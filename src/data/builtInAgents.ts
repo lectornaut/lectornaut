@@ -65,6 +65,8 @@ const ALL_TOOLS_ENABLED: ITeamAgent["tools"] = {
   askQuestion: true,
   searchWorkspaceNodes: true,
   summarizeNode: true,
+  compareNodes: true,
+  findRelatedNodes: true,
   // Real per-agent gates for the node tools (consumed at dispatch,
   // intersected with the team toggle + membership) — unlike the three
   // "type alignment only" gates below. `manageContent` → write tools;

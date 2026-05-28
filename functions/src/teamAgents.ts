@@ -85,6 +85,22 @@ interface TeamAgentToolToggles {
   searchWorkspaceNodes: boolean
   summarizeNode: boolean
   /**
+   * Per-agent gate for the multi-doc comparison tool (`compareNodes` in
+   * `botCompare.ts`). Same per-agent × team toggle intersection as
+   * the other read-only workspace tools; uses the team's chat model
+   * (no provider dependency beyond what the chat already needs).
+   */
+  compareNodes: boolean
+  /**
+   * Per-agent gate for the nearest-neighbor lookup tool
+   * (`findRelatedNodes` in `botLink.ts`). Reuses the source node's
+   * pre-computed embedding so there's no per-call embed cost; the
+   * sidebar's `findRelatedNodes` callable lives alongside this tool
+   * but is NOT gated by this toggle (it's a UI surface, not a
+   * model-callable tool).
+   */
+  findRelatedNodes: boolean
+  /**
    * Per-agent gate for the node-WRITE tools. NOT a `ChatToolName` (the
    * tools aren't registered via `pickChatTools`), but it IS consumed at
    * dispatch: `bot.ts` registers `NODE_WRITE_TOOLS` only when this is on
@@ -152,6 +168,8 @@ const DEFAULT_TOOL_TOGGLES: TeamAgentToolToggles = {
   askQuestion: true,
   searchWorkspaceNodes: true,
   summarizeNode: true,
+  compareNodes: true,
+  findRelatedNodes: true,
   manageContent: true,
   readContent: true,
 }
@@ -385,6 +403,14 @@ function normalizeAgentDoc(
         typeof toolsRaw.summarizeNode === "boolean"
           ? (toolsRaw.summarizeNode as boolean)
           : DEFAULT_TOOL_TOGGLES.summarizeNode,
+      compareNodes:
+        typeof toolsRaw.compareNodes === "boolean"
+          ? (toolsRaw.compareNodes as boolean)
+          : DEFAULT_TOOL_TOGGLES.compareNodes,
+      findRelatedNodes:
+        typeof toolsRaw.findRelatedNodes === "boolean"
+          ? (toolsRaw.findRelatedNodes as boolean)
+          : DEFAULT_TOOL_TOGGLES.findRelatedNodes,
       manageContent:
         typeof toolsRaw.manageContent === "boolean"
           ? (toolsRaw.manageContent as boolean)
@@ -436,6 +462,8 @@ const toolTogglesPatchSchema = z
     askQuestion: z.boolean(),
     searchWorkspaceNodes: z.boolean(),
     summarizeNode: z.boolean(),
+    compareNodes: z.boolean(),
+    findRelatedNodes: z.boolean(),
     manageContent: z.boolean(),
     readContent: z.boolean(),
   })

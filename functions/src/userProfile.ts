@@ -388,6 +388,233 @@ export const syncCurrentUserAccountProfile = onCall(
   }
 )
 
+// ============================================================================
+// Self-edit of user profile (displayName + photoURL)
+// ----------------------------------------------------------------------------
+// Sibling of `claimUsername` / `updateUserProfileVisibility` — those callables
+// own `username` and `isPublic` respectively; this one owns `displayName` and
+// `photoURL`. Before this existed the client wrote both fields directly to
+// `users/{uid}` via the sync engine and called Firebase Auth's
+// `updateProfile()` in parallel, which (a) bypassed the audit trail every
+// other mutation goes through, and (b) opened a window for the two systems
+// to diverge if one half failed.
+//
+// The audit log table is team-scoped (`logs` collection with `teamId` field),
+// so user-global self-edits don't fit there. We log to Cloud Logging instead
+// — same observability, no schema change. Cloud Logging entries are
+// queryable by `userProfile.update.self` action plus the structured `uid`
+// field below.
+// ============================================================================
+
+const DISPLAY_NAME_MAX_LENGTH = 100
+const PHOTO_URL_MAX_LENGTH = 2048
+
+interface UpdateOwnUserProfilePayload {
+  // displayName is non-null when present — the validator rejects
+  // null explicitly. photoURL allows null (it's the "clear" signal).
+  displayName?: string
+  photoURL?: string | null
+}
+
+function readOptionalStringOrNull(
+  data: Record<string, unknown>,
+  field: keyof UpdateOwnUserProfilePayload
+): string | null | undefined {
+  // Distinguish: missing key → undefined (skip field), explicit null →
+  // null (clear field), string → set field. Anything else rejects.
+  if (!(field in data)) return undefined
+  const value = data[field]
+  if (value === null) return null
+  if (typeof value !== "string") {
+    throw new HttpsError(
+      "invalid-argument",
+      `${field} must be a string or null.`
+    )
+  }
+  return value
+}
+
+function normalizeDisplayName(value: string): string {
+  // Trim whitespace and collapse internal whitespace runs. Matches the
+  // client's expectation that "John   Doe" round-trips to "John Doe".
+  return value.trim().replace(/\s+/g, " ")
+}
+
+function validateUpdateOwnUserProfilePayload(
+  data: unknown
+): UpdateOwnUserProfilePayload {
+  if (!data || typeof data !== "object") {
+    throw new HttpsError("invalid-argument", "Payload must be an object.")
+  }
+  const obj = data as Record<string, unknown>
+  const payload: UpdateOwnUserProfilePayload = {}
+
+  const rawDisplayName = readOptionalStringOrNull(obj, "displayName")
+  if (rawDisplayName !== undefined) {
+    if (rawDisplayName === null) {
+      // The Firebase Auth profile API treats `null` as "clear", but the
+      // user-facing settings screen always provides a name. Reject null
+      // here so a UI bug can't accidentally wipe the field.
+      throw new HttpsError(
+        "invalid-argument",
+        "displayName cannot be null. Pass a non-empty string to update it."
+      )
+    }
+    const normalized = normalizeDisplayName(rawDisplayName)
+    if (!normalized) {
+      throw new HttpsError("invalid-argument", "displayName must not be blank.")
+    }
+    if (normalized.length > DISPLAY_NAME_MAX_LENGTH) {
+      throw new HttpsError(
+        "invalid-argument",
+        `displayName must be at most ${DISPLAY_NAME_MAX_LENGTH} characters.`
+      )
+    }
+    payload.displayName = normalized
+  }
+
+  const rawPhotoURL = readOptionalStringOrNull(obj, "photoURL")
+  if (rawPhotoURL !== undefined) {
+    if (rawPhotoURL === null) {
+      payload.photoURL = null
+    } else {
+      const trimmed = rawPhotoURL.trim()
+      if (!trimmed) {
+        // Empty string = clear. Mirrors the client's earlier normalization
+        // (`photoURL === ""` → null) so old callers keep working.
+        payload.photoURL = null
+      } else {
+        if (trimmed.length > PHOTO_URL_MAX_LENGTH) {
+          throw new HttpsError(
+            "invalid-argument",
+            `photoURL must be at most ${PHOTO_URL_MAX_LENGTH} characters.`
+          )
+        }
+        payload.photoURL = trimmed
+      }
+    }
+  }
+
+  if (payload.displayName === undefined && payload.photoURL === undefined) {
+    throw new HttpsError(
+      "invalid-argument",
+      "Provide at least one of: displayName, photoURL."
+    )
+  }
+
+  return payload
+}
+
+export const updateOwnUserProfile = onCall(
+  { ...CALLABLE_OPTS },
+  async (request) => {
+    assertAuthenticated(request)
+    const uid = request.auth.uid
+    const payload = validateUpdateOwnUserProfilePayload(request.data)
+
+    const userRef = db.doc(`users/${uid}`)
+    const authProfile = await getAuthProfile(uid)
+
+    // Run the Firestore merge inside a transaction so we can compute a
+    // sharp before/after diff for the audit log (and so the structured
+    // fields list in the response reflects what actually changed, not
+    // what the client asked to change).
+    const result = await db.runTransaction(async (transaction) => {
+      const userSnap = await transaction.get(userRef)
+      const beforeData = userSnap.exists ? (userSnap.data() ?? {}) : {}
+
+      // Build the merge object. Only include keys that came in the
+      // payload — `merge: true` preserves untouched fields, and
+      // omitting unmodified keys keeps the diff tight.
+      const merge: Record<string, unknown> = {
+        ...buildUserBaseFields(uid, userSnap),
+        ...authProfile,
+        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      }
+      if (payload.displayName !== undefined) {
+        merge.displayName = payload.displayName
+      }
+      if (payload.photoURL !== undefined) {
+        merge.photoURL = payload.photoURL
+      }
+
+      transaction.set(userRef, merge, { merge: true })
+
+      // Audit diff: only fields whose value actually changes count as
+      // updated. A no-op call still succeeds but reports `updated:
+      // false` and an empty `fields` list so the client can skip
+      // optimistic-update toasts in that case.
+      const changedFields: string[] = []
+      const before: Record<string, unknown> = {}
+      const after: Record<string, unknown> = {}
+      if (
+        payload.displayName !== undefined &&
+        beforeData.displayName !== payload.displayName
+      ) {
+        changedFields.push("displayName")
+        before.displayName = beforeData.displayName ?? null
+        after.displayName = payload.displayName
+      }
+      if (
+        payload.photoURL !== undefined &&
+        (beforeData.photoURL ?? null) !== payload.photoURL
+      ) {
+        changedFields.push("photoURL")
+        before.photoURL = beforeData.photoURL ?? null
+        after.photoURL = payload.photoURL
+      }
+
+      return { changedFields, before, after }
+    })
+
+    // Mirror to Firebase Auth so the JWT's `name` / `picture` claims
+    // re-sync next refresh. The Firestore doc is the source of truth
+    // for the app, but the Auth profile drives external integrations
+    // (Google sign-in cards, etc.). Best-effort: we don't fail the
+    // RPC if this side fails — the audit log will record the
+    // attempt and a follow-up `syncCurrentUserAccountProfile` call
+    // will reconcile.
+    if (result.changedFields.length > 0) {
+      const authUpdates: { displayName?: string; photoURL?: string } = {}
+      if (payload.displayName !== undefined) {
+        authUpdates.displayName = payload.displayName
+      }
+      if (payload.photoURL !== undefined) {
+        // Firebase Auth uses empty string (not null) to clear photoURL.
+        authUpdates.photoURL = payload.photoURL ?? ""
+      }
+      try {
+        await auth.updateUser(uid, authUpdates)
+      } catch (err) {
+        logger.warn("[updateOwnUserProfile] auth sync failed", {
+          uid,
+          err: err instanceof Error ? err.message : String(err),
+        })
+      }
+    }
+
+    // Cloud Logging audit entry — the user-global equivalent of the
+    // team-scoped `logEvent` writes. Structured fields make it
+    // queryable from the Logs Explorer; the `action` tag matches the
+    // naming used by team audit entries so dashboards filtering by
+    // `action: "userProfile.update.self"` work uniformly.
+    if (result.changedFields.length > 0) {
+      logger.info("[updateOwnUserProfile] profile updated", {
+        action: "userProfile.update.self",
+        uid,
+        fields: result.changedFields,
+        before: result.before,
+        after: result.after,
+      })
+    }
+
+    return {
+      updated: result.changedFields.length > 0,
+      fields: result.changedFields,
+    }
+  }
+)
+
 export const claimUsername = onCall({ ...CALLABLE_OPTS }, async (request) => {
   assertAuthenticated(request)
 

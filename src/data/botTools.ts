@@ -41,11 +41,13 @@
 import {
   IconArchive,
   IconArrowRight,
+  IconColumns,
   IconDices,
   IconFilePlus,
   IconFileText,
   IconGlobe,
   IconHelpCircle,
+  IconLink,
   IconPencil,
   IconRotateCcw,
   IconSearch,
@@ -125,6 +127,29 @@ const CATALOG_BY_NAME: Record<BotToolName, BotToolDescriptor> = {
     // chain-or-attach logic). Works equally well whether or not the
     // user has pre-attached a node via the composer's + button.
     example: "Summarize the workspace document about ",
+  },
+  compareNodes: {
+    name: "compareNodes",
+    label: "Compare nodes",
+    description:
+      "Contrast 2–5 workspace nodes — overlaps, contradictions, and what each contributes.",
+    icon: IconColumns,
+    // Open prompt the user completes with the docs to compare. When
+    // the user has multiple nodes attached, the model picks the refs
+    // from the attached-context block; when not, it chains via
+    // `searchWorkspaceNodes` first to locate them.
+    example: "Compare the workspace documents about ",
+  },
+  findRelatedNodes: {
+    name: "findRelatedNodes",
+    label: "Find related nodes",
+    description:
+      "Surface other workspace nodes similar to a given one — via stored embeddings.",
+    icon: IconLink,
+    // Sentence prefix — the user names a document and the model
+    // resolves the ref (from attached context or a search). The
+    // server tool reuses the stored embedding so this is cheap.
+    example: "Find workspace docs related to ",
   },
 }
 

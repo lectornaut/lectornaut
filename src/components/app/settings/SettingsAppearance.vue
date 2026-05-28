@@ -415,6 +415,7 @@ const getAccentOptionStyle = (optionId: AccentId) =>
                   :key="theme.id"
                   :value="theme.id"
                 >
+                  <Component :is="theme.icon" />
                   {{ theme.name }}
                 </SelectItem>
               </SelectGroup>
@@ -445,7 +446,10 @@ const getAccentOptionStyle = (optionId: AccentId) =>
                   :key="fontSize.id"
                   :value="fontSize.id"
                 >
-                  {{ fontSize.name }}
+                  <Component :is="fontSize.icon" />
+                  <span :class="fontSize.style">
+                    {{ fontSize.name }}
+                  </span>
                 </SelectItem>
               </SelectGroup>
             </SelectContent>

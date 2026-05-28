@@ -30,6 +30,28 @@ interface PaginationState {
 
 const INCLUDE_ARCHIVED = true
 
+/**
+ * Hard cap on live `onSnapshot` subscriptions per (scope, team,
+ * workspace) bucket. The file tree opens one listener per expanded
+ * folder; without a cap, a power user expanding dozens of folders can
+ * accumulate that many WebSocket subscriptions. Firestore multiplexes
+ * them over a single connection, but each one carries client-side
+ * Watch state + memory for its snapshot data.
+ *
+ * When the cap is exceeded, the oldest non-root subscription is
+ * evicted. The last-seen children list stays in the store (the UI
+ * keeps rendering them) — the eviction only stops *live updates* for
+ * that folder until the user re-expands it. Root is exempt because
+ * the workspace's top-level navigation depends on it.
+ *
+ * 30 is comfortably above what a typical user keeps open in an IDE-
+ * style file tree and conservatively below the per-tab WebSocket
+ * limits browsers impose. Tune up if file-tree UX feels stale for
+ * very deep navigation; tune down if memory pressure on low-end
+ * devices becomes a concern.
+ */
+const MAX_ACTIVE_SUBSCRIPTIONS_PER_WORKSPACE = 30
+
 const workspaceKey = (
   scope: WorkspaceNodeScope,
   teamId: string,
@@ -360,6 +382,20 @@ export const useFileTreeStore = defineStore("fileTree", () => {
     const { subs } = getWorkspaceBuckets(key)
 
     if (subs[parentId]) return
+
+    // LRU cap on live subscriptions per workspace. `Object.keys` on a
+    // plain object preserves insertion order in V8, so iterating
+    // forward finds the oldest first. Skip ROOT_PARENT_ID — the
+    // workspace navigation depends on it being live; evicting it
+    // would freeze the file tree at the top level.
+    const activeIds = Object.keys(subs)
+    if (activeIds.length >= MAX_ACTIVE_SUBSCRIPTIONS_PER_WORKSPACE) {
+      const evictableId = activeIds.find((id) => id !== ROOT_PARENT_ID)
+      if (evictableId) {
+        subs[evictableId]?.()
+        delete subs[evictableId]
+      }
+    }
 
     setParentLoading(scope, teamId, workspaceId, parentId, true)
 

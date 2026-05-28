@@ -466,14 +466,28 @@
   font-size: 0.875em;
 }
 
-/* Shiki code BLOCK weight: markstream leaves `.code-block-content` without a
- * font-weight (it inherits prose ~400), so set it to match the CodeMirror +
- * Tiptap code surfaces (CODE_FONT_WEIGHT = 500). Bold Shiki tokens carry their
- * own inline weight, so this only shifts normal tokens. */
+/* Shiki code BLOCK weight + size.
+ *
+ * Weight: markstream leaves `.code-block-content` without a font-weight (it
+ * inherits prose ~400), so set it to match the CodeMirror + Tiptap code
+ * surfaces (CODE_FONT_WEIGHT = 500). Bold Shiki tokens carry their own inline
+ * weight, so this only shifts normal tokens.
+ *
+ * Size: `MarkdownCodeBlockNode` (Shiki node) hard-binds an inline
+ * `style="font-size: 14px"` on `.code-block-content` from a local ref that
+ * starts at 14 with no prop to override it from outside — so the library's
+ * own `font-size: var(--vscode-editor-font-size, 14px)` CSS rule is dead code
+ * (inline always wins). The only way to drive font size from the user's
+ * Appearance setting is to BEAT that inline declaration with `!important`,
+ * pointing at our reactive CSS var. `.code-block-content`'s child `pre` /
+ * `.shiki` use `font-size: inherit`, so this single override cascades through
+ * the whole block. Child elements pick up the var via the wrapper in
+ * AppMarkdown.vue. */
 .markstream-vue[data-custom-id="chat"] .code-block-content,
 .markstream-vue[data-custom-id="changelog-sheet"] .code-block-content,
 .markstream-vue[data-custom-id="changelog-page"] .code-block-content {
   font-weight: var(--ms-font-weight-code, 500);
+  font-size: var(--vscode-editor-font-size, 14px) !important;
 }
 
 /* List items render their own paragraph wrapper which picks up the

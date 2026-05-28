@@ -35,6 +35,8 @@ interface TeamAgentToolToggles {
   askQuestion: boolean
   searchWorkspaceNodes: boolean
   summarizeNode: boolean
+  compareNodes: boolean
+  findRelatedNodes: boolean
   manageContent: boolean
   readContent: boolean
 }
@@ -61,6 +63,8 @@ const ALL_TOOLS_ENABLED: TeamAgentToolToggles = {
   askQuestion: true,
   searchWorkspaceNodes: true,
   summarizeNode: true,
+  compareNodes: true,
+  findRelatedNodes: true,
   manageContent: true,
   readContent: true,
 }

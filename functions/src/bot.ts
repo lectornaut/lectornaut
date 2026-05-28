@@ -39,6 +39,7 @@ import {
 } from "genkit/beta"
 import {
   buildAgentSystemPrompt,
+  DEFAULT_AGENT_ID,
   normalizeActiveAgentIdForStorage,
   resolveActiveAgent,
   WORKSPACE_SAFETY_DIRECTIVE,
@@ -63,12 +64,14 @@ import {
   type BotActionContext,
   type BotChatMode,
 } from "./botBuiltinTools.js"
+import { compareNodesTool } from "./botCompare.js"
 import {
   CONTEXT_NODE_MAX,
   loadAndBuildContextBlock,
   NodeRefSchema,
   type NodeRef,
 } from "./botContext.js"
+import { findRelatedNodesTool } from "./botLink.js"
 import { NODE_READ_TOOLS, NODE_WRITE_TOOLS } from "./botNodeTools.js"
 import { searchWorkspaceNodesTool } from "./botRag.js"
 import { summarizeNodeTool } from "./botSummarize.js"
@@ -800,6 +803,18 @@ function pickChatTools(
     tools.push(searchWorkspaceNodesTool)
   if (config.tools.summarizeNode && agentAllows("summarizeNode"))
     tools.push(summarizeNodeTool)
+  // `compareNodes` is provider-agnostic — uses the team's selected chat
+  // model (same as `summarizeNode`) and reads node bodies directly from
+  // Firestore, so no embedder/Google-key dependency.
+  if (config.tools.compareNodes && agentAllows("compareNodes"))
+    tools.push(compareNodesTool)
+  // `findRelatedNodes` reuses each node's pre-computed embedding (stored
+  // by the embed-on-write triggers in `botRag.ts`) as the query vector,
+  // so it never calls the embedder at lookup time. No Gemini-key gate
+  // here — the source embedding already exists on disk; the query is
+  // pure Firestore vector search.
+  if (config.tools.findRelatedNodes && agentAllows("findRelatedNodes"))
+    tools.push(findRelatedNodesTool)
   // `transferToAgent` is only exposed when at least one OTHER agent
   // (or the team default, when an agent is currently active) is
   // reachable. Listing the tool with no available targets would
@@ -1028,48 +1043,124 @@ async function runTransferTurnIfRequested(opts: {
 
   const targetAgentId = normalizeActiveAgentIdForStorage(requested)
 
-  const transferPrep = await prepareChatTurn({
-    auth: opts.auth,
-    teamId: opts.teamId,
-    workspaceId: opts.workspaceId,
-    sessionId: opts.sessionId,
-    mode: opts.mode,
-    contextNodes: opts.contextNodes,
-    activeAgentId: targetAgentId,
-    model: opts.model,
-    // Pin is a one-shot at session creation; the first turn already
-    // wrote it (or we're resuming, in which case it was written ages
-    // ago). Passing it again would be a no-op at best and a doc
-    // duplicate-key check at worst — leave it undefined.
-    pinnedNode: undefined,
-    requireExistingSession: true,
-    archivedSessionMessage: opts.archivedSessionMessage,
-    disableTransfer: true,
-  })
+  // Run the prepared second turn under a fallback shell so that any
+  // failure between here and the post-stream sweep is converted to a
+  // user-visible chunk instead of escaping as `INTERNAL` through
+  // `onCallGenkit`. The first turn already streamed the original
+  // agent's "transferring you to X" reply to the client, AND the
+  // `commitTransferIfRequested` safety net (in the caller's `finally`)
+  // still lands the agent change on the session doc — so a clean exit
+  // here means the user keeps the bubble they saw, the agent badge
+  // stays flipped, and their next message routes to the new agent. The
+  // alternative (rethrow) collapses the optimistic UI on the client
+  // ([useBotChat.sendMessage] splices the in-flight bubble pair out on
+  // any caught error), wiping the visible transfer message and showing
+  // a generic toast — which is the user-reported failure mode.
+  //
+  // `HttpsError` continues to propagate: those carry an actionable
+  // message (permission-denied, archived, etc.) the client's toast
+  // already surfaces faithfully, so swallowing them would just turn a
+  // clear cause into a generic "couldn't reply" string.
+  //
+  // `streamChatToClient` already converts its own two known recoverable
+  // cases (`TurnTimeoutError`, tool-iteration exhaustion) into fallback
+  // chunks before they bubble up. This catch is the net for everything
+  // else — provider rate limits, network blips, the Cloud Functions
+  // 120s budget being squeezed when the first turn already burned most
+  // of it, target agent's model becoming unavailable mid-request, etc.
+  try {
+    const transferPrep = await prepareChatTurn({
+      auth: opts.auth,
+      teamId: opts.teamId,
+      workspaceId: opts.workspaceId,
+      sessionId: opts.sessionId,
+      mode: opts.mode,
+      contextNodes: opts.contextNodes,
+      activeAgentId: targetAgentId,
+      model: opts.model,
+      // Pin is a one-shot at session creation; the first turn already
+      // wrote it (or we're resuming, in which case it was written ages
+      // ago). Passing it again would be a no-op at best and a doc
+      // duplicate-key check at worst — leave it undefined.
+      pinnedNode: undefined,
+      requireExistingSession: true,
+      archivedSessionMessage: opts.archivedSessionMessage,
+      disableTransfer: true,
+    })
 
-  // Fresh ref-dedupe baseline. The truncated thread no longer
-  // includes the original agent's tool refs — but `collectPriorTurnToolRefs`
-  // is still the right primitive here: it reads from the session
-  // doc's persisted state (which mirrors the post-truncation thread),
-  // so the sweep correctly skips any prior-conversation tool refs
-  // while emitting any new tool calls the second agent makes.
-  const priorRefs = collectPriorTurnToolRefs(transferPrep.existingSession?.data)
+    // Fresh ref-dedupe baseline. The truncated thread no longer
+    // includes the original agent's tool refs — but `collectPriorTurnToolRefs`
+    // is still the right primitive here: it reads from the session
+    // doc's persisted state (which mirrors the post-truncation thread),
+    // so the sweep correctly skips any prior-conversation tool refs
+    // while emitting any new tool calls the second agent makes.
+    const priorRefs = collectPriorTurnToolRefs(
+      transferPrep.existingSession?.data
+    )
 
-  const turnAbort = new AbortController()
-  return await streamChatToClient(
-    transferPrep.chat.sendStream({
-      abortSignal: turnAbort.signal,
-      maxTurns: TOOL_MAX_TURNS,
-    }) as ChatStreamResult,
-    opts.sendChunk,
-    {
-      abortController: turnAbort,
-      preSentToolCalls: priorRefs.calls,
-      preSentToolResults: priorRefs.results,
-      preExistingToolCallCount: priorRefs.callCount,
-      preExistingToolResultCount: priorRefs.resultCount,
+    const turnAbort = new AbortController()
+    return await streamChatToClient(
+      transferPrep.chat.sendStream({
+        abortSignal: turnAbort.signal,
+        maxTurns: TOOL_MAX_TURNS,
+      }) as ChatStreamResult,
+      opts.sendChunk,
+      {
+        abortController: turnAbort,
+        preSentToolCalls: priorRefs.calls,
+        preSentToolResults: priorRefs.results,
+        preExistingToolCallCount: priorRefs.callCount,
+        preExistingToolResultCount: priorRefs.resultCount,
+      }
+    )
+  } catch (err) {
+    if (err instanceof HttpsError) throw err
+    logger.warn(
+      `[runTransferTurnIfRequested] second-turn failed team=${opts.teamId} session=${opts.sessionId} target=${targetAgentId ?? "(default)"}`,
+      { err: String(err) }
+    )
+
+    // Restore the first turn's full thread so the persisted state
+    // matches what the user saw stream by. Without this, the truncation
+    // above leaves disk at `[…prior, user]` — re-opening the chat
+    // would render just the user's bubble with no agent reply, even
+    // though the user watched the original "transferring you to X"
+    // text stream in. Best-effort: a restore failure is logged and
+    // swallowed (the streamed UI still works for this session; only
+    // the persisted-state-on-reload story degrades). We restore even
+    // when `firstFinal.messages` is the raw full thread (the common
+    // case) and skip when it's a stub (the inner turn already
+    // fell back into `TurnTimeoutError` / iteration-exhaustion, whose
+    // stub returns `messages: []` — re-saving empty would clobber the
+    // truncated thread with nothing).
+    if (
+      Array.isArray(opts.firstFinal.messages) &&
+      opts.firstFinal.messages.length > 0
+    ) {
+      try {
+        await opts.firstSession.updateMessages(
+          MAIN_THREAD,
+          opts.firstFinal.messages as Parameters<
+            typeof opts.firstSession.updateMessages
+          >[1]
+        )
+      } catch (restoreErr) {
+        logger.warn(
+          `[runTransferTurnIfRequested] thread restore failed team=${opts.teamId} session=${opts.sessionId}`,
+          { err: String(restoreErr) }
+        )
+      }
     }
-  )
+
+    const fallback =
+      "Handed off to the new agent, but they couldn't reply just now. " +
+      "Try sending your message again — your next message will route to them."
+    opts.sendChunk({ chunk: fallback })
+    return {
+      text: fallback,
+      messages: opts.firstFinal.messages ?? [],
+    } as unknown as Awaited<ChatStreamResult["response"]>
+  }
 }
 
 // ===========================================================================
@@ -1538,6 +1629,34 @@ function isToolIterationsExceededError(err: unknown): boolean {
 }
 
 /**
+ * Detect Genkit's "model called a tool not registered this turn" error.
+ * Happens when the model's continuation emits a tool request whose name
+ * isn't in the current `chat({ tools })` catalog — most commonly on a
+ * resume turn where the catalog changed since the historical thread was
+ * written (e.g., the user switched to an agent with fewer tools while an
+ * `askQuestion` interrupt was pending, so the resume runs without the
+ * node-CRUD tools that earlier turns successfully used).
+ *
+ * Status-narrowed past plain `NOT_FOUND` AND matched on the canonical
+ * "Tool X not found" message so we don't accidentally swallow unrelated
+ * NOT_FOUND errors (e.g. session/model lookup misses elsewhere in the
+ * generate pipeline). Returns the offending tool name so the fallback
+ * chunk can name it for the user.
+ */
+function getMissingToolName(err: unknown): string | null {
+  if (!err || typeof err !== "object") return null
+  const e = err as {
+    status?: string
+    originalMessage?: string
+    message?: string
+  }
+  if (e.status !== "NOT_FOUND") return null
+  const msg = e.originalMessage ?? e.message ?? ""
+  const match = /Tool (\S+) not found/.exec(msg)
+  return match ? match[1] : null
+}
+
+/**
  * Per-turn hard deadline. The provider call (Gemini / Claude / OpenAI)
  * can hang indefinitely on a bad day — flaky network, provider
  * incident, model that gets stuck mid-thought. Without a deadline the
@@ -1742,12 +1861,13 @@ async function streamChatToClientInner(
 
   // `result.response` rejects with a `GenkitError` whose `status` is
   // `ABORTED` when the model exhausts its tool-call budget without
-  // producing a final text. Without this catch, that reject would
-  // propagate to `onCallGenkit`, which wraps it as the opaque
-  // `INTERNAL` the client sees — and then the optimistic UI rollback
-  // makes the chat look like it was wiped. Convert the abort into a
-  // user-visible "couldn't find that" reply on the same stream so the
-  // chat ends gracefully instead of vanishing.
+  // producing a final text, or `NOT_FOUND` when the model emits a tool
+  // request whose name isn't in this turn's catalog. Without these
+  // catches the rejects would propagate to `onCallGenkit`, which wraps
+  // them as the opaque `INTERNAL` the client sees — and the optimistic
+  // UI rollback then makes the chat look like it was wiped. Convert
+  // each into a user-visible reply on the same stream so the turn
+  // ends gracefully instead of vanishing.
   let final: Awaited<ChatStreamResult["response"]>
   try {
     final = await result.response
@@ -1760,6 +1880,27 @@ async function streamChatToClientInner(
       // Cast is justified because the streaming protocol with the client
       // already concluded successfully via `sendChunk`; the outer flow
       // is just turning the same text into its unary echo.
+      return { text: fallback, messages: [] } as unknown as Awaited<
+        ChatStreamResult["response"]
+      >
+    }
+    const missingTool = getMissingToolName(err)
+    if (missingTool) {
+      // Most common trigger: an earlier turn ran under an agent with
+      // more tools (e.g. node CRUD) and recorded successful calls in
+      // the thread; the current turn runs under a different agent
+      // (commonly the default persona after the composer's selection
+      // was cleared while an interrupt was pending), so the model's
+      // continuation tries to call a tool that's no longer registered.
+      // The fallback nudges the user toward the two fixes that actually
+      // work — retry under the original agent, or rephrase so the model
+      // doesn't reach for the missing capability.
+      logger.warn(
+        `[streamChatToClient] missing tool '${missingTool}' on resume — likely an agent-switch dropped it from the catalog`,
+        { err: String(err) }
+      )
+      const fallback = `I tried to use the \`${missingTool}\` tool, but it isn't available in this chat right now — the active agent may not have access to it, or it was disabled since earlier in this conversation. Try switching back to the agent that ran the earlier steps, or ask me to take a different approach.`
+      sendChunk({ chunk: fallback })
       return { text: fallback, messages: [] } as unknown as Awaited<
         ChatStreamResult["response"]
       >
@@ -1983,10 +2124,20 @@ async function prepareChatTurn(opts: {
   // shared chats to whichever admin replied most recently.
   const sessionOwnerUid = existingSession?.ownerUid ?? auth.uid
 
-  // Node-CRUD authorization for this turn: the active agent AND the driving
-  // user must EACH be a member with content-management rights before the
-  // node tools are registered (the tool handlers re-check the same gate).
-  // The agent's role is a single doc read, skipped when no agent is active.
+  // Node-CRUD authorization for this turn:
+  //   - When a custom/built-in agent is active, BOTH the user and the agent
+  //     must be team members with content-management rights — the agent is
+  //     acting on the user's behalf, so the gate is the intersection.
+  //   - When the Default persona is active (`activeAgent === null`), there
+  //     is no agent identity to delegate to, so the user's own role is the
+  //     sole authority. The tool result is attributed in audit logs as
+  //     `{ userId: <driver>, agentId: "_default", agentName: "Default" }`
+  //     so reviewers can still tell a default-persona edit apart from a
+  //     direct (non-bot) edit. This matches the user's casual mental model
+  //     ("Default is the agent I'm currently using") and prevents the
+  //     tool-catalog drift bug where switching to Default mid-conversation
+  //     silently dropped node tools out from under the model — see
+  //     `getMissingToolName` above for the failure mode that motivated this.
   const userCanManageNodes = can(
     auth.uid,
     Capabilities.MANAGE_WORKSPACE_CONTENT,
@@ -1995,28 +2146,33 @@ async function prepareChatTurn(opts: {
   const activeAgentRole = activeAgent
     ? await getMembershipRoleOrNull(teamId, activeAgent.id)
     : null
-  const agentCanManageNodes =
-    !!activeAgent &&
-    can(activeAgent.id, Capabilities.MANAGE_WORKSPACE_CONTENT, {
-      scope: "workspace",
-      teamRole: activeAgentRole,
-    })
+  const agentCanManageNodes = activeAgent
+    ? can(activeAgent.id, Capabilities.MANAGE_WORKSPACE_CONTENT, {
+        scope: "workspace",
+        teamRole: activeAgentRole,
+      })
+    : // Default persona: borrow the user's authority. The user's role is
+      // already checked separately via `userCanManageNodes`, so the
+      // composite gate stays `user × agent` — there's just no second
+      // identity to fail on.
+      true
   const canManageNodes = userCanManageNodes && agentCanManageNodes
 
   // Read gate — the same user×agent intersection but on the lighter
   // READ_WORKSPACE capability (held by every role, guests included), so an
   // agent can read full file content (`readNode`) without the edit rights
-  // the write tools require. Reuses `activeAgentRole` from the write gate.
+  // the write tools require. Default-persona handling mirrors the write
+  // gate above (the user's role is the sole authority).
   const userCanReadNodes = can(auth.uid, Capabilities.READ_WORKSPACE, {
     scope: "workspace",
     teamRole: role,
   })
-  const agentCanReadNodes =
-    !!activeAgent &&
-    can(activeAgent.id, Capabilities.READ_WORKSPACE, {
-      scope: "workspace",
-      teamRole: activeAgentRole,
-    })
+  const agentCanReadNodes = activeAgent
+    ? can(activeAgent.id, Capabilities.READ_WORKSPACE, {
+        scope: "workspace",
+        teamRole: activeAgentRole,
+      })
+    : true
   const canReadNodes = userCanReadNodes && agentCanReadNodes
 
   // Feature-toggle layer ON TOP of the membership gates. `canManageNodes` /
@@ -2148,9 +2304,18 @@ async function prepareChatTurn(opts: {
     effectiveModel,
     canManageNodes,
     canReadNodes,
-    ...(activeAgent
-      ? { activeAgentId: activeAgent.id, activeAgentName: activeAgent.name }
-      : {}),
+    // Always set an identity so node-tool handlers
+    // (`resolveNodeContext` checks `ctx.activeAgentId`) and audit logs
+    // get a non-empty `agentId`/`agentName` pair regardless of which
+    // persona is driving. The Default persona uses `DEFAULT_AGENT_ID`
+    // (`"_default"`) — a sentinel the dispatch layer reserves and that
+    // `isBuiltInAgentId` already recognizes (underscore prefix), so
+    // downstream code that filters built-ins continues to treat it
+    // correctly. Audit log readers see `agentId: "_default"`,
+    // `agentName: "Default"` for actions the team's default voice took
+    // on the user's behalf.
+    activeAgentId: activeAgent?.id ?? DEFAULT_AGENT_ID,
+    activeAgentName: activeAgent?.name ?? "Default",
   }
 
   // Tool catalog — mode steers prompt style only; per-team toggles strip
@@ -2181,8 +2346,10 @@ async function prepareChatTurn(opts: {
   // tools (create/edit/rename/move/archive) need `nodeWriteEnabled`
   // (MANAGE_WORKSPACE_CONTENT × `manageContent` toggle); the READ tool
   // (`readNode`) needs `nodeReadEnabled` (the lighter READ_WORKSPACE ×
-  // `readContent` toggle). The default persona (no agent) gets neither:
-  // an agent must be added to the team as a member first.
+  // `readContent` toggle). The Default persona qualifies whenever the
+  // driving user does — there's no second identity to gate on — and the
+  // resulting actions are attributed in audit logs under the synthetic
+  // `_default` agent id (see `actionContext` above).
   if (nodeReadEnabled) {
     chatTools.push(...NODE_READ_TOOLS)
   }
@@ -2367,9 +2534,11 @@ const sendBotMessageFlow = ai.defineFlow(
       // under the target agent inside this same request so the user's
       // message gets answered immediately — no resend needed. Returns
       // the first turn's response unchanged when no transfer fired.
-      // Errors from the second turn propagate; `commitTransferIfRequested`
-      // in the finally below still lands the agent change so a retry
-      // from the user routes to the new agent on its first send.
+      // Non-`HttpsError` failures inside the helper are converted to a
+      // streamed fallback chunk + stub response (see the helper's
+      // `catch`) so the chat ends gracefully instead of the client
+      // seeing an opaque `INTERNAL`. `commitTransferIfRequested` in
+      // the finally below still lands the agent change either way.
       let final: Awaited<ChatStreamResult["response"]>
       try {
         final = await runTransferTurnIfRequested({

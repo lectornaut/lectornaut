@@ -143,9 +143,14 @@ const codeBlockProps = { showHeader: true, showCopyButton: true } as const
 //
 // Font family + weight and the tall-payload height cap live in CSS (the
 // "markstream-vue surface overrides" block in @/styles/index.css). Font SIZE
-// is the user's reactive Appearance setting, so it rides in as the
-// `--vscode-editor-font-size` custom property markstream's code surface reads
-// (attribute fall-through lands it on the `.markstream-vue` root).
+// rides in as the `--vscode-editor-font-size` custom property — set via the
+// `:style` fallthrough on `<MarkdownRender>` so it lands on `.markstream-vue`
+// and cascades down to `.code-block-content`. A `!important` rule in that
+// same overrides block then forces it onto `.code-block-content`, because the
+// library hard-binds an inline `style="font-size: 14px"` from a local ref
+// with no prop to override it — making its own `font-size:
+// var(--vscode-editor-font-size)` CSS rule dead code. `!important` beats the
+// unimportant inline style.
 const codeBlockFontSize = useCodeFontSize()
 
 const codeBlockFontVars = computed(() => ({

@@ -548,17 +548,22 @@ const initializeEditor = () => {
           EditorView.theme({ "&": { fontSize: `${codeFontSize.value}px` } })
         ),
 
-        // Editor surface (bg/fg/gutter) from the active Shiki theme. Starts on
-        // app tokens as a fallback, then swaps to the Shiki theme's surface
-        // once the async highlighter loads it. Placed after `editorTheme` so
-        // its surface bg/fg wins.
+        // Editor surface (bg/fg/gutter) from the active Shiki theme. Placed
+        // after `editorTheme` so its surface bg/fg wins. `preloadActiveCodeTheme`
+        // (called at app bootstrap before mount) ensures the highlighter has
+        // the active theme loaded by the time we get here, so `buildShikiSurfaceTheme`
+        // resolves synchronously and the editor's first paint is already on
+        // the right surface. The app-token fallback only kicks in on an
+        // unrelated mount path where the preload was skipped or failed —
+        // `applyShikiTheme()` in `onMounted` swaps it in once the load completes.
         surfaceCompartment.of(
-          EditorView.theme({
-            "&": {
-              backgroundColor: "var(--color-background)",
-              color: "var(--color-foreground)",
-            },
-          })
+          buildShikiSurfaceTheme(activeCodeThemeName.value) ??
+            EditorView.theme({
+              "&": {
+                backgroundColor: "var(--color-background)",
+                color: "var(--color-foreground)",
+              },
+            })
         ),
 
         // Token colors: pure-Shiki highlighting applied as decorations — the

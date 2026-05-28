@@ -23,6 +23,9 @@ const { t } = useI18n()
         <TabsTrigger value="attachments" class="text-xs">
           {{ t("inspector.tabs.attachments") }}
         </TabsTrigger>
+        <TabsTrigger value="related" class="text-xs">
+          {{ t("inspector.tabs.related") }}
+        </TabsTrigger>
         <TabsTrigger value="details" class="text-xs">
           {{ t("inspector.tabs.details") }}
         </TabsTrigger>
@@ -57,6 +60,19 @@ const { t } = useI18n()
         />
         <div v-else class="text-muted-foreground p-3 text-xs">
           {{ t("inspector.attachments.empty") }}
+        </div>
+      </TabsContent>
+
+      <TabsContent value="related" class="size-full h-0 min-h-0 min-w-0 grow">
+        <NodeRelated
+          v-if="teamId && workspaceId && node"
+          :team-id="teamId"
+          :workspace-id="workspaceId"
+          :scope="scope"
+          :node="node"
+        />
+        <div v-else class="text-muted-foreground p-3 text-xs">
+          {{ t("inspector.related.empty") }}
         </div>
       </TabsContent>
 

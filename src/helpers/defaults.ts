@@ -185,65 +185,110 @@ export const defaultSize: SizeId = "base"
 // runtime); see `@shikijs/themes`. `id`s mirror `editorThemeIdSchema` in
 // `src/schemas/settings.ts` — keep them in sync.
 export const editorThemes = [
-  { id: "default", name: "Default", light: "light-plus", dark: "dark-plus" },
-  { id: "ayu", name: "Ayu", light: "ayu-light", dark: "ayu-dark" },
+  {
+    id: "default",
+    name: "Default",
+    light: "light-plus",
+    dark: "dark-plus",
+    icon: IconPalette,
+  },
+  {
+    id: "ayu",
+    name: "Ayu",
+    light: "ayu-light",
+    dark: "ayu-dark",
+    icon: IconPalette,
+  },
   {
     id: "catppuccin",
     name: "Catppuccin",
     light: "catppuccin-latte",
     dark: "catppuccin-mocha",
+    icon: IconPalette,
   },
   {
     id: "everforest",
     name: "Everforest",
     light: "everforest-light",
     dark: "everforest-dark",
+    icon: IconPalette,
   },
-  { id: "github", name: "GitHub", light: "github-light", dark: "github-dark" },
+  {
+    id: "github",
+    name: "GitHub",
+    light: "github-light",
+    dark: "github-dark",
+    icon: IconPalette,
+  },
   {
     id: "gruvbox",
     name: "Gruvbox",
     light: "gruvbox-light-medium",
     dark: "gruvbox-dark-medium",
+    icon: IconPalette,
   },
   {
     id: "kanagawa",
     name: "Kanagawa",
     light: "kanagawa-lotus",
     dark: "kanagawa-wave",
+    icon: IconPalette,
   },
   {
     id: "material",
     name: "Material",
     light: "material-theme-lighter",
     dark: "material-theme",
+    icon: IconPalette,
   },
-  { id: "min", name: "Min", light: "min-light", dark: "min-dark" },
+  {
+    id: "min",
+    name: "Min",
+    light: "min-light",
+    dark: "min-dark",
+    icon: IconPalette,
+  },
   {
     id: "night-owl",
     name: "Night Owl",
     light: "night-owl-light",
     dark: "night-owl",
+    icon: IconPalette,
   },
-  { id: "one", name: "One", light: "one-light", dark: "one-dark-pro" },
+  {
+    id: "one",
+    name: "One",
+    light: "one-light",
+    dark: "one-dark-pro",
+    icon: IconPalette,
+  },
   {
     id: "rose-pine",
     name: "Rosé Pine",
     light: "rose-pine-dawn",
     dark: "rose-pine",
+    icon: IconPalette,
   },
-  { id: "slack", name: "Slack", light: "slack-ochin", dark: "slack-dark" },
+  {
+    id: "slack",
+    name: "Slack",
+    light: "slack-ochin",
+    dark: "slack-dark",
+    icon: IconPalette,
+  },
   {
     id: "solarized",
     name: "Solarized",
     light: "solarized-light",
     dark: "solarized-dark",
+    icon: IconPalette,
   },
   {
     id: "vitesse",
     name: "Vitesse",
     light: "vitesse-light",
     dark: "vitesse-dark",
+    icon: IconPalette,
   },
 ] as const
 
@@ -260,11 +305,41 @@ export const defaultEditorTheme: EditorThemeId = "default"
 // it's resolved to `size` before being handed to the editors. `id`s mirror
 // `editorFontSizeIdSchema` in `src/schemas/settings.ts` — keep them in sync.
 export const editorFontSizes = [
-  { id: "xs", name: "Extra small", size: 11 },
-  { id: "sm", name: "Small", size: 12 },
-  { id: "base", name: "Normal", size: 13 },
-  { id: "lg", name: "Large", size: 15 },
-  { id: "xl", name: "Extra large", size: 17 },
+  {
+    id: "xs",
+    name: "Extra small",
+    size: 11,
+    icon: IconMdiFormatTextVariant,
+    style: "text-xs",
+  },
+  {
+    id: "sm",
+    name: "Small",
+    size: 12,
+    icon: IconMdiFormatTextVariant,
+    style: "text-sm",
+  },
+  {
+    id: "base",
+    name: "Normal",
+    size: 13,
+    icon: IconMdiFormatTextVariant,
+    style: "text-base",
+  },
+  {
+    id: "lg",
+    name: "Large",
+    size: 15,
+    icon: IconMdiFormatTextVariant,
+    style: "text-lg",
+  },
+  {
+    id: "xl",
+    name: "Extra large",
+    size: 17,
+    icon: IconMdiFormatTextVariant,
+    style: "text-xl",
+  },
 ] as const
 
 export type EditorFontSizeId = (typeof editorFontSizes)[number]["id"]
@@ -481,6 +556,8 @@ export const defaultBotAgentConfig: IBotAgentConfig = {
     askQuestion: true,
     searchWorkspaceNodes: true,
     summarizeNode: true,
+    compareNodes: true,
+    findRelatedNodes: true,
     summarizeNodeInspector: true,
     manageContent: true,
     readContent: true,

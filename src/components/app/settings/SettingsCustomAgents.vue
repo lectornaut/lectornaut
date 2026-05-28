@@ -181,6 +181,11 @@ const DEFAULT_DRAFT: AgentDraft = {
     askQuestion: true,
     searchWorkspaceNodes: true,
     summarizeNode: true,
+    // Real per-agent toggles for the multi-doc and nearest-neighbor
+    // tools. Both read-only and use the team's chat model (compare)
+    // or pre-computed embeddings (related) — no provider dependency.
+    compareNodes: true,
+    findRelatedNodes: true,
     // Real per-agent toggles (consumed at dispatch): does this agent get
     // the node WRITE tools / the readNode tool? Each intersected with its
     // team toggle + membership.

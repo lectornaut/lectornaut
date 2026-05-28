@@ -29,11 +29,14 @@ import { mutateWithCoordinator } from "@/utils/firebase/firebase-sync-engine"
 import {
   collection,
   doc,
+  getDocs,
   limit,
   onSnapshot,
   orderBy,
   query,
+  startAfter,
   Timestamp,
+  type QueryDocumentSnapshot,
 } from "firebase/firestore"
 import { computed, onUnmounted, ref, shallowRef, watch } from "vue"
 import { useCurrentUser } from "vuefire"
@@ -53,13 +56,60 @@ const toNotification = (
     data.createdAt instanceof Timestamp ? data.createdAt.toDate() : new Date(),
 })
 
+/**
+ * Page size for both the live listener (most-recent slice) and each
+ * `loadMore()` fetch. 20 is small enough that the initial render is
+ * fast and large enough that most users never need to paginate.
+ */
+const NOTIFICATIONS_PAGE_SIZE = 20
+
 export function useNotifications() {
   const user = useCurrentUser()
-  const firestoreNotifications = ref<INotification[]>([])
+
+  // Two-tier storage: the listener owns the most-recent slice
+  // (so new arrivals appear without manual refresh), while older pages
+  // are fetched on demand via `getDocs` + cursor. This replaces the
+  // earlier "expanding limit" pattern, where each `loadMore()` tore
+  // down the listener and re-fetched the entire window — costing
+  // 20+40+60+... reads for what should be 20+20+20+...
+  const livePageNotifications = ref<INotification[]>([])
+  const olderPagesNotifications = ref<INotification[]>([])
   const optimisticNotifications = ref<INotification[]>([])
   const pendingNotificationIds = shallowRef(createPendingSet())
   const isLoading = ref(false)
-  const limitCount = ref(20)
+  const isLoadingMore = ref(false)
+  const hasMore = ref(true)
+
+  // Cursor for the next `getDocs` page. `shallowRef` per the project
+  // convention in CLAUDE.md — a plain `ref` would deep-proxy the
+  // Firestore snapshot's internals and break `startAfter()` when the
+  // SDK introspects the cursor (assertion 0xb815, IndexedDB clone
+  // failures, etc.). Same discipline as `usePaginatedLogs`.
+  const olderPagesCursor = shallowRef<QueryDocumentSnapshot | null>(null)
+
+  /**
+   * Merged view of live + older pages. Dedup by id handles the
+   * boundary where a brand-new notification arrives at the top and
+   * displaces the bottom-of-live row, which is now also represented
+   * in `olderPagesNotifications` (the page-2 fetch had captured what
+   * was then page 2, but a row that's since moved across the page
+   * boundary appears in both). Live wins.
+   */
+  const firestoreNotifications = computed<INotification[]>(() => {
+    const seen = new Set<string>()
+    const merged: INotification[] = []
+    for (const notification of livePageNotifications.value) {
+      if (seen.has(notification.id)) continue
+      seen.add(notification.id)
+      merged.push(notification)
+    }
+    for (const notification of olderPagesNotifications.value) {
+      if (seen.has(notification.id)) continue
+      seen.add(notification.id)
+      merged.push(notification)
+    }
+    return merged
+  })
 
   const notifications = computed(() =>
     mergeOptimisticCollection(
@@ -295,13 +345,20 @@ export function useNotifications() {
     if (!user.value) return
 
     const previousOptimistic = cloneState(optimisticNotifications.value)
-    const previousFirestore = cloneState(firestoreNotifications.value)
+    const previousLive = cloneState(livePageNotifications.value)
+    const previousOlder = cloneState(olderPagesNotifications.value)
 
     await withOptimisticBatchUpdate(
       pendingNotificationIds,
       [notificationId],
       () => {
-        firestoreNotifications.value = firestoreNotifications.value.filter(
+        // Filter from both tiers — the deleted notification might be
+        // in either (or both — see the dedup contract in
+        // `firestoreNotifications`).
+        livePageNotifications.value = livePageNotifications.value.filter(
+          (notification) => notification.id !== notificationId
+        )
+        olderPagesNotifications.value = olderPagesNotifications.value.filter(
           (notification) => notification.id !== notificationId
         )
         setOptimisticNotifications(
@@ -312,7 +369,8 @@ export function useNotifications() {
       },
       () => {
         optimisticNotifications.value = previousOptimistic
-        firestoreNotifications.value = previousFirestore
+        livePageNotifications.value = previousLive
+        olderPagesNotifications.value = previousOlder
       },
       async () => {
         await deleteNotificationFn({ notificationId })
@@ -334,13 +392,17 @@ export function useNotifications() {
     if (targetIds.length === 0) return
 
     const previousOptimistic = cloneState(optimisticNotifications.value)
-    const previousFirestore = cloneState(firestoreNotifications.value)
+    const previousLive = cloneState(livePageNotifications.value)
+    const previousOlder = cloneState(olderPagesNotifications.value)
 
     await withOptimisticBatchUpdate(
       pendingNotificationIds,
       targetIds,
       () => {
-        firestoreNotifications.value = firestoreNotifications.value.filter(
+        livePageNotifications.value = livePageNotifications.value.filter(
+          (notification) => !targetIdSet.has(notification.id)
+        )
+        olderPagesNotifications.value = olderPagesNotifications.value.filter(
           (notification) => !targetIdSet.has(notification.id)
         )
         setOptimisticNotifications(
@@ -351,7 +413,8 @@ export function useNotifications() {
       },
       () => {
         optimisticNotifications.value = previousOptimistic
-        firestoreNotifications.value = previousFirestore
+        livePageNotifications.value = previousLive
+        olderPagesNotifications.value = previousOlder
       },
       async () => {
         await deleteAllNotificationsFn({ status })
@@ -366,29 +429,55 @@ export function useNotifications() {
     if (unsubscribe) unsubscribe()
 
     if (!user.value) {
-      firestoreNotifications.value = []
+      livePageNotifications.value = []
+      olderPagesNotifications.value = []
       optimisticNotifications.value = []
       pendingNotificationIds.value = createPendingSet()
+      olderPagesCursor.value = null
+      hasMore.value = true
       isLoading.value = false
+      isLoadingMore.value = false
       return
     }
 
+    // Reset older-pages state — a fresh subscription starts back at
+    // page 1 only. `loadMore()` will re-populate older pages on
+    // demand. This matters at user-switch time and on hot reloads.
+    olderPagesNotifications.value = []
+    olderPagesCursor.value = null
+    hasMore.value = true
     isLoading.value = true
+
     const q = query(
       collection(firestore, `users/${user.value.uid}/notifications`),
       orderBy("createdAt", "desc"),
-      limit(limitCount.value)
+      limit(NOTIFICATIONS_PAGE_SIZE)
     )
 
     unsubscribe = onSnapshot(
       q,
       (snapshot) => {
-        firestoreNotifications.value = snapshot.docs.map((snapshotDoc) =>
+        livePageNotifications.value = snapshot.docs.map((snapshotDoc) =>
           toNotification(
             snapshotDoc.id,
             snapshotDoc.data() as Record<string, unknown>
           )
         )
+        // If the live page is full, the next `loadMore()` should start
+        // after the last doc. If it's short, there can't be more —
+        // collapse the load-more affordance.
+        if (snapshot.size === NOTIFICATIONS_PAGE_SIZE) {
+          // Only set the cursor when older pages haven't been loaded
+          // yet — once `loadMore()` has advanced past page 1, its
+          // own cursor is further along, and live emissions
+          // shouldn't rewind it.
+          if (olderPagesNotifications.value.length === 0) {
+            olderPagesCursor.value = snapshot.docs[snapshot.size - 1] ?? null
+          }
+        } else {
+          olderPagesCursor.value = null
+          hasMore.value = false
+        }
         isLoading.value = false
       },
       (error) => {
@@ -409,7 +498,7 @@ export function useNotifications() {
     )
   }
 
-  watch([user, limitCount], () => setupListener(), { immediate: true })
+  watch(user, () => setupListener(), { immediate: true })
 
   watch(firestoreNotifications, (data) => {
     if (pendingNotificationIds.value.size === 0) {
@@ -430,8 +519,57 @@ export function useNotifications() {
     { immediate: true }
   )
 
-  const loadMore = () => {
-    limitCount.value += 20
+  /**
+   * Fetch the next page of older notifications via cursor-based
+   * pagination. One-shot `getDocs` (not a listener) — older pages
+   * are static history, only the live page needs to react to new
+   * arrivals.
+   *
+   * No-ops on the leading edge (loading state still in flight, no
+   * more pages, no user) so callers can wire it to a button without
+   * extra guards.
+   */
+  const loadMore = async () => {
+    if (!user.value) return
+    if (isLoadingMore.value) return
+    if (!hasMore.value) return
+    const cursor = olderPagesCursor.value
+    if (!cursor) return
+
+    isLoadingMore.value = true
+    try {
+      const q = query(
+        collection(firestore, `users/${user.value.uid}/notifications`),
+        orderBy("createdAt", "desc"),
+        startAfter(cursor),
+        limit(NOTIFICATIONS_PAGE_SIZE)
+      )
+      const snapshot = await getDocs(q)
+      const next = snapshot.docs.map((snapshotDoc) =>
+        toNotification(
+          snapshotDoc.id,
+          snapshotDoc.data() as Record<string, unknown>
+        )
+      )
+      olderPagesNotifications.value = [
+        ...olderPagesNotifications.value,
+        ...next,
+      ]
+      // Advance the cursor to the last doc of THIS page; if the page
+      // was short, there's nothing left.
+      if (snapshot.size < NOTIFICATIONS_PAGE_SIZE) {
+        hasMore.value = false
+        olderPagesCursor.value = null
+      } else {
+        olderPagesCursor.value = snapshot.docs[snapshot.size - 1] ?? null
+      }
+    } catch (error) {
+      // Don't latch hasMore=false on transient errors — let the user
+      // retry. Mirrors usePaginatedLogs' handling.
+      console.error("Error loading more notifications:", error)
+    } finally {
+      isLoadingMore.value = false
+    }
   }
 
   const markAsRead = (id: string) =>
@@ -590,6 +728,8 @@ export function useNotifications() {
   return {
     notifications,
     isLoading,
+    isLoadingMore,
+    hasMore,
     unreadCount,
     inboxUnreadCount,
     savedUnreadCount,

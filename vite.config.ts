@@ -266,24 +266,6 @@ export default defineConfig({
     alias: {
       "@": fileURLToPath(new URL("./src", import.meta.url)),
     },
-    // The @lezer packages are identity-sensitive (CodeMirror matches highlight
-    // tags / node types by reference). Importing `@lezer/highlight` directly
-    // (shikiCodeMirror.ts) must resolve the SAME instance the @codemirror
-    // packages use, or highlighting throws "tags is not iterable".
-    dedupe: ["@lezer/highlight", "@lezer/common", "@lezer/lr"],
-  },
-  // Pre-bundle the @lezer/@codemirror graph as one unit so the dev optimizer
-  // can't inline separate @lezer copies into different chunks (which breaks the
-  // reference-based tag matching above).
-  optimizeDeps: {
-    include: [
-      "@lezer/highlight",
-      "@lezer/common",
-      "@codemirror/state",
-      "@codemirror/view",
-      "@codemirror/language",
-      "@codemirror/lang-javascript",
-    ],
   },
   // prevent vite from obscuring rust errors
   clearScreen: false,

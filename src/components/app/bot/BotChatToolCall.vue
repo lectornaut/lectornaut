@@ -362,6 +362,147 @@ const summarizeOutput = computed<SummarizeOutput | null>(() => {
   return { summary, keyPoints, suggestedTags, model }
 })
 
+// compareNodes — input: { refs[], focus? }, output: { overview, agreements[],
+// disagreements[], perNode[], model, error? }
+//
+// Mirrors `summarizeNode`'s structured-output card shape, but for N
+// documents. The `perNode` list lets users see what each input
+// contributed without re-reading the bodies.
+interface CompareInput {
+  refs: { scope: "code" | "write"; nodeId: string }[]
+  focus?: string
+}
+interface ComparePerNode {
+  scope: "code" | "write"
+  nodeId: string
+  name: string
+  contribution: string
+}
+interface CompareOutput {
+  overview: string
+  agreements: string[]
+  disagreements: string[]
+  perNode: ComparePerNode[]
+  model: string
+  error?: string
+}
+
+const compareInput = computed<CompareInput | null>(() => {
+  if (props.tool.name !== "compareNodes") return null
+  const raw = props.tool.input
+  if (!raw || typeof raw !== "object") return null
+  const obj = raw as Record<string, unknown>
+  if (!Array.isArray(obj.refs)) return null
+  const refs: CompareInput["refs"] = []
+  for (const entry of obj.refs as unknown[]) {
+    if (!entry || typeof entry !== "object") continue
+    const e = entry as Record<string, unknown>
+    const scope = e.scope === "code" || e.scope === "write" ? e.scope : null
+    const nodeId = typeof e.nodeId === "string" ? e.nodeId : ""
+    if (!scope || !nodeId) continue
+    refs.push({ scope, nodeId })
+  }
+  if (refs.length === 0) return null
+  const focus =
+    typeof obj.focus === "string" && obj.focus.trim() ? obj.focus : undefined
+  return { refs, focus }
+})
+
+const compareOutput = computed<CompareOutput | null>(() => {
+  if (props.tool.name !== "compareNodes") return null
+  const raw = props.tool.output
+  if (!raw || typeof raw !== "object") return null
+  const obj = raw as Record<string, unknown>
+  const error =
+    typeof obj.error === "string" && obj.error ? obj.error : undefined
+  const overview = typeof obj.overview === "string" ? obj.overview : ""
+  const agreements = Array.isArray(obj.agreements)
+    ? (obj.agreements as unknown[]).filter(
+        (p): p is string => typeof p === "string"
+      )
+    : []
+  const disagreements = Array.isArray(obj.disagreements)
+    ? (obj.disagreements as unknown[]).filter(
+        (p): p is string => typeof p === "string"
+      )
+    : []
+  const perNode: ComparePerNode[] = []
+  if (Array.isArray(obj.perNode)) {
+    for (const entry of obj.perNode as unknown[]) {
+      if (!entry || typeof entry !== "object") continue
+      const e = entry as Record<string, unknown>
+      const scope = e.scope === "code" || e.scope === "write" ? e.scope : null
+      const nodeId = typeof e.nodeId === "string" ? e.nodeId : ""
+      const name = typeof e.name === "string" ? e.name : ""
+      const contribution =
+        typeof e.contribution === "string" ? e.contribution : ""
+      if (!scope || !nodeId || !name) continue
+      perNode.push({ scope, nodeId, name, contribution })
+    }
+  }
+  const model = typeof obj.model === "string" ? obj.model : ""
+  if (error) {
+    return {
+      overview: "",
+      agreements: [],
+      disagreements: [],
+      perNode: [],
+      model,
+      error,
+    }
+  }
+  // Recognize the success shape: overview must be present OR per-node
+  // entries must exist. A model that returned `error: undefined` with
+  // an empty body has nothing useful — fall through to the JSON dump.
+  if (!overview && perNode.length === 0) return null
+  return { overview, agreements, disagreements, perNode, model }
+})
+
+// findRelatedNodes — input: { scope, nodeId, searchScope?, limit? },
+// output: { results[], truncated } — same result shape as
+// searchWorkspaceNodes (so the card list reuses the same row layout).
+interface RelatedInput {
+  scope: "code" | "write"
+  nodeId: string
+}
+interface RelatedOutput {
+  results: SearchResult[]
+  truncated: boolean
+}
+
+const relatedInput = computed<RelatedInput | null>(() => {
+  if (props.tool.name !== "findRelatedNodes") return null
+  const raw = props.tool.input
+  if (!raw || typeof raw !== "object") return null
+  const obj = raw as Record<string, unknown>
+  const scope = obj.scope === "code" || obj.scope === "write" ? obj.scope : null
+  const nodeId = typeof obj.nodeId === "string" ? obj.nodeId : ""
+  if (!scope || !nodeId) return null
+  return { scope, nodeId }
+})
+
+const relatedOutput = computed<RelatedOutput | null>(() => {
+  if (props.tool.name !== "findRelatedNodes") return null
+  const raw = props.tool.output
+  if (!raw || typeof raw !== "object") return null
+  const obj = raw as Record<string, unknown>
+  if (!Array.isArray(obj.results)) return null
+  const results: SearchResult[] = []
+  for (const entry of obj.results as unknown[]) {
+    if (!entry || typeof entry !== "object") continue
+    const e = entry as Record<string, unknown>
+    const nodeId = typeof e.nodeId === "string" ? e.nodeId : ""
+    const scope = e.scope === "code" || e.scope === "write" ? e.scope : null
+    const name = typeof e.name === "string" ? e.name : ""
+    const type = e.type === "folder" || e.type === "file" ? e.type : "file"
+    const snippet = typeof e.snippet === "string" ? e.snippet : ""
+    const distance = typeof e.distance === "number" ? e.distance : undefined
+    if (!nodeId || !scope || !name) continue
+    results.push({ nodeId, scope, name, type, snippet, distance })
+  }
+  return { results, truncated: obj.truncated === true }
+})
+
 // browseInternet — input: { query }, output: { ok, answer, sources[], retrievedAt }
 //
 // Live web search. We render the query and the synthesized `answer` as
@@ -532,6 +673,14 @@ const FALLBACK_LABEL_KEYS: Record<string, { input: string; output: string }> = {
     input: "ai.toolCall.labels.search",
     output: "ai.toolCall.labels.answer",
   },
+  compareNodes: {
+    input: "ai.toolCall.labels.request",
+    output: "ai.toolCall.labels.comparison",
+  },
+  findRelatedNodes: {
+    input: "ai.toolCall.labels.request",
+    output: "ai.toolCall.labels.related",
+  },
 }
 
 const inputLabel = computed(() =>
@@ -560,6 +709,10 @@ const hasCustomDoneRenderer = computed(() => {
       return searchOutput.value !== null
     case "summarizeNode":
       return summarizeOutput.value !== null
+    case "compareNodes":
+      return compareOutput.value !== null
+    case "findRelatedNodes":
+      return relatedOutput.value !== null
     case "browseInternet":
       return browseInternetOutput.value !== null
     default:
@@ -893,6 +1046,172 @@ const statusBadge = computed(() => STATUS_BADGES[status.value])
             })
           }}
         </CardFooter>
+      </Card>
+
+      <!-- ============================================================== -->
+      <!-- compareNodes: error variant OR structured comparison card. -->
+      <!-- ============================================================== -->
+      <Card
+        v-else-if="
+          tool.name === 'compareNodes' && compareOutput && compareOutput.error
+        "
+        size="sm"
+      >
+        <CardHeader>
+          <CardTitle>{{ t("ai.toolCall.compare.errorTitle") }}</CardTitle>
+        </CardHeader>
+        <CardContent class="text-destructive flex items-center gap-2">
+          <IconTriangleAlert />
+          <span>{{ compareOutput.error }}</span>
+        </CardContent>
+      </Card>
+
+      <Card v-else-if="tool.name === 'compareNodes' && compareOutput" size="sm">
+        <CardHeader v-if="compareInput?.focus">
+          <CardTitle>{{ compareInput.focus }}</CardTitle>
+        </CardHeader>
+        <CardContent class="flex flex-col gap-3">
+          <p v-if="compareOutput.overview" class="text-foreground">
+            {{ compareOutput.overview }}
+          </p>
+          <div class="flex flex-col gap-2">
+            <span class="text-muted-foreground text-xs font-medium uppercase">
+              {{ t("ai.toolCall.compare.agreements") }}
+            </span>
+            <ul
+              v-if="compareOutput.agreements.length > 0"
+              class="text-foreground marker:text-muted list-inside list-disc space-y-1"
+            >
+              <li
+                v-for="(point, idx) in compareOutput.agreements"
+                :key="`a${idx}`"
+              >
+                {{ point }}
+              </li>
+            </ul>
+            <span v-else class="text-muted-foreground text-xs">
+              {{ t("ai.toolCall.compare.noPoints") }}
+            </span>
+          </div>
+          <div class="flex flex-col gap-2">
+            <span class="text-muted-foreground text-xs font-medium uppercase">
+              {{ t("ai.toolCall.compare.disagreements") }}
+            </span>
+            <ul
+              v-if="compareOutput.disagreements.length > 0"
+              class="text-foreground marker:text-muted list-inside list-disc space-y-1"
+            >
+              <li
+                v-for="(point, idx) in compareOutput.disagreements"
+                :key="`d${idx}`"
+              >
+                {{ point }}
+              </li>
+            </ul>
+            <span v-else class="text-muted-foreground text-xs">
+              {{ t("ai.toolCall.compare.noPoints") }}
+            </span>
+          </div>
+          <div
+            v-if="compareOutput.perNode.length > 0"
+            class="flex flex-col gap-2"
+          >
+            <span class="text-muted-foreground text-xs font-medium uppercase">
+              {{ t("ai.toolCall.compare.perNode") }}
+            </span>
+            <ItemGroup>
+              <Item
+                v-for="entry in compareOutput.perNode"
+                :key="`${entry.scope}:${entry.nodeId}`"
+                variant="outline"
+                size="xs"
+              >
+                <ItemMedia variant="icon">
+                  <IconFileText class="text-muted-foreground" />
+                </ItemMedia>
+                <ItemContent>
+                  <ItemTitle class="break-all">{{ entry.name }}</ItemTitle>
+                  <ItemDescription v-if="entry.contribution">
+                    {{ entry.contribution }}
+                  </ItemDescription>
+                </ItemContent>
+                <ItemActions>
+                  <Badge variant="secondary">
+                    {{ searchScopeLabel(entry.scope) }}
+                  </Badge>
+                </ItemActions>
+              </Item>
+            </ItemGroup>
+          </div>
+        </CardContent>
+        <CardFooter
+          v-if="compareOutput.model"
+          class="text-muted-foreground text-xs"
+        >
+          {{
+            t("ai.toolCall.compare.modelFooter", {
+              model: compareOutput.model,
+            })
+          }}
+        </CardFooter>
+      </Card>
+
+      <!-- ============================================================== -->
+      <!-- findRelatedNodes: header with result count, then per-node rows. -->
+      <!-- Same row layout as searchWorkspaceNodes for visual consistency. -->
+      <!-- ============================================================== -->
+      <Card
+        v-else-if="tool.name === 'findRelatedNodes' && relatedOutput"
+        size="sm"
+      >
+        <CardHeader v-if="relatedInput">
+          <CardDescription>
+            {{
+              t("ai.toolCall.related.resultCount", {
+                count: relatedOutput.results.length,
+              })
+            }}
+            <template v-if="relatedOutput.truncated">
+              {{ t("ai.toolCall.related.truncated") }}
+            </template>
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Empty v-if="relatedOutput.results.length === 0" class="border p-6">
+            <EmptyHeader>
+              <EmptyMedia variant="icon">
+                <IconSearch />
+              </EmptyMedia>
+              <EmptyTitle>{{ t("ai.toolCall.related.empty") }}</EmptyTitle>
+            </EmptyHeader>
+          </Empty>
+          <ItemGroup v-else>
+            <Item
+              v-for="result in relatedOutput.results"
+              :key="`${result.scope}:${result.nodeId}`"
+              variant="outline"
+              size="xs"
+            >
+              <ItemMedia variant="icon">
+                <Component
+                  :is="result.type === 'folder' ? IconFolder : IconFileText"
+                  class="text-muted-foreground"
+                />
+              </ItemMedia>
+              <ItemContent>
+                <ItemTitle class="break-all">{{ result.name }}</ItemTitle>
+                <ItemDescription v-if="result.snippet">
+                  {{ result.snippet }}
+                </ItemDescription>
+              </ItemContent>
+              <ItemActions>
+                <Badge variant="secondary">
+                  {{ searchScopeLabel(result.scope) }}
+                </Badge>
+              </ItemActions>
+            </Item>
+          </ItemGroup>
+        </CardContent>
       </Card>
 
       <!-- ============================================================== -->

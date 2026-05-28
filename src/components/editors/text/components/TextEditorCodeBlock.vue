@@ -63,10 +63,19 @@ const surfaceStyle = computed(() => ({
 </script>
 
 <template>
-  <NodeViewWrapper class="code-block relative overflow-clip rounded-md border">
+  <NodeViewWrapper
+    class="code-block group relative overflow-clip rounded-md border"
+  >
     <div
       contenteditable="false"
-      class="code-block-language absolute top-2 right-2 z-10"
+      :class="
+        cn(
+          'code-block-language absolute top-2 right-2 z-10 transition',
+          isPickerOpen
+            ? 'opacity-100'
+            : 'pointer-events-none opacity-0 group-hover:pointer-events-auto group-hover:opacity-100'
+        )
+      "
     >
       <Popover v-model:open="isPickerOpen">
         <PopoverTrigger as-child>

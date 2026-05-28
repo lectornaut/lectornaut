@@ -70,6 +70,10 @@ const DEFAULT_TOOL_TOGGLES: ITeamAgent["tools"] = {
   askQuestion: true,
   searchWorkspaceNodes: true,
   summarizeNode: true,
+  // Real per-agent toggles for the multi-doc + nearest-neighbor tools.
+  // Both read-only; default true so existing agents pick them up.
+  compareNodes: true,
+  findRelatedNodes: true,
   // Real per-agent toggles (unlike the three "type alignment only" gates
   // below): dispatch reads `agent.tools.manageContent` for the node-WRITE
   // tools and `agent.tools.readContent` for the node-READ tool. Default
@@ -155,6 +159,14 @@ function snapshotToAgent(
         typeof toolsRaw.summarizeNode === "boolean"
           ? (toolsRaw.summarizeNode as boolean)
           : DEFAULT_TOOL_TOGGLES.summarizeNode,
+      compareNodes:
+        typeof toolsRaw.compareNodes === "boolean"
+          ? (toolsRaw.compareNodes as boolean)
+          : DEFAULT_TOOL_TOGGLES.compareNodes,
+      findRelatedNodes:
+        typeof toolsRaw.findRelatedNodes === "boolean"
+          ? (toolsRaw.findRelatedNodes as boolean)
+          : DEFAULT_TOOL_TOGGLES.findRelatedNodes,
       // Real per-agent gates for the node tools — consumed at dispatch
       // (intersected with the team toggle + membership). `manageContent`
       // gates the write tools; `readContent` gates `readNode`.

@@ -128,7 +128,25 @@ function cacheCatalogPrice(
   })
 }
 
+// Singleflight handle — when the cache is stale and N concurrent
+// requests miss simultaneously, they share one underlying Stripe
+// `prices.list` call instead of each spawning their own. Cleared in
+// `.finally()` so a failed refresh doesn't permanently latch other
+// callers onto the rejection.
+let refreshCatalogInflight: Promise<Map<string, BillingCatalogPrice>> | null =
+  null
+
 async function refreshCatalogCache(
+  stripe: Stripe
+): Promise<Map<string, BillingCatalogPrice>> {
+  if (refreshCatalogInflight) return refreshCatalogInflight
+  refreshCatalogInflight = refreshCatalogCacheUncached(stripe).finally(() => {
+    refreshCatalogInflight = null
+  })
+  return refreshCatalogInflight
+}
+
+async function refreshCatalogCacheUncached(
   stripe: Stripe
 ): Promise<Map<string, BillingCatalogPrice>> {
   const listed = await stripe.prices.list({

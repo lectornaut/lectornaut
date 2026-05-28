@@ -152,23 +152,35 @@ export const activeCodeThemeColors = ref<{ bg: string; fg: string }>({
   fg: "",
 })
 
+/** Load `name` and populate `activeCodeThemeColors` from it. Shared between the
+ *  one-shot startup preload (main.ts, before any editor mounts) and the
+ *  watcher below (re-runs on every theme/light-dark switch). */
+const syncCodeThemeColors = async (name: string): Promise<void> => {
+  await ensureTheme(name)
+  const instance = getHighlighter()
+  if (!instance) return
+  try {
+    const theme = instance.getTheme(name)
+    activeCodeThemeColors.value = { bg: theme.bg ?? "", fg: theme.fg ?? "" }
+  } catch {
+    /* theme unavailable — keep previous colors */
+  }
+}
+
+/** Block app mount until the active editor theme is loaded and
+ *  `activeCodeThemeColors` is populated, so the first frame the Tiptap /
+ *  CodeMirror / markstream surfaces render is already on the Shiki theme
+ *  surface. Without this, all three flash a fallback surface (prose muted /
+ *  app background / library muted) for the tick the async highlighter takes
+ *  to load the theme. Idempotent — safe to await more than once. */
+export const preloadActiveCodeTheme = (): Promise<void> =>
+  syncCodeThemeColors(activeCodeThemeName.value)
+
 let colorSyncStarted = false
 export const startCodeThemeColorSync = (): void => {
   if (colorSyncStarted) return
   colorSyncStarted = true
-  watch(
-    activeCodeThemeName,
-    async (name) => {
-      await ensureTheme(name)
-      const instance = getHighlighter()
-      if (!instance) return
-      try {
-        const theme = instance.getTheme(name)
-        activeCodeThemeColors.value = { bg: theme.bg ?? "", fg: theme.fg ?? "" }
-      } catch {
-        /* theme unavailable — keep previous colors */
-      }
-    },
-    { immediate: true }
-  )
+  watch(activeCodeThemeName, (name) => void syncCodeThemeColors(name), {
+    immediate: true,
+  })
 }

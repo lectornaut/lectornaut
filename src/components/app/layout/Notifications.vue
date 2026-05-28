@@ -27,6 +27,8 @@ type OverlayScrollbarsWrapperRef = ComponentPublicInstance<{
 const {
   notifications,
   isLoading,
+  isLoadingMore,
+  hasMore,
   unreadCount,
   inboxUnreadCount,
   savedUnreadCount,
@@ -76,7 +78,15 @@ useInfiniteScroll(
   },
   {
     distance: 10,
-    canLoadMore: () => !isLoading.value && notifications.value.length >= 20,
+    // Precise gate: only invoke loadMore when the server confirmed
+    // there's another page AND we're not already fetching one. Falls
+    // back to the prior length-based heuristic until the listener's
+    // first emission populates `hasMore`.
+    canLoadMore: () =>
+      hasMore.value &&
+      !isLoading.value &&
+      !isLoadingMore.value &&
+      notifications.value.length >= 20,
   }
 )
 </script>

@@ -1059,6 +1059,34 @@ export interface UpdateUserProfileVisibilityResponse {
   isPublic: boolean
 }
 
+/**
+ * Self-edit of `displayName` and/or `photoURL` on the caller's own user
+ * profile. Sibling of {@link claimUsername} (handles `username`) and
+ * {@link updateUserProfileVisibility} (handles `isPublic`) — those
+ * callables predate this one and remain canonical for their fields.
+ *
+ * Omit a key to leave that field untouched; pass `null` (or the empty
+ * string, which the server normalizes to `null`) for `photoURL` to
+ * clear it. `displayName` cannot be cleared — the settings UI always
+ * provides one.
+ *
+ * The server updates Firestore AND Firebase Auth in one round-trip,
+ * eliminating the divergence window the prior client-side parallel-
+ * writes pattern had. The audit entry lands in Cloud Logging under
+ * `action: "userProfile.update.self"` rather than the team-scoped
+ * `logs` collection.
+ */
+export interface UpdateOwnUserProfileRequest {
+  displayName?: string
+  photoURL?: string | null
+}
+
+export interface UpdateOwnUserProfileResponse {
+  updated: boolean
+  /** Subset of {displayName, photoURL} whose value actually changed. */
+  fields: string[]
+}
+
 export type SyncCurrentUserAccountProfileRequest = Record<string, never>
 
 export interface SyncCurrentUserAccountProfileResponse {
@@ -1398,6 +1426,11 @@ export const updateUserProfileVisibility = createTypedCallable<
   UpdateUserProfileVisibilityRequest,
   UpdateUserProfileVisibilityResponse
 >("updateUserProfileVisibility")
+
+export const updateOwnUserProfile = createTypedCallable<
+  UpdateOwnUserProfileRequest,
+  UpdateOwnUserProfileResponse
+>("updateOwnUserProfile")
 
 export const syncCurrentUserAccountProfileCallable = createTypedCallable<
   SyncCurrentUserAccountProfileRequest,
@@ -1810,6 +1843,46 @@ export interface SummarizeNodeRequest {
   nodeId: string
 }
 
+// =============================================================================
+// Find Related Nodes Request/Response Types — backs the inspector sidebar's
+// "Related" tab and shares its shape with the chat tool of the same name.
+// =============================================================================
+
+/**
+ * Where the nearest-neighbor query should look. Mirrors the server enum
+ * in `functions/src/botLink.ts`. `"both"` is the default — most "Related"
+ * surfaces want cross-scope matches.
+ */
+export type FindRelatedNodesSearchScope = "code" | "write" | "both"
+
+export interface FindRelatedNodesRequest {
+  teamId: string
+  workspaceId: string
+  /** Scope of the SOURCE node — concrete, never "both". */
+  scope: "code" | "write"
+  nodeId: string
+  searchScope?: FindRelatedNodesSearchScope
+  /** Default 5; max 10. */
+  limit?: number
+}
+
+export interface FindRelatedNodesResult {
+  scope: "code" | "write"
+  nodeId: string
+  name: string
+  type: "folder" | "file"
+  snippet: string
+  /** Cosine distance — lower is closer. Omitted when the retriever
+   *  didn't populate the field (rare). */
+  distance?: number
+}
+
+export interface FindRelatedNodesResponse {
+  results: FindRelatedNodesResult[]
+  /** True when more matches existed than `limit` allowed. */
+  truncated: boolean
+}
+
 /**
  * Structured summary produced by the server. Matches the Zod schema in
  * `functions/src/botSummarize.ts` — keep both in sync. Field shapes
@@ -1833,6 +1906,17 @@ export const summarizeNode = createTypedCallable<
   SummarizeNodeRequest,
   SummarizeNodeResponse
 >("summarizeNode")
+
+/**
+ * Find workspace nodes related to a given source node — backs the
+ * inspector sidebar's "Related" tab. Reuses the source's stored
+ * embedding as the query vector, so no embed call is made at lookup
+ * time. Membership-gated server-side; non-members get permission-denied.
+ */
+export const findRelatedNodes = createTypedCallable<
+  FindRelatedNodesRequest,
+  FindRelatedNodesResponse
+>("findRelatedNodes")
 
 // =============================================================================
 // AI Config Generation Request/Response Types — "Prompt" tab in the custom
@@ -1995,6 +2079,7 @@ export function useFunctions() {
     claimUsername,
     releaseUsername,
     updateUserProfileVisibility,
+    updateOwnUserProfile,
     syncCurrentUserAccountProfileCallable,
     deleteCurrentUserAccountData,
 
@@ -2042,6 +2127,7 @@ export function useFunctions() {
 
     // Structured-output sub-flows
     summarizeNode,
+    findRelatedNodes,
 
     // AI config generation ("Prompt" tab)
     generateTeamAgentConfig,

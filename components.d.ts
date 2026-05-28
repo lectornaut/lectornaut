@@ -270,6 +270,7 @@ declare module 'vue' {
     NodeBot: typeof import('./src/components/app/sidebars/NodeBot.vue')['default']
     NodeDetails: typeof import('./src/components/app/sidebars/NodeDetails.vue')['default']
     NodeInspectorSidebar: typeof import('./src/components/app/sidebars/NodeInspectorSidebar.vue')['default']
+    NodeRelated: typeof import('./src/components/app/sidebars/NodeRelated.vue')['default']
     NotificationItem: typeof import('./src/components/app/layout/NotificationItem.vue')['default']
     Notifications: typeof import('./src/components/app/layout/Notifications.vue')['default']
     OnboardingAccountFlow: typeof import('./src/components/app/onboarding/OnboardingAccountFlow.vue')['default']

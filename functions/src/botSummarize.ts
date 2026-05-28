@@ -32,6 +32,7 @@
 
 import { HttpsError, onCall } from "firebase-functions/v2/https"
 import { z } from "genkit/beta"
+import { createHash } from "node:crypto"
 import { getMembershipRole, requireVerifiedAuth } from "./bot.js"
 import { loadTeamAgentConfig, type BotAgentConfig } from "./botAgentConfig.js"
 import { db } from "./firebase.js"
@@ -156,6 +157,86 @@ interface SummarizeNodeResult extends SummarizeNodeOutput {
 }
 
 // ===========================================================================
+// In-process summary cache
+// ===========================================================================
+//
+// Summaries are deterministic for a given (content, model) pair — the
+// model + temperature are clamped, the prompt is identical, and the
+// schema rejects any model drift. So once we've spent the tokens to
+// produce a summary, every subsequent request for the same content
+// can return the cached result instead of re-paying the LLM call.
+//
+// Scope is intentionally per warm function instance: Cloud Functions
+// doesn't share memory across instances, but a single user clicking
+// "Generate" multiple times routes to the same warm instance (Cloud
+// Run sticky scheduling), so the savings land where they matter.
+// Cache misses on cold starts are fine — the cost ceiling is one LLM
+// call per (content, model) per warm instance lifetime.
+//
+// Invalidation is implicit: the cache key includes a hash of the
+// node's text + name, so any edit produces a fresh key. Archived /
+// deleted nodes never reach the cache lookup because `runSummarize`
+// throws before getting there.
+
+const SUMMARIZE_CACHE_TTL_MS = 60 * 60 * 1000
+const SUMMARIZE_CACHE_MAX_ENTRIES = 200
+
+interface SummarizeCacheEntry {
+  result: SummarizeNodeResult
+  expiresAt: number
+}
+
+const summarizeCache = new Map<string, SummarizeCacheEntry>()
+
+function hashSummarizeContent(name: string, content: string): string {
+  // Null byte separates name from body so name="ab", content="c" can't
+  // collide with name="a", content="bc". SHA-256 truncated to 16 bytes
+  // (32 hex chars) — still ~10^38 keyspace, comfortably collision-free
+  // for a 200-entry LRU, and cheaper to compare/store than full digest.
+  return createHash("sha256")
+    .update(name)
+    .update("\x00")
+    .update(content)
+    .digest("hex")
+    .slice(0, 32)
+}
+
+function buildSummarizeCacheKey(args: {
+  teamId: string
+  scope: "code" | "write"
+  nodeId: string
+  contentHash: string
+  model: string
+}): string {
+  return `${args.teamId}|${args.scope}|${args.nodeId}|${args.model}|${args.contentHash}`
+}
+
+function getCachedSummary(key: string): SummarizeNodeResult | null {
+  const entry = summarizeCache.get(key)
+  if (!entry) return null
+  if (entry.expiresAt < Date.now()) {
+    summarizeCache.delete(key)
+    return null
+  }
+  // LRU touch — re-insert moves the key to the end of Map's insertion
+  // order, so `keys().next()` evicts the genuinely-oldest entry next.
+  summarizeCache.delete(key)
+  summarizeCache.set(key, entry)
+  return entry.result
+}
+
+function setCachedSummary(key: string, result: SummarizeNodeResult): void {
+  if (summarizeCache.size >= SUMMARIZE_CACHE_MAX_ENTRIES) {
+    const oldestKey = summarizeCache.keys().next().value
+    if (oldestKey !== undefined) summarizeCache.delete(oldestKey)
+  }
+  summarizeCache.set(key, {
+    result,
+    expiresAt: Date.now() + SUMMARIZE_CACHE_TTL_MS,
+  })
+}
+
+// ===========================================================================
 // Shared implementation
 // ===========================================================================
 
@@ -258,6 +339,22 @@ async function runSummarize(
 
   const agentConfig =
     preloadedConfig ?? (await loadTeamAgentConfig(input.teamId))
+
+  // Cache lookup happens AFTER the node read (so we can hash content)
+  // and BEFORE the LLM call (where the savings come from). Hashing
+  // costs ~microseconds for a 30KB node; the LLM call costs seconds +
+  // tokens — the ordering is the whole point.
+  const contentHash = hashSummarizeContent(node.name, node.content)
+  const cacheKey = buildSummarizeCacheKey({
+    teamId: input.teamId,
+    scope: input.scope,
+    nodeId: input.nodeId,
+    contentHash,
+    model: agentConfig.model,
+  })
+  const cached = getCachedSummary(cacheKey)
+  if (cached) return cached
+
   const model = resolveModel(agentConfig.model)
   const promptInput = buildSummarizePromptInput(node)
 
@@ -291,7 +388,9 @@ async function runSummarize(
     )
   }
 
-  return { ...output, model: agentConfig.model }
+  const result: SummarizeNodeResult = { ...output, model: agentConfig.model }
+  setCachedSummary(cacheKey, result)
+  return result
 }
 
 // ===========================================================================

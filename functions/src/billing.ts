@@ -2306,6 +2306,20 @@ export const getBillingCatalog = onCall(
 /**
  * HTTP fallback for billing catalog.
  * Returns callable-compatible JSON so `httpsCallable` can consume it.
+ *
+ * Cache-Control headers are set on success: the catalog is identical
+ * for every caller and changes only when admins edit Stripe pricing,
+ * so a short browser cache + longer CDN cache is safe. The headers
+ * are mostly no-ops today (callable POSTs aren't browser-cached), but
+ * they pay off the moment this endpoint is routed via Firebase
+ * Hosting rewrites — the CDN edge will then absorb repeat hits.
+ *
+ * `stale-while-revalidate` covers the case where the cache has
+ * expired but a fresh fetch is in flight — serve stale instead of
+ * making the user wait on a Stripe round-trip.
+ *
+ * Error responses are explicitly marked `no-store` so a transient
+ * 412 doesn't get cached and poison subsequent loads.
  */
 export const getBillingCatalogHttp = onRequest(
   {
@@ -2319,12 +2333,18 @@ export const getBillingCatalogHttp = onRequest(
 
     try {
       const prices = await resolveBillingCatalogFromStripe(stripe)
+      response.set(
+        "Cache-Control",
+        "public, max-age=60, s-maxage=300, stale-while-revalidate=3600"
+      )
+      response.set("Vary", "Origin")
       response.status(200).json({ data: { prices } })
     } catch (error) {
       const message =
         error instanceof Error
           ? error.message
           : "Unable to resolve Stripe billing catalog."
+      response.set("Cache-Control", "no-store")
       response.status(412).json({
         error: {
           status: "FAILED_PRECONDITION",

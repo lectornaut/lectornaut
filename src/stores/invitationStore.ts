@@ -324,17 +324,14 @@ export const useInvitationStore = defineStore("invitations", () => {
       throw new Error("Only team owners can invite owners")
     }
 
-    // Check for existing pending invitation
-    const q = query(
-      collection(firestore, "invitations"),
-      where("teamId", "==", teamId),
-      where("email", "==", normalizedEmail),
-      where("status", "==", "pending")
-    )
-    const snapshot = await getDocs(q)
-    if (!snapshot.empty) {
-      throw new Error("A pending invitation already exists for this user.")
-    }
+    // The server's `sendInvitation` callable already enforces the
+    // "no duplicate pending invitation" rule (audit.ts:3214) with an
+    // `.select().limit(1)` aggregate read. A client-side pre-check
+    // would add a redundant round-trip *and* open a race window
+    // where two simultaneous sends both pass locally and only the
+    // server stops the duplicate — so trust the server here. The
+    // thrown HttpsError surfaces an "already-exists" code that
+    // `runInvitationMutation`'s wrapper toasts the same way.
 
     const opId = generateOperationId()
     const code = generateInvitationCode()

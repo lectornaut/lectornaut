@@ -355,6 +355,26 @@ export const botAgentToolTogglesSchema = z.object({
    */
   summarizeNode: z.boolean(),
   /**
+   * Multi-document comparison (`compareNodes` in
+   * `functions/src/botCompare.ts`). Loads 2–5 workspace nodes and
+   * produces a structured contrast — overview, points of agreement,
+   * points of disagreement, per-node unique contributions. Read-only,
+   * available in every mode. Uses the team's chat model (no
+   * provider-specific gate). Default true.
+   */
+  compareNodes: z.boolean(),
+  /**
+   * Nearest-neighbor lookup (`findRelatedNodes` in
+   * `functions/src/botLink.ts`). Reuses a source node's pre-computed
+   * embedding as the query vector — no per-call embed cost, works
+   * even when Google is disabled as a chat provider (embeddings are
+   * server infrastructure, computed asynchronously by the embed-on-
+   * write triggers). The sidebar's matching callable lives alongside
+   * the chat tool but ISN'T gated by this toggle — it's a UI surface,
+   * not a model-callable tool. Default true.
+   */
+  findRelatedNodes: z.boolean(),
+  /**
    * Gate for the agent node-WRITE tools (create / edit / rename / move /
    * archive workspace files & folders — `NODE_WRITE_TOOLS` in
    * `functions/src/botNodeTools.ts`). Unlike the keys above this is NOT a

@@ -1,4 +1,5 @@
 import App from "@/App.vue"
+import { preloadActiveCodeTheme } from "@/components/editors/text/shiki"
 import { isTauri } from "@/composables/usePlatform"
 import { createAppCheckModule } from "@/modules/appCheck"
 import { initDeepLink } from "@/modules/deepLink"
@@ -69,6 +70,15 @@ void preloadExtendedLanguageIcons()
 // initial navigation guard sees a settled `auth.currentUser`.
 await authReady
 await router.isReady()
+
+// Block mount until the active Shiki editor theme is loaded so the Tiptap,
+// CodeMirror, and markstream-vue code surfaces all render on the correct
+// theme background from the first frame instead of flashing a fallback
+// (prose muted / app background / library muted) while the async highlighter
+// loads. Runs after authReady/router so we don't widen the cold-start budget
+// (the Shiki theme load is dwarfed by those); even if it threw, we swallow it
+// — a missing theme falls back to the previous behaviour (empty colors ref).
+await preloadActiveCodeTheme().catch(() => {})
 
 app.mount("#app")
 

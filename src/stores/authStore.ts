@@ -10,6 +10,7 @@
  * Uses VueFire composables for reactive Firestore bindings
  */
 
+import { updateOwnUserProfile as updateOwnUserProfileFn } from "@/composables/useFunctions"
 import { syncCurrentUserAccountProfile } from "@/queries/userSettings"
 import {
   membershipPreferencesHydrationSchema,
@@ -44,14 +45,13 @@ import {
 } from "@/utils/firebase/firebase-optimistic"
 import {
   buildUpdatedAtBaseVersion,
-  mutateUpdateDocument,
   mutateWithCoordinator,
 } from "@/utils/firebase/firebase-sync-engine"
 import type { User } from "firebase/auth"
 import { Timestamp } from "firebase/firestore"
 import { defineStore } from "pinia"
 import { toast } from "vue-sonner"
-import { updateCurrentUserProfile, useCurrentUser, useDocument } from "vuefire"
+import { useCurrentUser, useDocument } from "vuefire"
 
 const defaultUserPreferences = (): IUserPreferences => ({
   currentTeamId: null,
@@ -379,11 +379,6 @@ export const useAuthStore = defineStore("auth", () => {
 
   let currentTeamMutationChain: Promise<void> = Promise.resolve()
 
-  const getUserUpdatedAtBaseVersion = (fallbackUpdatedAt: unknown) =>
-    buildUpdatedAtBaseVersion(
-      firestoreUserProfile.value?.updatedAt ?? fallbackUpdatedAt
-    )
-
   const getUserPreferencesUpdatedAtBaseVersion = (fallbackUpdatedAt: unknown) =>
     buildUpdatedAtBaseVersion(
       firestoreUserPreferences.value?.updatedAt ?? fallbackUpdatedAt
@@ -456,16 +451,33 @@ export const useAuthStore = defineStore("auth", () => {
     if (!currentUser.value || !userProfile.value) return
 
     const userId = currentUser.value.uid
-    const { photoURL, ...userUpdates } = updates
-    const userRef = getUserRef(userId)
+    const { displayName, photoURL } = updates
+
+    // Empty string is the legacy "clear" signal — normalize to null
+    // for both the optimistic local copy AND the wire payload so the
+    // two stay aligned. The server's validator also accepts empty
+    // string but it's cleaner to send the canonical form.
     const normalizedPhotoURL =
       photoURL === "" || photoURL === null ? null : photoURL
-    const previousUserProfile = cloneState(userProfile.value)
 
-    const firestoreUpdates = {
-      ...userUpdates,
-      ...(photoURL !== undefined ? { photoURL: normalizedPhotoURL } : {}),
-    }
+    // Build the wire payload. Only include keys the caller actually
+    // touched — the server treats missing keys as "leave untouched"
+    // and only-changed keys land in the audit log diff. Drops any
+    // ad-hoc fields callers may have passed historically (username /
+    // isPublic / etc.) — those have their own dedicated callables
+    // and shouldn't ride along here.
+    const payload: { displayName?: string; photoURL?: string | null } = {}
+    // IUserProfile.displayName is `string | null`, but the callable
+    // accepts only `string` (the server's validator rejects null —
+    // the settings UI always provides a name). Drop nulls on the
+    // client so a stale call site can't trip a server-side
+    // invalid-argument error.
+    if (typeof displayName === "string") payload.displayName = displayName
+    if (photoURL !== undefined) payload.photoURL = normalizedPhotoURL
+
+    if (Object.keys(payload).length === 0) return
+
+    const previousUserProfile = cloneState(userProfile.value)
 
     await withOptimisticUpdate(
       pendingUserIds,
@@ -473,7 +485,7 @@ export const useAuthStore = defineStore("auth", () => {
       () => {
         optimisticUserProfile.value = {
           ...userProfile.value!,
-          ...userUpdates,
+          ...(displayName !== undefined ? { displayName } : {}),
           ...(photoURL !== undefined ? { photoURL: normalizedPhotoURL } : {}),
         }
       },
@@ -481,37 +493,12 @@ export const useAuthStore = defineStore("auth", () => {
         optimisticUserProfile.value = previousUserProfile
       },
       async () => {
-        const promises: Promise<unknown>[] = []
-
-        if (photoURL !== undefined || userUpdates.displayName !== undefined) {
-          const authPhotoURL =
-            photoURL === "" || photoURL === null
-              ? ""
-              : (photoURL ?? currentUser.value!.photoURL ?? undefined)
-
-          promises.push(
-            updateCurrentUserProfile({
-              displayName:
-                userUpdates.displayName ||
-                currentUser.value!.displayName ||
-                undefined,
-              photoURL: authPhotoURL,
-            })
-          )
-        }
-
-        if (Object.keys(userUpdates).length > 0 || photoURL !== undefined) {
-          promises.push(
-            mutateUpdateDocument(userRef, firestoreUpdates, {
-              source: "auth.updateUserProfile",
-              baseVersion: getUserUpdatedAtBaseVersion(
-                previousUserProfile?.updatedAt
-              ),
-            })
-          )
-        }
-
-        await Promise.all(promises)
+        // Single round-trip: the server updates Firestore + Firebase
+        // Auth atomically (Admin SDK), eliminating the divergence
+        // window the prior client-side parallel-writes pattern had.
+        // The audit entry lands in Cloud Logging — see the JSDoc on
+        // `updateOwnUserProfile` in `useFunctions.ts`.
+        await updateOwnUserProfileFn(payload)
       }
     )
   }
