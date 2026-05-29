@@ -534,8 +534,12 @@ const askQuestionInputSchema = z.object({
     .boolean()
     .optional()
     .describe(
-      "When true, the user may type a free-form answer instead of " +
-        "picking one of `choices`."
+      "Whether the user may type a free-form answer instead of picking " +
+        "one of `choices`. Prefer `true`: set it `false` only when " +
+        "`choices` are genuinely exhaustive (e.g. yes/no, or a closed set " +
+        "where no other answer is possible). Whenever the options are just " +
+        "the likely answers and the user's real situation might not be " +
+        "covered, enable it so they aren't forced into an ill-fitting choice."
     ),
 })
 
@@ -554,9 +558,11 @@ export const askQuestionTool = defineInterruptTool({
   description:
     "Ask the user a clarifying question with a small set of choices. " +
     "Use this when you need a decision from the user to proceed and " +
-    "guessing would be worse than asking. The chat pauses until the " +
-    "user picks; you'll see their answer as the tool's output and can " +
-    "continue from there.",
+    "guessing would be worse than asking. Offer the most likely answers as " +
+    "`choices`, and unless those choices are truly exhaustive, set " +
+    "`allowOther: true` so the user can give a custom answer when none of " +
+    "them fit. The chat pauses until the user responds; you'll see their " +
+    "answer as the tool's output and can continue from there.",
   inputSchema: askQuestionInputSchema,
   outputSchema: askQuestionOutputSchema,
 })

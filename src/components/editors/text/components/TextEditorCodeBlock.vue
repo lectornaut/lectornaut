@@ -6,8 +6,7 @@ import {
   PLAINTEXT_LANGUAGE,
 } from "@/components/editors/text/shiki"
 import { CODE_FONT_WEIGHT, useCodeFontSize } from "@/composables/useCodeFont"
-import { IconCheck, IconChevronsUpDown } from "@/data/icons"
-import { cn } from "@/lib/utils"
+import { IconCheck, IconChevronsUpDown, IconCopy } from "@/data/icons"
 import { NodeViewContent, NodeViewWrapper, nodeViewProps } from "@tiptap/vue-3"
 
 const { t } = useI18n()
@@ -40,6 +39,18 @@ const selectLanguage = (id: string | null) => {
   isPickerOpen.value = false
 }
 
+// `copied` flips true on a successful write and self-resets after VueUse's
+// default window (~1.5s), which alone drives the copy⇄check icon swap below —
+// no manual timer. `legacy: true` adds an execCommand fallback for non-secure
+// contexts, matching how the rest of the app calls this composable.
+const { copy, copied } = useClipboard({ legacy: true })
+
+// A ProseMirror node's `textContent` is the concatenated text of its
+// descendants with no markup — for a code block that's exactly the source, and
+// it reflects the latest edits at click time. Same access the Shiki
+// highlighter extension uses to tokenize the block.
+const copyCode = () => copy(props.node.textContent)
+
 const codeFontSize = useCodeFontSize()
 
 // Font size/weight must go on the <code> element, not just <pre>: `prose-sm`
@@ -68,15 +79,35 @@ const surfaceStyle = computed(() => ({
   >
     <div
       contenteditable="false"
-      :class="
-        cn(
-          'code-block-language absolute top-2 right-2 z-10 transition',
-          isPickerOpen
-            ? 'opacity-100'
-            : 'pointer-events-none opacity-0 group-hover:pointer-events-auto group-hover:opacity-100'
-        )
-      "
+      :class="[
+        'code-block-language absolute top-2 right-2 z-10 flex items-center gap-2 transition',
+        isPickerOpen
+          ? 'opacity-100'
+          : 'pointer-events-none opacity-0 group-hover:pointer-events-auto group-hover:opacity-100',
+      ]"
     >
+      <TooltipProvider>
+        <Tooltip>
+          <TooltipTrigger as-child>
+            <Button
+              variant="outline"
+              size="icon-sm"
+              :aria-label="t('components.textEditor.copyCode')"
+              @click="copyCode"
+            >
+              <IconCheck v-if="copied" />
+              <IconCopy v-else />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>
+            {{
+              copied
+                ? t("components.textEditor.copied")
+                : t("components.textEditor.copyCode")
+            }}
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
       <Popover v-model:open="isPickerOpen">
         <PopoverTrigger as-child>
           <Button
@@ -84,7 +115,6 @@ const surfaceStyle = computed(() => ({
             size="sm"
             role="combobox"
             :aria-expanded="isPickerOpen"
-            class="w-40 justify-between"
           >
             <span class="truncate">{{ currentLanguageLabel }}</span>
             <IconChevronsUpDown />
@@ -106,16 +136,8 @@ const surfaceStyle = computed(() => ({
                   class="data-highlighted:bg-muted data-highlighted:text-foreground data-highlighted:**:[svg]:text-foreground"
                   @select="selectLanguage(null)"
                 >
-                  <IconCheck
-                    :class="
-                      cn(
-                        currentLanguageId === PLAINTEXT_LANGUAGE
-                          ? 'opacity-100'
-                          : 'opacity-0'
-                      )
-                    "
-                  />
                   {{ t("components.textEditor.auto") }}
+                  <IconCheck v-if="currentLanguageId === PLAINTEXT_LANGUAGE" />
                 </CommandItem>
                 <CommandItem
                   v-for="lang in CODE_LANGUAGES"
@@ -124,16 +146,8 @@ const surfaceStyle = computed(() => ({
                   class="data-highlighted:bg-muted data-highlighted:text-foreground data-highlighted:**:[svg]:text-foreground"
                   @select="selectLanguage(lang.id)"
                 >
-                  <IconCheck
-                    :class="
-                      cn(
-                        currentLanguageId === lang.id
-                          ? 'opacity-100'
-                          : 'opacity-0'
-                      )
-                    "
-                  />
                   {{ lang.name }}
+                  <IconCheck v-if="currentLanguageId === lang.id" />
                 </CommandItem>
               </CommandGroup>
             </CommandList>

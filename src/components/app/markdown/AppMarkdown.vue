@@ -13,7 +13,7 @@
  *
  * Streaming vs history is driven entirely off `final`:
  *   • final=false (chat tail mid-stream) → smooth pacing on,
- *     typewriter cursor visible, fade off (would flicker against
+ *     typewriter cursor off, fade off (would flicker against
  *     280ms pacing windows).
  *   • final=true (chat history + every other surface) → fade on for a
  *     polished entry, no pacing, no cursor.
@@ -47,8 +47,9 @@ const isDark = computed(() => resolvedTheme.value === "dark")
 
 // `final=false` only happens on the chat streaming tail (other surfaces
 // default to true). Driving the streaming-vs-history prop set off a
-// single boolean keeps the toggle atomic — Vue swaps all four props in
-// the same patch when `final` flips.
+// single boolean keeps the toggle atomic — Vue swaps all three props in
+// the same patch when `final` flips. (The typewriter cursor used to ride
+// this boolean too; it's now hard-off — see `:typewriter` in the template.)
 const streaming = computed(() => !props.final)
 
 const customHtmlTags = computed(() =>
@@ -219,7 +220,7 @@ const isDev = import.meta.env.DEV
     :smooth-streaming="streaming ? 'auto' : false"
     :smooth-streaming-options="smoothStreamingOptions"
     :fade="!streaming"
-    :typewriter="streaming"
+    :typewriter="false"
     :max-live-nodes="maxLiveNodes"
     :defer-nodes-until-visible="deferNodesUntilVisible"
     :show-tooltips="showTooltips"

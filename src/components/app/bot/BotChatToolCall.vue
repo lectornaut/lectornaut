@@ -1,19 +1,24 @@
 <script lang="ts" setup>
 /**
  * BotChatToolCall — renders one tool invocation segment from an agent
- * message. The collapsible header carries two signals: a leading
- * lifecycle-status badge (pending / running / answered / done / failed —
- * see `status` + `statusBadge`) and a trailing tool-identity glyph (a
- * built-in's catalog icon, or a generic asterisk for custom/other tools).
+ * message. The collapsible header carries a single leading icon. While the
+ * call is still in flight, that icon is the lifecycle-status badge (pending /
+ * running — see `status` + `statusBadge`). Once the call reaches a quiet,
+ * collapsed resting state, the badge gives way to a chevron that mirrors the
+ * open/closed state and cues the user to reopen it (see `showChevron` for
+ * which states qualify).
  * The body switches between per-tool presentations based on `tool.name`, with
  * a JSON fallback for tools we don't have a dedicated view for.
  *
- * Five state branches:
+ * State branches:
  *
- *   1. Pending interrupt (`isInterrupt && output === undefined`):
- *      The chat is paused waiting for the user to answer an
- *      `askQuestion` interrupt. Renders the question and choice
- *      buttons; clicking one calls `respondToInterrupt` to resume.
+ *   1. Interrupt (`isInterrupt`) — an `askQuestion`, with two sub-states by
+ *      position. LIVE (`isLiveInterrupt`, the conversation tail) pauses the
+ *      chat and renders the question + choice buttons; clicking one calls
+ *      `respondToInterrupt` to resume. ABANDONED (`isAbandonedInterrupt`, no
+ *      longer the tail because the user sent another message) renders the
+ *      question read-only as a collapsed historical card — resuming a
+ *      superseded interrupt would fail.
  *
  *   2. Resolved interrupt (askQuestion with `output` set):
  *      The user answered an `askQuestion`. Detected by tool NAME +
@@ -55,9 +60,8 @@ import {
   BotChatContextKey,
   type BotChatToolCall,
 } from "@/composables/useBotChat"
-import { botToolIcon, botToolLabel } from "@/data/botTools"
+import { botToolLabel } from "@/data/botTools"
 import {
-  IconAsterisk,
   IconBotMessageSquare,
   IconCheck,
   IconChevronRight,
@@ -108,16 +112,6 @@ const displayName = computed<string>(() => {
   return props.tool.name
 })
 
-// ── Header trailing slot: tool identity ────────────────────────────────────
-//
-// The leading badge carries lifecycle status (below); the trailing slot
-// carries WHICH tool this is. Built-ins show their specific catalog icon
-// (cloud, dice, search…); every other tool — custom, `transferToAgent`, a
-// hard-deleted tool — shares one generic asterisk glyph (no per-tool avatar).
-const trailingIcon = computed<Component>(
-  () => botToolIcon(props.tool.name) ?? IconAsterisk
-)
-
 const isInterrupt = computed(
   () => props.tool.isInterrupt === true && props.tool.output === undefined
 )
@@ -128,20 +122,46 @@ const isDone = computed(
   () => !isInterrupt.value && props.tool.output !== undefined
 )
 
-// Initial state is derived from the tool's current phase, NOT hardcoded
-// open: cards restored from history after a refresh already have `output`
-// set, and the watcher below only fires on a live pending→done
-// *transition* (Vue's `watch` isn't immediate), so a hardcoded `true`
-// would leave every finished card expanded. Open while running OR
-// awaiting input (the spinner/form is the point of the card then);
-// collapsed once an answer/result exists. The watcher then collapses the
-// card the moment a result arrives during a live session. The user can
-// override either way by clicking the trigger.
-const open = ref(props.tool.output === undefined)
+// A pending interrupt (`isInterrupt`) means an unanswered askQuestion — but
+// that splits in two by POSITION in the conversation:
+//   • Live — it's the last segment of the last message, so the chat is
+//     genuinely paused on it and the interactive choice form is the point.
+//   • Abandoned — the user didn't answer and sent another message instead,
+//     so content now follows it. Resuming a superseded interrupt would fail,
+//     so we render it read-only as a collapsed historical card.
+// An interrupt PAUSES the turn, so a live one can never have anything after
+// it; being the conversation tail is exactly what separates the two. We
+// compare the reactive tool by reference — `AiChat` passes the segment's
+// `tool` through untouched (no clone), so identity holds.
+const isConversationTail = computed(() => {
+  const msgs = botChat?.messages.value
+  if (!msgs || msgs.length === 0) return false
+  const segments = msgs[msgs.length - 1].segments
+  if (!segments || segments.length === 0) return false
+  const lastSegment = segments[segments.length - 1]
+  return lastSegment.kind === "tool" && lastSegment.tool === props.tool
+})
+const isLiveInterrupt = computed(
+  () => isInterrupt.value && isConversationTail.value
+)
+const isAbandonedInterrupt = computed(
+  () => isInterrupt.value && !isConversationTail.value
+)
+
+// Open while the card is actively doing something the user must watch: a
+// LIVE interrupt's choice form or a running spinner. Everything else opens
+// collapsed — a finished result, an error, or an ABANDONED interrupt (the
+// user moved on) is a quiet historical card. Derived, NOT hardcoded `true`:
+// cards restored from history must start collapsed (the watcher only fires on
+// a live *transition*, since Vue's `watch` isn't immediate). The watcher then
+// collapses the card the moment it leaves the active state — a result lands,
+// or the interrupt is superseded by a new message. The user can override
+// either way by clicking the trigger.
+const open = ref(isRunning.value || isLiveInterrupt.value)
 watch(
-  () => props.tool.output === undefined,
-  (pending) => {
-    if (!pending) open.value = false
+  () => isRunning.value || isLiveInterrupt.value,
+  (active) => {
+    if (!active) open.value = false
   }
 )
 
@@ -723,13 +743,21 @@ const hasCustomDoneRenderer = computed(() => {
 // ── Header leading slot: lifecycle status badge ────────────────────────────
 //
 // One discriminant for the card's whole lifecycle, replacing the old
-// implicit "v-else == done". The two output-absent states (pending /
+// implicit "v-else == done". The output-absent states (pending / abandoned /
 // running) come first; the rest are "output present" outcomes split into
-// error → answered-question → plain done. Driving the badge off this single
-// value (rather than three booleans) keeps the icon, tooltip, and styling in
-// one place and makes the partition exhaustive — adding a `ToolStatus`
-// member is a compile error in `statusBadge` until it's mapped.
-type ToolStatus = "pending" | "running" | "resolved" | "done" | "error"
+// error → answered-question → plain done. `abandoned` is an unanswered
+// interrupt the conversation has moved past (see `isAbandonedInterrupt`).
+// Driving the badge off this single value (rather than a tangle of booleans)
+// keeps the icon, tooltip, and styling in one place and makes the partition
+// exhaustive — adding a `ToolStatus` member is a compile error in
+// `statusBadge` until it's mapped.
+type ToolStatus =
+  | "pending"
+  | "abandoned"
+  | "running"
+  | "resolved"
+  | "done"
+  | "error"
 
 const isErrorResult = computed<boolean>(() => {
   // summarizeNode surfaces a structured error (its own destructive card).
@@ -749,7 +777,8 @@ const isErrorResult = computed<boolean>(() => {
 })
 
 const status = computed<ToolStatus>(() => {
-  if (isInterrupt.value) return "pending"
+  if (isLiveInterrupt.value) return "pending"
+  if (isAbandonedInterrupt.value) return "abandoned"
   if (isRunning.value) return "running"
   if (isErrorResult.value) return "error"
   if (isResolvedInterrupt.value) return "resolved"
@@ -761,12 +790,17 @@ const status = computed<ToolStatus>(() => {
 // single lookup keeps ESLint's return-in-computed rule satisfied (a `switch`
 // without a `default` trips it even when every case returns). `running` maps
 // to a null icon because the spinner is a standalone component the template
-// renders via `v-if`, not a lucide glyph.
+// renders via `v-if`, not a lucide glyph; `abandoned` is null for the same
+// reason it shows a chevron. The template renders a chevron instead of the
+// badge for the quiet resting states (`done`, `resolved`, `abandoned`, and
+// `error` without a dedicated failure card — see `showChevron`); those
+// entries stay mapped only to keep the record exhaustive.
 const STATUS_BADGES: Record<
   ToolStatus,
   { icon: Component | null; tooltipKey: string; class?: string }
 > = {
   pending: { icon: IconCircleHelp, tooltipKey: "ai.toolCall.needsInput" },
+  abandoned: { icon: null, tooltipKey: "ai.toolCall.unanswered" },
   running: { icon: null, tooltipKey: "ai.toolCall.running" },
   resolved: { icon: IconBotMessageSquare, tooltipKey: "ai.toolCall.answered" },
   error: {
@@ -778,46 +812,60 @@ const STATUS_BADGES: Record<
 }
 
 const statusBadge = computed(() => STATUS_BADGES[status.value])
+
+// Whether the leading glyph collapses to an expand/collapse chevron. True for
+// the quiet, collapsed resting states where the chevron is the only useful
+// signal: a `done` result, a `resolved` askQuestion (already answered), an
+// `abandoned` askQuestion (the user moved on without answering), and an
+// `error` with no dedicated failure card. `pending`/`running` keep their
+// status glyph because the card is still open and working. NOTE: a finished
+// clarifying question is `resolved` or `abandoned`, never `done` (see
+// `status`), so it relies on those branches to get a chevron at all.
+const showChevron = computed(
+  () =>
+    status.value === "done" ||
+    status.value === "resolved" ||
+    status.value === "abandoned" ||
+    (status.value === "error" && !hasCustomDoneRenderer.value)
+)
 </script>
 
 <template>
   <Collapsible v-model:open="open" class="grid gap-2">
     <CollapsibleTrigger as-child>
-      <Item variant="muted" size="xs">
-        <ItemMedia variant="icon">
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger as-child>
-                <Spinner v-if="status === 'running'" />
-                <Component
-                  :is="statusBadge.icon"
-                  v-else
-                  :class="statusBadge.class"
-                />
-              </TooltipTrigger>
-              <TooltipContent>{{ t(statusBadge.tooltipKey) }}</TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-        </ItemMedia>
+      <Item size="xs" class="group p-0 text-xs">
         <ItemContent>
-          <ItemTitle>
+          <ItemTitle
+            class="text-muted-foreground/80 group-hover:text-muted-foreground flex items-center gap-1 text-xs"
+          >
             {{ displayName }}
             <IconChevronRight
-              class="text-muted-foreground transition-transform will-change-transform"
+              v-if="showChevron"
+              class="text-muted-foreground/80 group-hover:text-muted-foreground size-3! transition-transform will-change-transform"
               :class="{ 'rotate-90': open }"
             />
+            <TooltipProvider v-else>
+              <Tooltip>
+                <TooltipTrigger as-child>
+                  <Spinner v-if="status === 'running'" />
+                  <Component
+                    :is="statusBadge.icon"
+                    v-else
+                    :class="statusBadge.class"
+                  />
+                </TooltipTrigger>
+                <TooltipContent>{{ t(statusBadge.tooltipKey) }}</TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
           </ItemTitle>
         </ItemContent>
-        <ItemActions>
-          <Component :is="trailingIcon" />
-        </ItemActions>
       </Item>
     </CollapsibleTrigger>
     <CollapsibleContent>
       <!-- ============================================================== -->
-      <!-- Pending interrupt: question + choices form. -->
+      <!-- Live interrupt: question + choices form (chat is paused here). -->
       <!-- ============================================================== -->
-      <Card v-if="isInterrupt && askQuestionInput" size="sm">
+      <Card v-if="isLiveInterrupt && askQuestionInput" size="sm">
         <CardHeader>
           <CardTitle>{{ askQuestionInput.question }}</CardTitle>
         </CardHeader>
@@ -853,15 +901,31 @@ const statusBadge = computed(() => STATUS_BADGES[status.value])
       </Card>
 
       <!-- ============================================================== -->
-      <!-- Pending interrupt with malformed payload — polite escape hatch. -->
+      <!-- Live interrupt with malformed payload — polite escape hatch. -->
       <!-- ============================================================== -->
-      <Item v-else-if="isInterrupt" variant="muted" size="xs">
+      <Item v-else-if="isLiveInterrupt" variant="muted" size="xs">
         <ItemContent>
           <ItemDescription class="line-clamp-none">
             {{ t("ai.toolCall.malformedInterrupt") }}
           </ItemDescription>
         </ItemContent>
       </Item>
+
+      <!-- ============================================================== -->
+      <!-- Abandoned interrupt: the user sent another message instead of -->
+      <!-- answering, so the chat moved on. Read-only historical card — no -->
+      <!-- choice form (resuming a superseded interrupt would fail), just -->
+      <!-- the question and a note that it went unanswered. -->
+      <!-- ============================================================== -->
+      <Card v-else-if="isAbandonedInterrupt && questionText" size="sm">
+        <CardHeader>
+          <CardTitle>{{ questionText }}</CardTitle>
+        </CardHeader>
+        <CardContent class="text-muted-foreground flex items-center gap-2">
+          <IconCircleHelp />
+          <span>{{ t("ai.toolCall.unanswered") }}</span>
+        </CardContent>
+      </Card>
 
       <!-- ============================================================== -->
       <!-- Resolved interrupt: question (header) + the chosen answer. A -->

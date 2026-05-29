@@ -447,16 +447,28 @@
    needed. If the surface's outer edge ever needs trimming, anchor on the
    node wrapper (e.g. `[data-node-index="0"]`) — never a universal `*`. */
 
+/* `<thinking>` disclosures (BotThinkingBlock) are custom nodes with no
+   `--ms-flow-*` margin, so when one LEADS a reply it sits flush against the
+   answer below it. Give only that case a gap: the leading node wrapper
+   (`[data-node-index="0"]`) when it holds a thinking block (`:has`) AND has a
+   following block (`:not(:last-child)`). A reasoning-only reply, or one where
+   thinking isn't the first block, gets none — exactly the "anchor on the node
+   wrapper" pattern the note above prescribes, never a universal `:first-child`. */
+.markstream-vue[data-custom-id="chat"]
+  .node-slot[data-node-index="0"]:not(:last-child):has(.bot-thinking-block) {
+  margin-bottom: 1em;
+}
+
 /* ── Typography polish (chat + sheet, where bubbles are narrow) ───── */
 .markstream-vue[data-custom-id="chat"] .paragraph-node,
 .markstream-vue[data-custom-id="changelog-sheet"] .paragraph-node {
-  text-wrap: pretty;
+  @apply text-pretty;
 }
 
 .markstream-vue[data-custom-id="chat"] .heading-node,
 .markstream-vue[data-custom-id="changelog-sheet"] .heading-node {
-  text-wrap: balance;
-  letter-spacing: -0.01em;
+  @apply text-balance;
+  @apply tracking-tight;
 }
 
 /* Inline code at 0.875em — at small bubble sizes the library default
@@ -490,13 +502,37 @@
   font-size: var(--vscode-editor-font-size, 14px) !important;
 }
 
+/* Themed code background must span the FULL horizontal scroll width.
+ *
+ * The Shiki `<pre>` carries the theme background, but markstream lays it out
+ * inside a `display:grid` scroll viewport (`.code-block-content`, overflow:auto)
+ * whose grid item (`.code-block-render`) is pinned to the visible width via
+ * `min-width:0`. A long, non-wrapping line overflows that width and the viewport
+ * scrolls — but a `width:auto` block paints its background only to the visible
+ * edge, so the overflowing region beyond it shows the container's `--code-bg`
+ * (and, on overscroll, the page) instead of the themed surface: the dark band
+ * that appears when you scroll a wide code/JSON block right.
+ *
+ * Forcing the `<pre>` to `min-width: max-content` grows its box to the longest
+ * line, so the theme background covers the entire scrollable region. It's a
+ * floor, not a fixed width: a block narrower than the viewport keeps
+ * `width:auto` = full container, so there's no gap at rest either. This is the
+ * structural complement to the `--code-bg` match in AppMarkdown.vue (which
+ * handles the VERTICAL rubber-band and the container border/rounding). Sibling
+ * to the Tiptap surface, where the `<pre>` is itself the scroller so its
+ * background never scrolls away. */
+.markstream-vue[data-custom-id="chat"] .code-block-content pre,
+.markstream-vue[data-custom-id="changelog-sheet"] .code-block-content pre,
+.markstream-vue[data-custom-id="changelog-page"] .code-block-content pre {
+  min-width: max-content;
+}
+
 /* List items render their own paragraph wrapper which picks up the
  * global paragraph margin and doubles spacing inside tight lists. */
 .markstream-vue[data-custom-id="chat"] .list-item .paragraph-node,
 .markstream-vue[data-custom-id="changelog-sheet"] .list-item .paragraph-node,
 .markstream-vue[data-custom-id="changelog-page"] .list-item .paragraph-node {
-  margin-top: 0;
-  margin-bottom: 0;
+  @apply my-0;
 }
 
 /*
@@ -507,7 +543,7 @@
   reactive check on the non-reactive editor instance would miss that).
 */
 .tiptap[contenteditable="false"] .code-block-language {
-  display: none;
+  @apply hidden;
 }
 
 /* Driver.js popover theme

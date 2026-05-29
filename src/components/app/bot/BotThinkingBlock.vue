@@ -22,7 +22,7 @@
  * the same kind of card as a tool-call result.
  */
 import AppMarkdown from "@/components/app/markdown/AppMarkdown.vue"
-import { IconBot, IconChevronRight, IconSparkles } from "@/data/icons"
+import { IconChevronRight } from "@/data/icons"
 
 const props = defineProps<{
   /** Custom-tag node from markstream; `content` is the inner Markdown. */
@@ -38,31 +38,20 @@ const reasoning = computed(() => props.node?.content ?? "")
 </script>
 
 <template>
-  <Collapsible v-model:open="open" class="grid gap-2">
+  <Collapsible v-model:open="open" class="bot-thinking-block grid gap-2">
     <CollapsibleTrigger as-child>
-      <Item variant="muted" size="xs">
-        <ItemMedia variant="icon">
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger as-child>
-                <IconSparkles />
-              </TooltipTrigger>
-              <TooltipContent>{{ t("ai.reasoning") }}</TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-        </ItemMedia>
+      <Item size="xs" class="group p-0 text-xs">
         <ItemContent>
-          <ItemTitle>
+          <ItemTitle
+            class="text-muted-foreground/80 group-hover:text-muted-foreground flex items-center gap-1 text-xs"
+          >
             {{ t("ai.reasoning") }}
             <IconChevronRight
-              class="text-muted-foreground transition-transform will-change-transform"
+              class="text-muted-foreground/80 group-hover:text-muted-foreground size-3! transition-transform will-change-transform"
               :class="{ 'rotate-90': open }"
             />
           </ItemTitle>
         </ItemContent>
-        <ItemActions>
-          <IconBot />
-        </ItemActions>
       </Item>
     </CollapsibleTrigger>
     <CollapsibleContent>

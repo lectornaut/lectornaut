@@ -7,6 +7,7 @@ import {
 import { useReadAloud } from "@/composables/useReadAloud"
 import {
   IconAiFill,
+  IconCheck,
   IconCopy,
   IconPause,
   IconPlay,
@@ -59,7 +60,19 @@ const messageAvatarSeed = (message: BotChatMessage): string =>
 // view of the bubble: copying or quoting it gives the user the words,
 // not the JSON the model emitted to fetch a file. Tool segments stay
 // where they belong — inline cards in the bubble.
-const { copy: copyToClipboard } = useClipboard({ legacy: true })
+const { copy: copyToClipboard, copied: justCopied } = useClipboard({
+  legacy: true,
+})
+
+// `useClipboard` exposes one shared `copied` flag that self-resets after a
+// short window (~1.5s). The hover bar's copy button swaps to a check while
+// it's set — but that flag is component-wide, so on its own it would also
+// flash a check on whichever *other* bubble you hover during the window.
+// Pair it with the id of the last-copied message to scope the swap to the
+// one bubble that was actually copied.
+const lastCopiedMessageId = ref<string | null>(null)
+const isCopied = (messageId: string): boolean =>
+  justCopied.value && lastCopiedMessageId.value === messageId
 
 // The model's reasoning is folded into `<thinking>…</thinking>` blocks
 // inside `content` (rendered as a collapsible disclosure). Copying or
@@ -73,6 +86,7 @@ const handleCopyMessage = async (message: BotChatMessage) => {
   const text = stripThinking(message.content)
   if (!text) return
   await copyToClipboard(text)
+  lastCopiedMessageId.value = message.id
   toast.success(t("ai.messageCopied"))
 }
 
@@ -260,13 +274,13 @@ const renderedMessages = computed(() =>
         <EmptyTitle>{{ t("ai.chatEmpty") }}</EmptyTitle>
       </EmptyHeader>
     </Empty>
-    <div v-else class="messages-list mt-auto grid grid-cols-1 gap-2 p-2">
+    <div v-else class="messages-list mt-auto grid grid-cols-1 gap-2 px-2 py-4">
       <ContextMenu
         v-for="{ message, blocks } in renderedMessages"
         :key="message.id"
       >
-        <ContextMenuTrigger>
-          <div class="flex items-end gap-2 p-2">
+        <ContextMenuTrigger class="group relative">
+          <div class="flex items-end gap-2 px-2 pb-8">
             <Avatar
               v-if="message.role === 'user'"
               variant="beam"
@@ -278,7 +292,7 @@ const renderedMessages = computed(() =>
                 'var(--color-chart-4)',
                 'var(--color-chart-5)',
               ]"
-              class="sticky bottom-0 size-5"
+              class="sticky bottom-0 size-5 shrink-0"
             />
             <div
               :class="[
@@ -306,6 +320,121 @@ const renderedMessages = computed(() =>
                 />
               </template>
             </div>
+          </div>
+          <!-- Hover action bar — the same actions as the context menu, surfaced
+               on hover for discoverability (right-click is easy to miss). It
+               calls the identical handlers and reuses the identical i18n
+               labels, so the two entry points can never drift; only the
+               presentation differs (a floating segmented `ButtonGroup` of
+               icon-only buttons vs. menu rows). Tooltips name each icon. -->
+          <div
+            class="pointer-events-none absolute bottom-0 left-2 z-10 flex items-center gap-1 opacity-0 transition group-hover:pointer-events-auto group-hover:opacity-100"
+          >
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger as-child>
+                  <Button
+                    variant="ghost"
+                    size="icon-xs"
+                    :disabled="!message.content"
+                    :aria-label="t('actions.copy')"
+                    @click="handleCopyMessage(message)"
+                  >
+                    <IconCheck v-if="isCopied(message.id)" class="size-3!" />
+                    <IconCopy v-else class="size-3!" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  {{
+                    isCopied(message.id)
+                      ? t("ai.messageCopied")
+                      : t("actions.copy")
+                  }}
+                </TooltipContent>
+              </Tooltip>
+              <Tooltip>
+                <TooltipTrigger as-child>
+                  <Button
+                    variant="ghost"
+                    size="icon-xs"
+                    :disabled="!message.content"
+                    :aria-label="t('ai.reply')"
+                    @click="handleReplyMessage(message)"
+                  >
+                    <IconReply class="size-3!" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>{{ t("ai.reply") }}</TooltipContent>
+              </Tooltip>
+
+              <!-- Read aloud — same three states as the context menu: idle ⇒
+                     a single "Read aloud" button; active (playing OR paused) ⇒
+                     a play/pause toggle + Stop. Hidden when the browser lacks
+                     SpeechSynthesis. -->
+              <template v-if="isReadAloudSupported">
+                <template v-if="isSpeaking(message.id) || isPaused(message.id)">
+                  <Tooltip v-if="isSpeaking(message.id)">
+                    <TooltipTrigger as-child>
+                      <Button
+                        variant="ghost"
+                        size="icon-xs"
+                        :aria-label="t('ai.readAloudPause')"
+                        @click="pauseReadAloud()"
+                      >
+                        <IconPause class="size-3!" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      {{ t("ai.readAloudPause") }}
+                    </TooltipContent>
+                  </Tooltip>
+                  <Tooltip v-else>
+                    <TooltipTrigger as-child>
+                      <Button
+                        variant="ghost"
+                        size="icon-xs"
+                        :aria-label="t('ai.readAloudResume')"
+                        @click="resumeReadAloud()"
+                      >
+                        <IconPlay class="size-3!" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      {{ t("ai.readAloudResume") }}
+                    </TooltipContent>
+                  </Tooltip>
+                  <Tooltip>
+                    <TooltipTrigger as-child>
+                      <Button
+                        variant="ghost"
+                        size="icon-xs"
+                        :aria-label="t('ai.readAloudStop')"
+                        @click="stopReadAloud()"
+                      >
+                        <IconSquare class="size-3!" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      {{ t("ai.readAloudStop") }}
+                    </TooltipContent>
+                  </Tooltip>
+                </template>
+                <Tooltip v-else>
+                  <TooltipTrigger as-child>
+                    <Button
+                      variant="ghost"
+                      size="icon-xs"
+                      :disabled="!message.content"
+                      :aria-label="t('ai.readAloud')"
+                      @click="handleReadAloud(message)"
+                    >
+                      <IconVolume2 class="size-3!" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>{{ t("ai.readAloud") }}</TooltipContent>
+                </Tooltip>
+              </template>
+            </TooltipProvider>
           </div>
         </ContextMenuTrigger>
         <ContextMenuContent>
@@ -371,7 +500,7 @@ const renderedMessages = computed(() =>
       </ContextMenu>
       <div
         v-if="showThinking"
-        class="text-muted-foreground flex items-center gap-2 px-6 pb-6 text-xs"
+        class="text-muted-foreground flex items-center gap-2 px-3 py-6 text-xs"
       >
         <span
           class="bg-muted-foreground inline-block size-2 animate-pulse rounded-full"
