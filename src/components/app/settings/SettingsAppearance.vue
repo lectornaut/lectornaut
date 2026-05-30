@@ -106,6 +106,13 @@ const selectedSize = computed({
   },
 })
 
+const selectedTranslucentSidebar = computed({
+  get: () => themeSettings.value.translucentSidebar,
+  set: (value: boolean) => {
+    themeSettings.value.translucentSidebar = value
+  },
+})
+
 const groupedBaseOptions = bases.filter(
   (color) => color.id === "accent" || color.id === "custom"
 )
@@ -333,6 +340,20 @@ const getAccentOptionStyle = (optionId: AccentId) =>
               </SelectContent>
             </Select>
           </div>
+        </Field>
+        <Field orientation="horizontal">
+          <FieldContent>
+            <FieldLabel for="translucent-sidebar">
+              {{ t("settings.appearance.translucentSidebar.label") }}
+            </FieldLabel>
+            <FieldDescription>
+              {{ t("settings.appearance.translucentSidebar.description") }}
+            </FieldDescription>
+          </FieldContent>
+          <Switch
+            id="translucent-sidebar"
+            v-model="selectedTranslucentSidebar"
+          />
         </Field>
       </FieldSet>
       <FieldSeparator />

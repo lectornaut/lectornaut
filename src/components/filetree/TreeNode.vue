@@ -17,6 +17,7 @@ import {
 import { showErrorToast, showSuccessToast } from "@/helpers/toast"
 import { useFileTreeStore } from "@/stores/fileTreeStore"
 import type { WorkspaceNode, WorkspaceNodeScope } from "@/types/nodes"
+import { useHotkeys } from "@tanstack/vue-hotkeys"
 import { computed, ref } from "vue"
 
 defineOptions({
@@ -214,6 +215,111 @@ const showEmptyState = computed(
     childrenIds.value.length === 0 &&
     pagination.value.hasMore === false
 )
+
+// ──────────────────────────────────────────────────────────────────────────
+// Menu keyboard shortcuts
+//
+// While THIS node's dropdown menu is open, expose accelerators mirroring the
+// menu items: R = rename, E = archive/unarchive, ⌫/Delete = delete.
+//
+// `useHotkeys` registers on `document`; because `TreeNode` is recursive, every
+// instance binds the same keys, so `conflictBehavior: "allow"` suppresses the
+// duplicate-registration warnings. reka-ui dropdowns are modal (one open at a
+// time), so the per-binding `enabled` gate — driven by `menuOpen` — guarantees
+// only the open menu's handlers ever run.
+// ──────────────────────────────────────────────────────────────────────────
+const menuOpen = ref(false)
+
+// Mirror the click path: dispatching an action also dismisses the menu.
+const runMenuAction = (action: () => void) => {
+  action()
+  menuOpen.value = false
+}
+
+// Shared gate: an accelerator only fires while this node's menu is open.
+const menuActionEnabled = () => menuOpen.value && !!node.value
+
+// Child creation is folder-only and unavailable on archived nodes — keep the
+// gate congruent with the menu items, which only render under the same checks.
+const canCreateChild = () =>
+  menuActionEnabled() && isFolder.value && !node.value?.isArchived
+
+const createFolder = () => {
+  const current = node.value
+  if (!current || current.type !== "folder" || current.isArchived) return
+  runMenuAction(() => emit("create-folder", current))
+}
+
+const createFile = () => {
+  const current = node.value
+  if (!current || current.type !== "folder" || current.isArchived) return
+  runMenuAction(() => emit("create-file", current))
+}
+
+const renameNode = () => {
+  const current = node.value
+  if (!current || current.isArchived) return
+  runMenuAction(() => emit("rename", current))
+}
+
+const toggleArchiveNode = () => {
+  const current = node.value
+  if (!current) return
+  // One key covers both states — only one of the two items is ever shown.
+  runMenuAction(() => {
+    if (current.isArchived) {
+      emit("unarchive", current)
+    } else {
+      emit("archive", current)
+    }
+  })
+}
+
+const deleteNode = () => {
+  const current = node.value
+  if (!current) return
+  runMenuAction(() => emit("delete", current))
+}
+
+useHotkeys(
+  [
+    {
+      hotkey: "Shift+N",
+      callback: createFolder,
+      options: { enabled: canCreateChild },
+    },
+    {
+      hotkey: "N",
+      callback: createFile,
+      options: { enabled: canCreateChild },
+    },
+    {
+      hotkey: "R",
+      callback: renameNode,
+      // Rename is unavailable for archived nodes (mirrors the disabled item).
+      options: {
+        enabled: () => menuActionEnabled() && !node.value?.isArchived,
+      },
+    },
+    {
+      hotkey: "E",
+      callback: toggleArchiveNode,
+      options: { enabled: menuActionEnabled },
+    },
+    // Bind both Backspace (macOS ⌫) and Delete (Windows / forward-delete).
+    {
+      hotkey: "Backspace",
+      callback: deleteNode,
+      options: { enabled: menuActionEnabled },
+    },
+    {
+      hotkey: "Delete",
+      callback: deleteNode,
+      options: { enabled: menuActionEnabled },
+    },
+  ],
+  { conflictBehavior: "allow" }
+)
 </script>
 
 <template>
@@ -301,7 +407,7 @@ const showEmptyState = computed(
               {{ node.name }}
             </span>
           </SidebarMenuButton>
-          <DropdownMenu>
+          <DropdownMenu v-model:open="menuOpen">
             <DropdownMenuTrigger as-child>
               <SidebarMenuAction
                 show-on-hover
@@ -315,10 +421,12 @@ const showEmptyState = computed(
                 <DropdownMenuItem @click="emit('create-folder', node)">
                   <IconFolderPlus />
                   {{ t("fileTree.newFolder") }}
+                  <DropdownMenuShortcut>⇧N</DropdownMenuShortcut>
                 </DropdownMenuItem>
                 <DropdownMenuItem @click="emit('create-file', node)">
                   <IconFilePlus />
                   {{ t("fileTree.newFile") }}
+                  <DropdownMenuShortcut>N</DropdownMenuShortcut>
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
               </template>
@@ -328,6 +436,9 @@ const showEmptyState = computed(
               >
                 <IconPencil />
                 {{ t("actions.rename") }}
+                <DropdownMenuShortcut v-if="!node.isArchived">
+                  R
+                </DropdownMenuShortcut>
               </DropdownMenuItem>
               <DropdownMenuItem
                 v-if="!node.isArchived"
@@ -335,15 +446,18 @@ const showEmptyState = computed(
               >
                 <IconArchive />
                 {{ t("fileTree.archive") }}
+                <DropdownMenuShortcut>E</DropdownMenuShortcut>
               </DropdownMenuItem>
               <DropdownMenuItem v-else @click="emit('unarchive', node)">
                 <IconRefreshCcw />
                 {{ t("fileTree.unarchive") }}
+                <DropdownMenuShortcut>E</DropdownMenuShortcut>
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem @click="emit('delete', node)">
                 <IconTrash2 />
                 {{ t("actions.delete") }}
+                <DropdownMenuShortcut>⌫</DropdownMenuShortcut>
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
@@ -428,7 +542,7 @@ const showEmptyState = computed(
             {{ node.name }}
           </span>
         </SidebarMenuButton>
-        <DropdownMenu>
+        <DropdownMenu v-model:open="menuOpen">
           <DropdownMenuTrigger as-child>
             <SidebarMenuAction
               show-on-hover
@@ -444,6 +558,9 @@ const showEmptyState = computed(
             >
               <IconPencil />
               {{ t("actions.rename") }}
+              <DropdownMenuShortcut v-if="!node.isArchived">
+                R
+              </DropdownMenuShortcut>
             </DropdownMenuItem>
             <DropdownMenuItem
               v-if="!node.isArchived"
@@ -451,15 +568,18 @@ const showEmptyState = computed(
             >
               <IconArchive />
               {{ t("fileTree.archive") }}
+              <DropdownMenuShortcut>E</DropdownMenuShortcut>
             </DropdownMenuItem>
             <DropdownMenuItem v-else @click="emit('unarchive', node)">
               <IconRefreshCcw />
               {{ t("fileTree.unarchive") }}
+              <DropdownMenuShortcut>E</DropdownMenuShortcut>
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem @click="emit('delete', node)">
               <IconTrash2 />
               {{ t("actions.delete") }}
+              <DropdownMenuShortcut>⌫</DropdownMenuShortcut>
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>

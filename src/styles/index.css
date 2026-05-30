@@ -40,7 +40,9 @@
 
     @apply h-dvh;
     @apply w-dvw;
-    @apply bg-background;
+    @apply bg-linear-to-b;
+    @apply from-card/95;
+    @apply to-card/90;
     @apply text-foreground;
     @apply text-base;
     @apply font-flex;
@@ -664,3 +666,7 @@
 /* :where(button, [role="button"]):not([disabled]) {
   cursor: pointer;
 } */
+
+[data-slot="sidebar-inner"] {
+  @apply bg-transparent!;
+}

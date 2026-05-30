@@ -3,10 +3,17 @@ import {
   IS_APPLE_DEVICE,
   SYSTEM_SHORTCUTS,
 } from "@/helpers/shortcuts"
-import { setHotkeysEnabled } from "@/modules/hotkeys"
 import { normalizeHotkeyFromEvent } from "@tanstack/vue-hotkeys"
 import { nextTick, onScopeDispose, ref } from "vue"
 import { toast } from "vue-sonner"
+
+/**
+ * Shared flag: `true` while any shortcut recorder is actively capturing keys.
+ * `useGlobalHotkeys` reads this to mute global hotkeys during recording so the
+ * captured combo doesn't also trigger an app action (replaces the imperative
+ * `setHotkeysEnabled` toggle that the old hotkeys-js module exposed).
+ */
+export const isRecordingShortcut = ref(false)
 
 export type ShortcutRecorderOptions = {
   /** Called with the final TanStack `Mod`-notation string (e.g. "Mod+K") */
@@ -26,18 +33,18 @@ export const useShortcutRecorder = (options: ShortcutRecorderOptions) => {
   const isRecording = ref(false)
   const recorderInput = ref<HTMLInputElement | null>(null)
 
-  // While recording, mute the global hotkeys so the keys being captured don't
-  // also trigger app actions (replaces hotkeys-js's `hotkeys.filter` override).
+  // While recording, mute the global hotkeys (via the shared reactive flag) so
+  // the keys being captured don't also trigger app actions.
   const suppressHotkeys = () => {
     if (isRecording.value) return
 
     isRecording.value = true
-    setHotkeysEnabled(false)
+    isRecordingShortcut.value = true
   }
 
   const restoreHotkeys = () => {
     isRecording.value = false
-    setHotkeysEnabled(true)
+    isRecordingShortcut.value = false
   }
 
   const resolveInputElement = (

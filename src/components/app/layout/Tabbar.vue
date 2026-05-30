@@ -654,13 +654,14 @@ onUnmounted(() => {
                   },
                 ]"
               >
-                <InputGroup v-if="renamingTabId === tab.id">
+                <InputGroup v-if="renamingTabId === tab.id" class="h-8">
                   <InputGroupAddon>
                     <IconPenLine />
                   </InputGroupAddon>
                   <InputGroupInput
                     v-model="renamingName"
                     :placeholder="tab.name"
+                    class="h-fit"
                     @keydown.enter="saveRename"
                     @keydown.esc="cancelRename"
                   />

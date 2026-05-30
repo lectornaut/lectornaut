@@ -486,7 +486,7 @@ const closeTab = (id: string) => {
                         :inert="topPanel?.isCollapsed"
                       >
                         <div
-                          class="bg-background/80 flex min-h-0 min-w-0 grow flex-col overflow-clip"
+                          class="bg-background flex min-h-0 min-w-0 grow flex-col overflow-clip"
                         >
                           <!-- Non-scrollable sub-header with backdrop blur -->
                           <SubNavigation />

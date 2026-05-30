@@ -346,6 +346,11 @@ export type EditorFontSizeId = (typeof editorFontSizes)[number]["id"]
 
 export const defaultEditorFontSize: EditorFontSizeId = "base"
 
+// Renders the app shell (sidebar wrapper) transparent so the window's
+// native vibrancy/backdrop shows through. On by default to preserve the
+// translucent look the sidebar always had before this became a toggle.
+export const defaultTranslucentSidebar = true
+
 // ────────────────────────────────────────────────────────────────────────────
 // Bot agent (workspace AI client) — model catalog + per-workspace defaults.
 // ────────────────────────────────────────────────────────────────────────────

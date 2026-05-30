@@ -4,7 +4,6 @@ import { isTauri } from "@/composables/usePlatform"
 import { createAppCheckModule } from "@/modules/appCheck"
 import { initDeepLink } from "@/modules/deepLink"
 import { authReady, firebaseApp } from "@/modules/firebase"
-import { initHotkeys } from "@/modules/hotkeys"
 import { i18n, initLanguage } from "@/modules/i18n"
 import { initPwa } from "@/modules/pwa"
 import { router } from "@/modules/router"
@@ -48,7 +47,6 @@ app.use(i18n)
 initTheme()
 initLanguage()
 initDeepLink()
-initHotkeys()
 initPwa()
 initSync()
 

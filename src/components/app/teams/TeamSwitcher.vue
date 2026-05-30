@@ -82,14 +82,14 @@ const currentPlanLabel = computed(() => {
                 size="lg"
                 :tooltip="t('components.teamSwitcher.switchTeam')"
               >
-                <Avatar class="size-8">
+                <Avatar class="size-8 rounded-md">
                   <AvatarImage
-                    class="size-8"
+                    class="size-8 rounded-md"
                     :src="currentTeam?.photoURL!"
                     :alt="currentTeam?.name!"
                     referrerpolicy="no-referrer"
                   />
-                  <AvatarFallback class="size-8">
+                  <AvatarFallback class="size-8 rounded-md">
                     {{ getInitials(currentTeam?.name!) }}
                   </AvatarFallback>
                 </Avatar>
@@ -164,14 +164,15 @@ const currentPlanLabel = computed(() => {
               <DropdownMenuLabel>
                 <Item class="group" size="xs">
                   <ItemMedia>
-                    <Avatar>
+                    <Avatar class="rounded-md">
                       <AvatarImage
                         v-if="currentTeam?.photoURL"
                         :src="currentTeam.photoURL"
                         :alt="currentTeam?.name"
+                        class="rounded-md"
                         referrerpolicy="no-referrer"
                       />
-                      <AvatarFallback>
+                      <AvatarFallback class="rounded-md">
                         {{ getInitials(currentTeam?.name!) }}
                       </AvatarFallback>
                     </Avatar>
@@ -238,13 +239,14 @@ const currentPlanLabel = computed(() => {
                       >
                         <Item class="group" size="xs">
                           <ItemMedia>
-                            <Avatar>
+                            <Avatar class="rounded-md">
                               <AvatarImage
                                 :src="team.original?.photoURL!"
                                 :alt="team.label"
+                                class="rounded-md"
                                 referrerpolicy="no-referrer"
                               />
-                              <AvatarFallback>
+                              <AvatarFallback class="rounded-md">
                                 {{ getInitials(team.label) }}
                               </AvatarFallback>
                             </Avatar>

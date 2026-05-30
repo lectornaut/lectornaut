@@ -1,10 +1,14 @@
 <script lang="ts" setup>
 import { resumeSessionWatcher } from "@/composables/useDeviceSessions"
+import { useGlobalHotkeys } from "@/composables/useGlobalHotkeys"
 import { useCurrentUser } from "vuefire"
 
 const user = useCurrentUser()
 const router = useRouter()
 const route = useRoute()
+
+// Register all global application hotkeys for the app's lifetime.
+useGlobalHotkeys()
 
 // Only handle redirecting logged-in users away from guest-only pages.
 // Logout redirects are NOT handled here - the router beforeEach guard

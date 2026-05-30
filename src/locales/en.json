@@ -1281,6 +1281,10 @@
       "customization": {
         "label": "Customization",
         "description": "Adjust theme, colors, fonts, and display preferences."
+      },
+      "translucentSidebar": {
+        "label": "Translucent sidebar",
+        "description": "Let the window background show through the sidebar instead of a solid surface."
       }
     },
     "agents": {

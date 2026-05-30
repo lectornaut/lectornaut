@@ -5,6 +5,7 @@ import { useWorkspaceActions } from "@/composables/useWorkspaceActions"
 import { emitter } from "@/modules/mitt"
 import { useBillingStore } from "@/stores/billingStore"
 import { useLayoutStore } from "@/stores/layoutStore"
+import { useSettingsStore } from "@/stores/settingsStore"
 import { listen } from "@tauri-apps/api/event"
 import { storeToRefs } from "pinia"
 
@@ -14,6 +15,9 @@ const { currentWorkspace, isBootstrapping: isWorkspaceBootstrapping } =
   useWorkspaceActions()
 const layoutStore = useLayoutStore()
 const { sidebarOpen } = storeToRefs(layoutStore)
+
+const settingsStore = useSettingsStore()
+const { themeSettings } = storeToRefs(settingsStore)
 
 const billingStore = useBillingStore()
 const { canUseFeature } = billingStore
@@ -73,7 +77,10 @@ onMounted(async () => {
 </script>
 
 <template>
-  <SidebarProvider v-model:open="sidebarOpen">
+  <SidebarProvider
+    v-model:open="sidebarOpen"
+    :class="{ 'bg-transparent!': themeSettings.translucentSidebar }"
+  >
     <div class="flex size-full min-h-0 min-w-0 grow flex-col overflow-clip">
       <div class="flex min-h-0 min-w-0 grow" data-tauri-drag-region>
         <Spinner

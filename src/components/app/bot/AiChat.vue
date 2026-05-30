@@ -288,7 +288,7 @@ const renderedMessages = computed(() =>
         <EmptyTitle>{{ t("ai.chatEmpty") }}</EmptyTitle>
       </EmptyHeader>
     </Empty>
-    <div v-else class="messages-list mt-auto grid grid-cols-1 gap-2 px-2 py-4">
+    <div v-else class="messages-list mt-auto grid grid-cols-1 px-2 py-4">
       <ContextMenu
         v-for="{ message, blocks } in renderedMessages"
         :key="message.id"
@@ -347,7 +347,7 @@ const renderedMessages = computed(() =>
                icon-only buttons vs. menu rows). Tooltips name each icon. -->
           <div
             :class="[
-              'pointer-events-none absolute bottom-0 z-10 flex items-center gap-1 opacity-0 transition group-hover:pointer-events-auto group-hover:opacity-100',
+              'pointer-events-none absolute bottom-1 z-10 flex items-center gap-1 opacity-0 transition group-hover:pointer-events-auto group-hover:opacity-100',
               isOwnMessage(message) ? 'right-2' : 'left-2',
             ]"
           >

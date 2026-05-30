@@ -22,10 +22,10 @@ import {
   defaultShortcutOverrides,
   defaultSize,
   defaultTheme,
+  defaultTranslucentSidebar,
 } from "@/helpers/defaults"
 import { isDefaultHotkey } from "@/helpers/shortcuts"
 import { firestore } from "@/modules/firebase"
-import { rebindHotkeys } from "@/modules/hotkeys"
 import {
   areNotificationSettingsEqual,
   cloneNotificationSettings,
@@ -89,6 +89,10 @@ export const useSettingsStore = defineStore("settings", () => {
     "editorFontSize",
     defaultEditorFontSize
   )
+  const translucentSidebar = useStorage<boolean>(
+    "translucentSidebar",
+    defaultTranslucentSidebar
+  )
 
   const themeSettings = reactive({
     mode,
@@ -101,6 +105,7 @@ export const useSettingsStore = defineStore("settings", () => {
     language,
     editorTheme,
     editorFontSize,
+    translucentSidebar,
   })
 
   const pendingTheme = shallowRef(false)
@@ -187,6 +192,13 @@ export const useSettingsStore = defineStore("settings", () => {
       ) {
         editorFontSize.value = themeDoc.editorFontSize
       }
+      if (
+        "translucentSidebar" in themeDoc &&
+        typeof themeDoc.translucentSidebar === "boolean" &&
+        themeDoc.translucentSidebar !== translucentSidebar.value
+      ) {
+        translucentSidebar.value = themeDoc.translucentSidebar
+      }
     },
     { immediate: true }
   )
@@ -269,6 +281,7 @@ export const useSettingsStore = defineStore("settings", () => {
         language: language.value,
         editorTheme: editorTheme.value,
         editorFontSize: editorFontSize.value,
+        translucentSidebar: translucentSidebar.value,
       },
       "settings.themes.persist"
     )
@@ -321,6 +334,7 @@ export const useSettingsStore = defineStore("settings", () => {
       language,
       editorTheme,
       editorFontSize,
+      translucentSidebar,
     ],
     () => {
       void persistThemeWithSync()
@@ -863,8 +877,8 @@ export const useSettingsStore = defineStore("settings", () => {
     { debounce: 500, deep: true }
   )
 
-  // Re-register global hotkey bindings when overrides change
-  watch(shortcutOverrides, () => rebindHotkeys(), { deep: true })
+  // Global hotkeys re-register reactively from `shortcutOverrides` via
+  // `useGlobalHotkeys`; no manual rebind needed here.
 
   function updateShortcutOverride(shortcutId: string, hotkeys: string): void {
     if (isDefaultHotkey(shortcutId, hotkeys)) {

@@ -89,11 +89,12 @@ export const settingsThemeDocSchema = z.object({
   language: languageIdSchema.optional(),
   editorTheme: editorThemeIdSchema.optional(),
   editorFontSize: editorFontSizeIdSchema.optional(),
+  translucentSidebar: z.boolean().optional(),
 })
 
 /**
- * Map of shortcut-id → key-binding overrides, persisted in localStorage by
- * `src/modules/hotkeys.ts`. PR 5 will swap the unvalidated `JSON.parse` there
- * for a `parseSafe` call against this schema.
+ * Map of shortcut-id → key-binding override. Persisted in localStorage and
+ * synced to Firestore by the settings store, then read reactively by
+ * `useGlobalHotkeys` to (re)register the global hotkeys.
  */
 export const shortcutOverridesSchema = z.record(z.string(), z.string())
