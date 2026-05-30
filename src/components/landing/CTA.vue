@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import hotkeys from "hotkeys-js"
+import { useHotkey } from "@tanstack/vue-hotkeys"
 import { useCurrentUser, useIsCurrentUserLoaded } from "vuefire"
 
 const { t } = useI18n()
@@ -7,9 +7,7 @@ const router = useRouter()
 const user = useCurrentUser()
 const isUserLoaded = useIsCurrentUserLoaded()
 
-hotkeys("enter", (event) => {
-  console.log("Enter key pressed")
-  event.preventDefault()
+useHotkey("Enter", () => {
   if (user.value) {
     router.push("/start")
   } else {

@@ -25,7 +25,23 @@ import {
   IconXCircle,
   IconXSquare,
 } from "@/data/icons"
+import {
+  formatForDisplay,
+  formatHotkey,
+  parseHotkey,
+  type Hotkey,
+} from "@tanstack/vue-hotkeys"
 import type { Component } from "vue"
+
+/**
+ * A hotkey binding string in TanStack notation (e.g. `"Mod+K"`, `"Mod+Shift+L"`).
+ *
+ * The `(string & {})` arm preserves autocomplete for the type-safe `Hotkey`
+ * union while still permitting escape-hatch combos the union deliberately
+ * excludes — notably `Shift+<punctuation>` like `"Shift+/"` (the "?" help key),
+ * which is layout-dependent and matched via `event.code` at runtime.
+ */
+export type HotkeyBinding = Hotkey | (string & {})
 
 // ============================================================================
 // Platform Detection (cached for performance)
@@ -73,8 +89,12 @@ export type Shortcut = {
   description: string[]
   /** Display keys (e.g., [["⌘", "K"]]) - optional for command-only shortcuts */
   keys?: string[][]
-  /** hotkeys-js binding string (e.g., "cmd+k,ctrl+k") - required if keys is set */
-  hotkeys?: string
+  /**
+   * TanStack hotkey binding(s) in cross-platform `Mod` notation (e.g. `"Mod+K"`,
+   * which resolves to ⌘K on macOS and Ctrl+K elsewhere). Use an array for
+   * actions bound to several distinct combos (e.g. workspace switch up/down).
+   */
+  hotkeys?: HotkeyBinding | HotkeyBinding[]
   /** Event emitted when shortcut is triggered */
   event: string
   /** Optional parameters passed to the event */
@@ -186,34 +206,35 @@ export const getFlatShortcuts = (options?: FilterOptions): Shortcut[] => {
 // Display & Validation Utilities (shared across recorder UIs)
 // ============================================================================
 
-/** Map of special key names to their display symbols */
-export const DISPLAY_KEY_MAP: Record<string, string> = {
-  arrowup: "↑",
-  arrowdown: "↓",
-  arrowleft: "←",
-  arrowright: "→",
-  escape: "Esc",
-  enter: "↩",
-  backspace: "⌫",
-  delete: "⌦",
-  tab: "⇥",
-  " ": "Space",
-}
+/** Target platform passed to TanStack's display/parse helpers. */
+const DISPLAY_PLATFORM: "mac" | "windows" = IS_APPLE_DEVICE ? "mac" : "windows"
 
-/** System shortcuts that cannot be registered as global hotkeys */
-export const SYSTEM_SHORTCUTS = new Set([
-  "cmd+h", // Hide window
-  "cmd+m", // Minimize
-  "cmd+q", // Quit
-  "cmd+w", // Close window
-  "cmd+tab", // App switcher
-  "cmd+space", // Spotlight
-  "cmd+i", // Get Info (Finder)
+/**
+ * Private separator for splitting `formatForDisplay` output into key tokens.
+ * Uses the ASCII Unit Separator (U+001F) so it never collides with a key glyph.
+ */
+const DISPLAY_SEPARATOR = "\u001f"
+
+/**
+ * macOS system shortcuts that cannot be reassigned as app hotkeys, in `Mod`
+ * notation (Mod = ⌘ on macOS). Matched against the recorder's normalized
+ * output and only enforced on Apple devices (see `useShortcutRecorder`).
+ */
+export const SYSTEM_SHORTCUTS = new Set<HotkeyBinding>([
+  "Mod+H", // Hide window
+  "Mod+M", // Minimize
+  "Mod+Q", // Quit
+  "Mod+W", // Close window
+  "Mod+Tab", // App switcher
+  "Mod+Space", // Spotlight
+  "Mod+I", // Get Info (Finder)
 ])
 
 /**
- * Split a hotkeys-js binding string into combos while preserving literal comma
- * keys, e.g. "cmd+,,ctrl+," -> ["cmd+,", "ctrl+,"]
+ * Split a binding string into individual combos while preserving literal comma
+ * keys, e.g. `"Mod+,"` -> `["Mod+,"]`. Also splits legacy hotkeys-js values
+ * (`"cmd+k,ctrl+k"` -> `["cmd+k", "ctrl+k"]`) so existing user overrides keep
+ * working without a data migration.
  */
 export const splitHotkeyBindings = (binding: string): string[] => {
   const normalizedBinding = binding.replace(/\s/g, "")
@@ -231,23 +252,32 @@ export const splitHotkeyBindings = (binding: string): string[] => {
   return combos.filter(Boolean)
 }
 
-/** Convert a hotkeys-js binding string to platform-specific display keys */
+/**
+ * Resolve a shortcut binding (single string, array, or undefined) to a flat
+ * list of combo strings. A bare string is run through `splitHotkeyBindings` so
+ * both array definitions and legacy comma-joined overrides normalize uniformly.
+ */
+export const getHotkeyCombos = (
+  binding: HotkeyBinding | HotkeyBinding[] | undefined
+): string[] => {
+  if (!binding) return []
+  return Array.isArray(binding) ? binding : splitHotkeyBindings(binding)
+}
+
+/**
+ * Convert a single hotkey combo to platform-specific display key tokens for
+ * `<Kbd>` rendering, e.g. `"Mod+Shift+L"` -> `["⌘", "⇧", "L"]` on macOS.
+ */
 export const hotkeyToDisplayKeys = (hotkey: string): string[] => {
-  const parts = hotkey.split("+")
-  return parts.map((part) => {
-    switch (part) {
-      case "cmd":
-        return IS_APPLE_DEVICE ? "⌘" : getPlatformSpecialKey()
-      case "ctrl":
-        return IS_APPLE_DEVICE ? "⌃" : "Ctrl"
-      case "shift":
-        return IS_APPLE_DEVICE ? "⇧" : "Shift"
-      case "alt":
-        return IS_APPLE_DEVICE ? "⌥" : "Alt"
-      default:
-        return DISPLAY_KEY_MAP[part] ?? part.toUpperCase()
-    }
-  })
+  if (!hotkey) return []
+  try {
+    return formatForDisplay(hotkey, {
+      platform: DISPLAY_PLATFORM,
+      separatorToken: DISPLAY_SEPARATOR,
+    }).split(DISPLAY_SEPARATOR)
+  } catch {
+    return [hotkey]
+  }
 }
 
 /** Stable identifier for storing per-shortcut overrides */
@@ -265,36 +295,38 @@ export const getShortcutById = (shortcutId: string): Shortcut | undefined =>
     .find((shortcut) => getShortcutId(shortcut) === shortcutId)
 
 /** Get the default hotkeys binding for a shortcut identifier */
-export const getDefaultHotkeys = (shortcutId: string): string | undefined =>
+export const getDefaultHotkeys = (
+  shortcutId: string
+): HotkeyBinding | HotkeyBinding[] | undefined =>
   getShortcutById(shortcutId)?.hotkeys
 
 /**
- * Normalize a hotkey combo string for comparison.
- * Splits modifiers, sorts them, lowercases everything.
- * e.g. "shift+cmd+k" → "cmd+k+shift"
+ * Canonicalize a single hotkey combo for equality comparison (conflict & reset
+ * detection). Resolves `Mod` to the current platform's modifier and aliases
+ * (`cmd`/`ctrl`) to canonical names, so `"Mod+K"`, `"cmd+k"` (macOS) and
+ * `"ctrl+k"` (Windows) all compare equal. Falls back to a lowercased string for
+ * combos TanStack can't parse.
  */
 export const normalizeHotkeyCombo = (combo: string): string => {
-  const parts = combo.toLowerCase().split("+")
-  const modifiers = parts.filter((p) =>
-    ["cmd", "ctrl", "shift", "alt", "meta"].includes(p)
-  )
-  const keys = parts.filter(
-    (p) => !["cmd", "ctrl", "shift", "alt", "meta"].includes(p)
-  )
-  return [...modifiers.sort(), ...keys].join("+")
+  try {
+    return formatHotkey(parseHotkey(combo, DISPLAY_PLATFORM))
+  } catch {
+    return combo.toLowerCase()
+  }
 }
 
 /**
- * Generate cross-platform hotkey string from a single recorded combo.
- * On Mac: cmd+k → "cmd+k,ctrl+k" (so it works on both platforms)
- * On non-Mac: ctrl+k → "ctrl+k" (cmd bindings aren't needed)
+ * True when a single recorded combo equals the shortcut's default binding,
+ * compared canonically (so `"Mod+K"` matches a legacy `"cmd+k"` override and a
+ * freshly recorded combo alike). Only single-combo defaults are user-editable,
+ * so multi-combo defaults never match.
  */
-export const toCrossPlatformHotkeys = (hotkey: string): string => {
-  if (IS_APPLE_DEVICE && hotkey.includes("cmd") && !hotkey.includes("ctrl")) {
-    const ctrlVariant = hotkey.replace(/\bcmd\b/g, "ctrl")
-    return `${hotkey},${ctrlVariant}`
-  }
-  return hotkey
+export const isDefaultHotkey = (shortcutId: string, combo: string): boolean => {
+  const defaults = getHotkeyCombos(getDefaultHotkeys(shortcutId))
+  return (
+    defaults.length === 1 &&
+    normalizeHotkeyCombo(defaults[0]) === normalizeHotkeyCombo(combo)
+  )
 }
 
 // ============================================================================
@@ -308,7 +340,7 @@ const generateTabSelectionShortcuts = (): Shortcut[] =>
     return {
       description: [`Select tab ${num}`],
       keys: [[getPlatformSpecialKey(), String(num)]],
-      hotkeys: `cmd+${num},ctrl+${num}`,
+      hotkeys: `Mod+${num}`,
       event: "Tabs.Select",
       parameters: num,
       icon: IconCheckSquare2,
@@ -343,7 +375,7 @@ export const shortcuts: ShortcutCategory[] = [
       {
         description: ["Commands"],
         keys: [[getPlatformSpecialKey(), "K"]],
-        hotkeys: "cmd+k,ctrl+k",
+        hotkeys: "Mod+K",
         event: "Dialog.Command.Open",
         icon: IconTerminal,
         tags: ["command", "search", "palette"],
@@ -352,7 +384,7 @@ export const shortcuts: ShortcutCategory[] = [
       {
         description: ["Ask AI"],
         keys: [[getPlatformSpecialKey(), "↩"]],
-        hotkeys: "cmd+enter,ctrl+enter",
+        hotkeys: "Mod+Enter",
         event: "Dialog.AiAsk.Toggle",
         icon: IconSparkles,
         tags: ["ai", "ask", "assistant", "copilot"],
@@ -360,7 +392,7 @@ export const shortcuts: ShortcutCategory[] = [
       {
         description: ["Settings"],
         keys: [[getPlatformSpecialKey(), ","]],
-        hotkeys: "cmd+,,ctrl+,",
+        hotkeys: "Mod+,",
         event: "Dialog.Settings.Open",
         parameters: "preferences",
         icon: IconSettings,
@@ -369,14 +401,14 @@ export const shortcuts: ShortcutCategory[] = [
       {
         description: ["Keyboard shortcuts"],
         keys: [[getPlatformSpecialKey(), "/"]],
-        hotkeys: "cmd+/,ctrl+/",
+        hotkeys: "Mod+/",
         event: "Dialog.Shortcuts.Open",
         icon: IconKeyboard,
         tags: ["keyboard", "shortcuts", "help", "keys"],
       },
       {
         description: ["Workspace", "Switch"],
-        hotkeys: "cmd+shift+up,ctrl+shift+up,cmd+shift+down,ctrl+shift+down",
+        hotkeys: ["Mod+Shift+ArrowUp", "Mod+Shift+ArrowDown"],
         event: "Workspace.Switch",
         icon: IconComponent,
         tags: ["workspace", "switch", "dropdown"],
@@ -385,7 +417,7 @@ export const shortcuts: ShortcutCategory[] = [
       {
         description: ["Help and support"],
         keys: [["?"]],
-        hotkeys: "shift+/",
+        hotkeys: "Shift+/",
         event: "Menu.Help.Toggle",
         icon: IconHelpCircle,
         tags: ["help", "support", "documentation", "faq"],
@@ -404,7 +436,7 @@ export const shortcuts: ShortcutCategory[] = [
       {
         description: ["Open new tab"],
         keys: [[getPlatformSpecialKey(), "T"]],
-        hotkeys: "cmd+t,ctrl+t",
+        hotkeys: "Mod+T",
         event: "Tabs.Add",
         icon: IconPlusSquare,
         tags: ["tab", "new", "add", "open", "create"],
@@ -412,7 +444,7 @@ export const shortcuts: ShortcutCategory[] = [
       {
         description: ["Reopen last closed tab"],
         keys: [[getPlatformSpecialKey(), "⇧", "T"]],
-        hotkeys: "cmd+shift+t,ctrl+shift+t",
+        hotkeys: "Mod+Shift+T",
         event: "Tabs.ReopenLast",
         icon: IconHistory,
         tags: ["tab", "reopen", "history", "restore", "undo"],
@@ -420,7 +452,7 @@ export const shortcuts: ShortcutCategory[] = [
       {
         description: ["Close current tab"],
         keys: [[getPlatformSpecialKey(), "W"]],
-        hotkeys: "cmd+w,ctrl+w",
+        hotkeys: "Mod+W",
         event: "Tabs.Close",
         icon: IconMinusSquare,
         tags: ["tab", "close", "remove"],
@@ -428,7 +460,7 @@ export const shortcuts: ShortcutCategory[] = [
       {
         description: ["Close other tabs"],
         keys: [[getPlatformSpecialKey(), "⇧", "W"]],
-        hotkeys: "cmd+shift+w,ctrl+shift+w",
+        hotkeys: "Mod+Shift+W",
         event: "Tabs.Close.Others",
         icon: IconXCircle,
         tags: ["tab", "close", "remove", "others"],
@@ -436,7 +468,7 @@ export const shortcuts: ShortcutCategory[] = [
       {
         description: ["Close all tabs"],
         keys: [[getPlatformSpecialKey(), getPlatformAlternateKey(), "W"]],
-        hotkeys: "cmd+alt+w,ctrl+alt+w",
+        hotkeys: "Mod+Alt+W",
         event: "Tabs.Close.All",
         icon: IconXSquare,
         tags: ["tab", "close", "remove", "all", "clear"],
@@ -444,7 +476,7 @@ export const shortcuts: ShortcutCategory[] = [
       {
         description: ["Duplicate tab"],
         keys: [[getPlatformSpecialKey(), "D"]],
-        hotkeys: "cmd+d,ctrl+d",
+        hotkeys: "Mod+D",
         event: "Tabs.Duplicate",
         icon: IconCopy,
         tags: ["tab", "duplicate", "copy", "clone"],
@@ -452,7 +484,7 @@ export const shortcuts: ShortcutCategory[] = [
       {
         description: ["Rename tab"],
         keys: [["F2"]],
-        hotkeys: "f2",
+        hotkeys: "F2",
         event: "Tabs.Rename",
         icon: IconSquarePen,
         tags: ["tab", "rename", "edit", "name"],
@@ -460,7 +492,7 @@ export const shortcuts: ShortcutCategory[] = [
       {
         description: ["Select next tab"],
         keys: [[getPlatformControlKey(), "Tab"]],
-        hotkeys: "ctrl+tab",
+        hotkeys: "Control+Tab",
         event: "Tabs.Select",
         parameters: "next",
         icon: IconCheckSquare2,
@@ -470,7 +502,7 @@ export const shortcuts: ShortcutCategory[] = [
       {
         description: ["Select previous tab"],
         keys: [[getPlatformControlKey(), "⇧", "Tab"]],
-        hotkeys: "ctrl+shift+tab",
+        hotkeys: "Control+Shift+Tab",
         event: "Tabs.Select",
         parameters: "previous",
         icon: IconCheckSquare2,
@@ -501,7 +533,7 @@ export const shortcuts: ShortcutCategory[] = [
       {
         description: ["Sidebar", "Left"],
         keys: [[getPlatformSpecialKey(), "\\"]],
-        hotkeys: "cmd+\\,ctrl+\\",
+        hotkeys: "Mod+\\",
         event: "Sidebar.Left.Toggle",
         icon: IconPanelLeft,
         tags: ["sidebar", "toggle", "layout", "left", "panel"],
@@ -509,7 +541,7 @@ export const shortcuts: ShortcutCategory[] = [
       {
         description: ["Sidebar", "Right"],
         keys: [[getPlatformSpecialKey(), "⇧", "\\"]],
-        hotkeys: "cmd+shift+\\,ctrl+shift+\\",
+        hotkeys: "Mod+Shift+\\",
         event: "Sidebar.Right.Toggle",
         icon: IconPanelRight,
         tags: ["sidebar", "toggle", "layout", "right", "panel"],
@@ -517,7 +549,7 @@ export const shortcuts: ShortcutCategory[] = [
       {
         description: ["Panel", "Bottom"],
         keys: [[getPlatformSpecialKey(), "J"]],
-        hotkeys: "cmd+j,ctrl+j",
+        hotkeys: "Mod+J",
         event: "Panel.Bottom.Toggle",
         icon: IconPanelBottom,
         tags: ["panel", "toggle", "layout", "bottom", "terminal"],
@@ -571,7 +603,7 @@ export const shortcuts: ShortcutCategory[] = [
       {
         description: ["Settings", "Team", "Overview"],
         keys: [[getPlatformSpecialKey(), ";"]],
-        hotkeys: "cmd+;,ctrl+;",
+        hotkeys: "Mod+;",
         event: "Dialog.Settings.Open",
         parameters: "overview",
         icon: IconComponent,
@@ -581,8 +613,8 @@ export const shortcuts: ShortcutCategory[] = [
       // workspaces
       {
         description: ["Settings", "Team", "Workspaces"],
-        keys: [[getPlatformSpecialKey(), "⇧", "W"]],
-        hotkeys: "cmd+shift+w,ctrl+shift+w",
+        keys: [[getPlatformSpecialKey(), "⇧", "S"]],
+        hotkeys: "Mod+Shift+S",
         event: "Dialog.Settings.Open",
         parameters: "workspaces",
         icon: IconSettings,
@@ -592,7 +624,7 @@ export const shortcuts: ShortcutCategory[] = [
       {
         description: ["Settings", "Team", "Members"],
         keys: [[getPlatformSpecialKey(), "⇧", "M"]],
-        hotkeys: "cmd+shift+m,ctrl+shift+m",
+        hotkeys: "Mod+Shift+M",
         event: "Dialog.Settings.Open",
         parameters: "members",
         icon: IconUsersRound,
@@ -644,7 +676,7 @@ export const shortcuts: ShortcutCategory[] = [
       {
         description: ["Logout"],
         keys: [[getPlatformSpecialKey(), "⇧", "L"]],
-        hotkeys: "cmd+shift+l,ctrl+shift+l",
+        hotkeys: "Mod+Shift+L",
         event: "Dialog.Exit.Open",
         icon: IconLogOut,
         tags: ["logout", "sign out", "exit", "session"],

@@ -847,7 +847,7 @@ watch(selectedCreateFiles, async (files) => {
       </AlertDialogHeader>
 
       <AlertDialogFooter>
-        <AlertDialogCancel @click="closeDeleteDialog()">
+        <AlertDialogCancel>
           {{ t("actions.cancel") }}
         </AlertDialogCancel>
         <AlertDialogAction

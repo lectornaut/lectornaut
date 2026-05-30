@@ -16,13 +16,14 @@ import {
   IconSettings2,
 } from "@/data/icons"
 import {
-  getDefaultHotkeys,
   getFilteredShortcuts,
   getFlatShortcuts,
+  getHotkeyCombos,
   getShortcutId,
   hotkeyToDisplayKeys,
+  isDefaultHotkey,
   normalizeHotkeyCombo,
-  splitHotkeyBindings,
+  type HotkeyBinding,
   type Shortcut,
   type ShortcutCategory,
 } from "@/helpers/shortcuts"
@@ -101,14 +102,14 @@ const filteredShortcuts = computed(() => {
 const editingShortcutId = ref<string | null>(null)
 
 /** Get the effective hotkeys binding for a shortcut (override or default) */
-const getEffectiveHotkeys = (shortcut: Shortcut): string | undefined =>
+const getEffectiveHotkeys = (
+  shortcut: Shortcut
+): HotkeyBinding | HotkeyBinding[] | undefined =>
   shortcutOverrides.value[getShortcutId(shortcut)] ?? shortcut.hotkeys
 
 /** Get display keys for a shortcut, using override if present */
 const getDisplayKeys = (shortcut: Shortcut): string[] => {
-  const effective = getEffectiveHotkeys(shortcut)
-  if (!effective) return []
-  const primaryCombo = splitHotkeyBindings(effective)[0]
+  const primaryCombo = getHotkeyCombos(getEffectiveHotkeys(shortcut))[0]
   return primaryCombo ? hotkeyToDisplayKeys(primaryCombo) : []
 }
 
@@ -124,7 +125,7 @@ const getConflict = (
   candidateHotkeys: string,
   excludeShortcutId: string
 ): string | null => {
-  const candidateCombos = splitHotkeyBindings(candidateHotkeys).map((combo) =>
+  const candidateCombos = getHotkeyCombos(candidateHotkeys).map((combo) =>
     normalizeHotkeyCombo(combo)
   )
 
@@ -133,7 +134,7 @@ const getConflict = (
     if (getShortcutId(shortcut) === excludeShortcutId) continue
     const effective = getEffectiveHotkeys(shortcut)
     if (!effective) continue
-    const existingCombos = splitHotkeyBindings(effective).map((combo) =>
+    const existingCombos = getHotkeyCombos(effective).map((combo) =>
       normalizeHotkeyCombo(combo)
     )
     for (const combo of candidateCombos) {
@@ -162,9 +163,15 @@ const {
     const shortcut = getFlatShortcuts(filterOptions.value).find(
       (candidate) => getShortcutId(candidate) === shortcutId
     )
-    const currentHotkeys = shortcut ? getEffectiveHotkeys(shortcut) : null
+    const currentCombo = shortcut
+      ? getHotkeyCombos(getEffectiveHotkeys(shortcut))[0]
+      : undefined
 
-    if (currentHotkeys === hotkeys) {
+    // No-op if the user re-recorded the combo already in effect.
+    if (
+      currentCombo &&
+      normalizeHotkeyCombo(currentCombo) === normalizeHotkeyCombo(hotkeys)
+    ) {
       stopRecording()
       editingShortcutId.value = null
       return
@@ -180,7 +187,7 @@ const {
       return
     }
 
-    if (hotkeys === getDefaultHotkeys(shortcutId)) {
+    if (isDefaultHotkey(shortcutId, hotkeys)) {
       resetShortcutOverride(shortcutId)
     } else {
       updateShortcutOverride(shortcutId, hotkeys)
@@ -285,7 +292,7 @@ const isEditing = (shortcut: Shortcut): boolean =>
                 <Item
                   v-for="(shortcut, shortcutIndex) in category.shortcuts"
                   :key="shortcutIndex"
-                  class="p-0"
+                  size="xs"
                 >
                   <ItemContent>
                     <ItemDescription>

@@ -40,9 +40,7 @@
 
     @apply h-dvh;
     @apply w-dvw;
-    @apply bg-linear-to-b;
-    @apply from-card/95;
-    @apply to-card/90;
+    @apply bg-background;
     @apply text-foreground;
     @apply text-base;
     @apply font-flex;

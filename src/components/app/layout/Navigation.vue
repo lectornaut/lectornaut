@@ -91,7 +91,6 @@ useSortable(el, activeNavItems, {
             </SidebarMenuButton>
           </SidebarMenuItem>
         </template>
-        <Separator class="my-1" />
         <DropdownMenu>
           <DropdownMenuTrigger as-child>
             <SidebarMenuItem>

@@ -153,6 +153,38 @@ const getAccentOptionStyle = (optionId: AccentId) =>
         </Field>
         <Field orientation="horizontal">
           <FieldContent>
+            <FieldLabel for="language">{{
+              t("settings.preferences.language.label")
+            }}</FieldLabel>
+            <FieldDescription>
+              {{ t("settings.preferences.language.description") }}
+            </FieldDescription>
+          </FieldContent>
+          <Select id="language" v-model="selectedLanguage">
+            <SelectTrigger>
+              <SelectValue
+                :placeholder="t('settings.preferences.language.placeholder')"
+              />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectGroup>
+                <SelectItem
+                  v-for="language in languages"
+                  :key="language.id"
+                  :value="language.id"
+                >
+                  <Component :is="language.icon" />
+                  {{ language.name }}
+                </SelectItem>
+              </SelectGroup>
+            </SelectContent>
+          </Select>
+        </Field>
+      </FieldSet>
+      <FieldSeparator />
+      <FieldSet>
+        <Field orientation="horizontal">
+          <FieldContent>
             <FieldLabel for="theme">{{
               t("settings.preferences.theme.label")
             }}</FieldLabel>
@@ -302,35 +334,9 @@ const getAccentOptionStyle = (optionId: AccentId) =>
             </Select>
           </div>
         </Field>
-        <Field orientation="horizontal">
-          <FieldContent>
-            <FieldLabel for="language">{{
-              t("settings.preferences.language.label")
-            }}</FieldLabel>
-            <FieldDescription>
-              {{ t("settings.preferences.language.description") }}
-            </FieldDescription>
-          </FieldContent>
-          <Select id="language" v-model="selectedLanguage">
-            <SelectTrigger>
-              <SelectValue
-                :placeholder="t('settings.preferences.language.placeholder')"
-              />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectGroup>
-                <SelectItem
-                  v-for="language in languages"
-                  :key="language.id"
-                  :value="language.id"
-                >
-                  <Component :is="language.icon" />
-                  {{ language.name }}
-                </SelectItem>
-              </SelectGroup>
-            </SelectContent>
-          </Select>
-        </Field>
+      </FieldSet>
+      <FieldSeparator />
+      <FieldSet>
         <Field orientation="horizontal">
           <FieldContent>
             <FieldLabel for="font">{{
@@ -393,6 +399,9 @@ const getAccentOptionStyle = (optionId: AccentId) =>
             </SelectContent>
           </Select>
         </Field>
+      </FieldSet>
+      <FieldSeparator />
+      <FieldSet>
         <Field orientation="horizontal">
           <FieldContent>
             <FieldLabel for="editor-theme">{{

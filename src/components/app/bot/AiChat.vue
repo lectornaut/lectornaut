@@ -52,6 +52,20 @@ const messageAvatarSeed = (message: BotChatMessage): string =>
   authStore.currentUser?.uid ??
   "User"
 
+// Is this user turn authored by the *current* logged-in viewer? Drives
+// right-alignment: your own messages sit on the right (avatar on the
+// right), while everyone else — other admins posting into a shared chat,
+// and the agent — stays on the left. The familiar iMessage/Slack split.
+//
+// We compare against `messageAvatarSeed` rather than re-deriving the
+// author so alignment and avatar identity can never drift apart: a bubble
+// pinned to the right always carries *your* avatar. The seed's own
+// fallback chain also lands the right answer in the pre-first-save window
+// (no `authorUid`/`ownerUid` yet ⇒ resolves to the current uid ⇒ own).
+const isOwnMessage = (message: BotChatMessage): boolean =>
+  message.role === "user" &&
+  messageAvatarSeed(message) === authStore.currentUser?.uid
+
 // ── Copy / Reply (context menu actions) ──────────────────────────────────
 //
 // Both actions read `message.content` — for agent turns this is the
@@ -116,7 +130,7 @@ const handleReplyMessage = (message: BotChatMessage) => {
 // message reads at a time); see `useReadAloud`. `isSpeaking`/`isPaused` are
 // per-message predicates that drive the context-menu's three states.
 const {
-  isSupported: isReadAloudSupported,
+  isAvailable: isReadAloudAvailable,
   isSpeaking,
   isPaused,
   readAloud,
@@ -280,9 +294,14 @@ const renderedMessages = computed(() =>
         :key="message.id"
       >
         <ContextMenuTrigger class="group relative">
-          <div class="flex items-end gap-2 px-2 pb-8">
+          <div
+            :class="[
+              'flex items-end gap-2 px-2 pb-8',
+              { 'flex-row-reverse': isOwnMessage(message) },
+            ]"
+          >
             <Avatar
-              v-if="message.role === 'user'"
+              v-if="message.role === 'user' && !isOwnMessage(message)"
               variant="beam"
               :name="messageAvatarSeed(message)"
               :colors="[
@@ -297,13 +316,11 @@ const renderedMessages = computed(() =>
             <div
               :class="[
                 'markdown-bubble flex flex-col gap-2 text-sm',
-                {
-                  'bg-destructive/25 max-w-2/3 rounded-lg rounded-bl-xs p-2':
-                    message.role === 'user',
-                },
-                {
-                  'w-full': message.role === 'agent',
-                },
+                message.role === 'user' && [
+                  'bg-destructive/25 max-w-2/3 rounded-lg p-2',
+                  isOwnMessage(message) ? 'rounded-br-xs' : 'rounded-bl-xs',
+                ],
+                message.role === 'agent' && 'w-full',
               ]"
             >
               <template v-for="block in blocks" :key="block.id">
@@ -312,6 +329,7 @@ const renderedMessages = computed(() =>
                   surface="chat"
                   :content="block.text"
                   :final="block.final"
+                  class="select-auto"
                 />
                 <BotChatToolCall
                   v-else
@@ -328,7 +346,10 @@ const renderedMessages = computed(() =>
                presentation differs (a floating segmented `ButtonGroup` of
                icon-only buttons vs. menu rows). Tooltips name each icon. -->
           <div
-            class="pointer-events-none absolute bottom-0 left-2 z-10 flex items-center gap-1 opacity-0 transition group-hover:pointer-events-auto group-hover:opacity-100"
+            :class="[
+              'pointer-events-none absolute bottom-0 z-10 flex items-center gap-1 opacity-0 transition group-hover:pointer-events-auto group-hover:opacity-100',
+              isOwnMessage(message) ? 'right-2' : 'left-2',
+            ]"
           >
             <TooltipProvider>
               <Tooltip>
@@ -371,7 +392,7 @@ const renderedMessages = computed(() =>
                      a single "Read aloud" button; active (playing OR paused) ⇒
                      a play/pause toggle + Stop. Hidden when the browser lacks
                      SpeechSynthesis. -->
-              <template v-if="isReadAloudSupported">
+              <template v-if="isReadAloudAvailable">
                 <template v-if="isSpeaking(message.id) || isPaused(message.id)">
                   <Tooltip v-if="isSpeaking(message.id)">
                     <TooltipTrigger as-child>
@@ -457,7 +478,7 @@ const renderedMessages = computed(() =>
                idle; while a read is active (playing OR paused) it splits
                into two inline controls — a play/pause toggle + Stop. Hidden
                entirely when the browser lacks SpeechSynthesis. -->
-          <template v-if="isReadAloudSupported">
+          <template v-if="isReadAloudAvailable">
             <ContextMenuSeparator />
             <div
               v-if="isSpeaking(message.id) || isPaused(message.id)"

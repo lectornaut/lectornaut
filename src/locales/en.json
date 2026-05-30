@@ -700,6 +700,8 @@
         "unlinked": "Provider unlinked",
         "unlinkedDesc": "This sign-in method was removed.",
         "failed": "Couldn't unlink sign-in method",
+        "removeConfirmTitle": "Remove sign-in method?",
+        "removeConfirmDescription": "Remove {name}? You'll no longer be able to sign in with it.",
         "google": "Google.com",
         "password": "Password"
       },
@@ -835,6 +837,18 @@
       "system": {
         "label": "System",
         "description": "Configure startup, menu bar, and desktop behavior."
+      },
+      "speech": {
+        "label": "Speech",
+        "description": "Control voice dictation and spoken responses."
+      },
+      "readAloud": {
+        "label": "Read aloud",
+        "description": "Allow assistant messages to be played back as speech."
+      },
+      "dictation": {
+        "label": "Dictation",
+        "description": "Use your microphone to dictate messages by voice."
       },
       "updates": {
         "label": "Updates",

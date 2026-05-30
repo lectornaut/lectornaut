@@ -6,7 +6,11 @@ import {
 } from "@/composables/useShortcutRecorder"
 import { IconCheck, IconRotateCcw, IconSettings2 } from "@/data/icons"
 import { defaultFileDropOverlayShortcutKeys } from "@/helpers/defaults"
-import { hotkeyToDisplayKeys, splitHotkeyBindings } from "@/helpers/shortcuts"
+import {
+  getHotkeyCombos,
+  hotkeyToDisplayKeys,
+  normalizeHotkeyCombo,
+} from "@/helpers/shortcuts"
 import {
   checkForUpdates,
   downloadAndInstallUpdate,
@@ -30,6 +34,8 @@ const {
   fileDropOverlayShortcut,
   fileDropOverlayShortcutKeys,
   openInDesktopApp,
+  readAloudEnabled,
+  dictationEnabled,
   isUpdatingPreferences,
 } = storeToRefs(settingsStore)
 const { updatePreference } = settingsStore
@@ -77,8 +83,9 @@ const {
   handleRecorderKeydown,
 } = useShortcutRecorder({
   onRecord: (hotkeys) => {
-    // For file drop overlay, store only the first combo (single-platform Tauri shortcut)
-    fileDropOverlayShortcutKeys.value = splitHotkeyBindings(hotkeys)[0] ?? ""
+    // The recorder emits a single Mod-notation combo (e.g. "Mod+Shift+D");
+    // store it verbatim for the Tauri global-shortcut registration.
+    fileDropOverlayShortcutKeys.value = getHotkeyCombos(hotkeys)[0] ?? ""
   },
 })
 
@@ -100,7 +107,9 @@ const displayKeys = computed(() =>
 )
 
 const isDefaultShortcut = computed(
-  () => fileDropOverlayShortcutKeys.value === defaultFileDropOverlayShortcutKeys
+  () =>
+    normalizeHotkeyCombo(fileDropOverlayShortcutKeys.value) ===
+    normalizeHotkeyCombo(defaultFileDropOverlayShortcutKeys)
 )
 
 const restoreDefaultShortcut = () => {
@@ -180,6 +189,41 @@ const restoreDefaultShortcut = () => {
             </FieldDescription>
           </FieldContent>
           <Switch id="open-in-desktop-app" v-model="openInDesktopApp" />
+        </Field>
+      </FieldSet>
+      <FieldSeparator />
+      <FieldSet>
+        <Field orientation="horizontal">
+          <FieldContent>
+            <FieldLabel>
+              {{ t("settings.preferences.speech.label") }}
+            </FieldLabel>
+            <FieldDescription>
+              {{ t("settings.preferences.speech.description") }}
+            </FieldDescription>
+          </FieldContent>
+        </Field>
+        <Field orientation="horizontal">
+          <FieldContent>
+            <FieldLabel for="read-aloud">
+              {{ t("settings.preferences.readAloud.label") }}
+            </FieldLabel>
+            <FieldDescription>
+              {{ t("settings.preferences.readAloud.description") }}
+            </FieldDescription>
+          </FieldContent>
+          <Switch id="read-aloud" v-model="readAloudEnabled" />
+        </Field>
+        <Field orientation="horizontal">
+          <FieldContent>
+            <FieldLabel for="dictation">
+              {{ t("settings.preferences.dictation.label") }}
+            </FieldLabel>
+            <FieldDescription>
+              {{ t("settings.preferences.dictation.description") }}
+            </FieldDescription>
+          </FieldContent>
+          <Switch id="dictation" v-model="dictationEnabled" />
         </Field>
       </FieldSet>
       <template v-if="isTauri">

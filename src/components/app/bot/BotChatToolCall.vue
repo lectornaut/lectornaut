@@ -833,15 +833,15 @@ const showChevron = computed(
 <template>
   <Collapsible v-model:open="open" class="grid gap-2">
     <CollapsibleTrigger as-child>
-      <Item size="xs" class="group p-0 text-xs">
+      <Item size="xs" class="group/toolCall p-0 text-xs select-none">
         <ItemContent>
           <ItemTitle
-            class="text-muted-foreground/80 group-hover:text-muted-foreground flex items-center gap-1 text-xs"
+            class="text-muted-foreground/80 group-hover/toolCall:text-muted-foreground flex items-center gap-1 text-xs"
           >
             {{ displayName }}
             <IconChevronRight
               v-if="showChevron"
-              class="text-muted-foreground/80 group-hover:text-muted-foreground size-3! transition-transform will-change-transform"
+              class="text-muted-foreground/80 group-hover/toolCall:text-muted-foreground size-3! transition-transform will-change-transform"
               :class="{ 'rotate-90': open }"
             />
             <TooltipProvider v-else>
@@ -861,7 +861,7 @@ const showChevron = computed(
         </ItemContent>
       </Item>
     </CollapsibleTrigger>
-    <CollapsibleContent>
+    <CollapsibleContent class="select-auto">
       <!-- ============================================================== -->
       <!-- Live interrupt: question + choices form (chat is paused here). -->
       <!-- ============================================================== -->

@@ -1,16 +1,20 @@
 import { isTauri } from "@/composables/usePlatform"
 import {
   getFilteredShortcuts,
+  getHotkeyCombos,
   getShortcutId,
-  splitHotkeyBindings,
 } from "@/helpers/shortcuts"
 import { emitter } from "@/modules/mitt"
 import { parseSafe } from "@/schemas/_utils"
 import { shortcutOverridesSchema } from "@/schemas/settings"
-import hotkeys from "hotkeys-js"
+import {
+  getHotkeyManager,
+  type Hotkey,
+  type HotkeyRegistrationHandle,
+} from "@tanstack/vue-hotkeys"
 
-/** Track all currently registered hotkey strings for teardown */
-const registeredBindings = new Set<string>()
+/** Handles for every currently registered global hotkey (teardown + toggling). */
+const registrations: HotkeyRegistrationHandle[] = []
 
 /**
  * Read shortcut overrides from localStorage (non-reactive, for use outside Vue).
@@ -32,10 +36,11 @@ const readOverrides = (): Record<string, string> => {
 /**
  * Initializes global hotkeys.
  * Filters shortcuts based on platform (Web/Desktop), applies user overrides,
- * and registers them using hotkeys-js.
+ * and registers them with TanStack's singleton `HotkeyManager`.
  */
 export const initHotkeys = () => {
   const overrides = readOverrides()
+  const manager = getHotkeyManager()
 
   const filteredShortcuts = getFilteredShortcuts({
     context: "hotkeys",
@@ -44,18 +49,29 @@ export const initHotkeys = () => {
 
   filteredShortcuts.forEach((category) => {
     category.shortcuts.forEach((shortcut) => {
-      // Resolve effective binding: user override takes precedence
+      // Resolve effective binding: user override takes precedence. A combo list
+      // of length 0 means the shortcut is unbound or explicitly disabled ("").
       const binding = overrides[getShortcutId(shortcut)] ?? shortcut.hotkeys
-      if (!binding) return
+      const combos = getHotkeyCombos(binding)
+      if (combos.length === 0) return
 
-      // Empty string means the shortcut is disabled
-      if (binding === "") return
-
-      hotkeys(binding, (event) => {
-        event.preventDefault()
-        emitter.emit(shortcut.event, shortcut.parameters)
-      })
-      registeredBindings.add(binding)
+      for (const combo of combos) {
+        const handle = manager.register(
+          // Cast: definitions may carry escape-hatch combos (e.g. "Shift+/")
+          // outside the type-safe `Hotkey` union; they are valid at runtime.
+          combo as Hotkey,
+          () => emitter.emit(shortcut.event, shortcut.parameters),
+          {
+            // Match hotkeys-js's default filter: don't fire while the user is
+            // typing in an editable input/textarea/contenteditable.
+            ignoreInputs: true,
+            // conflictBehavior defaults to "warn": app bindings are unique, so
+            // a future accidental duplicate (or a colliding legacy override)
+            // surfaces in the console instead of silently double-firing.
+          }
+        )
+        registrations.push(handle)
+      }
     })
   })
 }
@@ -64,12 +80,10 @@ export const initHotkeys = () => {
  * Unbinds all currently registered hotkeys.
  */
 export const teardownHotkeys = () => {
-  for (const binding of registeredBindings) {
-    for (const combo of splitHotkeyBindings(binding)) {
-      hotkeys.unbind(combo)
-    }
+  for (const handle of registrations) {
+    handle.unregister()
   }
-  registeredBindings.clear()
+  registrations.length = 0
 }
 
 /**
@@ -79,4 +93,15 @@ export const teardownHotkeys = () => {
 export const rebindHotkeys = () => {
   teardownHotkeys()
   initHotkeys()
+}
+
+/**
+ * Enable or disable all global hotkeys without unregistering them. Used by the
+ * shortcut recorder to suppress hotkeys while the user captures a new combo
+ * (replaces hotkeys-js's `hotkeys.filter = () => false`).
+ */
+export const setHotkeysEnabled = (enabled: boolean) => {
+  for (const handle of registrations) {
+    handle.setOptions({ enabled })
+  }
 }

@@ -1,5 +1,7 @@
+import { useSettingsStore } from "@/stores/settingsStore"
 import { useSpeechSynthesis } from "@vueuse/core"
-import { ref, shallowRef } from "vue"
+import { storeToRefs } from "pinia"
+import { computed, ref, shallowRef } from "vue"
 
 /**
  * App-wide read-aloud (text-to-speech) over the Web Speech API.
@@ -45,6 +47,14 @@ const speech = useSpeechSynthesis(spokenText, {
 export function useReadAloud() {
   const isSupported = speech.isSupported
 
+  // Read-aloud can be switched off in Preferences. Fold that choice into the
+  // availability flag the chat UI gates on, so turning it off hides the
+  // control everywhere; the `readAloud` guard below stops any stray call.
+  const { readAloudEnabled } = storeToRefs(useSettingsStore())
+  const isAvailable = computed(
+    () => isSupported.value && readAloudEnabled.value
+  )
+
   /** Actively speaking *this* message (not paused, not ended). */
   const isSpeaking = (id: string) =>
     activeId.value === id && speech.status.value === "play"
@@ -54,13 +64,14 @@ export function useReadAloud() {
     activeId.value === id && speech.status.value === "pause"
 
   /**
-   * Start reading `text` aloud for message `id`. No-op when the API is
-   * unsupported or the text is blank. Any in-flight read is cancelled by
-   * `speak()`, so the new message simply takes over the one synthesizer.
+   * Start reading `text` aloud for message `id`. No-op when read-aloud is
+   * unavailable (unsupported or switched off) or the text is blank. Any
+   * in-flight read is cancelled by `speak()`, so the new message simply takes
+   * over the one synthesizer.
    */
   const readAloud = (id: string, text: string) => {
     const trimmed = text.trim()
-    if (!isSupported.value || !trimmed) return
+    if (!isAvailable.value || !trimmed) return
     spokenText.value = trimmed
     activeId.value = id
     // `speak()` reads the `utterance` computed, which the `spokenText`
@@ -81,5 +92,14 @@ export function useReadAloud() {
     activeId.value = null
   }
 
-  return { isSupported, isSpeaking, isPaused, readAloud, pause, resume, stop }
+  return {
+    isSupported,
+    isAvailable,
+    isSpeaking,
+    isPaused,
+    readAloud,
+    pause,
+    resume,
+    stop,
+  }
 }

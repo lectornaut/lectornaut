@@ -1,7 +1,7 @@
 import {
+  getHotkeyCombos,
   getShortcutById,
   hotkeyToDisplayKeys,
-  splitHotkeyBindings,
 } from "@/helpers/shortcuts"
 import { useSettingsStore } from "@/stores/settingsStore"
 import { storeToRefs } from "pinia"
@@ -23,7 +23,7 @@ export const useShortcutKeys = (
   return computed(() => {
     const override = shortcutOverrides.value?.[shortcutId]
     if (override) {
-      const firstCombo = splitHotkeyBindings(override)[0]
+      const firstCombo = getHotkeyCombos(override)[0]
       if (firstCombo) return hotkeyToDisplayKeys(firstCombo)
     }
     return shortcut?.keys?.[0] ?? null

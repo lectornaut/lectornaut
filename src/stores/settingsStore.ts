@@ -23,7 +23,7 @@ import {
   defaultSize,
   defaultTheme,
 } from "@/helpers/defaults"
-import { getDefaultHotkeys } from "@/helpers/shortcuts"
+import { isDefaultHotkey } from "@/helpers/shortcuts"
 import { firestore } from "@/modules/firebase"
 import { rebindHotkeys } from "@/modules/hotkeys"
 import {
@@ -562,6 +562,13 @@ export const useSettingsStore = defineStore("settings", () => {
 
   const openInDesktopApp = useStorage<boolean>("openInDesktopApp", true)
 
+  // Speech features (read-aloud playback, voice dictation). Device-local —
+  // a microphone you have here you may not have elsewhere — so localStorage
+  // only, no Firestore sync. Default on to preserve the always-available
+  // behavior these features had before the toggles existed.
+  const readAloudEnabled = useStorage<boolean>("readAloudEnabled", true)
+  const dictationEnabled = useStorage<boolean>("dictationEnabled", true)
+
   watch(
     preferencesDocData,
     (docData) => {
@@ -634,8 +641,8 @@ export const useSettingsStore = defineStore("settings", () => {
 
   // ── File drop overlay OS-level global shortcut ──────────────────────
   //
-  // Converts our internal format ("cmd+shift+d") to the Tauri accelerator
-  // format ("CommandOrControl+Shift+D") documented at:
+  // Converts our internal TanStack format ("Mod+Shift+D") to the Tauri
+  // accelerator format ("CommandOrControl+Shift+D") documented at:
   // https://v2.tauri.app/plugin/global-shortcut/
   //
   // Key rules:
@@ -658,6 +665,7 @@ export const useSettingsStore = defineStore("settings", () => {
     backspace: "Backspace",
     delete: "Delete",
     tab: "Tab",
+    space: "Space",
     " ": "Space",
   }
 
@@ -667,13 +675,19 @@ export const useSettingsStore = defineStore("settings", () => {
       .map((part) => {
         const key = part.trim().toLowerCase()
         switch (key) {
+          // `Mod` (and legacy `cmd`) → ⌘ on macOS, Ctrl elsewhere.
+          case "mod":
           case "cmd":
+          case "command":
+          case "meta":
             return "CommandOrControl"
           case "ctrl":
+          case "control":
             return "Control"
           case "shift":
             return "Shift"
           case "alt":
+          case "option":
             return "Alt"
           default:
             return TAURI_KEY_MAP[key] ?? part.trim().toUpperCase()
@@ -849,11 +863,11 @@ export const useSettingsStore = defineStore("settings", () => {
     { debounce: 500, deep: true }
   )
 
-  // Re-register hotkeys-js bindings when overrides change
+  // Re-register global hotkey bindings when overrides change
   watch(shortcutOverrides, () => rebindHotkeys(), { deep: true })
 
   function updateShortcutOverride(shortcutId: string, hotkeys: string): void {
-    if (hotkeys === getDefaultHotkeys(shortcutId)) {
+    if (isDefaultHotkey(shortcutId, hotkeys)) {
       resetShortcutOverride(shortcutId)
       return
     }
@@ -900,6 +914,8 @@ export const useSettingsStore = defineStore("settings", () => {
     fileDropOverlayShortcut,
     fileDropOverlayShortcutKeys,
     openInDesktopApp,
+    readAloudEnabled,
+    dictationEnabled,
     isUpdatingPreferences,
     isPreferencesLoading,
     updatePreference,

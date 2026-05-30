@@ -40,21 +40,21 @@ const reasoning = computed(() => props.node?.content ?? "")
 <template>
   <Collapsible v-model:open="open" class="bot-thinking-block grid gap-2">
     <CollapsibleTrigger as-child>
-      <Item size="xs" class="group p-0 text-xs">
+      <Item size="xs" class="group/thinking p-0 text-xs select-none">
         <ItemContent>
           <ItemTitle
-            class="text-muted-foreground/80 group-hover:text-muted-foreground flex items-center gap-1 text-xs"
+            class="text-muted-foreground/80 group-hover/thinking:text-muted-foreground flex items-center gap-1 text-xs"
           >
             {{ t("ai.reasoning") }}
             <IconChevronRight
-              class="text-muted-foreground/80 group-hover:text-muted-foreground size-3! transition-transform will-change-transform"
+              class="text-muted-foreground/80 group-hover/thinking:text-muted-foreground size-3! transition-transform will-change-transform"
               :class="{ 'rotate-90': open }"
             />
           </ItemTitle>
         </ItemContent>
       </Item>
     </CollapsibleTrigger>
-    <CollapsibleContent>
+    <CollapsibleContent class="select-auto">
       <Card size="sm">
         <CardContent>
           <AppMarkdown surface="chat" :content="reasoning" />

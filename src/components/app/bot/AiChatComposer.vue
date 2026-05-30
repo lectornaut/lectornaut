@@ -12,13 +12,13 @@ import { BOT_NODE_TOOL_CATALOG, BOT_TOOL_CATALOG } from "@/data/botTools"
 import {
   IconAiFill,
   IconArrowUp,
+  IconAsterisk,
   IconBadgeCheck,
   IconBot,
   IconFile,
   IconFolder,
   IconMic,
   IconPlus,
-  IconWrench,
   IconX,
 } from "@/data/icons"
 import { findBotModel } from "@/helpers/defaults"
@@ -68,11 +68,12 @@ const isReadOnly = computed(
 
 // ── Voice dictation (Web Speech API) ──────────────────────────────────────
 // Appends spoken words to the composer input; see `useDictation`. The mic
-// button (left of Send) toggles it and is hidden when the browser has no
-// SpeechRecognition. `handleSend` stops it so a trailing result can't
-// repopulate the just-cleared field.
+// button (left of Send) toggles it and is hidden when dictation is
+// unavailable — unsupported by the browser, or switched off in Preferences.
+// `handleSend` stops it so a trailing result can't repopulate the
+// just-cleared field.
 const {
-  isSupported: isDictationSupported,
+  isAvailable: isDictationAvailable,
   isListening: isDictating,
   toggleDictation,
   stopDictation,
@@ -742,7 +743,7 @@ const availableTools = computed<readonly ComposerToolEntry[]>(() => {
       key: tool.id,
       label: tool.displayName.trim() || tool.name,
       description: tool.description,
-      icon: IconWrench,
+      icon: IconAsterisk,
       example: buildCustomToolExample(tool),
       kind: "custom",
     })
@@ -964,7 +965,6 @@ const onToolMenuCloseAutoFocus = (event: Event) => {
             </SheetFooter>
           </SheetContent>
         </Sheet>
-        <Separator orientation="vertical" class="my-2" />
         <DropdownMenu v-model:open="toolsOpen">
           <TooltipProvider>
             <Tooltip>
@@ -1209,7 +1209,7 @@ const onToolMenuCloseAutoFocus = (event: Event) => {
           </SelectContent>
         </Select>
         <Separator orientation="vertical" class="my-2" />
-        <TooltipProvider v-if="isDictationSupported">
+        <TooltipProvider v-if="isDictationAvailable">
           <Tooltip>
             <TooltipTrigger as-child>
               <InputGroupButton

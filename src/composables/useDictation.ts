@@ -1,5 +1,7 @@
+import { useSettingsStore } from "@/stores/settingsStore"
 import { useSpeechRecognition } from "@vueuse/core"
-import { watch, type Ref } from "vue"
+import { storeToRefs } from "pinia"
+import { computed, watch, type Ref } from "vue"
 
 /**
  * Voice dictation into a text model via the Web Speech API.
@@ -37,6 +39,14 @@ export function useDictation(target: Ref<string>) {
       lang: typeof navigator !== "undefined" ? navigator.language : "en-US",
     })
 
+  // Dictation can be switched off in Preferences. Folding that into
+  // `isAvailable` lets the mic button hide when it's unsupported OR disabled,
+  // and the `startDictation` guard stops it being triggered another way.
+  const { dictationEnabled } = storeToRefs(useSettingsStore())
+  const isAvailable = computed(
+    () => isSupported.value && dictationEnabled.value
+  )
+
   // Text present before dictation began (we append, never overwrite) and
   // the finalized phrases captured so far this session.
   let base = ""
@@ -56,7 +66,7 @@ export function useDictation(target: Ref<string>) {
   })
 
   const startDictation = () => {
-    if (!isSupported.value) return
+    if (!isAvailable.value) return
     base = target.value
     committed = ""
     start()
@@ -71,6 +81,7 @@ export function useDictation(target: Ref<string>) {
 
   return {
     isSupported,
+    isAvailable,
     isListening,
     startDictation,
     stopDictation,

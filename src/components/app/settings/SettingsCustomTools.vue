@@ -492,18 +492,12 @@ const handleEditorSave = async (): Promise<void> => {
               composer rather than a field stacked above a loose button.
             -->
             <div class="flex min-h-0 flex-col gap-3">
-              <div class="flex flex-col gap-1">
-                <Label
-                  :for="`tool-ai-prompt-${editingTool?.id ?? 'new'}`"
-                  class="text-sm font-medium"
-                >
-                  {{ t("settings.agents.customTools.ai.promptLabel") }}
-                </Label>
-                <p class="text-muted-foreground text-xs">
-                  {{ t("settings.agents.customTools.ai.promptDescription") }}
-                </p>
-              </div>
               <InputGroup class="min-h-0 grow">
+                <div class="w-full shrink-0 border-b p-2">
+                  <span class="text-sm font-medium">
+                    {{ t("settings.agents.customTools.ai.promptLabel") }}
+                  </span>
+                </div>
                 <InputGroupTextarea
                   :id="`tool-ai-prompt-${editingTool?.id ?? 'new'}`"
                   v-model="aiPrompt"
@@ -557,7 +551,7 @@ const handleEditorSave = async (): Promise<void> => {
             <div
               class="bg-muted/30 flex h-full min-h-0 flex-col overflow-hidden rounded-lg border"
             >
-              <div class="shrink-0 border-b px-4 py-2.5">
+              <div class="w-full shrink-0 border-b p-2">
                 <span class="text-sm font-medium">
                   {{ t("settings.agents.customTools.ai.previewTitle") }}
                 </span>

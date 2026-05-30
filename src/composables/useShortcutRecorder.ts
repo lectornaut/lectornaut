@@ -1,14 +1,15 @@
 import {
   hotkeyToDisplayKeys,
+  IS_APPLE_DEVICE,
   SYSTEM_SHORTCUTS,
-  toCrossPlatformHotkeys,
 } from "@/helpers/shortcuts"
-import hotkeys from "hotkeys-js"
+import { setHotkeysEnabled } from "@/modules/hotkeys"
+import { normalizeHotkeyFromEvent } from "@tanstack/vue-hotkeys"
 import { nextTick, onScopeDispose, ref } from "vue"
 import { toast } from "vue-sonner"
 
 export type ShortcutRecorderOptions = {
-  /** Called with the final hotkeys-js string when a valid combo is recorded */
+  /** Called with the final TanStack `Mod`-notation string (e.g. "Mod+K") */
   onRecord: (hotkeys: string) => void
 }
 
@@ -19,27 +20,24 @@ export type ShortcutRecorderTarget =
   | null
   | undefined
 
+const RECORDER_PLATFORM: "mac" | "windows" = IS_APPLE_DEVICE ? "mac" : "windows"
+
 export const useShortcutRecorder = (options: ShortcutRecorderOptions) => {
   const isRecording = ref(false)
   const recorderInput = ref<HTMLInputElement | null>(null)
 
-  let previousFilter: typeof hotkeys.filter | null = null
-
-  const setHotkeyFilter = () => {
+  // While recording, mute the global hotkeys so the keys being captured don't
+  // also trigger app actions (replaces hotkeys-js's `hotkeys.filter` override).
+  const suppressHotkeys = () => {
     if (isRecording.value) return
 
     isRecording.value = true
-    previousFilter = hotkeys.filter
-    hotkeys.filter = () => false
+    setHotkeysEnabled(false)
   }
 
-  const restoreHotkeyFilter = () => {
+  const restoreHotkeys = () => {
     isRecording.value = false
-
-    if (previousFilter) {
-      hotkeys.filter = previousFilter
-      previousFilter = null
-    }
+    setHotkeysEnabled(true)
   }
 
   const resolveInputElement = (
@@ -77,7 +75,7 @@ export const useShortcutRecorder = (options: ShortcutRecorderOptions) => {
     if (!input) return
 
     if (document.activeElement === input) {
-      setHotkeyFilter()
+      suppressHotkeys()
       return
     }
 
@@ -87,16 +85,16 @@ export const useShortcutRecorder = (options: ShortcutRecorderOptions) => {
   }
 
   const stopRecording = () => {
-    restoreHotkeyFilter()
+    restoreHotkeys()
   }
 
   const handleRecorderFocus = (event: FocusEvent) => {
     setRecorderInput(event.currentTarget)
-    setHotkeyFilter()
+    suppressHotkeys()
   }
 
   const handleRecorderBlur = () => {
-    restoreHotkeyFilter()
+    restoreHotkeys()
   }
 
   const handleRecorderClick = (event: MouseEvent) => {
@@ -131,17 +129,12 @@ export const useShortcutRecorder = (options: ShortcutRecorderOptions) => {
       return
     }
 
-    const parts: string[] = []
-    if (event.metaKey) parts.push("cmd")
-    if (event.ctrlKey) parts.push("ctrl")
-    if (event.altKey) parts.push("alt")
-    if (event.shiftKey) parts.push("shift")
+    // Convert the keyboard event to a portable combo (e.g. ⌘K → "Mod+K").
+    const hotkeyString = normalizeHotkeyFromEvent(event, RECORDER_PLATFORM)
 
-    parts.push(event.key.toLowerCase())
-
-    const hotkeyString = parts.join("+")
-
-    if (SYSTEM_SHORTCUTS.has(hotkeyString)) {
+    // System shortcuts are claimed by macOS and can't be reassigned. Only
+    // enforced on Apple devices, where `Mod` resolves to ⌘ (the reserved key).
+    if (IS_APPLE_DEVICE && SYSTEM_SHORTCUTS.has(hotkeyString)) {
       toast.error(
         `${hotkeyToDisplayKeys(hotkeyString).join("")} is reserved by the system`,
         { description: "Choose a different combination." }
@@ -149,7 +142,7 @@ export const useShortcutRecorder = (options: ShortcutRecorderOptions) => {
       return
     }
 
-    options.onRecord(toCrossPlatformHotkeys(hotkeyString))
+    options.onRecord(hotkeyString)
   }
 
   return {

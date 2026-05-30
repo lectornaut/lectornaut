@@ -136,9 +136,9 @@ const handleConfirmShare = async () => {
   await botChat?.setActiveVisibility(target)
 }
 
-const handleCancelShare = () => {
-  confirmShareOpen.value = false
-  pendingVisibility.value = null
+const handleShareDialogOpenChange = (value: boolean) => {
+  confirmShareOpen.value = value
+  if (!value) pendingVisibility.value = null
 }
 
 // ── Rename ───────────────────────────────────────────────────────────────────
@@ -334,7 +334,10 @@ const submitDelete = async () => {
   </div>
 
   <!-- Confirm sharing -->
-  <AlertDialog v-model:open="confirmShareOpen">
+  <AlertDialog
+    :open="confirmShareOpen"
+    @update:open="handleShareDialogOpenChange"
+  >
     <AlertDialogContent>
       <AlertDialogHeader>
         <AlertDialogTitle>
@@ -345,7 +348,7 @@ const submitDelete = async () => {
         </AlertDialogDescription>
       </AlertDialogHeader>
       <AlertDialogFooter>
-        <AlertDialogCancel @click="handleCancelShare">
+        <AlertDialogCancel>
           {{ t("actions.cancel") }}
         </AlertDialogCancel>
         <AlertDialogAction

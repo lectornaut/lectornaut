@@ -621,13 +621,13 @@ onUnmounted(() => {
           <BackForth v-if="!open || isMobile" v-motion-fade-visible />
           <nav
             ref="el"
-            class="relative flex min-w-0 items-stretch justify-start gap-2"
+            class="relative flex min-w-0 items-stretch justify-start gap-2 empty:hidden"
           >
             <template v-if="pending">
               <Skeleton v-for="n in 3" :key="n" class="bg-accent h-8 w-60" />
             </template>
             <template v-else-if="tabs.length === 0">
-              <Button
+              <!-- <Button
                 variant="outline"
                 class="w-60 min-w-0 shrink-0 justify-start border-dashed shadow-none"
                 size="sm"
@@ -635,7 +635,7 @@ onUnmounted(() => {
               >
                 <IconPlus />
                 {{ t("tabs.newTab") }}
-              </Button>
+              </Button> -->
             </template>
             <template v-else>
               <div
@@ -689,10 +689,10 @@ onUnmounted(() => {
                           :variant="
                             tab.id === activeTabId ? 'outline' : 'secondary'
                           "
-                          class="group w-[-webkit-fill-available] min-w-0"
+                          class="group w-[-webkit-fill-available] min-w-0 gap-2"
                           :class="[
                             tab.id === activeTabId
-                              ? 'hover:bg-background border-transparent!'
+                              ? 'hover:bg-background'
                               : 'bg-accent/25 text-accent-foreground/25 hover:text-accent-foreground/50 hover:bg-accent/50',
                             isPinnedTab(tab) ? 'justify-center px-0!' : 'pr-1!',
                           ]"
@@ -881,7 +881,7 @@ onUnmounted(() => {
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger as-child>
-                  <Button variant="ghost" size="icon-sm" @click="openNewTab">
+                  <Button variant="outline" size="icon-sm" @click="openNewTab">
                     <IconPlus />
                   </Button>
                 </TooltipTrigger>

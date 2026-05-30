@@ -101,10 +101,7 @@ function togglePinned() {
           </SidebarMenu>
         </SidebarFooter>
         <SidebarFooter>
-          <template v-if="agentsSidebarVisible">
-            <Agents />
-            <Separator />
-          </template>
+          <Agents v-if="agentsSidebarVisible" />
           <Support />
           <SettingsMenu />
           <CreateMenu />

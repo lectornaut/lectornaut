@@ -466,13 +466,13 @@ const unlinkProvider = async (providerId: string) => {
 
   await unlink(user.value!, providerId)
     .then(() => {
-      toast.success("Provider unlinked", {
-        description: "The provider has been successfully unlinked.",
+      toast.success(t("settings.account.identityProviders.unlinked"), {
+        description: t("settings.account.identityProviders.unlinkedDesc"),
       })
     })
     .catch((error) => {
       hiddenProviderIds.value = previousHiddenProviderIds
-      handleAuthError(error, "Failed to unlink provider")
+      handleAuthError(error, t("settings.account.identityProviders.failed"))
     })
     .finally(() => {
       unlinkingProviderMap.value = {
@@ -1255,82 +1255,125 @@ const getDeviceIcon = (deviceType: string) => {
               </FieldDescription>
             </FieldContent>
           </Field>
-          <Field
-            v-for="provider in linkedProviders"
-            :key="provider.providerId"
-            orientation="horizontal"
-          >
-            <FieldContent>
-              <Item>
-                <ItemMedia class="group relative">
-                  <Avatar>
-                    <AvatarImage
-                      :src="provider?.photoURL!"
-                      :alt="provider?.displayName"
-                      referrerpolicy="no-referrer"
-                    />
-                    <AvatarFallback>
-                      {{ getInitials(provider.displayName!) }}
-                    </AvatarFallback>
-                  </Avatar>
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger as-child>
-                        <Button
-                          variant="secondary"
-                          class="ring-background absolute -right-2 -bottom-2 size-4 ring-2"
-                          size="icon"
-                        >
-                          <IconGoogleIcon
-                            v-if="provider.providerId === 'google.com'"
-                          />
-                          <IconKeyRound
-                            v-else-if="provider.providerId === 'password'"
-                          />
-                        </Button>
-                      </TooltipTrigger>
-                      <TooltipContent side="right">
-                        {{ getComputedProviderName(provider.providerId) }}
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
-                </ItemMedia>
-                <ItemContent class="gap-0.5 truncate">
-                  <ItemTitle class="truncate">
-                    {{ provider.displayName }}
-                  </ItemTitle>
-                  <ItemDescription class="truncate text-xs">
-                    {{ provider.email }}
-                  </ItemDescription>
-                </ItemContent>
-              </Item>
-            </FieldContent>
-            <Button
-              :disabled="unlinkingProviderMap[provider.providerId]"
-              variant="secondary"
-              @click="unlinkProvider(provider.providerId)"
+          <ItemGroup v-if="linkedProviders.length > 0">
+            <Item
+              v-for="provider in linkedProviders"
+              :key="provider.providerId"
+              variant="muted"
+              size="xs"
             >
-              <Spinner v-if="unlinkingProviderMap[provider.providerId]" />
-              <span> {{ t("common.remove") }} </span>
-            </Button>
-          </Field>
-          <Field v-if="linkedProviders.length === 0" orientation="horizontal">
-            <FieldContent>
-              <Empty class="border border-dashed">
-                <EmptyHeader>
-                  <EmptyMedia variant="icon">
-                    <IconKeyRound />
-                  </EmptyMedia>
-                  <EmptyTitle>
-                    {{ t("settings.account.identityProviders.noAccounts") }}
-                  </EmptyTitle>
-                  <EmptyDescription>
-                    {{ t("settings.account.identityProviders.description") }}
-                  </EmptyDescription>
-                </EmptyHeader>
-              </Empty>
-            </FieldContent>
-          </Field>
+              <ItemMedia class="group relative">
+                <Avatar>
+                  <AvatarImage
+                    :src="provider?.photoURL!"
+                    :alt="provider?.displayName"
+                    referrerpolicy="no-referrer"
+                  />
+                  <AvatarFallback>
+                    {{ getInitials(provider.displayName!) }}
+                  </AvatarFallback>
+                </Avatar>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger as-child>
+                      <Button
+                        variant="secondary"
+                        class="ring-background absolute -right-2 -bottom-2 size-4 ring-2"
+                        size="icon"
+                      >
+                        <IconGoogleIcon
+                          v-if="provider.providerId === 'google.com'"
+                        />
+                        <IconKeyRound
+                          v-else-if="provider.providerId === 'password'"
+                        />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent side="right">
+                      {{ getComputedProviderName(provider.providerId) }}
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </ItemMedia>
+              <ItemContent class="gap-0.5 truncate">
+                <ItemTitle class="truncate">
+                  {{ provider.displayName }}
+                </ItemTitle>
+                <ItemDescription class="truncate text-xs">
+                  {{ provider.email }}
+                </ItemDescription>
+              </ItemContent>
+              <ItemActions>
+                <AlertDialog>
+                  <AlertDialogTrigger as-child>
+                    <Button
+                      :disabled="unlinkingProviderMap[provider.providerId]"
+                      variant="secondary"
+                    >
+                      <Spinner
+                        v-if="unlinkingProviderMap[provider.providerId]"
+                      />
+                      <span> {{ t("common.remove") }} </span>
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>
+                        {{
+                          t(
+                            "settings.account.identityProviders.removeConfirmTitle"
+                          )
+                        }}
+                      </AlertDialogTitle>
+                      <AlertDialogDescription>
+                        {{
+                          t(
+                            "settings.account.identityProviders.removeConfirmDescription",
+                            {
+                              name: getComputedProviderName(
+                                provider.providerId
+                              ),
+                            }
+                          )
+                        }}
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>
+                        {{ t("common.cancel") }}
+                      </AlertDialogCancel>
+                      <AlertDialogAction
+                        :disabled="unlinkingProviderMap[provider.providerId]"
+                        @click="unlinkProvider(provider.providerId)"
+                      >
+                        <Spinner
+                          v-if="unlinkingProviderMap[provider.providerId]"
+                        />
+                        {{ t("common.remove") }}
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+              </ItemActions>
+            </Item>
+          </ItemGroup>
+          <Empty
+            v-if="linkedProviders.length === 0"
+            orientation="horizontal"
+            class="border border-dashed"
+          >
+            <EmptyHeader>
+              <EmptyMedia variant="icon">
+                <IconKeyRound />
+              </EmptyMedia>
+              <EmptyTitle>
+                {{ t("settings.account.identityProviders.noAccounts") }}
+              </EmptyTitle>
+              <EmptyDescription>
+                {{ t("settings.account.identityProviders.description") }}
+              </EmptyDescription>
+            </EmptyHeader>
+          </Empty>
         </FieldSet>
         <FieldSeparator />
         <!-- Multi-Factor Authentication -->
@@ -1729,87 +1772,90 @@ const getDeviceIcon = (deviceType: string) => {
               </AlertDialogContent>
             </AlertDialog>
           </Field>
-          <Field
-            v-for="session in sessionRows"
-            :key="session.id"
-            orientation="horizontal"
-          >
-            <FieldContent>
-              <Item>
-                <ItemMedia>
-                  <Component :is="session.deviceIcon" />
-                </ItemMedia>
-                <ItemContent class="gap-0.5 truncate">
-                  <ItemTitle class="truncate">
-                    {{ session.deviceName }}
-                  </ItemTitle>
-                  <ItemDescription class="truncate text-xs">
-                    {{ session.ip }}
-                    ·
-                    {{
-                      t("settings.account.devices.lastActive", {
-                        time: session.lastActiveLabel,
-                      })
-                    }}
-                  </ItemDescription>
-                </ItemContent>
-              </Item>
-            </FieldContent>
-            <div class="flex items-center gap-2">
-              <template v-if="session.isCurrent">
-                <Badge variant="destructive">
-                  <IconCircleDot class="-ml-1" />
-                  {{ t("settings.account.devices.thisDevice") }}
-                </Badge>
-                <Button
-                  variant="secondary"
-                  @click="emitter.emit('Dialog.Exit.Open')"
-                >
-                  {{ t("settings.account.devices.logoutDevice") }}
-                </Button>
-              </template>
-              <AlertDialog v-else>
-                <AlertDialogTrigger as-child>
-                  <Button
-                    variant="secondary"
-                    :disabled="isRevoking(session.id)"
-                  >
-                    <Spinner v-if="isRevoking(session.id)" />
-                    {{ t("settings.account.devices.logoutDevice") }}
-                  </Button>
-                </AlertDialogTrigger>
-                <AlertDialogContent>
-                  <AlertDialogHeader>
-                    <AlertDialogTitle>
-                      {{
-                        t("settings.account.devices.logoutDeviceConfirmTitle")
-                      }}
-                    </AlertDialogTitle>
-                    <AlertDialogDescription>
-                      {{
-                        t(
-                          "settings.account.devices.logoutDeviceConfirmDescription",
-                          { device: session.deviceName }
-                        )
-                      }}
-                    </AlertDialogDescription>
-                  </AlertDialogHeader>
-                  <AlertDialogFooter>
-                    <AlertDialogCancel>
-                      {{ t("common.cancel") }}
-                    </AlertDialogCancel>
-                    <AlertDialogAction
-                      :disabled="isRevoking(session.id)"
-                      @click="handleRevokeSession(session.id)"
+          <ItemGroup v-if="sessionRows.length > 0">
+            <Item
+              v-for="session in sessionRows"
+              :key="session.id"
+              variant="muted"
+              size="xs"
+            >
+              <ItemMedia>
+                <Component :is="session.deviceIcon" />
+              </ItemMedia>
+              <ItemContent class="gap-0.5 truncate">
+                <ItemTitle class="truncate">
+                  {{ session.deviceName }}
+                </ItemTitle>
+                <ItemDescription class="truncate text-xs">
+                  {{ session.ip }}
+                  ·
+                  {{
+                    t("settings.account.devices.lastActive", {
+                      time: session.lastActiveLabel,
+                    })
+                  }}
+                </ItemDescription>
+              </ItemContent>
+              <ItemActions>
+                <div class="flex items-center gap-2">
+                  <template v-if="session.isCurrent">
+                    <Badge variant="destructive">
+                      <IconCircleDot class="-ml-1" />
+                      {{ t("settings.account.devices.thisDevice") }}
+                    </Badge>
+                    <Button
+                      variant="secondary"
+                      @click="emitter.emit('Dialog.Exit.Open')"
                     >
-                      <Spinner v-if="isRevoking(session.id)" />
                       {{ t("settings.account.devices.logoutDevice") }}
-                    </AlertDialogAction>
-                  </AlertDialogFooter>
-                </AlertDialogContent>
-              </AlertDialog>
-            </div>
-          </Field>
+                    </Button>
+                  </template>
+                  <AlertDialog v-else>
+                    <AlertDialogTrigger as-child>
+                      <Button
+                        variant="secondary"
+                        :disabled="isRevoking(session.id)"
+                      >
+                        <Spinner v-if="isRevoking(session.id)" />
+                        {{ t("settings.account.devices.logoutDevice") }}
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>
+                          {{
+                            t(
+                              "settings.account.devices.logoutDeviceConfirmTitle"
+                            )
+                          }}
+                        </AlertDialogTitle>
+                        <AlertDialogDescription>
+                          {{
+                            t(
+                              "settings.account.devices.logoutDeviceConfirmDescription",
+                              { device: session.deviceName }
+                            )
+                          }}
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>
+                          {{ t("common.cancel") }}
+                        </AlertDialogCancel>
+                        <AlertDialogAction
+                          :disabled="isRevoking(session.id)"
+                          @click="handleRevokeSession(session.id)"
+                        >
+                          <Spinner v-if="isRevoking(session.id)" />
+                          {{ t("settings.account.devices.logoutDevice") }}
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                </div>
+              </ItemActions>
+            </Item>
+          </ItemGroup>
           <Field v-if="sessionsPending" orientation="horizontal">
             <FieldContent>
               <Empty>

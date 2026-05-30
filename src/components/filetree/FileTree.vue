@@ -685,7 +685,7 @@ onBeforeUnmount(() => {
         </AlertDialogDescription>
       </AlertDialogHeader>
       <AlertDialogFooter>
-        <AlertDialogCancel @click="dialogs.archive.open = false">
+        <AlertDialogCancel>
           {{ t("actions.cancel") }}
         </AlertDialogCancel>
         <AlertDialogAction
@@ -714,7 +714,7 @@ onBeforeUnmount(() => {
         </AlertDialogDescription>
       </AlertDialogHeader>
       <AlertDialogFooter>
-        <AlertDialogCancel @click="dialogs.delete.open = false">
+        <AlertDialogCancel>
           {{ t("actions.cancel") }}
         </AlertDialogCancel>
         <AlertDialogAction :disabled="isDeleting" @click="handleDeleteConfirm">

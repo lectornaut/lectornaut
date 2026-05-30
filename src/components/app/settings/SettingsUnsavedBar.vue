@@ -25,9 +25,9 @@ const { t } = useI18n()
 
 <template>
   <DialogFooter
-    class="bg-background/90 sticky bottom-3 z-10 m-3 flex items-center gap-2 rounded-lg border p-2 shadow-lg backdrop-blur-lg"
+    class="bg-popover sticky bottom-3 z-10 m-3 flex items-center gap-2 rounded-lg border p-2 shadow-lg"
   >
-    <p class="text-muted-foreground mr-auto ml-2 text-xs">
+    <p class="text-muted-foreground mr-auto ml-1 text-xs">
       {{ t("settings.unsavedChanges") }}
     </p>
     <Button variant="outline" :disabled="saving" @click="$emit('discard')">

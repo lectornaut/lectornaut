@@ -842,7 +842,7 @@ const closeTab = (id: string) => {
               <div
                 v-if="isPoppedOut"
                 ref="draggableContainer"
-                class="pointer-events-none fixed inset-y-12 right-2 left-14 z-50"
+                class="pointer-events-none fixed top-12 right-2 bottom-2 left-12 z-50"
               >
                 <ContextMenu>
                   <ContextMenuTrigger as-child>
