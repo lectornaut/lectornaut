@@ -38,9 +38,26 @@ const HEARTBEAT_INTERVAL_MS = 5 * 60 * 1000
 const SESSION_TOUCH_THROTTLE_MS = 30_000
 const REGISTER_RETRY_DELAYS_MS = [1_000, 2_500]
 const VERIFICATION_DELAYS_MS = [1_500, 4_000]
-const isOnline = useOnline()
-const isWindowFocused = useWindowFocus()
-const documentVisibility = useDocumentVisibility()
+
+// Activity refs (online/focus/visibility), created LAZILY on first use rather
+// than at module load. Each of these VueUse composables attaches window/document
+// listeners immediately; evaluating them at import time touched the DOM during
+// SSR/test imports and leaked listeners even when the session feature was never
+// used. `??=` creates them exactly once, after the `typeof window` guard in
+// `startActivityListeners`, then shares them for the app's lifetime.
+let activityRefs: {
+  isOnline: ReturnType<typeof useOnline>
+  isWindowFocused: ReturnType<typeof useWindowFocus>
+  documentVisibility: ReturnType<typeof useDocumentVisibility>
+} | null = null
+
+function getActivityRefs() {
+  return (activityRefs ??= {
+    isOnline: useOnline(),
+    isWindowFocused: useWindowFocus(),
+    documentVisibility: useDocumentVisibility(),
+  })
+}
 
 interface SessionMonitorContext {
   uid: string
@@ -374,6 +391,8 @@ function startActivityListeners(context: SessionMonitorContext) {
   stopActivityListeners()
 
   if (typeof window === "undefined" || typeof document === "undefined") return
+
+  const { isOnline, isWindowFocused, documentVisibility } = getActivityRefs()
 
   const wakeSession = () => {
     if (!isContextActive(context)) return

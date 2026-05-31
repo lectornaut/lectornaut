@@ -352,7 +352,8 @@ export function useBotChat(): BotChatContext {
   const { currentUser, currentTeamId, currentWorkspaceId } =
     storeToRefs(authStore)
 
-  const { currentRole } = useCurrentTeamRole(currentTeamId)
+  const { currentRole, canManageWorkspaceContent } =
+    useCurrentTeamRole(currentTeamId)
   const isTeamAdmin = computed(
     () => !!currentRole.value && ADMIN_ROLES.has(currentRole.value)
   )
@@ -822,7 +823,13 @@ export function useBotChat(): BotChatContext {
     if (!sessionId.value) return true // new chat — anyone with team+workspace can start
     if (isActiveArchived.value) return false // archived sessions are read-only
     if (isActiveOwner.value) return true
-    return activeVisibility.value === "shared" && isTeamAdmin.value
+    // Shared chats are collaborative: any full member (owner/admin/member)
+    // can post into them. Guests — who lack MANAGE_WORKSPACE_CONTENT —
+    // remain read-only. Renaming/archiving/visibility stay admin-only
+    // (`canManageActive` / `canChangeVisibilityActive` below).
+    return (
+      activeVisibility.value === "shared" && canManageWorkspaceContent.value
+    )
   })
 
   const canChangeVisibilityActive = computed(() => {

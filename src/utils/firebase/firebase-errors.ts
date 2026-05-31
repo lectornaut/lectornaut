@@ -106,6 +106,22 @@ export const hasFirebaseErrorCode = (error: unknown, code: string): boolean => {
 // ============================================================================
 
 /**
+ * Safely extract a human-readable message from an unknown thrown value.
+ *
+ * Unlike `(error as Error).message`, this never throws when the caught value
+ * isn't an Error (JS allows throwing strings, numbers, or null): it prefers the
+ * Error's own message, then a thrown non-empty string, then the fallback.
+ */
+export const getErrorMessage = (
+  error: unknown,
+  fallback = "Something went wrong"
+): string => {
+  if (error instanceof Error && error.message) return error.message
+  if (typeof error === "string" && error) return error
+  return fallback
+}
+
+/**
  * Get a user-friendly error message for Firebase Auth errors.
  */
 export const getAuthErrorMessage = (error: unknown): string => {

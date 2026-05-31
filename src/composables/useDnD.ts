@@ -30,6 +30,19 @@ const state = {
   isDragging: shallowRef(false),
 }
 
+// Global cursor-style watcher, registered ONCE at module scope.
+//
+// The drag state above is module-global (one drag at a time), so this watcher
+// must be too. Previously it lived inside `useDragAndDrop()`, registering a
+// fresh, never-stopped watcher on every component that called the composable —
+// N watchers accumulating across mounts, all mutating `document.body`. At module
+// scope it has exactly one instance for the app's lifetime.
+watch(state.isDragging, (dragging) => {
+  if (typeof document !== "undefined" && document.body) {
+    document.body.style.userSelect = dragging ? "none" : ""
+  }
+})
+
 export default function useDragAndDrop() {
   const { draggedType, isDragOver, isDragging } = state
   let stopDropListener: (() => void) | undefined
@@ -44,13 +57,6 @@ export default function useDragAndDrop() {
     stopDragEndListener?.()
     stopDragEndListener = undefined
   }
-
-  // Global watcher for cursor style
-  watch(state.isDragging, (dragging) => {
-    if (typeof document !== "undefined" && document.body) {
-      document.body.style.userSelect = dragging ? "none" : ""
-    }
-  })
 
   // Cleanup event listeners on component unmount to prevent memory leaks
   onUnmounted(() => {

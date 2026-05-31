@@ -44,6 +44,7 @@ const activeVisibility = computed(
   () => botChat?.activeVisibility.value ?? "private"
 )
 const isActiveOwner = computed(() => botChat?.isActiveOwner.value ?? false)
+const canEditActive = computed(() => botChat?.canEditActive.value ?? false)
 const isActiveArchived = computed(
   () => botChat?.isActiveArchived.value ?? false
 )
@@ -351,6 +352,9 @@ const detailRows = computed<DetailRow[]>(() => {
               </Badge>
               <Badge v-if="isActiveOwner" variant="secondary">
                 {{ t("ai.details.owner") }}
+              </Badge>
+              <Badge v-else-if="canEditActive" variant="secondary">
+                {{ t("ai.details.editor") }}
               </Badge>
               <Badge v-else variant="secondary">
                 {{ t("ai.details.readOnly") }}

@@ -760,26 +760,70 @@ export function mergeOptimisticCollection<T extends { id: string }>(
 }
 
 /**
- * Creates a snapshot guard that prevents onSnapshot from overwriting
- * optimistic updates while operations are pending
+ * Builds a re-entrancy-safe cloud persister around the "persist with a
+ * single-slot queue" pattern several stores share.
  *
- * @param pendingIds - Set tracking in-flight operations
- * @param getAffectedIds - Function to extract affected IDs from snapshot data
+ * While a write is in flight, further `trigger()` calls don't stack — they set
+ * a queued flag, and exactly one follow-up write runs after the current one
+ * settles (collapsing a burst into at most one trailing write). The write is
+ * wrapped in `withCloudSyncOperation` for telemetry. Pair with a debounced
+ * watcher (e.g. VueUse `watchDebounced`) for the time-based debounce.
+ *
+ * The `pending` ref is RETURNED because callers commonly read it elsewhere —
+ * e.g. an inbound snapshot watch skips applying remote state while a local
+ * write is pending, so it can't clobber the in-flight edit.
+ *
+ * @param options.persist    Performs the write; returns false on failure (e.g.
+ *   a null doc ref). A false result is surfaced as an error to telemetry.
+ * @param options.id         Stable operation id for the cloud sync queue.
+ * @param options.source     Telemetry source tag.
+ * @param options.canPersist Optional pre-check; when it returns false, trigger
+ *   is a no-op (e.g. there's no target doc ref yet).
+ * @param options.errorLabel Console-error prefix on failure (defaults to id).
  */
-export function createSnapshotGuard<T>(
-  pendingIds: Set<string>,
-  getAffectedIds: (data: T) => string[]
-): (data: T, apply: (data: T) => void) => void {
-  return (data: T, apply: (data: T) => void) => {
-    const affectedIds = getAffectedIds(data)
-    const hasPendingOperations = affectedIds.some((id) => pendingIds.has(id))
+export function createDebouncedCloudSync(options: {
+  persist: () => Promise<boolean>
+  id: string
+  source: string
+  canPersist?: () => boolean
+  errorLabel?: string
+}): { trigger: () => Promise<void>; pending: Ref<boolean> } {
+  const { persist, id, source, canPersist, errorLabel = id } = options
+  const pending = shallowRef(false)
+  const isQueued = ref(false)
 
-    if (!hasPendingOperations) {
-      apply(data)
+  const trigger = async (): Promise<void> => {
+    if (canPersist && !canPersist()) return
+
+    // Already persisting: remember to run exactly one more time after, then bail.
+    if (pending.value) {
+      isQueued.value = true
+      return
     }
-    // If there are pending operations, skip the snapshot update
-    // The optimistic state will be reconciled when the operation completes
+
+    pending.value = true
+    isQueued.value = false
+
+    try {
+      await withCloudSyncOperation(
+        async () => {
+          const success = await persist()
+          if (!success) throw new Error(`Failed to persist ${id}`)
+        },
+        { id, source }
+      )
+    } catch (error) {
+      console.error(`[createDebouncedCloudSync:${errorLabel}] failed:`, error)
+    } finally {
+      pending.value = false
+      // Drain the single queued slot: a trigger that arrived mid-flight.
+      if (isQueued.value) {
+        void trigger()
+      }
+    }
   }
+
+  return { trigger, pending }
 }
 
 /**

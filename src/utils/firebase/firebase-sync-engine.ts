@@ -1537,6 +1537,32 @@ export async function mutateSetDocument(
   })
 }
 
+/**
+ * Persist a document with `merge: true` and uniform error handling, returning a
+ * boolean instead of throwing. Shared by the settings and layout stores, which
+ * previously each defined a byte-identical local `safeSetDoc`. A `null` ref
+ * (e.g. before the team/user is resolved) is treated as a no-op failure.
+ *
+ * @returns `true` on success, `false` if the ref was null or the write failed.
+ */
+export async function safeSetDocument(
+  ref: DocumentReference | null,
+  data: Record<string, unknown>,
+  source: string
+): Promise<boolean> {
+  if (!ref) return false
+  try {
+    await mutateSetDocument(ref, data, { source, merge: true })
+    return true
+  } catch (error) {
+    console.error(
+      `[safeSetDocument:${source}] Failed to persist to Firestore:`,
+      error
+    )
+    return false
+  }
+}
+
 export async function mutateUpdateDocument(
   ref: DocumentReference,
   updates: Record<string, unknown>,

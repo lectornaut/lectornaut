@@ -1,7 +1,7 @@
 import { useSettingsStore } from "@/stores/settingsStore"
 import { useSpeechSynthesis } from "@vueuse/core"
 import { storeToRefs } from "pinia"
-import { computed, ref, shallowRef } from "vue"
+import { computed, onScopeDispose, ref, shallowRef } from "vue"
 
 /**
  * App-wide read-aloud (text-to-speech) over the Web Speech API.
@@ -91,6 +91,15 @@ export function useReadAloud() {
     speech.stop()
     activeId.value = null
   }
+
+  // Stop speaking when the consuming component unmounts. The state is a module
+  // singleton, but VueUse's `useSpeechSynthesis` scope-dispose only flips
+  // `isPlaying` — it never calls `synth.cancel()` — so without this, navigating
+  // away mid-read leaves the synthesizer talking with no UI left to stop it.
+  // `failSilently` (Vue 3.5+) keeps this safe if ever called outside a scope.
+  onScopeDispose(() => {
+    if (activeId.value !== null) stop()
+  }, true)
 
   return {
     isSupported,

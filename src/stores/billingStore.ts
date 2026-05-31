@@ -13,6 +13,7 @@ import {
 } from "@/helpers/billing"
 import { useTeamStore } from "@/stores/teamStore"
 import { defineStore, storeToRefs } from "pinia"
+import { useCurrentUser } from "vuefire"
 
 export type BillingFeatureKey =
   | "paid"
@@ -35,6 +36,7 @@ const BILLING_FEATURE_RULES: Record<BillingFeatureKey, BillingFeatureRule> = {
 export const useBillingStore = defineStore("billing", () => {
   const teamStore = useTeamStore()
   const { currentTeam, isLoading: isTeamLoading } = storeToRefs(teamStore)
+  const currentUser = useCurrentUser()
 
   const catalog = ref<BillingCatalog | null>(null)
   const isCatalogLoading = ref(false)
@@ -246,6 +248,44 @@ export const useBillingStore = defineStore("billing", () => {
       void refreshBilling(teamId)
     },
     { immediate: true }
+  )
+
+  /**
+   * Clears all billing state, including the team-independent catalog/promise
+   * caches. Unlike the team watch above (which only tracks `currentTeam`), this
+   * is the only path that resets the cross-team `catalog`, `catalogError`,
+   * `lastLoadedAt`, and the in-flight promise maps. Bumping the request IDs
+   * discards any in-flight responses so they can't write after the reset.
+   */
+  const resetBillingState = () => {
+    catalogRequestId += 1
+    billingRequestId += 1
+    catalogLoadPromise = null
+    billingLoadPromises.clear()
+
+    catalog.value = null
+    isCatalogLoading.value = false
+    catalogError.value = null
+    lastLoadedAt.value = null
+
+    billingSnapshot.value = null
+    billingSnapshotTeamId.value = null
+    isBillingLoading.value = false
+    billingError.value = null
+    lastBillingLoadedAt.value = null
+  }
+
+  // Reset billing when the signed-in user changes. Guarded to fire only on
+  // logout or an account switch — NOT on the initial undefined→uid resolution,
+  // which would otherwise discard the first billing load the team watch above
+  // kicks off during startup. (Previously billing state leaked across sessions:
+  // a new user could briefly see the previous user's cached catalog/errors.)
+  watch(
+    () => currentUser.value?.uid ?? null,
+    (uid, previousUid) => {
+      if (!previousUid || uid === previousUid) return
+      resetBillingState()
+    }
   )
 
   return {

@@ -27,6 +27,7 @@ import {
   type UpdateTeamCustomToolPatch,
 } from "@/composables/useFunctions"
 import { firestore } from "@/modules/firebase"
+import { botAgentModelSchema } from "@/schemas/domain"
 import { useAgentConfigStore } from "@/stores/agentConfigStore"
 import { useAuthStore } from "@/stores/authStore"
 import type { ICustomToolAction, ITeamCustomTool } from "@/types/domain"
@@ -46,8 +47,6 @@ const DEFAULT_ACTION: ICustomToolAction = {
   kind: "constant",
   value: '{ "ok": true }',
 }
-
-const DEFAULT_FIELDS: ITeamCustomTool["inputSchema"] = { fields: [] }
 
 // ─── Helpers ───────────────────────────────────────────────────────────────
 
@@ -121,7 +120,10 @@ function normalizeAction(raw: unknown): ICustomToolAction {
       return {
         kind: "promptTemplate",
         prompt: typeof raw.prompt === "string" ? raw.prompt : "",
-        model: typeof raw.model === "string" ? (raw.model as never) : null,
+        // Validate against the known model enum instead of `as never`-casting
+        // an arbitrary string. An unrecognized/legacy model id falls back to
+        // `null`, which the schema permits ("use the chat's current model").
+        model: botAgentModelSchema.safeParse(raw.model).data ?? null,
       }
     case "workspaceSearch":
       return {
@@ -171,10 +173,6 @@ function snapshotToTool(
       typeof data.createdByUid === "string" ? data.createdByUid : "",
   }
 }
-
-// Avoid unused warning until consumers reference the defaults — keeps
-// the export clean for future extension.
-void DEFAULT_FIELDS
 
 // ─── Store ─────────────────────────────────────────────────────────────────
 

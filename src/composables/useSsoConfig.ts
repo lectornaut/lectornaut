@@ -13,7 +13,7 @@ import { firestore } from "@/modules/firebase"
 import type { ITeamSecurityConfig } from "@/types/sso"
 import { defaultLoginMethods, defaultSsoConfig } from "@/types/sso"
 import { doc } from "firebase/firestore"
-import type { Ref } from "vue"
+import { toValue, type MaybeRefOrGetter } from "vue"
 import { useDocument } from "vuefire"
 
 type SsoOperation =
@@ -27,14 +27,15 @@ type SsoOperation =
  * Composable for managing team SSO configuration in admin settings.
  * Provides reactive Firestore binding and Cloud Function wrappers.
  */
-export function useSsoConfig(teamId: Ref<string | null>) {
+export function useSsoConfig(teamId: MaybeRefOrGetter<string | null>) {
   const loading = useLoadingState<SsoOperation>()
   const actions = createActionRunner(loading.withLoading)
 
   // Reactive Firestore binding to security config
   const securityDocRef = computed(() => {
-    if (!teamId.value) return null
-    return doc(firestore, `teams/${teamId.value}/settings/security`)
+    const id = toValue(teamId)
+    if (!id) return null
+    return doc(firestore, `teams/${id}/settings/security`)
   })
 
   const { data: securityConfig, pending: loadingConfig } =
@@ -58,8 +59,9 @@ export function useSsoConfig(teamId: Ref<string | null>) {
   )
 
   const requireTeamId = (): string => {
-    if (!teamId.value) throw new Error("No team selected")
-    return teamId.value
+    const id = toValue(teamId)
+    if (!id) throw new Error("No team selected")
+    return id
   }
 
   // Save SSO configuration

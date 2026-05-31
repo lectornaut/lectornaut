@@ -12,7 +12,8 @@
  *
  * Visibility model:
  *   - private (default): only the owner can read/write.
- *   - shared:  any team member can read; only owner + team admins write.
+ *   - shared:  any team member can read; the owner + any full member
+ *              (owner/admin/member) can write — guests stay read-only.
  *   - public:  reserved for future — read path not implemented.
  *
  * Auth layering:
@@ -2061,8 +2062,10 @@ async function prepareChatTurn(opts: {
   ])
 
   // Edit-permission gate. The owner always has edit; for shared sessions,
-  // team admins also have edit. Archived sessions reject regardless of
-  // role — archiving is a soft "read-only" flag.
+  // any full member (owner/admin/member) also has edit — guests, who lack
+  // MANAGE_WORKSPACE_CONTENT, stay read-only. Mirrors the client's
+  // `canEditActive`. Archived sessions reject regardless of role —
+  // archiving is a soft "read-only" flag.
   const existingSession: BotSessionDocSummary | null = loadedSession
   if (sessionId) {
     if (!existingSession) {
@@ -2073,7 +2076,12 @@ async function prepareChatTurn(opts: {
     }
     const isOwner = existingSession.ownerUid === auth.uid
     const canEdit =
-      isOwner || (existingSession.visibility === "shared" && isAdminRole(role))
+      isOwner ||
+      (existingSession.visibility === "shared" &&
+        can(auth.uid, Capabilities.MANAGE_WORKSPACE_CONTENT, {
+          scope: "workspace",
+          teamRole: role,
+        }))
     if (!canEdit) {
       throw new HttpsError(
         "permission-denied",

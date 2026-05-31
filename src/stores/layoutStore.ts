@@ -21,14 +21,14 @@ import type {
   NavigationUiState,
 } from "@/types/layout"
 import {
-  addPending,
   cloneState,
+  createDebouncedCloudSync,
   createPendingSet,
-  removePending,
   withCloudSyncOperation,
+  withOptimisticBatchUpdate,
   withOptimisticUpdate,
 } from "@/utils/firebase/firebase-optimistic"
-import { mutateSetDocument } from "@/utils/firebase/firebase-sync-engine"
+import { safeSetDocument as safeSetDoc } from "@/utils/firebase/firebase-sync-engine"
 import { useStorage, watchDebounced } from "@vueuse/core"
 import { collection, doc } from "firebase/firestore"
 import { defineStore, storeToRefs } from "pinia"
@@ -126,8 +126,6 @@ export const useLayoutStore = defineStore("layout", () => {
   // Pending operation tracking
   const pendingTabIds = shallowRef(createPendingSet())
   const pendingNavigation = shallowRef(false)
-  const pendingNavigationUi = shallowRef(false)
-  const isNavigationUiPersistQueued = ref(false)
   const isApplyingNavigationUiSnapshot = shallowRef(false)
   const navigationUiDirty = ref(false)
 
@@ -499,28 +497,6 @@ export const useLayoutStore = defineStore("layout", () => {
   // ============================================================================
 
   /**
-   * Safely persist to Firestore with error handling and rollback support
-   * @returns true if successful, false if failed
-   */
-  async function safeSetDoc(
-    docRef: ReturnType<typeof doc> | null,
-    data: Record<string, unknown>,
-    source: string
-  ): Promise<boolean> {
-    if (!docRef) return false
-    try {
-      await mutateSetDocument(docRef, data, {
-        source,
-        merge: true,
-      })
-      return true
-    } catch (error) {
-      console.error("[layoutStore] Failed to persist to Firestore:", error)
-      return false
-    }
-  }
-
-  /**
    * Persist tabs with optimistic update protection
    */
   async function persistTabs(): Promise<boolean> {
@@ -574,41 +550,18 @@ export const useLayoutStore = defineStore("layout", () => {
    * Persist UI layout state with global sync queue tracking.
    * Queues one extra run when rapid toggle changes happen during a save.
    */
-  async function persistNavigationUiWithSync(): Promise<void> {
-    if (!navigationDocRef.value) return
-
-    if (pendingNavigationUi.value) {
-      isNavigationUiPersistQueued.value = true
-      return
-    }
-
-    pendingNavigationUi.value = true
-    isNavigationUiPersistQueued.value = false
-
-    try {
-      await withCloudSyncOperation(
-        async () => {
-          const success = await persistNavigationUiState()
-          if (!success) {
-            throw new Error("Failed to persist navigation ui state")
-          }
-        },
-        {
-          id: "navigation-ui",
-          source: "layout.navigation.ui.persist",
-        }
-      )
-    } catch (error) {
-      // Keep local state and avoid revert; the next local change will retry.
-      console.error("[layoutStore] persistNavigationUi failed:", error)
-    } finally {
-      pendingNavigationUi.value = false
-
-      if (isNavigationUiPersistQueued.value) {
-        void persistNavigationUiWithSync()
-      }
-    }
-  }
+  // Re-entrancy-safe debounced persister. `pendingNavigationUi` is read by the
+  // inbound navigation snapshot watch above to skip applying remote state while
+  // a local write is in flight (the watch callback runs async, after this
+  // declaration initializes, so the earlier textual reference is safe).
+  const { trigger: persistNavigationUiWithSync, pending: pendingNavigationUi } =
+    createDebouncedCloudSync({
+      persist: persistNavigationUiState,
+      id: "navigation-ui",
+      source: "layout.navigation.ui.persist",
+      canPersist: () => navigationDocRef.value !== null,
+      errorLabel: "layout.navigationUi",
+    })
 
   // ============================================================================
   // Debounced Persistence Watchers
@@ -856,55 +809,44 @@ export const useLayoutStore = defineStore("layout", () => {
     const previousRecentlyClosed = cloneState(recentlyClosed.value)
     const previousTabIndicators = cloneState(tabIndicators.value)
 
-    // Use loop to execute updates for "other" tabs since we don't have a single ID
-    // But since we persist the whole tabs collection, we can just use keepId as the pending key
-    // or maybe a special key. However, withOptimisticUpdate expects a single ID key.
-    // For bulk operations that affect the whole collection, we can pick the 'keepId' or a generic key.
-    // Let's use keepId as the primary key since that's the one remaining.
-
-    // To prevent interaction with other tabs during this, we ideally mark them all.
-    // withOptimisticUpdate only marks one ID.
-    // So we will manually mark others, and let withOptimisticUpdate handle the main one.
-
     const tabsToClose = tabs.value.filter((t) => !t.pinned && t.id !== keepId)
     if (tabsToClose.length === 0) {
       activeTabId.value = keep.id
       return
     }
-    tabsToClose.forEach((t) => addPending(pendingTabIds, t.id))
 
-    try {
-      await withOptimisticUpdate(
-        pendingTabIds,
-        keepId,
-        // Apply optimistic update
-        () => {
-          tabsToClose.forEach(addToHistory)
-          const remainingTabs = normalizeTabs(
-            tabs.value.filter((t) => t.pinned || t.id === keepId)
-          )
-          tabs.value = remainingTabs
-          activeTabId.value = keep.id
-          pruneTabIndicators(remainingTabs)
-        },
-        // Rollback on error
-        () => {
-          tabs.value = previousTabs
-          activeTabId.value = previousActiveTabId
-          recentlyClosed.value = previousRecentlyClosed
-          tabIndicators.value = previousTabIndicators
-        },
-        // Persistence
-        async () => {
-          const success = await persistTabs()
-          if (!success) {
-            throw new Error("Failed to persist closeOtherTabs")
-          }
+    // Mark every closing tab pending (not just one key): the batch helper tracks
+    // all of them and handles rollback, replacing the previous single-ID
+    // `withOptimisticUpdate` workaround that could only mark `keepId`.
+    await withOptimisticBatchUpdate(
+      pendingTabIds,
+      tabsToClose.map((t) => t.id),
+      // Apply optimistic update
+      () => {
+        tabsToClose.forEach(addToHistory)
+        const remainingTabs = normalizeTabs(
+          tabs.value.filter((t) => t.pinned || t.id === keepId)
+        )
+        tabs.value = remainingTabs
+        activeTabId.value = keep.id
+        pruneTabIndicators(remainingTabs)
+      },
+      // Rollback on error
+      () => {
+        tabs.value = previousTabs
+        activeTabId.value = previousActiveTabId
+        recentlyClosed.value = previousRecentlyClosed
+        tabIndicators.value = previousTabIndicators
+      },
+      // Persistence
+      async () => {
+        const success = await persistTabs()
+        if (!success) {
+          throw new Error("Failed to persist closeOtherTabs")
         }
-      )
-    } finally {
-      tabsToClose.forEach((t) => removePending(pendingTabIds, t.id))
-    }
+      },
+      { source: "layout.tabs.closeOther" }
+    )
   }
 
   /**
@@ -920,43 +862,38 @@ export const useLayoutStore = defineStore("layout", () => {
     const previousRecentlyClosed = cloneState(recentlyClosed.value)
     const previousTabIndicators = cloneState(tabIndicators.value)
 
-    // Mark all as pending manually except one to carry the operation?
-    // Or we use a special ID like 'all-tabs' but that might not block individual tab clicks if logic checks tab.id
-    // It's safer to mark all.
-    tabsToClose.forEach((t) => addPending(pendingTabIds, t.id))
-
-    try {
-      await withCloudSyncOperation(
-        async () => {
-          tabsToClose.forEach(addToHistory)
-          const remainingTabs = normalizeTabs(
-            tabs.value.filter((tab) => tab.pinned)
-          )
-          const nextActiveTab = remainingTabs.find(
-            (tab) => tab.id === activeTabId.value
-          )
-          tabs.value = remainingTabs
-          activeTabId.value = nextActiveTab?.id ?? remainingTabs[0]?.id ?? ""
-          pruneTabIndicators(remainingTabs)
-
-          const success = await persistTabs()
-          if (!success) throw new Error("Failed to persist closeAllTabs")
-        },
-        {
-          id: "all",
-          source: "layout.tabs.closeAll",
-        }
-      )
-    } catch (error) {
-      tabs.value = previousTabs
-      activeTabId.value = previousActiveTabId
-      recentlyClosed.value = previousRecentlyClosed
-      tabIndicators.value = previousTabIndicators
-      console.error("[layoutStore] closeAllTabs failed:", error)
-      throw error
-    } finally {
-      tabsToClose.forEach((t) => removePending(pendingTabIds, t.id))
-    }
+    // Mark every closing tab pending; the batch helper handles rollback too,
+    // replacing the prior manual addPending/try/catch/finally scaffold.
+    await withOptimisticBatchUpdate(
+      pendingTabIds,
+      tabsToClose.map((t) => t.id),
+      // Apply optimistic update
+      () => {
+        tabsToClose.forEach(addToHistory)
+        const remainingTabs = normalizeTabs(
+          tabs.value.filter((tab) => tab.pinned)
+        )
+        const nextActiveTab = remainingTabs.find(
+          (tab) => tab.id === activeTabId.value
+        )
+        tabs.value = remainingTabs
+        activeTabId.value = nextActiveTab?.id ?? remainingTabs[0]?.id ?? ""
+        pruneTabIndicators(remainingTabs)
+      },
+      // Rollback on error
+      () => {
+        tabs.value = previousTabs
+        activeTabId.value = previousActiveTabId
+        recentlyClosed.value = previousRecentlyClosed
+        tabIndicators.value = previousTabIndicators
+      },
+      // Persistence
+      async () => {
+        const success = await persistTabs()
+        if (!success) throw new Error("Failed to persist closeAllTabs")
+      },
+      { source: "layout.tabs.closeAll" }
+    )
   }
 
   function clearRecentlyClosed() {

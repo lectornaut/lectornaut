@@ -48,7 +48,7 @@ import {
   createPendingSet,
   mergeOptimisticCollectionByKey,
   removePending,
-  withCloudSyncOperation,
+  withOptimisticBatchUpdate,
   withOptimisticUpdate,
 } from "@/utils/firebase/firebase-optimistic"
 import {
@@ -853,53 +853,53 @@ export const useMembershipStore = defineStore("memberships", () => {
     const isRemovingSelf = userIds.includes(currentUserId)
     const isRemovingSelfFromCurrentTeam = isRemovingSelf && isCurrentTeamTarget
 
-    await withCloudSyncOperation(
+    // Batch optimistic helper tracks pending for every membership key and runs
+    // rollback on failure — mirroring the singular `removeMember` above instead
+    // of the previous hand-rolled try/catch/finally. `pendingUserIds` is a
+    // separate collection the helper doesn't manage, so the self key is
+    // added/released by hand inside the apply/cloud callbacks.
+    await withOptimisticBatchUpdate(
+      pendingMembershipIds,
+      membershipKeys,
+      // Apply optimistic updates
+      () => {
+        if (isCurrentTeamTarget) {
+          optimisticTeamMembers.value = teamMembers.value.filter(
+            (m) => isAgentMembership(m) || !userIdSet.has(m.userId)
+          )
+        }
+
+        if (isRemovingSelf) {
+          addPending(pendingUserIds, currentUserId)
+          optimisticMemberships.value = memberships.value.filter(
+            (m) => m.teamId !== teamId
+          )
+          if (isRemovingSelfFromCurrentTeam && userProfile.value) {
+            authStore.setCurrentTeamIdLocal(null)
+          }
+        }
+      },
+      // Rollback on error
+      () => {
+        if (isCurrentTeamTarget) {
+          optimisticTeamMembers.value = previousTeamMembers
+        }
+        optimisticMemberships.value = previousMemberships
+        if (isRemovingSelfFromCurrentTeam) {
+          authStore.setCurrentTeamIdLocal(previousCurrentTeamId ?? null)
+        }
+      },
+      // Cloud Function call
       async () => {
         try {
-          // Mark all membership keys as pending
-          membershipKeys.forEach((k) => addPending(pendingMembershipIds, k))
-
-          // Apply optimistic updates
-          if (isCurrentTeamTarget) {
-            optimisticTeamMembers.value = teamMembers.value.filter(
-              (m) => isAgentMembership(m) || !userIdSet.has(m.userId)
-            )
-          }
-
-          if (isRemovingSelf) {
-            addPending(pendingUserIds, currentUserId)
-            optimisticMemberships.value = memberships.value.filter(
-              (m) => m.teamId !== teamId
-            )
-            if (isRemovingSelfFromCurrentTeam && userProfile.value) {
-              authStore.setCurrentTeamIdLocal(null)
-            }
-          }
-
-          // Cloud Function call
           await removeMembersFn({ teamId, userIds })
-        } catch (error) {
-          // Rollback optimistic state on error
-          if (isCurrentTeamTarget) {
-            optimisticTeamMembers.value = previousTeamMembers
-          }
-          optimisticMemberships.value = previousMemberships
-          if (isRemovingSelfFromCurrentTeam) {
-            authStore.setCurrentTeamIdLocal(previousCurrentTeamId ?? null)
-          }
-          throw error
         } finally {
-          // Clear pending flags
           if (isRemovingSelf) {
             removePending(pendingUserIds, currentUserId)
           }
-          membershipKeys.forEach((k) => removePending(pendingMembershipIds, k))
         }
       },
-      {
-        id: `${teamId}:${userIds.join(",")}`,
-        source: "membership.removeMembers",
-      }
+      { source: "membership.removeMembers" }
     )
   }
 
@@ -1013,12 +1013,11 @@ export const useMembershipStore = defineStore("memberships", () => {
   }
 
   /**
-   * Create a membership for a new team (used by teamStore)
+   * Build an owner membership object for a newly created team. Pure/synchronous
+   * — it performs no I/O, so it isn't `async` (callers shouldn't have to await a
+   * plain object construction).
    */
-  async function createOwnerMembership(
-    teamId: string,
-    team: ITeam
-  ): Promise<IMembership> {
+  function createOwnerMembership(teamId: string, team: ITeam): IMembership {
     if (!currentUser.value || !userProfile.value) {
       throw new Error("Not authenticated")
     }

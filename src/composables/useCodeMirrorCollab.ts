@@ -11,6 +11,14 @@ export interface CodeMirrorCollabResult {
   ytext: Y.Text
   /** Current plain-text content of the Y.Text */
   getText: () => string
+  /**
+   * Tears down the UndoManager, detaching its observers from the Y.Text/doc.
+   * Call this when the session is destroyed (e.g. on file switch) — the
+   * EditorView's own teardown disposes the yCollab plugin, but the UndoManager
+   * is created here and must be released here too, or its observers linger on
+   * the doc until the doc itself is destroyed.
+   */
+  destroy: () => void
 }
 
 /**
@@ -44,5 +52,6 @@ export function useCodeMirrorCollab(
     extensions,
     ytext,
     getText: () => ytext.toString(),
+    destroy: () => undoManager.destroy(),
   }
 }

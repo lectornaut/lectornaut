@@ -160,6 +160,7 @@
     "details": {
       "empty": "Start or open a chat to see its details.",
       "readOnly": "Read-only",
+      "editor": "Editor",
       "modeBadge": "{mode} mode",
       "you": "You",
       "formerMember": "Former member",

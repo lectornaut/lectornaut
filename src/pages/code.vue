@@ -1,5 +1,8 @@
 <script lang="ts" setup>
-import { useCodeMirrorCollab } from "@/composables/useCodeMirrorCollab"
+import {
+  useCodeMirrorCollab,
+  type CodeMirrorCollabResult,
+} from "@/composables/useCodeMirrorCollab"
 import { useCollabPage } from "@/composables/useCollabPage"
 import { IconFileText } from "@/data/icons"
 import { useNodeBreadcrumb } from "@/helpers/breadcrumber"
@@ -22,6 +25,9 @@ definePage({
 
 const nodeScope = "code" as const
 const collabExtensions = shallowRef<Extension[]>([])
+// Hold the active CodeMirror collab binding so its UndoManager can be torn
+// down when the session is destroyed (file switch / unmount).
+let activeCmCollab: CodeMirrorCollabResult | null = null
 
 const {
   teamId,
@@ -42,10 +48,13 @@ const {
   basePath: "/code",
   onSessionCreated: (session, fileContent) => {
     const cmCollab = useCodeMirrorCollab(session, fileContent)
+    activeCmCollab = cmCollab
     collabExtensions.value = cmCollab.extensions
     return cmCollab.getText()
   },
   onSessionDestroyed: () => {
+    activeCmCollab?.destroy()
+    activeCmCollab = null
     collabExtensions.value = []
   },
 })

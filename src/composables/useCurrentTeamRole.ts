@@ -2,21 +2,26 @@ import { useAuthStore } from "@/stores/authStore"
 import { useMembershipStore } from "@/stores/membershipStore"
 import { can, Capabilities } from "@/types/permissions"
 import { storeToRefs } from "pinia"
-import { computed, type Ref } from "vue"
+import { computed, toValue, type MaybeRefOrGetter } from "vue"
 
 /**
  * Resolves the current user's role in a given team from memberships.
  * Shared by composables that need role-based permission checks for a specific team.
+ *
+ * Accepts a plain string, a ref, or a getter for the team id (resolved via
+ * `toValue` inside the computed), so callers can pass whichever they hold
+ * without wrapping in a ref first.
  */
-export function useCurrentTeamRole(teamId: Ref<string | null>) {
+export function useCurrentTeamRole(teamId: MaybeRefOrGetter<string | null>) {
   const { currentUser } = storeToRefs(useAuthStore())
   const { memberships } = storeToRefs(useMembershipStore())
 
   const currentRole = computed(() => {
-    if (!teamId.value || !currentUser.value) return null
+    const id = toValue(teamId)
+    if (!id || !currentUser.value) return null
     return (
       memberships.value.find(
-        (m) => m.teamId === teamId.value && m.userId === currentUser.value?.uid
+        (m) => m.teamId === id && m.userId === currentUser.value?.uid
       )?.role ?? null
     )
   })
@@ -55,6 +60,17 @@ export function useCurrentTeamRole(teamId: Ref<string | null>) {
     })
   )
 
+  // "Member+ can edit" gate for everyday workspace content — documents and
+  // shared bot chats alike. True for owner/admin/member, false for guests
+  // (read-only). Mirrors the collab editor's editor/viewer split (see
+  // `utils/collab/rbac`).
+  const canManageWorkspaceContent = computed(() =>
+    can(currentUser.value, Capabilities.MANAGE_WORKSPACE_CONTENT, {
+      scope: "workspace",
+      teamRole: currentRole.value,
+    })
+  )
+
   // "Member+ can view" gate for Tier-A settings pages (AI config, members,
   // workspaces, teams, plans, overview). True for owner/admin/member,
   // false for guests — controls page *visibility*, not mutation rights.
@@ -71,6 +87,7 @@ export function useCurrentTeamRole(teamId: Ref<string | null>) {
     canManageBotSessions,
     canManageSecurity,
     canManageWorkspaceStorage,
+    canManageWorkspaceContent,
     canViewTeamSettings,
   }
 }

@@ -26,6 +26,8 @@ import {
 } from "@/helpers/defaults"
 import { isDefaultHotkey } from "@/helpers/shortcuts"
 import { firestore } from "@/modules/firebase"
+import { parseSafe } from "@/schemas/_utils"
+import { settingsThemeDocSchema } from "@/schemas/settings"
 import {
   areNotificationSettingsEqual,
   cloneNotificationSettings,
@@ -35,8 +37,12 @@ import {
   type UserNotificationSettings,
 } from "@/types/notifications"
 import type { SettingsThemeDoc, ThemeMode } from "@/types/settings"
-import { withCloudSyncOperation } from "@/utils/firebase/firebase-optimistic"
-import { mutateSetDocument } from "@/utils/firebase/firebase-sync-engine"
+import { getErrorMessage } from "@/utils/firebase/firebase-errors"
+import { createDebouncedCloudSync } from "@/utils/firebase/firebase-optimistic"
+import {
+  mutateSetDocument,
+  safeSetDocument as safeSetDoc,
+} from "@/utils/firebase/firebase-sync-engine"
 import { normalizeHexColor } from "@/utils/theme/customTheme"
 import { convertFileSrc, invoke } from "@tauri-apps/api/core"
 import { resolveResource } from "@tauri-apps/api/path"
@@ -61,8 +67,15 @@ import { useCurrentUser, useDocument } from "vuefire"
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null
 
+// Validate incoming theme docs against the Zod schema instead of an unchecked
+// `as` cast. `isRecord` guards first so a missing/empty doc returns null
+// silently (absence isn't a violation); a present-but-malformed doc is caught
+// by `parseSafe` — loud in dev, zero-overhead pass-through in prod. This stops
+// an invalid mode/base/font from round-tripping back out to `useStorage`.
 const toSettingsThemeDoc = (value: unknown): SettingsThemeDoc | null =>
-  isRecord(value) ? (value as SettingsThemeDoc) : null
+  isRecord(value)
+    ? parseSafe(settingsThemeDocSchema, value, "settings.theme")
+    : null
 
 export const useSettingsStore = defineStore("settings", () => {
   const user = useCurrentUser()
@@ -108,9 +121,6 @@ export const useSettingsStore = defineStore("settings", () => {
     translucentSidebar,
   })
 
-  const pendingTheme = shallowRef(false)
-  const isThemePersistQueued = ref(false)
-
   const themeDocRef = computed(() => {
     if (!user.value?.uid) return null
     return doc(
@@ -123,6 +133,40 @@ export const useSettingsStore = defineStore("settings", () => {
   })
 
   const { data: themeDocData, pending: themePending } = useDocument(themeDocRef)
+
+  async function persistTheme(): Promise<boolean> {
+    return safeSetDoc(
+      themeDocRef.value,
+      {
+        mode: mode.value,
+        base: base.value,
+        accent: accent.value,
+        customBaseColor: customBaseColor.value,
+        customAccentColor: customAccentColor.value,
+        font: font.value,
+        size: size.value,
+        language: language.value,
+        editorTheme: editorTheme.value,
+        editorFontSize: editorFontSize.value,
+        translucentSidebar: translucentSidebar.value,
+      },
+      "settings.themes.persist"
+    )
+  }
+
+  // Re-entrancy-safe debounced persister. `pendingTheme` is read by the inbound
+  // snapshot watch below to skip applying remote state mid-write. It must be
+  // declared before that watch: the watch is `immediate`, so its callback runs
+  // synchronously during setup and would hit `pendingTheme`'s temporal dead
+  // zone if the declaration came later.
+  const { trigger: persistThemeWithSync, pending: pendingTheme } =
+    createDebouncedCloudSync({
+      persist: persistTheme,
+      id: "theme",
+      source: "settings.themes.persist",
+      canPersist: () => themeDocRef.value !== null,
+      errorLabel: "settings.theme",
+    })
 
   watch(
     themeDocData,
@@ -249,79 +293,6 @@ export const useSettingsStore = defineStore("settings", () => {
     { immediate: true }
   )
 
-  async function safeSetDoc(
-    docRef: ReturnType<typeof doc> | null,
-    data: Record<string, unknown>,
-    source: string
-  ): Promise<boolean> {
-    if (!docRef) return false
-    try {
-      await mutateSetDocument(docRef, data, {
-        source,
-        merge: true,
-      })
-      return true
-    } catch (error) {
-      console.error("[settingsStore] Failed to persist to Firestore:", error)
-      return false
-    }
-  }
-
-  async function persistTheme(): Promise<boolean> {
-    return safeSetDoc(
-      themeDocRef.value,
-      {
-        mode: mode.value,
-        base: base.value,
-        accent: accent.value,
-        customBaseColor: customBaseColor.value,
-        customAccentColor: customAccentColor.value,
-        font: font.value,
-        size: size.value,
-        language: language.value,
-        editorTheme: editorTheme.value,
-        editorFontSize: editorFontSize.value,
-        translucentSidebar: translucentSidebar.value,
-      },
-      "settings.themes.persist"
-    )
-  }
-
-  async function persistThemeWithSync(): Promise<void> {
-    if (!themeDocRef.value) return
-
-    if (pendingTheme.value) {
-      isThemePersistQueued.value = true
-      return
-    }
-
-    pendingTheme.value = true
-    isThemePersistQueued.value = false
-
-    try {
-      await withCloudSyncOperation(
-        async () => {
-          const success = await persistTheme()
-          if (!success) {
-            throw new Error("Failed to persist theme")
-          }
-        },
-        {
-          id: "theme",
-          source: "settings.themes.persist",
-        }
-      )
-    } catch (error) {
-      console.error("[settingsStore] persistTheme failed:", error)
-    } finally {
-      pendingTheme.value = false
-
-      if (isThemePersistQueued.value) {
-        void persistThemeWithSync()
-      }
-    }
-  }
-
   watchDebounced(
     [
       mode,
@@ -416,7 +387,7 @@ export const useSettingsStore = defineStore("settings", () => {
     } catch (error) {
       optimisticNotificationSettings.value = previous
       toast.error(messages.error, {
-        description: (error as Error).message,
+        description: getErrorMessage(error),
       })
       return false
     } finally {
@@ -535,7 +506,7 @@ export const useSettingsStore = defineStore("settings", () => {
       return true
     } catch (error) {
       toast.error("Failed to send test notification", {
-        description: (error as Error).message,
+        description: getErrorMessage(error),
       })
       return false
     } finally {
@@ -812,7 +783,7 @@ export const useSettingsStore = defineStore("settings", () => {
     } catch (error) {
       prefRef.value = previousValue
       toast.error("Failed to update preference", {
-        description: (error as Error).message,
+        description: getErrorMessage(error),
       })
       return false
     } finally {
