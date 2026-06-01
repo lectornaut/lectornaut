@@ -561,6 +561,7 @@ export const defaultBotAgentConfig: IBotAgentConfig = {
     browseInternet: true,
     askQuestion: true,
     searchWorkspaceNodes: true,
+    listWorkspaceNodes: true,
     summarizeNode: true,
     compareNodes: true,
     findRelatedNodes: true,

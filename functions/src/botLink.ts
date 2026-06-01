@@ -67,6 +67,22 @@ const RELATED_LIMIT_DEFAULT = 5
 const RELATED_LIMIT_MAX = 10
 
 /**
+ * Coerce a model-supplied related-nodes limit into [1, RELATED_LIMIT_MAX].
+ * The chat tool's input schema deliberately omits a hard `.min/.max` bound:
+ * Genkit validates tool args before the handler runs, so an over-eager
+ * `limit: 50` from the model would abort the whole turn with
+ * `INVALID_ARGUMENT` (the same failure mode `searchWorkspaceNodes` hit).
+ * Clamp instead — the client `onCall` path stays schema-validated, so this
+ * only softens the model-driven tool call. Never throws.
+ */
+function clampRelatedLimit(raw: number | undefined): number {
+  if (typeof raw !== "number" || !Number.isFinite(raw)) {
+    return RELATED_LIMIT_DEFAULT
+  }
+  return Math.min(RELATED_LIMIT_MAX, Math.max(1, Math.floor(raw)))
+}
+
+/**
  * Same cosine cutoff as `searchWorkspaceNodes` — anything farther is
  * "top-K nearest but not actually near", and surfacing those as
  * "Related" erodes trust in the sidebar (the user sees a list of
@@ -319,11 +335,12 @@ const relatedToolInputSchema = z.object({
     ),
   limit: z
     .number()
-    .int()
-    .min(1)
-    .max(RELATED_LIMIT_MAX)
     .optional()
-    .describe("Maximum number of related nodes to return."),
+    .describe(
+      `Maximum number of related nodes to return. Effective range is ` +
+        `1–${RELATED_LIMIT_MAX} (default ${RELATED_LIMIT_DEFAULT}); ` +
+        "out-of-range or fractional values are clamped, not rejected."
+    ),
 })
 
 export const findRelatedNodesTool = ai.defineTool(
@@ -359,7 +376,7 @@ export const findRelatedNodesTool = ai.defineTool(
       sourceScope: input.scope,
       sourceNodeId: input.nodeId,
       searchScope: input.searchScope ?? "both",
-      limit: input.limit ?? RELATED_LIMIT_DEFAULT,
+      limit: clampRelatedLimit(input.limit),
     })
   }
 )

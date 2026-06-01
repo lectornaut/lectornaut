@@ -121,8 +121,6 @@ const isPresetEnabled = (preset: WorkflowPreset): boolean =>
 const isPresetSwitchDisabled = (preset: WorkflowPreset): boolean => {
   if (!canManage.value || isSaving.value) return true
   if (pendingPresetKeys.value.has(preset.key)) return true
-  // Gated presets (feature not built yet) can never be enabled.
-  if (preset.requiresDependency) return true
   // The first enable materializes a doc bound to the active workspace; toggling
   // an already-materialized preset doesn't need one.
   if (!presetActiveWorkflow(preset.key) && !currentWorkspaceId.value)
@@ -132,8 +130,7 @@ const isPresetSwitchDisabled = (preset: WorkflowPreset): boolean => {
 
 // The Configure cog stays visible on every preset row (consistent with the
 // other settings rows) but is only actionable once the preset is materialized —
-// there's no workflow doc to edit before it's enabled, and gated presets never
-// materialize.
+// there's no workflow doc to edit before it's enabled.
 const isPresetEditDisabled = (preset: WorkflowPreset): boolean =>
   !canManage.value || isSaving.value || !presetActiveWorkflow(preset.key)
 
@@ -149,7 +146,7 @@ const togglePreset = async (
   preset: WorkflowPreset,
   value: boolean
 ): Promise<void> => {
-  if (preset.requiresDependency || !canManage.value) return
+  if (!canManage.value) return
   if (pendingPresetKeys.value.has(preset.key)) return
   setPresetPending(preset.key, true)
   try {
@@ -173,11 +170,6 @@ const togglePreset = async (
     setPresetPending(preset.key, false)
   }
 }
-
-const dependencyLabel = (preset: WorkflowPreset): string =>
-  preset.requiresDependency === "feedback"
-    ? t("settings.workflows.depFeedback")
-    : t("settings.workflows.depTranslation")
 
 // ── Custom workflows (inline list — active / disabled / archived) ────────────
 // Mirrors SettingsAgents/SettingsTools: the non-archived custom workflows split
@@ -270,8 +262,7 @@ const rowDescription = (wf: IWorkflow): string =>
         <!-- ── Predefined workflows (per-preset toggles) ─────────────────
              One Switch per shipped preset, mirroring SettingsAgents'
              built-in agents. Toggling materializes / re-enables / disables
-             the preset's workflow doc; gated presets render disabled with a
-             "needs feature" badge + tooltip. -->
+             the preset's workflow doc. -->
         <FieldSet>
           <Field orientation="horizontal">
             <FieldContent>
@@ -291,14 +282,8 @@ const rowDescription = (wf: IWorkflow): string =>
               orientation="horizontal"
             >
               <FieldContent>
-                <FieldLabel
-                  :for="`wf-preset-${preset.key}`"
-                  class="flex items-center gap-2"
-                >
+                <FieldLabel :for="`wf-preset-${preset.key}`">
                   {{ preset.name }}
-                  <Badge v-if="preset.requiresDependency" variant="outline">
-                    {{ dependencyLabel(preset) }}
-                  </Badge>
                 </FieldLabel>
                 <FieldDescription>
                   {{ preset.description }}
@@ -307,8 +292,8 @@ const rowDescription = (wf: IWorkflow): string =>
               <div class="flex items-center gap-1">
                 <!-- Configure cog — always visible (like the other settings
                      rows), but only actionable once the preset is materialized
-                     as a real workflow doc; nothing to edit before it's enabled,
-                     and gated presets never materialize. -->
+                     as a real workflow doc; nothing to edit before it's
+                     enabled. -->
                 <Tooltip>
                   <DropdownMenu>
                     <TooltipTrigger as-child>
@@ -335,23 +320,14 @@ const rowDescription = (wf: IWorkflow): string =>
                 </Tooltip>
 
                 <!-- Enable/disable Switch. -->
-                <Tooltip>
-                  <TooltipTrigger as-child>
-                    <span class="inline-block">
-                      <Switch
-                        :id="`wf-preset-${preset.key}`"
-                        :model-value="isPresetEnabled(preset)"
-                        :disabled="isPresetSwitchDisabled(preset)"
-                        @update:model-value="
-                          (value) => togglePreset(preset, Boolean(value))
-                        "
-                      />
-                    </span>
-                  </TooltipTrigger>
-                  <TooltipContent v-if="preset.requiresDependency">
-                    {{ dependencyLabel(preset) }}
-                  </TooltipContent>
-                </Tooltip>
+                <Switch
+                  :id="`wf-preset-${preset.key}`"
+                  :model-value="isPresetEnabled(preset)"
+                  :disabled="isPresetSwitchDisabled(preset)"
+                  @update:model-value="
+                    (value) => togglePreset(preset, Boolean(value))
+                  "
+                />
               </div>
             </Field>
           </TooltipProvider>
@@ -453,6 +429,7 @@ const rowDescription = (wf: IWorkflow): string =>
                     :id="wf.id"
                     :key="wf.id"
                     :name="wf.name"
+                    :avatar-seed="wf.avatarSeed"
                     :description="rowDescription(wf)"
                     :enabled="wf.enabled"
                     :is-predefined="false"
@@ -501,6 +478,7 @@ const rowDescription = (wf: IWorkflow): string =>
                     :id="wf.id"
                     :key="wf.id"
                     :name="wf.name"
+                    :avatar-seed="wf.avatarSeed"
                     :description="rowDescription(wf)"
                     :enabled="wf.enabled"
                     :is-predefined="false"
@@ -549,6 +527,7 @@ const rowDescription = (wf: IWorkflow): string =>
                     :id="wf.id"
                     :key="wf.id"
                     :name="wf.name"
+                    :avatar-seed="wf.avatarSeed"
                     :description="rowDescription(wf)"
                     :enabled="wf.enabled"
                     :is-predefined="!!wf.presetKey"
@@ -577,7 +556,7 @@ const rowDescription = (wf: IWorkflow): string =>
       @save="handleSave"
     />
 
-    <WorkflowEditorDialog
+    <SettingsCustomWorkflow
       v-model:open="editorOpen"
       :workflow="editingWorkflow"
     />

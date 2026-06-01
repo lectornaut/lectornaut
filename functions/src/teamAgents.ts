@@ -83,6 +83,14 @@ interface TeamAgentToolToggles {
   browseInternet: boolean
   askQuestion: boolean
   searchWorkspaceNodes: boolean
+  /**
+   * Per-agent gate for the node-enumeration tool (`listWorkspaceNodes` in
+   * `botRag.ts`) — a directory listing the model uses to act over many/all
+   * nodes instead of misusing `searchWorkspaceNodes` with a wildcard query.
+   * Plain Firestore read; same per-agent × team intersection as the other
+   * read-only workspace tools, with no Google-key dependency.
+   */
+  listWorkspaceNodes: boolean
   summarizeNode: boolean
   /**
    * Per-agent gate for the multi-doc comparison tool (`compareNodes` in
@@ -167,6 +175,7 @@ const DEFAULT_TOOL_TOGGLES: TeamAgentToolToggles = {
   browseInternet: true,
   askQuestion: true,
   searchWorkspaceNodes: true,
+  listWorkspaceNodes: true,
   summarizeNode: true,
   compareNodes: true,
   findRelatedNodes: true,
@@ -399,6 +408,10 @@ function normalizeAgentDoc(
         typeof toolsRaw.searchWorkspaceNodes === "boolean"
           ? (toolsRaw.searchWorkspaceNodes as boolean)
           : DEFAULT_TOOL_TOGGLES.searchWorkspaceNodes,
+      listWorkspaceNodes:
+        typeof toolsRaw.listWorkspaceNodes === "boolean"
+          ? (toolsRaw.listWorkspaceNodes as boolean)
+          : DEFAULT_TOOL_TOGGLES.listWorkspaceNodes,
       summarizeNode:
         typeof toolsRaw.summarizeNode === "boolean"
           ? (toolsRaw.summarizeNode as boolean)
@@ -461,6 +474,7 @@ const toolTogglesPatchSchema = z
     browseInternet: z.boolean(),
     askQuestion: z.boolean(),
     searchWorkspaceNodes: z.boolean(),
+    listWorkspaceNodes: z.boolean(),
     summarizeNode: z.boolean(),
     compareNodes: z.boolean(),
     findRelatedNodes: z.boolean(),

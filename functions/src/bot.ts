@@ -78,7 +78,7 @@ import {
   NODE_WRITE_TOOLS,
   type CapturedNodeChange,
 } from "./botNodeTools.js"
-import { searchWorkspaceNodesTool } from "./botRag.js"
+import { listWorkspaceNodesTool, searchWorkspaceNodesTool } from "./botRag.js"
 import { summarizeNodeTool } from "./botSummarize.js"
 import { listBuiltInAgents } from "./builtInAgents.js"
 import { admin, db } from "./firebase.js"
@@ -864,6 +864,12 @@ function pickChatTools(
     agentAllows("searchWorkspaceNodes")
   )
     tools.push(searchWorkspaceNodesTool)
+  // `listWorkspaceNodes` enumerates the node tree (a directory listing the
+  // model uses instead of abusing `searchWorkspaceNodes` with a wildcard). A
+  // plain Firestore read — no embeddings — so NO Google-key gate, unlike
+  // search; same as summarizeNode / compareNodes / findRelatedNodes.
+  if (config.tools.listWorkspaceNodes && agentAllows("listWorkspaceNodes"))
+    tools.push(listWorkspaceNodesTool)
   if (config.tools.summarizeNode && agentAllows("summarizeNode"))
     tools.push(summarizeNodeTool)
   // `compareNodes` is provider-agnostic — uses the team's selected chat
@@ -1752,6 +1758,36 @@ function getMissingToolName(err: unknown): string | null {
 }
 
 /**
+ * Detect Genkit's "the model called a tool with arguments that fail its input
+ * schema" error — a numeric field over a `.max()`, a bad enum, a missing
+ * required field, etc. Genkit validates tool-call args against the schema
+ * BEFORE the handler runs and throws `INVALID_ARGUMENT: Schema validation
+ * failed …`, which (like the two errors above) mirrors onto the stream channel
+ * and would otherwise escape as an opaque `INTERNAL` / land as the terminal
+ * error of a headless Workflows run.
+ *
+ * Status-narrowed past plain `INVALID_ARGUMENT` AND matched on the canonical
+ * "Schema validation failed" wording so we don't swallow unrelated
+ * INVALID_ARGUMENTs from elsewhere in the generate pipeline. We can't resume
+ * the turn — Genkit already aborted the whole generate — so the caller turns
+ * this into a graceful, logged fallback rather than a cryptic crash. The real
+ * fix for any given tool is to clamp/relax its schema so the model can't trip
+ * it (see `clampSearchLimit` in botRag.ts); this is the catch-all backstop for
+ * tools that haven't been hardened that way yet.
+ */
+function isToolInputValidationError(err: unknown): boolean {
+  if (!err || typeof err !== "object") return false
+  const e = err as {
+    status?: string
+    originalMessage?: string
+    message?: string
+  }
+  if (e.status !== "INVALID_ARGUMENT") return false
+  const msg = e.originalMessage ?? e.message ?? ""
+  return msg.includes("Schema validation failed")
+}
+
+/**
  * Per-turn hard deadline. The provider call (Gemini / Claude / OpenAI)
  * can hang indefinitely on a bad day — flaky network, provider
  * incident, model that gets stuck mid-thought. Without a deadline the
@@ -1895,78 +1931,87 @@ async function streamChatToClientInner(
   let liveCallSeq = options.preExistingToolCallCount ?? 0
   let liveResultSeq = options.preExistingToolResultCount ?? 0
   const thinking = createThinkingFolder((text) => sendChunk({ chunk: text }))
-  for await (const chunk of result.stream) {
-    // Iterate parts directly — `chunk.text` collapses text parts and
-    // hides tool requests/responses. Only the parts walk gives us
-    // structured access to the tool round-trip.
-    const parts = chunk.content ?? []
-    for (const part of parts) {
-      // Gemini reasoning deltas (thinkingConfig.includeThoughts) stream
-      // before the answer — fold a contiguous run into one <thinking>
-      // block the chat surface renders as a collapsible disclosure.
-      if (typeof part.reasoning === "string" && part.reasoning) {
-        thinking.reasoning(part.reasoning)
-        continue
-      }
-      // Any non-reasoning part ends the reasoning run.
-      thinking.close()
-      if (typeof part.text === "string" && part.text) {
-        sendChunk({ chunk: part.text })
-        continue
-      }
-      if (part.toolRequest && part.toolRequest.name) {
-        // Skip partial toolRequests — Gemini streams the JSON input as
-        // it tokenizes, and we don't want the client to render a half-
-        // parsed `{"locat`. The terminal non-partial chunk carries the
-        // complete input.
-        if (part.toolRequest.partial) continue
-        const key = refKey(part.toolRequest, "call", liveCallSeq++)
-        if (sentToolCalls.has(key)) continue
-        sentToolCalls.add(key)
-        const isInterrupt =
-          !!part.metadata?.interrupt ||
-          INTERRUPT_TOOL_NAMES.has(part.toolRequest.name)
-        sendChunk({
-          toolCall: {
-            ref: part.toolRequest.ref,
-            name: part.toolRequest.name,
-            input: part.toolRequest.input,
-            ...(isInterrupt ? { isInterrupt: true } : {}),
-          },
-        })
-        continue
-      }
-      if (part.toolResponse && part.toolResponse.name) {
-        const key = refKey(part.toolResponse, "result", liveResultSeq++)
-        if (sentToolResults.has(key)) continue
-        sentToolResults.add(key)
-        sendChunk({
-          toolResult: {
-            ref: part.toolResponse.ref,
-            name: part.toolResponse.name,
-            output: part.toolResponse.output,
-          },
-        })
-      }
-    }
-  }
 
-  // Close a reasoning run the model didn't follow with any answer text.
-  thinking.close()
-
-  // `result.response` rejects with a `GenkitError` whose `status` is
-  // `ABORTED` when the model exhausts its tool-call budget without
-  // producing a final text, or `NOT_FOUND` when the model emits a tool
-  // request whose name isn't in this turn's catalog. Without these
-  // catches the rejects would propagate to `onCallGenkit`, which wraps
-  // them as the opaque `INTERNAL` the client sees — and the optimistic
-  // UI rollback then makes the chat look like it was wiped. Convert
-  // each into a user-visible reply on the same stream so the turn
-  // ends gracefully instead of vanishing.
+  // A turn that ends abnormally rejects with a `GenkitError` on BOTH the
+  // streamed chunk channel AND `result.response` — Genkit's `generateStream`
+  // mirrors the generate rejection onto the channel (`channel.error(err)`),
+  // and the channel throws the instant that's set, so the `for await` below
+  // surfaces the error FIRST, before `await result.response` is reached. The
+  // recovery therefore has to wrap the whole stream loop: guarding only
+  // `result.response` was dead code for streamed turns, letting the reject
+  // escape to `onCallGenkit` (wrapped as the opaque `INTERNAL` the chat sees)
+  // and crash a headless Workflows run with a cryptic `ABORTED: …`. Three
+  // cases are recoverable — `ABORTED` (model exhausted its `maxTurns` tool-call
+  // budget without a final text), `NOT_FOUND` (model called a tool not
+  // registered this turn, e.g. an agent switch dropped it), and
+  // `INVALID_ARGUMENT` (model called a tool with args that fail its input
+  // schema — Genkit rejects pre-handler). All convert into a user-visible
+  // reply on the same stream so the turn ends gracefully instead of vanishing.
   let final: Awaited<ChatStreamResult["response"]>
   try {
+    for await (const chunk of result.stream) {
+      // Iterate parts directly — `chunk.text` collapses text parts and
+      // hides tool requests/responses. Only the parts walk gives us
+      // structured access to the tool round-trip.
+      const parts = chunk.content ?? []
+      for (const part of parts) {
+        // Gemini reasoning deltas (thinkingConfig.includeThoughts) stream
+        // before the answer — fold a contiguous run into one <thinking>
+        // block the chat surface renders as a collapsible disclosure.
+        if (typeof part.reasoning === "string" && part.reasoning) {
+          thinking.reasoning(part.reasoning)
+          continue
+        }
+        // Any non-reasoning part ends the reasoning run.
+        thinking.close()
+        if (typeof part.text === "string" && part.text) {
+          sendChunk({ chunk: part.text })
+          continue
+        }
+        if (part.toolRequest && part.toolRequest.name) {
+          // Skip partial toolRequests — Gemini streams the JSON input as
+          // it tokenizes, and we don't want the client to render a half-
+          // parsed `{"locat`. The terminal non-partial chunk carries the
+          // complete input.
+          if (part.toolRequest.partial) continue
+          const key = refKey(part.toolRequest, "call", liveCallSeq++)
+          if (sentToolCalls.has(key)) continue
+          sentToolCalls.add(key)
+          const isInterrupt =
+            !!part.metadata?.interrupt ||
+            INTERRUPT_TOOL_NAMES.has(part.toolRequest.name)
+          sendChunk({
+            toolCall: {
+              ref: part.toolRequest.ref,
+              name: part.toolRequest.name,
+              input: part.toolRequest.input,
+              ...(isInterrupt ? { isInterrupt: true } : {}),
+            },
+          })
+          continue
+        }
+        if (part.toolResponse && part.toolResponse.name) {
+          const key = refKey(part.toolResponse, "result", liveResultSeq++)
+          if (sentToolResults.has(key)) continue
+          sentToolResults.add(key)
+          sendChunk({
+            toolResult: {
+              ref: part.toolResponse.ref,
+              name: part.toolResponse.name,
+              output: part.toolResponse.output,
+            },
+          })
+        }
+      }
+    }
+
+    // Close a reasoning run the model didn't follow with any answer text.
+    thinking.close()
     final = await result.response
   } catch (err) {
+    // Close any reasoning fold the abort interrupted mid-run, so the
+    // fallback below isn't swallowed into a never-closed <thinking> block.
+    thinking.close()
     if (isToolIterationsExceededError(err)) {
       const fallback =
         "I tried a few searches but couldn't pin down what you're after. Could you give me more specific terms — a document name or a phrase from inside it — or attach the file to this turn so I can read it directly?"
@@ -1995,6 +2040,23 @@ async function streamChatToClientInner(
         { err: String(err) }
       )
       const fallback = `I tried to use the \`${missingTool}\` tool, but it isn't available in this chat right now — the active agent may not have access to it, or it was disabled since earlier in this conversation. Try switching back to the agent that ran the earlier steps, or ask me to take a different approach.`
+      sendChunk({ chunk: fallback })
+      return { text: fallback, messages: [] } as unknown as Awaited<
+        ChatStreamResult["response"]
+      >
+    }
+    if (isToolInputValidationError(err)) {
+      // The model produced a tool argument the tool's schema rejects. Genkit
+      // validates args before the handler, so this aborts the whole turn and
+      // can't be resumed — end gracefully with a logged note instead of
+      // surfacing the raw INVALID_ARGUMENT, which on a headless Workflows run
+      // would otherwise become the run's terminal error.
+      logger.warn(
+        "[streamChatToClient] tool input failed schema validation — the model emitted an argument the tool rejects",
+        { err: String(err) }
+      )
+      const fallback =
+        "I tried to use one of my tools with an argument it wouldn't accept, so I couldn't finish that step. Could you rephrase your request, or break it into a smaller one?"
       sendChunk({ chunk: fallback })
       return { text: fallback, messages: [] } as unknown as Awaited<
         ChatStreamResult["response"]

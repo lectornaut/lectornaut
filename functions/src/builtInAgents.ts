@@ -35,6 +35,7 @@ interface TeamAgentToolToggles {
   browseInternet: boolean
   askQuestion: boolean
   searchWorkspaceNodes: boolean
+  listWorkspaceNodes: boolean
   summarizeNode: boolean
   compareNodes: boolean
   findRelatedNodes: boolean
@@ -63,6 +64,7 @@ const ALL_TOOLS_ENABLED: TeamAgentToolToggles = {
   browseInternet: true,
   askQuestion: true,
   searchWorkspaceNodes: true,
+  listWorkspaceNodes: true,
   summarizeNode: true,
   compareNodes: true,
   findRelatedNodes: true,

@@ -1822,6 +1822,8 @@ export type WorkflowUpdateModeInput = "automatic" | "require_review"
 export interface CreateWorkflowDraft {
   name: string
   description?: string
+  /** Seed for the workflow's generative avatar; falls back to `name`. */
+  avatarSeed?: string
   agentId: string
   workspaceId: string
   /** Tree the workflow may edit; null/undefined = the workspace's `write` tree. */
@@ -2142,6 +2144,7 @@ export const generateTeamCustomToolConfig = createTypedCallable<
 export interface GeneratedTeamWorkflowConfig {
   name: string
   description: string
+  avatarSeed: string
   instructions: string
   additionalPrompt: string
   /** null = the workspace's default `write` tree. */

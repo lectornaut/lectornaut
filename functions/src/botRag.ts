@@ -247,6 +247,26 @@ interface RagToolContext {
 
 const SEARCH_SCOPES = ["code", "write", "both"] as const
 
+// Bounds for the model-supplied `limit`. Deliberately NOT expressed as Zod
+// `.min/.max` on the input schema: Genkit validates tool args against the
+// schema BEFORE the handler runs, so a hard bound turns an over-eager
+// `limit: 50` into an `INVALID_ARGUMENT` that aborts the ENTIRE turn (it
+// crashed a headless Workflows run). We advertise the range in the field
+// description for the model and clamp here instead — a bad limit becomes
+// harmless, never fatal. Same rationale as the `.default()` note in the
+// handler below: don't let the schema layer be load-bearing.
+const SEARCH_LIMIT_MIN = 1
+const SEARCH_LIMIT_MAX = 10
+const SEARCH_LIMIT_DEFAULT = 5
+
+/** Coerce any model-supplied limit into [MIN, MAX]; never throws. */
+function clampSearchLimit(raw: number | undefined): number {
+  if (typeof raw !== "number" || !Number.isFinite(raw)) {
+    return SEARCH_LIMIT_DEFAULT
+  }
+  return Math.min(SEARCH_LIMIT_MAX, Math.max(SEARCH_LIMIT_MIN, Math.floor(raw)))
+}
+
 const searchInputSchema = z.object({
   query: z
     .string()
@@ -258,11 +278,12 @@ const searchInputSchema = z.object({
     ),
   limit: z
     .number()
-    .int()
-    .min(1)
-    .max(10)
-    .default(5)
-    .describe("Maximum number of nodes to return across all scopes."),
+    .optional()
+    .describe(
+      "Maximum number of nodes to return across all scopes. Effective " +
+        "range is 1–10 (default 5); the tool clamps out-of-range or " +
+        "fractional values instead of rejecting them."
+    ),
   scope: z
     .enum(SEARCH_SCOPES)
     .default("both")
@@ -355,7 +376,10 @@ export const searchWorkspaceNodesTool = ai.defineTool(
     // a collection path ending in `/undefined`). Default in the handler
     // too, regardless of what the schema says.
     const scope: (typeof SEARCH_SCOPES)[number] = input.scope ?? "both"
-    const limit = input.limit ?? 5
+    // Clamp rather than trust the schema (see SEARCH_LIMIT_* above): a hard
+    // schema bound would have rejected an over-large `limit` at Genkit's
+    // pre-handler boundary, aborting the turn before we ever got here.
+    const limit = clampSearchLimit(input.limit)
 
     // Diagnostic breadcrumbs are at debug level so they don't show up in
     // routine `firebase functions:log` output. Crank the function's log
@@ -392,7 +416,7 @@ export const searchWorkspaceNodesTool = ai.defineTool(
     // Pull a few extra per scope so the merged-and-clipped result list
     // can't end up shorter than `limit` when one scope has fewer
     // matches than its quota.
-    const perScopeFetch = Math.min(10, Math.max(2, limit))
+    const perScopeFetch = Math.min(SEARCH_LIMIT_MAX, Math.max(2, limit))
 
     const merged: Array<z.infer<typeof searchResultSchema>> = []
 
@@ -504,6 +528,155 @@ export const searchWorkspaceNodesTool = ai.defineTool(
     // ("there's more, ask again with a narrower query!" — no, there
     // really wasn't more relevant content).
     return { results: limited, truncated: relevant.length > limit }
+  }
+)
+
+// ===========================================================================
+// Tool — listWorkspaceNodes
+// ===========================================================================
+
+const LIST_LIMIT_MIN = 1
+const LIST_LIMIT_MAX = 200
+const LIST_LIMIT_DEFAULT = 100
+
+/**
+ * Same clamp discipline as `clampSearchLimit` — a hard `.min/.max` schema
+ * bound would reject at Genkit's pre-handler validation and abort the whole
+ * turn, so the schema stays permissive and the handler clamps. Never throws.
+ */
+function clampListLimit(raw: number | undefined): number {
+  if (typeof raw !== "number" || !Number.isFinite(raw)) {
+    return LIST_LIMIT_DEFAULT
+  }
+  return Math.min(LIST_LIMIT_MAX, Math.max(LIST_LIMIT_MIN, Math.floor(raw)))
+}
+
+const listInputSchema = z.object({
+  scope: z
+    .enum(SEARCH_SCOPES)
+    .default("both")
+    .describe(
+      "Which workspace subtree to enumerate: 'code' (source files), " +
+        "'write' (rich-text documents), or 'both' (default)."
+    ),
+  limit: z
+    .number()
+    .optional()
+    .describe(
+      "Maximum number of nodes to return across all scopes. Effective " +
+        "range is 1–200 (default 100); out-of-range or fractional values " +
+        "are clamped, not rejected. If the result comes back truncated, " +
+        "narrow with `searchWorkspaceNodes` rather than trying to page."
+    ),
+})
+
+const listResultSchema = z.object({
+  nodeId: z.string(),
+  scope: z.enum(["code", "write"]),
+  name: z.string(),
+  type: z.enum(["folder", "file"]),
+  /** Parent folder id; "root" for top-level nodes. */
+  parentId: z.string(),
+})
+
+const listOutputSchema = z.object({
+  nodes: z.array(listResultSchema),
+  /** True when more nodes existed than `limit` allowed. */
+  truncated: z.boolean(),
+})
+
+export const listWorkspaceNodesTool = ai.defineTool(
+  {
+    name: "listWorkspaceNodes",
+    description:
+      "List the workspace's nodes (files + folders) by name — a directory " +
+      "listing, NOT a search. Returns each node's `scope`, `nodeId`, " +
+      "`name`, `type`, and `parentId` ('root' for top-level) so you can " +
+      "enumerate or walk the tree. Use this whenever you need to act over " +
+      "MANY or ALL nodes (e.g. 'review every doc in the workspace', " +
+      "'rename all the code files'): do NOT call `searchWorkspaceNodes` " +
+      "with a wildcard like '*' — that's semantic search and cannot " +
+      "enumerate. Archived nodes are omitted. Feed any `scope` + `nodeId` " +
+      "straight into `readNode`, `summarizeNode`, or the edit tools. " +
+      "Bounded — very large workspaces come back with `truncated: true`; " +
+      "when you're after something specific rather than everything, prefer " +
+      "`searchWorkspaceNodes`.",
+    inputSchema: listInputSchema,
+    outputSchema: listOutputSchema,
+  },
+  async (input, { context }) => {
+    const ctx = (context ?? {}) as RagToolContext
+    const teamId = ctx.teamId
+    const workspaceId = ctx.workspaceId
+    // Default in the handler (Genkit doesn't apply Zod `.default()` to the
+    // runtime input — see the searchWorkspaceNodes note above) and clamp the
+    // model-supplied limit rather than bounding it in the schema.
+    const scope: (typeof SEARCH_SCOPES)[number] = input.scope ?? "both"
+    const limit = clampListLimit(input.limit)
+
+    if (!teamId || !workspaceId) {
+      logger.warn("[listWorkspaceNodes] missing teamId/workspaceId in context")
+      return { nodes: [], truncated: false }
+    }
+
+    const scopes: Array<"code" | "write"> =
+      scope === "both" ? ["code", "write"] : [scope]
+
+    const collected: Array<z.infer<typeof listResultSchema>> = []
+    let truncated = false
+
+    for (const s of scopes) {
+      const collectionPath = `teams/${teamId}/workspaces/${workspaceId}/${s}`
+      try {
+        // No `orderBy`: ordering on a field (e.g. `sortKey`/`name`) would
+        // silently DROP any node doc missing it — and nodes can be created by
+        // paths other than the bot's `createNode`. Implicit document-id order
+        // is always complete and needs no index. Fetch one extra to detect
+        // "there's more" without a count query. `isArchived` is filtered in
+        // code (like searchWorkspaceNodes) — archived nodes are rare, so they
+        // seldom eat the budget, and filtering here avoids a composite index.
+        const snap = await db
+          .collection(collectionPath)
+          .limit(limit + 1)
+          .get()
+        if (snap.size > limit) truncated = true
+        for (const doc of snap.docs.slice(0, limit)) {
+          const data = doc.data() as Record<string, unknown>
+          if (data.isArchived === true) continue
+          const name = typeof data.name === "string" ? data.name : doc.id
+          const type =
+            data.type === "folder" || data.type === "file"
+              ? (data.type as "folder" | "file")
+              : "file"
+          const parentId =
+            typeof data.parentId === "string" && data.parentId
+              ? data.parentId
+              : "root"
+          collected.push({ nodeId: doc.id, scope: s, name, type, parentId })
+        }
+      } catch (err) {
+        logger.warn(`[listWorkspaceNodes] query failed for scope=${s}`, {
+          err: String(err),
+        })
+      }
+    }
+
+    // Across "both" scopes the merged list can exceed `limit`; clip + flag.
+    if (collected.length > limit) {
+      truncated = true
+      collected.length = limit
+    }
+    // Sort for a readable listing (folders before files, then by name) — this
+    // is presentation only; truncation already happened above in id order.
+    collected.sort((a, b) => {
+      if (a.type !== b.type) return a.type === "folder" ? -1 : 1
+      return a.name.localeCompare(b.name)
+    })
+
+    logger.debug(
+      `[listWorkspaceNodes] team=${teamId} workspace=${workspaceId} scope=${scope} returned=${collected.length} truncated=${truncated}`
+    )
+    return { nodes: collected, truncated }
   }
 )
 

@@ -4,9 +4,7 @@
  * through the same `workflowDraftSchema` as a custom workflow. Keep in sync
  * with the client copy in `src/data/workflowPresets.ts`.
  *
- * Presets carrying `requiresDependency` lean on a feature that does not exist
- * yet (node feedback, content translation) and are REFUSED at enable time.
- * The SEO preset is intentionally omitted.
+ * Every preset here is enable-ready. (The SEO preset is intentionally omitted.)
  */
 
 type PresetTrigger =
@@ -20,12 +18,13 @@ export interface ServerWorkflowPreset {
   key: string
   name: string
   description: string
+  /** Stable seed for the materialized workflow's generative avatar. */
+  avatarSeed: string
   instructions: string
   additionalPrompt?: string
   defaultTrigger: PresetTrigger
   defaultUpdateMode: "automatic" | "require_review"
   defaultTargetScope: "code" | "write" | null
-  requiresDependency?: "feedback" | "translation"
 }
 
 const WEEKLY_MON_9AM = {
@@ -41,6 +40,7 @@ export const WORKFLOW_PRESETS: readonly ServerWorkflowPreset[] = [
     description:
       "When a code file changes, propose matching edits to the docs that " +
       "describe it, citing the source file.",
+    avatarSeed: "sync-docs",
     instructions: [
       "You keep the workspace's written docs accurate to its code.",
       "1. Read the code node(s) that changed and the related write docs.",
@@ -62,6 +62,7 @@ export const WORKFLOW_PRESETS: readonly ServerWorkflowPreset[] = [
     description:
       "On a schedule, summarize what changed across the workspace since the " +
       "last run into a designated changelog doc.",
+    avatarSeed: "changelog",
     instructions: [
       "You maintain a running changelog.",
       "1. Review the code and write nodes that changed since your last run.",
@@ -81,6 +82,7 @@ export const WORKFLOW_PRESETS: readonly ServerWorkflowPreset[] = [
     description:
       "Mine recurring questions from assistant chats to find gaps in the " +
       "docs and propose fill-ins.",
+    avatarSeed: "conversation-gaps",
     instructions: [
       "You improve the docs based on what people actually ask the assistant.",
       "1. Look for recurring questions or confusion in recent assistant " +
@@ -101,6 +103,7 @@ export const WORKFLOW_PRESETS: readonly ServerWorkflowPreset[] = [
     description:
       "Correct grammar, spelling, and punctuation in the docs without " +
       "changing meaning.",
+    avatarSeed: "grammar",
     instructions: [
       "You fix grammar, spelling, and punctuation only.",
       "1. Read each target doc.",
@@ -123,6 +126,7 @@ export const WORKFLOW_PRESETS: readonly ServerWorkflowPreset[] = [
     description:
       "Align docs to the team's writing style guide (tone, voice, formatting " +
       "conventions).",
+    avatarSeed: "style-guide",
     instructions: [
       "You apply the team's style guide to the docs.",
       "1. Read each target doc against the style rules below.",
@@ -143,6 +147,7 @@ export const WORKFLOW_PRESETS: readonly ServerWorkflowPreset[] = [
     name: "Repair links",
     description:
       "Find broken inline links in the docs and propose fixes or removals.",
+    avatarSeed: "repair-links",
     instructions: [
       "You repair broken links in the docs.",
       "1. Scan each target doc for inline links.",
@@ -155,34 +160,6 @@ export const WORKFLOW_PRESETS: readonly ServerWorkflowPreset[] = [
     defaultTrigger: { type: "schedule", schedule: WEEKLY_MON_9AM },
     defaultUpdateMode: "require_review",
     defaultTargetScope: "write",
-  },
-  {
-    key: "_feedback_gaps",
-    name: "Draft improvements from user feedback",
-    description:
-      "Turn reader feedback on docs into proposed improvements. Requires a " +
-      "node feedback feature, which doesn't exist yet.",
-    instructions:
-      "Review reader feedback on each doc and propose edits that address the " +
-      "most common or impactful issues.",
-    defaultTrigger: { type: "schedule", schedule: WEEKLY_MON_9AM },
-    defaultUpdateMode: "require_review",
-    defaultTargetScope: "write",
-    requiresDependency: "feedback",
-  },
-  {
-    key: "_translate",
-    name: "Translate content",
-    description:
-      "Keep translated copies of docs in sync. Requires node-content " +
-      "translation, which doesn't exist yet.",
-    instructions:
-      "Produce or update a translation of each target doc, preserving " +
-      "structure and formatting.",
-    defaultTrigger: { type: "event", scope: "write", debounceMinutes: 60 },
-    defaultUpdateMode: "require_review",
-    defaultTargetScope: "write",
-    requiresDependency: "translation",
   },
 ]
 

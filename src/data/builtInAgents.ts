@@ -64,6 +64,7 @@ const ALL_TOOLS_ENABLED: ITeamAgent["tools"] = {
   browseInternet: true,
   askQuestion: true,
   searchWorkspaceNodes: true,
+  listWorkspaceNodes: true,
   summarizeNode: true,
   compareNodes: true,
   findRelatedNodes: true,

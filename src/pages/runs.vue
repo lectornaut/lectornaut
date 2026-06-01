@@ -2,6 +2,7 @@
 import { runColumns } from "@/components/app/runs/runColumns"
 import { useRunsExplorer } from "@/composables/useRunsExplorer"
 import { useTeamWorkflows } from "@/composables/useTeamWorkflows"
+import { IconChevronRight } from "@/data/icons"
 import { runStatusDotClass, runStatusLabel } from "@/data/workflowRunConstants"
 import { computed } from "vue"
 
@@ -23,10 +24,9 @@ const {
   filteredRows,
   dayMarkers,
   workflowGroups,
-  selectedWorkflowIds,
   hasFilters,
   toggleWorkflow,
-  clearWorkflows,
+  isWorkflowSelected,
   clearAll,
 } = useRunsExplorer()
 
@@ -82,14 +82,57 @@ const stats = computed(() => {
       <Separator />
       <SidebarContent>
         <OverlayScrollbarsWrapper>
-          <SidebarGroup>
-            <WorkflowRunFilter
-              :groups="workflowGroups"
-              :selected-ids="selectedWorkflowIds"
-              @toggle="toggleWorkflow"
-              @clear="clearWorkflows"
-            />
-          </SidebarGroup>
+          <p
+            v-if="workflowGroups.length === 0"
+            class="text-muted-foreground px-4 py-2 text-xs"
+          >
+            {{ t("pages.runs.noWorkflows") }}
+          </p>
+
+          <template v-for="(group, index) in workflowGroups" :key="group.label">
+            <SidebarSeparator v-if="index > 0" class="mx-0" />
+            <SidebarGroup>
+              <Collapsible
+                :default-open="index === 0"
+                class="group/collapsible"
+              >
+                <SidebarGroupLabel
+                  as-child
+                  class="group/label text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground w-full gap-2 text-sm"
+                >
+                  <CollapsibleTrigger>
+                    {{ group.label }}
+                    <span class="text-muted-foreground">{{
+                      group.items.length
+                    }}</span>
+                    <IconChevronRight
+                      class="ml-auto transition-transform group-data-[state=open]/collapsible:rotate-90"
+                    />
+                  </CollapsibleTrigger>
+                </SidebarGroupLabel>
+                <CollapsibleContent>
+                  <SidebarGroupContent>
+                    <SidebarMenu>
+                      <SidebarMenuItem
+                        v-for="item in group.items"
+                        :key="item.key"
+                      >
+                        <SidebarMenuButton as="label" class="cursor-pointer">
+                          <Checkbox
+                            :model-value="isWorkflowSelected(item.workflowIds)"
+                            @update:model-value="
+                              toggleWorkflow(item.workflowIds)
+                            "
+                          />
+                          <span class="grow truncate">{{ item.name }}</span>
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                    </SidebarMenu>
+                  </SidebarGroupContent>
+                </CollapsibleContent>
+              </Collapsible>
+            </SidebarGroup>
+          </template>
         </OverlayScrollbarsWrapper>
       </SidebarContent>
       <Separator />

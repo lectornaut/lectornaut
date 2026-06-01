@@ -8,6 +8,7 @@
  */
 
 import { toRunRow, type RunRow } from "@/components/app/runs/runColumns"
+import { getWorkflowPreset, WORKFLOW_PRESETS } from "@/data/workflowPresets"
 import { runStatusDotClass, runStatusRank } from "@/data/workflowRunConstants"
 import { useTeamWorkflowsStore } from "@/stores/teamWorkflowsStore"
 import { storeToRefs } from "pinia"
@@ -49,9 +50,20 @@ const tsMs = (ts: unknown): number | null =>
   (ts as { toDate?: () => Date })?.toDate?.()?.getTime?.() ?? null
 
 export interface WorkflowFilterItem {
-  id: string
+  /**
+   * Stable list + dedupe key — the `presetKey` for predefined rows (collapsing
+   * any legacy data that materialized one preset into several docs), the
+   * workflow doc id for custom rows. NOT itself a workflow id; selection keys
+   * off `workflowIds`.
+   */
+  key: string
   name: string
-  enabled: boolean
+  /**
+   * Every workflow doc this row stands for. Normally one; >1 only in the legacy
+   * multi-doc-per-preset case, where toggling the row covers them all so no
+   * run is left unfilterable.
+   */
+  workflowIds: string[]
 }
 export interface WorkflowFilterGroup {
   label: string
@@ -61,6 +73,12 @@ export interface DayMarker {
   dotClass: string
   scheduled: boolean
 }
+
+/** Catalog order for predefined rows — keeps the filter list stable and aligned
+ *  with Settings → Workflows (the workflows Firestore query is unordered). */
+const PRESET_ORDER = new Map<string, number>(
+  WORKFLOW_PRESETS.map((p, i) => [p.key, i])
+)
 
 export function useRunsExplorer() {
   const store = useTeamWorkflowsStore()
@@ -119,22 +137,60 @@ export function useRunsExplorer() {
     return markers
   })
 
-  const groupItems = (predefined: boolean): WorkflowFilterItem[] =>
+  // Predefined rows collapse by `presetKey` so the canonical model — at most
+  // one runnable doc per shipped preset (see SettingsWorkflows) — holds even
+  // against legacy data that materialized a preset twice: the row carries every
+  // matching doc id and toggles them as one. The label comes from the catalog
+  // (the same name Settings shows), falling back to the doc name for a preset
+  // that's since been retired from the catalog.
+  const predefinedItems = (): WorkflowFilterItem[] => {
+    const byKey = new Map<string, WorkflowFilterItem>()
+    for (const w of activeWorkflows.value) {
+      if (!w.presetKey) continue
+      const item = byKey.get(w.presetKey)
+      if (item) {
+        item.workflowIds.push(w.id)
+        continue
+      }
+      byKey.set(w.presetKey, {
+        key: w.presetKey,
+        name: getWorkflowPreset(w.presetKey)?.name ?? w.name,
+        workflowIds: [w.id],
+      })
+    }
+    return [...byKey.values()].sort(
+      (a, b) =>
+        (PRESET_ORDER.get(a.key) ?? Infinity) -
+          (PRESET_ORDER.get(b.key) ?? Infinity) || a.name.localeCompare(b.name)
+    )
+  }
+
+  // Custom workflows are already one-doc-per-row; key + select by the doc id.
+  const customItems = (): WorkflowFilterItem[] =>
     activeWorkflows.value
-      .filter((w) => (predefined ? !!w.presetKey : !w.presetKey))
-      .map((w) => ({ id: w.id, name: w.name, enabled: w.enabled }))
+      .filter((w) => !w.presetKey)
+      .map((w) => ({ key: w.id, name: w.name, workflowIds: [w.id] }))
 
   const workflowGroups = computed<WorkflowFilterGroup[]>(() =>
     [
-      { label: "Predefined", items: groupItems(true) },
-      { label: "Custom", items: groupItems(false) },
+      { label: "Predefined", items: predefinedItems() },
+      { label: "Custom", items: customItems() },
     ].filter((g) => g.items.length > 0)
   )
 
-  const toggleWorkflow = (id: string): void => {
+  /** A filter row reads as selected only when every doc it represents is. */
+  const isWorkflowSelected = (workflowIds: string[]): boolean =>
+    workflowIds.length > 0 &&
+    workflowIds.every((id) => selectedWorkflowIds.value.has(id))
+
+  // Toggle every doc the row stands for as a unit — clear them if all are
+  // already selected, otherwise select them all. `selectedWorkflowIds` stays a
+  // flat set of real doc ids, so `filteredRows` matching is unchanged.
+  const toggleWorkflow = (workflowIds: string[]): void => {
     const next = new Set(selectedWorkflowIds.value)
-    if (next.has(id)) next.delete(id)
-    else next.add(id)
+    if (workflowIds.every((id) => next.has(id)))
+      workflowIds.forEach((id) => next.delete(id))
+    else workflowIds.forEach((id) => next.add(id))
     selectedWorkflowIds.value = next
   }
   const clearWorkflows = (): void => {
@@ -158,6 +214,7 @@ export function useRunsExplorer() {
     workflowGroups,
     hasFilters,
     toggleWorkflow,
+    isWorkflowSelected,
     clearWorkflows,
     clearAll,
   }

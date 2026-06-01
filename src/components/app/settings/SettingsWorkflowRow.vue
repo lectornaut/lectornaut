@@ -5,8 +5,8 @@ import {
   IconRotateCcw,
   IconSettings,
   IconTrash,
-  IconWorkflow,
 } from "@/data/icons"
+import Avatar from "vue-boring-avatars"
 import { computed, ref } from "vue"
 
 /**
@@ -18,8 +18,11 @@ import { computed, ref } from "vue"
  * wins over "Archived" when both apply).
  *
  * Workflow-specific vs. the agent / tool rows:
- *   - A generic `IconWorkflow` fills the media slot — a workflow is an
- *     automation, not an identity, so there's no per-row avatar.
+ *   - The media slot renders a `vue-boring-avatars` portrait seeded from
+ *     `avatarSeed` (falling back to `name`), matching the custom-agent and
+ *     custom-tool rows. Workflows use the `bauhaus` variant to stay distinct
+ *     from agents (`beam`) and tools (`marble`) while sharing the chart-N
+ *     palette.
  *   - The cog menu is flag-driven: predefined rows expose only "Edit"; custom
  *     rows add Archive / Restore + Delete-forever (`canArchive` / `isArchived`
  *     / `canDelete`).
@@ -31,6 +34,8 @@ const props = defineProps<{
   id: string
   name: string
   description: string
+  /** Seed for the row's generative avatar; falls back to `name` when blank. */
+  avatarSeed: string
   enabled: boolean
   isPredefined: boolean
   isArchived: boolean
@@ -60,6 +65,10 @@ const statusBadgeKey = computed<"disabled" | "archived" | null>(() => {
   return null
 })
 
+const avatarSeedEffective = computed(
+  () => props.avatarSeed.trim() || props.name.trim() || "Workflow"
+)
+
 const deleteConfirmOpen = ref(false)
 const handleDeleteConfirmed = (): void => {
   deleteConfirmOpen.value = false
@@ -72,8 +81,18 @@ const onToggleEnabled = (value: boolean | string): void => {
 
 <template>
   <Item variant="outline" :class="{ 'opacity-70': statusBadgeKey !== null }">
-    <ItemMedia variant="icon">
-      <IconWorkflow />
+    <ItemMedia variant="image" class="rounded-full">
+      <Avatar
+        variant="bauhaus"
+        :name="avatarSeedEffective"
+        :colors="[
+          'var(--color-chart-1)',
+          'var(--color-chart-2)',
+          'var(--color-chart-3)',
+          'var(--color-chart-4)',
+          'var(--color-chart-5)',
+        ]"
+      />
     </ItemMedia>
 
     <ItemContent class="truncate">

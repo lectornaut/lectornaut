@@ -48,6 +48,7 @@ import {
   IconGlobe,
   IconHelpCircle,
   IconLink,
+  IconList,
   IconPencil,
   IconRotateCcw,
   IconSearch,
@@ -115,6 +116,16 @@ const CATALOG_BY_NAME: Record<BotToolName, BotToolDescriptor> = {
     description: "Find files or folders by what they contain.",
     icon: IconSearch,
     example: "Find the workspace notes about ",
+  },
+  listWorkspaceNodes: {
+    name: "listWorkspaceNodes",
+    label: "List workspace",
+    description:
+      "Enumerate files and folders by name — a directory listing, not a search.",
+    icon: IconList,
+    // Sentence prefix the user completes — nudges the model to enumerate
+    // rather than reach for semantic search.
+    example: "List the workspace files in ",
   },
   summarizeNode: {
     name: "summarizeNode",

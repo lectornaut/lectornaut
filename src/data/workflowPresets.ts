@@ -5,12 +5,10 @@
  * a real workflow doc via `enableTeamWorkflowPreset`, so predefined and custom
  * workflows validate + run through the exact same path.
  *
- * Dependency gating: presets whose feature doesn't exist yet (node feedback,
- * node-content translation) carry `requiresDependency` and are rendered
- * DISABLED until that dependency ships — they never seed a runnable workflow.
- * The SEO preset is intentionally omitted (Lectornaut has no public-publishing
- * surface). Keep this list in sync with the server copy in
- * `functions/src/workflowPresets.ts`.
+ * Every preset here is enable-ready — the only thing that turns one off is the
+ * team's own per-preset toggle. (The SEO preset is intentionally omitted:
+ * Lectornaut has no public-publishing surface.) Keep this list in sync with the
+ * server copy in `functions/src/workflowPresets.ts`.
  */
 
 import type {
@@ -20,14 +18,13 @@ import type {
 
 export type WorkflowPresetCategory = "self_updating" | "maintenance"
 
-/** A net-new feature a preset leans on that does not exist in the app yet. */
-export type WorkflowPresetDependency = "feedback" | "translation"
-
 export interface WorkflowPreset {
   /** Stable `presetKey` persisted on the materialized workflow doc. */
   key: string
   name: string
   description: string
+  /** Stable seed for the materialized workflow's generative avatar. */
+  avatarSeed: string
   category: WorkflowPresetCategory
   /** Default procedure the agent follows (authors can edit after enabling). */
   instructions: string
@@ -37,11 +34,6 @@ export interface WorkflowPreset {
   defaultUpdateMode: WorkflowUpdateModeInput
   /** Tree the workflow edits; null = the workspace's `write` tree. */
   defaultTargetScope: "code" | "write" | null
-  /**
-   * When set, the underlying feature isn't built — the preset is shown
-   * disabled with an explanation and cannot be enabled.
-   */
-  requiresDependency?: WorkflowPresetDependency
 }
 
 export const WORKFLOW_PRESETS: readonly WorkflowPreset[] = [
@@ -52,6 +44,7 @@ export const WORKFLOW_PRESETS: readonly WorkflowPreset[] = [
     description:
       "When a code file changes, propose matching edits to the docs that " +
       "describe it, citing the source file.",
+    avatarSeed: "sync-docs",
     category: "self_updating",
     instructions: [
       "You keep the workspace's written docs accurate to its code.",
@@ -74,6 +67,7 @@ export const WORKFLOW_PRESETS: readonly WorkflowPreset[] = [
     description:
       "On a schedule, summarize what changed across the workspace since the " +
       "last run into a designated changelog doc.",
+    avatarSeed: "changelog",
     category: "self_updating",
     instructions: [
       "You maintain a running changelog.",
@@ -97,6 +91,7 @@ export const WORKFLOW_PRESETS: readonly WorkflowPreset[] = [
     description:
       "Mine recurring questions from assistant chats to find gaps in the " +
       "docs and propose fill-ins.",
+    avatarSeed: "conversation-gaps",
     category: "self_updating",
     instructions: [
       "You improve the docs based on what people actually ask the assistant.",
@@ -122,6 +117,7 @@ export const WORKFLOW_PRESETS: readonly WorkflowPreset[] = [
     description:
       "Correct grammar, spelling, and punctuation in the docs without " +
       "changing meaning.",
+    avatarSeed: "grammar",
     category: "maintenance",
     instructions: [
       "You fix grammar, spelling, and punctuation only.",
@@ -145,6 +141,7 @@ export const WORKFLOW_PRESETS: readonly WorkflowPreset[] = [
     description:
       "Align docs to the team's writing style guide (tone, voice, formatting " +
       "conventions).",
+    avatarSeed: "style-guide",
     category: "maintenance",
     instructions: [
       "You apply the team's style guide to the docs.",
@@ -166,6 +163,7 @@ export const WORKFLOW_PRESETS: readonly WorkflowPreset[] = [
     name: "Repair links",
     description:
       "Find broken inline links in the docs and propose fixes or removals.",
+    avatarSeed: "repair-links",
     category: "maintenance",
     instructions: [
       "You repair broken links in the docs.",
@@ -183,45 +181,7 @@ export const WORKFLOW_PRESETS: readonly WorkflowPreset[] = [
     defaultUpdateMode: "require_review",
     defaultTargetScope: "write",
   },
-  // ── Gated: dependency does not exist yet (seed disabled) ──────────────────
-  {
-    key: "_feedback_gaps",
-    name: "Draft improvements from user feedback",
-    description:
-      "Turn reader feedback on docs into proposed improvements. Requires a " +
-      "node feedback feature, which doesn't exist yet.",
-    category: "self_updating",
-    instructions:
-      "Review reader feedback on each doc and propose edits that address the " +
-      "most common or impactful issues.",
-    defaultTrigger: {
-      type: "schedule",
-      schedule: { type: "weekly", dayOfWeek: 1, atMinuteUTC: 540 },
-    },
-    defaultUpdateMode: "require_review",
-    defaultTargetScope: "write",
-    requiresDependency: "feedback",
-  },
-  {
-    key: "_translate",
-    name: "Translate content",
-    description:
-      "Keep translated copies of docs in sync. Requires node-content " +
-      "translation, which doesn't exist yet.",
-    category: "maintenance",
-    instructions:
-      "Produce or update a translation of each target doc, preserving " +
-      "structure and formatting.",
-    defaultTrigger: { type: "event", scope: "write", debounceMinutes: 60 },
-    defaultUpdateMode: "require_review",
-    defaultTargetScope: "write",
-    requiresDependency: "translation",
-  },
 ] as const
-
-/** Presets a team can actually enable today (dependency satisfied). */
-export const availableWorkflowPresets = (): WorkflowPreset[] =>
-  WORKFLOW_PRESETS.filter((p) => !p.requiresDependency)
 
 export const getWorkflowPreset = (key: string): WorkflowPreset | undefined =>
   WORKFLOW_PRESETS.find((p) => p.key === key)

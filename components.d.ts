@@ -337,6 +337,7 @@ declare module 'vue' {
     SettingsCustomAgents: typeof import('./src/components/app/settings/SettingsCustomAgents.vue')['default']
     SettingsCustomToolRow: typeof import('./src/components/app/settings/SettingsCustomToolRow.vue')['default']
     SettingsCustomTools: typeof import('./src/components/app/settings/SettingsCustomTools.vue')['default']
+    SettingsCustomWorkflow: typeof import('./src/components/app/workflows/SettingsCustomWorkflow.vue')['default']
     SettingsData: typeof import('./src/components/app/settings/SettingsData.vue')['default']
     SettingsLogs: typeof import('./src/components/app/settings/SettingsLogs.vue')['default']
     SettingsMembers: typeof import('./src/components/app/settings/SettingsMembers.vue')['default']

@@ -336,6 +336,16 @@ export const botAgentToolTogglesSchema = z.object({
    */
   searchWorkspaceNodes: z.boolean(),
   /**
+   * Enumerate workspace nodes by name — a directory listing
+   * (`listWorkspaceNodes` in `functions/src/botRag.ts`), the non-semantic
+   * companion to `searchWorkspaceNodes`. The model uses it to act over many
+   * or all nodes (e.g. "review every doc") instead of misusing search with a
+   * wildcard query. Read-only, a plain Firestore read with no Google-key
+   * dependency, exposed in every mode. Like `compareNodes`/`findRelatedNodes`
+   * it's a per-agent toggle (no team-level Tools-page row); default true.
+   */
+  listWorkspaceNodes: z.boolean(),
+  /**
    * Structured-output summarization of a workspace node from chat.
    * Read-only so it's exposed in every mode. Mirrors the inspector's
    * "Generate summary" button — disable to remove the chat-driven
@@ -936,6 +946,14 @@ export const workflowSchema = z.object({
   presetKey: z.string().nullable().default(null),
   name: z.string(),
   description: z.string().default(""),
+  /**
+   * Seed for `vue-boring-avatars` — same convention as ITeamAgent.avatarSeed
+   * and ITeamCustomTool.avatarSeed. Falls back to `name` at render time when
+   * empty. `.default("")` keeps workflow docs written before this field
+   * shipped readable. Predefined presets seed a stable value (see
+   * `workflowPresets.ts`) so their generated avatar stays recognizable.
+   */
+  avatarSeed: z.string().max(40).default(""),
   agentId: z.string(),
   workspaceId: z.string(),
   /** Tree the workflow may edit. null = the workspace's `write` tree. */

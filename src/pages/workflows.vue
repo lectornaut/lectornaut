@@ -444,7 +444,7 @@ const formatWhen = (ts: unknown): string =>
     </Sidebar>
   </Teleport>
 
-  <WorkflowEditorDialog
+  <SettingsCustomWorkflow
     v-model:open="editorOpen"
     :workflow="editingWorkflow"
     @saved="onSaved"

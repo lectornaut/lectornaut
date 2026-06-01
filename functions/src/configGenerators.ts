@@ -636,6 +636,7 @@ export const generateTeamCustomToolConfig = onCall<GenerateConfigRequest>(
 const WORKFLOW_BOUNDS = {
   name: 120,
   description: 500,
+  avatarSeed: 40,
   instructions: 8000,
   additionalPrompt: 2000,
 } as const
@@ -699,6 +700,13 @@ const generatedWorkflowZod = z.object({
     .describe(
       "One sentence (max 500 chars) describing what this workflow does and " +
         "when it runs, so teammates understand it at a glance."
+    ),
+  avatarSeed: z
+    .string()
+    .describe(
+      "A single short word used to seed a generative avatar for the " +
+        "workflow. Usually a keyword from its name (e.g. 'changelog', " +
+        "'sync-docs'). May be empty."
     ),
   instructions: z
     .string()
@@ -771,6 +779,7 @@ type GeneratedWorkflowTrigger =
 interface GeneratedWorkflowConfig {
   name: string
   description: string
+  avatarSeed: string
   instructions: string
   additionalPrompt: string
   /** null = the workspace's default `write` tree. */
@@ -884,6 +893,7 @@ export const generateTeamWorkflowConfig = onCall<GenerateConfigRequest>(
       name:
         clampText(output.name, WORKFLOW_BOUNDS.name).trim() || "New workflow",
       description: clampText(output.description, WORKFLOW_BOUNDS.description),
+      avatarSeed: clampText(output.avatarSeed, WORKFLOW_BOUNDS.avatarSeed),
       instructions:
         clampText(output.instructions, WORKFLOW_BOUNDS.instructions).trim() ||
         "Describe the procedure the agent should follow each run.",

@@ -116,6 +116,8 @@ const nodeRefSchema = z.object({
 const workflowDraftSchema = z.object({
   name: z.string().min(1).max(120),
   description: z.string().max(500).optional(),
+  /** Seed for the workflow's generative avatar; falls back to `name`. */
+  avatarSeed: z.string().max(40).optional(),
   /** The team agent this workflow runs AS (must be a team member). */
   agentId: z.string().min(1),
   workspaceId: z.string().min(1),
@@ -142,6 +144,7 @@ const workflowUpdateSchema = workflowDraftSchema
 interface WorkflowDoc {
   name: string
   description: string
+  avatarSeed: string
   /** null = custom; non-null = a seeded predefined instance. */
   presetKey: string | null
   agentId: string
@@ -351,6 +354,7 @@ function buildWorkflowDocData(
   return {
     name: draft.name,
     description: draft.description ?? "",
+    avatarSeed: draft.avatarSeed ?? "",
     presetKey,
     agentId: draft.agentId,
     workspaceId: draft.workspaceId,
@@ -662,7 +666,6 @@ export const reviewTeamWorkflowRun = onCall<{
 /**
  * Materialize a predefined catalog preset as a `presetKey != null` workflow —
  * validated + persisted through the exact same path as a custom workflow.
- * Refuses presets whose underlying dependency doesn't exist yet.
  */
 export const enableTeamWorkflowPreset = onCall<{
   teamId: string
@@ -686,18 +689,12 @@ export const enableTeamWorkflowPreset = onCall<{
   const preset =
     typeof presetKey === "string" ? getWorkflowPreset(presetKey) : undefined
   if (!preset) throw new HttpsError("invalid-argument", "Unknown preset.")
-  if (preset.requiresDependency) {
-    throw new HttpsError(
-      "failed-precondition",
-      "This predefined workflow isn't available yet — it depends on a " +
-        "feature that hasn't shipped."
-    )
-  }
   await assertAgentRunnable(teamId, agentId)
 
   const parsed = workflowDraftSchema.safeParse({
     name: preset.name,
     description: preset.description,
+    avatarSeed: preset.avatarSeed,
     agentId,
     workspaceId,
     targetScope: preset.defaultTargetScope,

@@ -7,10 +7,14 @@ const props = defineProps<{
   selectedIds: Set<string>
 }>()
 
-const emit = defineEmits<{ toggle: [id: string]; clear: [] }>()
+const emit = defineEmits<{ toggle: [workflowIds: string[]]; clear: [] }>()
 
 const { t } = useI18n()
 const anySelected = computed(() => props.selectedIds.size > 0)
+
+// A row is checked only when every doc it represents is in the selection.
+const isSelected = (workflowIds: string[]): boolean =>
+  workflowIds.length > 0 && workflowIds.every((id) => props.selectedIds.has(id))
 </script>
 
 <template>
@@ -38,22 +42,14 @@ const anySelected = computed(() => props.selectedIds.size > 0)
       </span>
       <label
         v-for="item in group.items"
-        :key="item.id"
+        :key="item.key"
         class="hover:bg-accent flex cursor-pointer items-center gap-2 rounded px-1 py-0.5 text-sm"
       >
         <Checkbox
-          :model-value="selectedIds.has(item.id)"
-          @update:model-value="emit('toggle', item.id)"
+          :model-value="isSelected(item.workflowIds)"
+          @update:model-value="emit('toggle', item.workflowIds)"
         />
-        <span
-          class="grow truncate"
-          :class="{ 'text-muted-foreground': !item.enabled }"
-        >
-          {{ item.name }}
-        </span>
-        <span v-if="!item.enabled" class="text-muted-foreground text-[10px]">
-          {{ t("settings.workflows.disabled") }}
-        </span>
+        <span class="grow truncate">{{ item.name }}</span>
       </label>
     </div>
   </div>

@@ -1337,6 +1337,11 @@
       "name": "Name",
       "namePlaceholder": "e.g. Weekly changelog update",
       "description": "Description",
+      "avatarSeed": {
+        "label": "Avatar seed",
+        "description": "Optional. Used to generate the avatar pattern; defaults to the workflow's name when blank.",
+        "placeholder": "Leave blank to use the name"
+      },
       "agent": "Run as agent",
       "agentPlaceholder": "Select an agent",
       "runAsAgentToggle": "Run as a specific agent",
@@ -1357,7 +1362,6 @@
       "eventScope": "Watch which content",
       "scopeWrite": "Write documents",
       "scopeCode": "Code files",
-      "enabledLabel": "Enabled",
       "cancel": "Cancel",
       "save": "Save",
       "confirmDelete": "Delete workflow \"{name}\"? This can't be undone.",
@@ -1377,8 +1381,6 @@
       "catalogTitle": "Predefined workflows",
       "predefinedDescription": "Ready-made automations you can switch on. Each runs as the Default agent and proposes edits to your docs for review.",
       "presetRunAs": "Enable as",
-      "depFeedback": "Needs a feedback feature (not available yet)",
-      "depTranslation": "Needs content translation (not available yet)",
       "presetOn": "Enabled",
       "enablePreset": "Enable",
       "yourWorkflows": "Your workflows",

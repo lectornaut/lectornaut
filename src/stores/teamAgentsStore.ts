@@ -75,6 +75,8 @@ const DEFAULT_TOOL_TOGGLES: ITeamAgent["tools"] = {
   browseInternet: true,
   askQuestion: true,
   searchWorkspaceNodes: true,
+  // Directory-listing companion to search; per-agent toggle, default true.
+  listWorkspaceNodes: true,
   summarizeNode: true,
   // Real per-agent toggles for the multi-doc + nearest-neighbor tools.
   // Both read-only; default true so existing agents pick them up.
@@ -164,6 +166,10 @@ function snapshotToAgent(
         typeof toolsRaw.searchWorkspaceNodes === "boolean"
           ? (toolsRaw.searchWorkspaceNodes as boolean)
           : DEFAULT_TOOL_TOGGLES.searchWorkspaceNodes,
+      listWorkspaceNodes:
+        typeof toolsRaw.listWorkspaceNodes === "boolean"
+          ? (toolsRaw.listWorkspaceNodes as boolean)
+          : DEFAULT_TOOL_TOGGLES.listWorkspaceNodes,
       summarizeNode:
         typeof toolsRaw.summarizeNode === "boolean"
           ? (toolsRaw.summarizeNode as boolean)

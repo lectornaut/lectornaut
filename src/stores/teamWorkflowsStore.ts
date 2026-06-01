@@ -47,15 +47,22 @@ const RECENT_RUNS_LIMIT = 50
 
 // Workflow/run docs are written only server-side (admin SDK) and validated
 // there, so the client converter trusts the shape and just injects the id +
-// teamId recovered from the doc path.
+// teamId recovered from the doc path. `avatarSeed` is the one field that needs
+// a runtime fallback: it shipped after the first workflows, so docs written
+// before it exists have no value, and the row/editor call `.trim()` on it.
+// Normalize here (mirroring teamAgentsStore) so `IWorkflow.avatarSeed` is
+// always a string in practice, matching its schema type.
 const workflowConverter: FirestoreDataConverter<IWorkflow> = {
   toFirestore: () => ({}),
-  fromFirestore: (snapshot) =>
-    ({
+  fromFirestore: (snapshot) => {
+    const data = snapshot.data()
+    return {
       id: snapshot.id,
       teamId: snapshot.ref.parent.parent?.id ?? "",
-      ...snapshot.data(),
-    }) as IWorkflow,
+      ...data,
+      avatarSeed: typeof data.avatarSeed === "string" ? data.avatarSeed : "",
+    } as IWorkflow
+  },
 }
 
 const workflowRunConverter: FirestoreDataConverter<IWorkflowRun> = {

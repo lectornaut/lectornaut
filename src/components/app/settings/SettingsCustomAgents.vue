@@ -180,6 +180,7 @@ const DEFAULT_DRAFT: AgentDraft = {
     browseInternet: true,
     askQuestion: true,
     searchWorkspaceNodes: true,
+    listWorkspaceNodes: true,
     summarizeNode: true,
     // Real per-agent toggles for the multi-doc and nearest-neighbor
     // tools. Both read-only and use the team's chat model (compare)

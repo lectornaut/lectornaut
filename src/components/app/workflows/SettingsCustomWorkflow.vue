@@ -80,7 +80,9 @@ const agentAvatarSeed = (agent: {
   name: string
   id: string
 }): string => agent.avatarSeed.trim() || agent.name.trim() || agent.id
-const agentAvatarColors = [
+// Shared chart-N palette for every boring-avatar in this editor — the agent
+// picker's `beam` portraits and the workflow's own `bauhaus` identity avatar.
+const avatarColors = [
   "var(--color-chart-1)",
   "var(--color-chart-2)",
   "var(--color-chart-3)",
@@ -94,6 +96,7 @@ const { currentTeamId, currentWorkspaceId } = storeToRefs(authStore)
 interface WorkflowFormDraft {
   name: string
   description: string
+  avatarSeed: string
   agentId: string
   instructions: string
   additionalPrompt: string
@@ -107,12 +110,12 @@ interface WorkflowFormDraft {
   targetScope: "code" | "write"
   updateMode: "automatic" | "require_review"
   contextNodes: WorkflowNodeRefInput[]
-  enabled: boolean
 }
 
 const emptyDraft = (): WorkflowFormDraft => ({
   name: "",
   description: "",
+  avatarSeed: "",
   agentId: props.defaultAgentId || DEFAULT_AGENT_ID,
   instructions: "",
   additionalPrompt: "",
@@ -126,10 +129,17 @@ const emptyDraft = (): WorkflowFormDraft => ({
   targetScope: "write",
   updateMode: "require_review",
   contextNodes: [],
-  enabled: true,
 })
 
 const draft = ref<WorkflowFormDraft>(emptyDraft())
+
+// Mirrors `SettingsWorkflowRow`'s `avatarSeedEffective` so the editor preview
+// renders the exact avatar the list row will show after save: explicit seed
+// first, else the workflow name, else a constant so an empty draft still
+// yields a stable portrait.
+const effectiveAvatarSeed = computed(
+  () => draft.value.avatarSeed.trim() || draft.value.name.trim() || "Workflow"
+)
 
 // "Run as a specific agent" toggle. OFF → the workflow runs as the Default
 // agent (`_default`) and the picker is hidden; ON → the picker appears with
@@ -189,8 +199,8 @@ const minuteToTime = (min: number): string => {
 // Configure tab edits, the preview renders, and Save persists. The server
 // clamps every string and normalizes the trigger, so the generated draft is
 // always saveable. The model never sees team data, so generation leaves the
-// agent binding, context nodes, and enabled flag untouched (the editor keeps
-// its own values for those).
+// agent binding and context nodes untouched (the editor keeps its own values
+// for those).
 
 /** Prompt textarea cap. The server independently caps at 4000. */
 const AI_PROMPT_MAX = 2000
@@ -226,13 +236,13 @@ const initDraft = (): void => {
   const d = emptyDraft()
   d.name = wf.name
   d.description = wf.description ?? ""
+  d.avatarSeed = wf.avatarSeed ?? ""
   d.agentId = wf.agentId
   d.instructions = wf.instructions ?? ""
   d.additionalPrompt = wf.additionalPrompt ?? ""
   d.targetScope = wf.targetScope ?? "write"
   d.updateMode = wf.updateMode ?? "require_review"
   d.contextNodes = (wf.contextNodes ?? []).map((n) => ({ ...n }))
-  d.enabled = wf.enabled
   const trig = wf.trigger
   d.triggerType = trig.type
   if (trig.type === "event") {
@@ -303,7 +313,7 @@ const canGenerate = computed<boolean>(() => {
 
 /**
  * Merge a generated config into the draft IN PLACE so the chosen agent,
- * workspace, context nodes, and enabled flag survive. Un-flattens the server's
+ * workspace, and context nodes survive. Un-flattens the server's
  * normalized trigger into the form's flat fields — the inverse of
  * `buildTrigger`, mirroring how `initDraft` reads a saved workflow's trigger.
  */
@@ -311,6 +321,7 @@ const applyGeneratedConfig = (data: GeneratedTeamWorkflowConfig): void => {
   const d = draft.value
   d.name = data.name
   d.description = data.description
+  d.avatarSeed = data.avatarSeed
   d.instructions = data.instructions
   d.additionalPrompt = data.additionalPrompt
   d.targetScope = data.targetScope ?? "write"
@@ -410,13 +421,13 @@ const handleSave = async (): Promise<void> => {
   const shared = {
     name: d.name.trim(),
     description: d.description.trim(),
+    avatarSeed: d.avatarSeed.trim(),
     instructions: d.instructions.trim(),
     additionalPrompt: d.additionalPrompt.trim(),
     targetScope: d.targetScope,
     updateMode: d.updateMode,
     trigger: buildTrigger(d),
     contextNodes: d.contextNodes,
-    enabled: d.enabled,
   }
   if (editingId.value) {
     const ok = await update(editingId.value, shared)
@@ -551,17 +562,26 @@ const handleSave = async (): Promise<void> => {
               </div>
               <OverlayScrollbarsWrapper v-else class="min-h-0 grow">
                 <div class="flex flex-col gap-4 p-4">
-                  <!-- Identity (name + description) -->
-                  <div class="min-w-0">
-                    <p class="truncate text-sm font-medium">
-                      {{ draft.name || t("settings.workflows.newTitle") }}
-                    </p>
-                    <p class="text-muted-foreground truncate text-xs">
-                      {{
-                        draft.description ||
-                        t("settings.workflows.ai.previewNoDescription")
-                      }}
-                    </p>
+                  <!-- Identity (avatar + name + description) -->
+                  <div class="flex items-center gap-3">
+                    <div class="size-10 shrink-0 overflow-hidden rounded-full">
+                      <Avatar
+                        variant="bauhaus"
+                        :name="effectiveAvatarSeed"
+                        :colors="avatarColors"
+                      />
+                    </div>
+                    <div class="min-w-0">
+                      <p class="truncate text-sm font-medium">
+                        {{ draft.name || t("settings.workflows.newTitle") }}
+                      </p>
+                      <p class="text-muted-foreground truncate text-xs">
+                        {{
+                          draft.description ||
+                          t("settings.workflows.ai.previewNoDescription")
+                        }}
+                      </p>
+                    </div>
                   </div>
 
                   <!-- Runs as agent -->
@@ -586,7 +606,7 @@ const handleSave = async (): Promise<void> => {
                         <Avatar
                           variant="beam"
                           :name="agentAvatarSeed(selectedAgent)"
-                          :colors="agentAvatarColors"
+                          :colors="avatarColors"
                         />
                       </span>
                       <span class="truncate text-sm">
@@ -682,6 +702,39 @@ const handleSave = async (): Promise<void> => {
                 <Input id="wf-desc" v-model="draft.description" />
               </div>
 
+              <!--
+                Avatar seed — live preview + input, mirroring the agent / tool
+                editors. The `bauhaus` variant + chart-N palette match
+                `SettingsWorkflowRow` 1:1, so the preview equals the list row
+                after save. Blank falls back to the workflow name.
+              -->
+              <div class="flex flex-col gap-1.5">
+                <Label for="wf-avatar-seed">{{
+                  t("settings.workflows.avatarSeed.label")
+                }}</Label>
+                <div class="flex items-center gap-3">
+                  <span class="size-10 shrink-0 overflow-hidden rounded-full">
+                    <Avatar
+                      variant="bauhaus"
+                      :name="effectiveAvatarSeed"
+                      :colors="avatarColors"
+                    />
+                  </span>
+                  <Input
+                    id="wf-avatar-seed"
+                    v-model="draft.avatarSeed"
+                    :placeholder="
+                      t('settings.workflows.avatarSeed.placeholder')
+                    "
+                    :maxlength="40"
+                    class="grow"
+                  />
+                </div>
+                <p class="text-muted-foreground text-xs">
+                  {{ t("settings.workflows.avatarSeed.description") }}
+                </p>
+              </div>
+
               <div class="flex flex-col gap-1.5">
                 <div class="flex items-center justify-between">
                   <Label for="wf-run-as">{{
@@ -726,7 +779,7 @@ const handleSave = async (): Promise<void> => {
                           <Avatar
                             variant="beam"
                             :name="agentAvatarSeed(selectedAgent)"
-                            :colors="agentAvatarColors"
+                            :colors="avatarColors"
                           />
                         </span>
                         {{ selectedAgent.name }}
@@ -782,7 +835,7 @@ const handleSave = async (): Promise<void> => {
                               <Avatar
                                 variant="beam"
                                 :name="agentAvatarSeed(agent)"
-                                :colors="agentAvatarColors"
+                                :colors="avatarColors"
                               />
                             </span>
                           </ItemMedia>
@@ -826,7 +879,7 @@ const handleSave = async (): Promise<void> => {
                                 <Avatar
                                   variant="beam"
                                   :name="agentAvatarSeed(agent)"
-                                  :colors="agentAvatarColors"
+                                  :colors="avatarColors"
                                 />
                               </span>
                             </ItemMedia>
@@ -1101,17 +1154,6 @@ const handleSave = async (): Promise<void> => {
                       : t("settings.workflows.modeReviewHint")
                   }}
                 </p>
-              </div>
-
-              <div class="flex items-center justify-between">
-                <Label for="wf-enabled">{{
-                  t("settings.workflows.enabledLabel")
-                }}</Label>
-                <Switch
-                  id="wf-enabled"
-                  :model-value="draft.enabled"
-                  @update:model-value="(v: boolean) => (draft.enabled = v)"
-                />
               </div>
             </div>
           </OverlayScrollbarsWrapper>

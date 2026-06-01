@@ -193,6 +193,7 @@ export const CHAT_TOOL_NAMES = [
   "browseInternet",
   "askQuestion",
   "searchWorkspaceNodes",
+  "listWorkspaceNodes",
   "summarizeNode",
   "compareNodes",
   "findRelatedNodes",
@@ -345,6 +346,7 @@ const DEFAULT_BOT_AGENT_CONFIG: BotAgentConfig = {
     browseInternet: true,
     askQuestion: true,
     searchWorkspaceNodes: true,
+    listWorkspaceNodes: true,
     summarizeNode: true,
     compareNodes: true,
     findRelatedNodes: true,
@@ -446,6 +448,7 @@ const botAgentConfigUpdateSchema = z.object({
       browseInternet: z.boolean(),
       askQuestion: z.boolean(),
       searchWorkspaceNodes: z.boolean(),
+      listWorkspaceNodes: z.boolean(),
       summarizeNode: z.boolean(),
       compareNodes: z.boolean(),
       findRelatedNodes: z.boolean(),
@@ -674,6 +677,9 @@ const botAgentConfigDocSchema = z
         ),
         searchWorkspaceNodes: cappedToolToggle(
           DEFAULT_BOT_AGENT_CONFIG.tools.searchWorkspaceNodes
+        ),
+        listWorkspaceNodes: cappedToolToggle(
+          DEFAULT_BOT_AGENT_CONFIG.tools.listWorkspaceNodes
         ),
         summarizeNode: cappedToolToggle(
           DEFAULT_BOT_AGENT_CONFIG.tools.summarizeNode
