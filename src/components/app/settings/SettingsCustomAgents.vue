@@ -194,6 +194,7 @@ const DEFAULT_DRAFT: AgentDraft = {
     // Carried for type alignment with the team-level toggle schema —
     // ignored at the per-agent dispatch layer (see ITeamAgent JSDoc).
     customAgents: true,
+    customWorkflows: true,
     customTools: true,
     summarizeNodeInspector: true,
   },

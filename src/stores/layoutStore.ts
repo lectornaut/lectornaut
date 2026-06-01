@@ -28,11 +28,12 @@ import {
   withOptimisticBatchUpdate,
   withOptimisticUpdate,
 } from "@/utils/firebase/firebase-optimistic"
+import { useDocumentQuery } from "@/utils/firebase/firebase-query"
 import { safeSetDocument as safeSetDoc } from "@/utils/firebase/firebase-sync-engine"
 import { useStorage, watchDebounced } from "@vueuse/core"
 import { collection, doc } from "firebase/firestore"
 import { defineStore, storeToRefs } from "pinia"
-import { useCurrentUser, useDocument } from "vuefire"
+import { useCurrentUser } from "vuefire"
 
 export type Tab = LayoutTab
 export type NavItem = (typeof defaultMenu)[number]
@@ -246,12 +247,13 @@ export const useLayoutStore = defineStore("layout", () => {
   })
 
   // ============================================================================
-  // Hydration (VueFire) with Optimistic Protection
+  // Hydration (TanStack Query) with Optimistic Protection
   // ============================================================================
 
-  const { data: tabsDocData, pending: tabsPending } = useDocument(tabsDocRef)
-  const { data: navDocData, pending: navPending } =
-    useDocument(navigationDocRef)
+  const { data: tabsDocData, isLoading: tabsPending } =
+    useDocumentQuery(tabsDocRef)
+  const { data: navDocData, isLoading: navPending } =
+    useDocumentQuery(navigationDocRef)
 
   const isLoading = computed(
     () => (tabsPending.value || navPending.value) && !isHydrated.value
@@ -268,7 +270,7 @@ export const useLayoutStore = defineStore("layout", () => {
       // We only want to reset tabs when we have a valid ref but the doc doesn't exist
       if (!tabsDocRef.value) return
 
-      // VueFire emits `undefined` between docRef becoming non-null and the
+      // The query emits `undefined` between docRef becoming non-null and the
       // first snapshot landing. Treating that as "no saved tabs" would wipe
       // tabs on the immediate fire — the `null` case below is the only one
       // that signals Firestore-confirmed absence.
@@ -332,11 +334,32 @@ export const useLayoutStore = defineStore("layout", () => {
     { flush: "sync" }
   )
 
+  // Re-entrancy-safe debounced persister for UI layout state, with global sync
+  // queue tracking (queues one extra run when rapid toggles happen during a save).
+  //
+  // MUST be declared before the `navDocData` watch below. That watch is
+  // `immediate: true`, and reads now hydrate synchronously from the persisted
+  // query cache, so its first callback can run *during store setup* and read
+  // `pendingNavigationUi` (it skips applying remote state while a local write is
+  // in flight). Declaring it here guarantees the binding is initialized before
+  // that synchronous first fire. Under VueFire this read was async, so the value
+  // was `undefined` on the immediate fire and the callback early-returned before
+  // reaching the reference — the ordering bug stayed latent until cache hydration
+  // made the first read synchronous.
+  const { trigger: persistNavigationUiWithSync, pending: pendingNavigationUi } =
+    createDebouncedCloudSync({
+      persist: persistNavigationUiState,
+      id: "navigation-ui",
+      source: "layout.navigation.ui.persist",
+      canPersist: () => navigationDocRef.value !== null,
+      errorLabel: "layout.navigationUi",
+    })
+
   // Watch Navigation Data - protected against optimistic overwrites
   watch(
     navDocData,
     (doc) => {
-      // VueFire emits `undefined` before the first snapshot arrives. Without
+      // The query emits `undefined` before the first snapshot arrives. Without
       // this guard the immediate fire would treat "loading" as "no saved nav"
       // and reset `activeNavItems` to `defaultMenu`, flashing the default menu
       // before the user's customized nav arrives from Firestore.
@@ -545,23 +568,6 @@ export const useLayoutStore = defineStore("layout", () => {
       "layout.navigation.persist"
     )
   }
-
-  /**
-   * Persist UI layout state with global sync queue tracking.
-   * Queues one extra run when rapid toggle changes happen during a save.
-   */
-  // Re-entrancy-safe debounced persister. `pendingNavigationUi` is read by the
-  // inbound navigation snapshot watch above to skip applying remote state while
-  // a local write is in flight (the watch callback runs async, after this
-  // declaration initializes, so the earlier textual reference is safe).
-  const { trigger: persistNavigationUiWithSync, pending: pendingNavigationUi } =
-    createDebouncedCloudSync({
-      persist: persistNavigationUiState,
-      id: "navigation-ui",
-      source: "layout.navigation.ui.persist",
-      canPersist: () => navigationDocRef.value !== null,
-      errorLabel: "layout.navigationUi",
-    })
 
   // ============================================================================
   // Debounced Persistence Watchers

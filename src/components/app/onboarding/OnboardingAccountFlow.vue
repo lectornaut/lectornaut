@@ -24,7 +24,8 @@ import {
 } from "@/utils/firebase/firebase-helpers"
 import { collection, doc } from "firebase/firestore"
 import { toast } from "vue-sonner"
-import { useCurrentUser, useDocument, useStorageFile } from "vuefire"
+import { useDocumentQuery } from "@/utils/firebase/firebase-query"
+import { useCurrentUser, useStorageFile } from "vuefire"
 
 const { t } = useI18n()
 
@@ -36,7 +37,7 @@ const userDocRef = computed(() => {
   return doc(collection(firestore, "users"), user.value.uid)
 })
 
-const { data: userData } = useDocument(userDocRef)
+const { data: userData } = useDocumentQuery(userDocRef)
 
 const currentUsername = computed(() => userData.value?.username ?? "")
 const currentIsPublic = computed(() => userData.value?.isPublic ?? false)

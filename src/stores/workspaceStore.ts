@@ -11,7 +11,7 @@
  * - teamStore: Current team information
  * - membershipStore: User's role in team
  *
- * Uses VueFire composables for reactive Firestore bindings.
+ * Reactive Firestore reads flow through TanStack Query (onSnapshot-backed).
  * All mutations go through Cloud Functions for automatic audit logging.
  */
 
@@ -20,7 +20,7 @@ import {
   deleteWorkspace as deleteWorkspaceFn,
   updateWorkspace as updateWorkspaceFn,
 } from "@/composables/useFunctions"
-import { workspacesHydrationSchema } from "@/schemas/domain"
+import { queryClient } from "@/modules/queryClient"
 import { useAuthStore } from "@/stores/authStore"
 import { useMembershipStore } from "@/stores/membershipStore"
 import type { IWorkspace } from "@/types/domain"
@@ -30,27 +30,23 @@ import {
   getMembershipPreferencesRef,
   uploadWorkspacePhoto,
 } from "@/utils/firebase/firebase-helpers"
-import {
-  readHydrationCache,
-  writeHydrationCache,
-} from "@/utils/firebase/firebase-hydration"
+import { useFirestoreMutation } from "@/utils/firebase/firebase-mutation"
 import {
   addPending,
-  cloneState,
   createPendingSet,
-  mergeOptimisticCollection,
   removePending,
-  withOptimisticUpdate,
 } from "@/utils/firebase/firebase-optimistic"
+import { useCollectionQuery } from "@/utils/firebase/firebase-query"
+import {
+  queryKeys,
+  type FirestoreQueryKey,
+} from "@/utils/firebase/firebase-query-keys"
 import {
   mutateSetDocument,
   mutateWithCoordinator,
 } from "@/utils/firebase/firebase-sync-engine"
 import { Timestamp } from "firebase/firestore"
 import { defineStore, storeToRefs } from "pinia"
-import { useCollection } from "vuefire"
-
-const getWorkspacesCacheKey = (teamId: string) => `workspaces:${teamId}`
 
 export const useWorkspaceStore = defineStore("workspaces", () => {
   const authStore = useAuthStore()
@@ -78,7 +74,7 @@ export const useWorkspaceStore = defineStore("workspaces", () => {
   })
 
   // ============================================================================
-  // VueFire Reactive Bindings
+  // Realtime Firestore bindings (TanStack Query)
   // ============================================================================
 
   // Query for workspaces in current team - null when no team selected
@@ -92,27 +88,56 @@ export const useWorkspaceStore = defineStore("workspaces", () => {
     return createTeamWorkspacesQuery(teamId)
   })
 
-  // VueFire reactive collection binding for workspaces
-  const _vuefireWorkspaces = useCollection<IWorkspace>(workspacesQueryRef, {
-    reset: true,
+  // Realtime collection binding (TanStack Query + onSnapshot). The source getter
+  // folds `workspacesQueryRef` into a cache identity (collection path); a null
+  // query keeps the read idle until a team + membership resolve.
+  const workspacesQuery = useCollectionQuery<IWorkspace>(() => {
+    const query = workspacesQueryRef.value
+    return query ? { query, path: query.path } : null
   })
   const firestoreWorkspaces: ComputedRef<IWorkspace[]> = computed(
-    () => _vuefireWorkspaces.data.value ?? []
+    () => workspacesQuery.data.value ?? []
   )
   const isFirestoreLoading: ComputedRef<boolean> = computed(
-    () => _vuefireWorkspaces.pending.value
+    () => workspacesQuery.isLoading.value
   )
 
   // ============================================================================
   // State (for optimistic updates)
   // ============================================================================
 
-  /** Local workspaces that can be optimistically updated */
-  const optimisticWorkspaces = ref<IWorkspace[]>([])
-
-  // Pending operation tracking
+  // Pending operation tracking (per-workspace-id; drives `isWorkspacePending`
+  // and the stale-selection cleanup guard). Managed by the action wrappers
+  // around each mutation, mirroring the prior optimistic layer's behavior.
   const pendingWorkspaceIds = shallowRef(createPendingSet())
   const isPersistingWorkspaceSelection = ref(false)
+
+  /** Cache key for the current team's workspaces list (matches the read query). */
+  const workspacesListKey = (teamId: string): FirestoreQueryKey =>
+    queryKeys.list(`teams/${teamId}/workspaces`)
+
+  // One mutation drives every workspace list write. Callers pass the affected
+  // cache key(s) + optimistic apply/rollback + the Cloud Function call; the hold
+  // in `useFirestoreMutation` keeps the optimistic value visible until the
+  // server-applied snapshot reconciles it. Selection + pending side-effects are
+  // handled in the action wrappers below.
+  const workspaceMutation = useFirestoreMutation<
+    {
+      keys: FirestoreQueryKey[]
+      apply: () => void
+      rollback: () => void
+      run: () => Promise<void>
+    },
+    void
+  >({
+    mutationFn: (vars) => vars.run(),
+    optimistic: (vars) => ({
+      keys: vars.keys,
+      apply: vars.apply,
+      rollback: vars.rollback,
+    }),
+    source: "workspace",
+  })
 
   async function persistWorkspaceSelection(
     workspaceId: string | null
@@ -131,45 +156,12 @@ export const useWorkspaceStore = defineStore("workspaces", () => {
     )
   }
 
-  const hydrateWorkspacesForTeam = (teamId: string | null) => {
-    if (!teamId) {
-      optimisticWorkspaces.value = []
-      return
-    }
-
-    const cacheKey = getWorkspacesCacheKey(teamId)
-    const cached = readHydrationCache<IWorkspace[]>(cacheKey, {
-      schema: workspacesHydrationSchema,
-      context: `hydration:${cacheKey}`,
-    })
-
-    optimisticWorkspaces.value = cached ? [...cached] : []
-  }
-
-  const persistWorkspacesForTeam = (
-    teamId: string | null,
-    workspaceList: IWorkspace[]
-  ) => {
-    if (!teamId) return
-    writeHydrationCache(getWorkspacesCacheKey(teamId), workspaceList)
-  }
-
   // ============================================================================
   // Computed - Merged State
   // ============================================================================
 
-  /** All workspaces for the current team */
-  const workspaces = computed({
-    get: () =>
-      mergeOptimisticCollection(
-        firestoreWorkspaces.value,
-        optimisticWorkspaces.value,
-        pendingWorkspaceIds.value
-      ),
-    set: (value) => {
-      optimisticWorkspaces.value = value
-    },
-  })
+  /** All workspaces for the current team (straight from the realtime cache). */
+  const workspaces = computed(() => firestoreWorkspaces.value)
 
   const workspaceById = computed(
     () =>
@@ -185,7 +177,7 @@ export const useWorkspaceStore = defineStore("workspaces", () => {
 
   const isLoading = computed(() => {
     if (!currentTeamId.value) return false
-    if (optimisticWorkspaces.value.length > 0) return false
+    if (workspaces.value.length > 0) return false
     if (workspacesQueryRef.value) return isFirestoreLoading.value
     return isMembershipLoading.value && !hasCurrentTeamMembership.value
   })
@@ -213,46 +205,8 @@ export const useWorkspaceStore = defineStore("workspaces", () => {
   )
 
   // ============================================================================
-  // Sync Optimistic State with Firestore
+  // Stale selection cleanup
   // ============================================================================
-
-  // Sync optimistic workspaces with Firestore data when not pending
-  watch(
-    currentTeamId,
-    (teamId, previousTeamId) => {
-      if (teamId === previousTeamId && previousTeamId !== undefined) return
-      hydrateWorkspacesForTeam(teamId)
-    },
-    { immediate: true }
-  )
-
-  // Sync optimistic state from Firestore only once VueFire has actually
-  // fetched for the current team. The `!queryRef` guard catches the case
-  // when memberships are still loading; the raw-data undefined check
-  // catches the case when memberships hydrated synchronously (so queryRef
-  // is non-null) but VueFire's async internal watcher hasn't yet reacted
-  // to the docRef change — at that moment `pending` is still false and
-  // the computed `firestoreWorkspaces` would have wrapped the undefined
-  // raw value as `[]`, which would otherwise wipe the hydrated cache.
-  watch(
-    [
-      currentTeamId,
-      firestoreWorkspaces,
-      isFirestoreLoading,
-      workspacesQueryRef,
-    ],
-    ([teamId, data, loading, queryRef]) => {
-      if (!teamId || loading || !queryRef) return
-      if (_vuefireWorkspaces.data.value === undefined) return
-      if (pendingWorkspaceIds.value.size > 0) return
-      if (data.some((workspace) => workspace.teamId !== teamId)) return
-
-      const nextWorkspaces = [...data]
-      optimisticWorkspaces.value = nextWorkspaces
-      persistWorkspacesForTeam(teamId, nextWorkspaces)
-    },
-    { immediate: true }
-  )
 
   // Handle stale currentWorkspaceId (e.g. workspace deleted)
   watch(
@@ -274,11 +228,10 @@ export const useWorkspaceStore = defineStore("workspaces", () => {
     ]) => {
       // If we are loading, or no workspace ID selected, ignore.
       // `firestoreLoading` is checked separately from `loading` because the
-      // latter shortcuts to false whenever `optimisticWorkspaces` has any
-      // items (including cache-hydrated entries). Without this guard, a
-      // cold start with a cached selection would fire before the workspaces
-      // query resolved, see an empty merged list (the merge drops non-pending
-      // optimistic entries), and wipe the user's selection.
+      // latter shortcuts to false whenever the workspaces list is non-empty
+      // (including cache-restored entries). Without this guard, a cold start
+      // with a cached selection could fire before the workspaces query
+      // resolved, see an empty list, and wipe the user's selection.
       if (
         !workspaceId ||
         loading ||
@@ -330,9 +283,10 @@ export const useWorkspaceStore = defineStore("workspaces", () => {
   // Cleanup
   // ============================================================================
 
-  function cleanup() {
-    optimisticWorkspaces.value = []
-  }
+  // Kept for API compatibility. Read state now lives in the query cache, which
+  // is cleared centrally on logout (clearPersistedQueryCache), so there is no
+  // per-store optimistic state left to reset here.
+  function cleanup() {}
 
   // ============================================================================
   // Actions
@@ -355,7 +309,10 @@ export const useWorkspaceStore = defineStore("workspaces", () => {
     }
 
     const teamId = currentTeamId.value
-    // Generate a temporary ID for optimistic update - will be replaced by server
+    const uid = currentUser.value.uid
+    const key = workspacesListKey(teamId)
+    // Temporary ID for the optimistic row — replaced by the server's id once
+    // the create lands and the live snapshot reconciles.
     const tempId = `temp_${Date.now()}_${Math.random().toString(36).slice(2)}`
     const now = Timestamp.now()
 
@@ -369,41 +326,36 @@ export const useWorkspaceStore = defineStore("workspaces", () => {
       updatedAt: now,
     }
 
-    // Clone previous state for rollback
-    const previousWorkspaces = cloneState(workspaces.value)
+    const previousWorkspaces = queryClient.getQueryData<IWorkspace[]>(key)
     const previousWorkspaceId = currentWorkspaceId.value
 
-    let actualWorkspaceId: string | null = null
-
-    await withOptimisticUpdate(
-      pendingWorkspaceIds,
-      tempId,
-      // Apply optimistic update
-      () => {
-        optimisticWorkspaces.value = [...workspaces.value, newWorkspace]
-        // Auto-select the new workspace (will be updated to actual ID)
-        addPending(pendingUserIds, currentUser.value!.uid)
-        authStore.setCurrentWorkspaceId(tempId)
-      },
-      // Rollback on error
-      () => {
-        optimisticWorkspaces.value = previousWorkspaces
-        authStore.setCurrentWorkspaceId(previousWorkspaceId ?? null)
-        removePending(pendingUserIds, currentUser.value!.uid)
-      },
-      // Cloud Function call
-      async () => {
-        try {
+    addPending(pendingWorkspaceIds, tempId)
+    addPending(pendingUserIds, uid)
+    try {
+      await workspaceMutation.mutateAsync({
+        keys: [key],
+        apply: () => {
+          queryClient.setQueryData<IWorkspace[]>(key, [
+            ...(queryClient.getQueryData<IWorkspace[]>(key) ?? []),
+            newWorkspace,
+          ])
+          // Auto-select the new workspace (swapped to the real id on success).
+          authStore.setCurrentWorkspaceId(tempId)
+        },
+        rollback: () => {
+          queryClient.setQueryData(key, previousWorkspaces)
+          authStore.setCurrentWorkspaceId(previousWorkspaceId ?? null)
+        },
+        run: async () => {
           const result = await createWorkspaceFn({
             teamId,
             name,
             description: description ?? null,
           })
+          const actualWorkspaceId = result.data.workspaceId
 
-          actualWorkspaceId = result.data.workspaceId
-
-          // Best-effort photo upload after workspace exists.
-          // Do not fail workspace creation if photo upload/update fails.
+          // Best-effort photo upload after the workspace exists. Do not fail
+          // workspace creation if the photo upload/update fails.
           if (photoFile) {
             try {
               const photoURL = await uploadWorkspacePhoto(
@@ -424,16 +376,17 @@ export const useWorkspaceStore = defineStore("workspaces", () => {
             }
           }
 
-          // Persist workspace selection in the current team membership scope.
+          // Persist + finalize the selection on the server-issued id.
           await persistWorkspaceSelection(actualWorkspaceId)
-
-          // Update local state with actual workspace ID
           authStore.setCurrentWorkspaceId(actualWorkspaceId)
-        } finally {
-          removePending(pendingUserIds, currentUser.value!.uid)
-        }
-      }
-    )
+        },
+      })
+    } finally {
+      removePending(pendingUserIds, uid)
+      // Hold the per-id pending flag briefly past settle so the stale-selection
+      // watch doesn't fire in the tempId→realId window before the snapshot lands.
+      setTimeout(() => removePending(pendingWorkspaceIds, tempId), 120)
+    }
   }
 
   /**
@@ -495,6 +448,7 @@ export const useWorkspaceStore = defineStore("workspaces", () => {
     }
 
     const teamId = currentTeamId.value
+    const key = workspacesListKey(teamId)
     const { name, description, photoFile } = updates
     const optimisticPhotoURL =
       photoFile instanceof File ? URL.createObjectURL(photoFile) : undefined
@@ -510,27 +464,26 @@ export const useWorkspaceStore = defineStore("workspaces", () => {
           : {}),
     }
 
-    // Clone previous state for rollback
-    const previousWorkspaces = cloneState(workspaces.value)
+    const previousWorkspaces = queryClient.getQueryData<IWorkspace[]>(key)
     let resolvedPhotoURL: string | null | undefined =
       photoFile === null ? null : undefined
 
+    const patchWorkspace = (patch: Partial<IWorkspace>) => {
+      queryClient.setQueryData<IWorkspace[]>(
+        key,
+        (queryClient.getQueryData<IWorkspace[]>(key) ?? []).map((w) =>
+          w.id === workspaceId ? { ...w, ...patch } : w
+        )
+      )
+    }
+
+    addPending(pendingWorkspaceIds, workspaceId)
     try {
-      await withOptimisticUpdate(
-        pendingWorkspaceIds,
-        workspaceId,
-        // Apply optimistic update
-        () => {
-          optimisticWorkspaces.value = workspaces.value.map((w) =>
-            w.id === workspaceId ? { ...w, ...workspaceUpdates } : w
-          )
-        },
-        // Rollback on error
-        () => {
-          optimisticWorkspaces.value = previousWorkspaces
-        },
-        // Cloud Function call
-        async () => {
+      await workspaceMutation.mutateAsync({
+        keys: [key],
+        apply: () => patchWorkspace(workspaceUpdates),
+        rollback: () => queryClient.setQueryData(key, previousWorkspaces),
+        run: async () => {
           if (photoFile instanceof File) {
             resolvedPhotoURL = await uploadWorkspacePhoto(
               teamId,
@@ -549,22 +502,22 @@ export const useWorkspaceStore = defineStore("workspaces", () => {
               : {}),
           })
 
+          // Replace the optimistic blob URL with the uploaded URL.
           if (photoFile !== undefined && resolvedPhotoURL !== undefined) {
-            optimisticWorkspaces.value = workspaces.value.map((w) =>
-              w.id === workspaceId ? { ...w, photoURL: resolvedPhotoURL } : w
-            )
+            patchWorkspace({ photoURL: resolvedPhotoURL })
           }
 
-          // Cleanup photo object when profile picture is explicitly removed.
+          // Clean up the storage object when the photo is explicitly removed.
           if (resolvedPhotoURL === null) {
             await deleteWorkspacePhotoFile(teamId, workspaceId)
           }
-        }
-      )
+        },
+      })
     } finally {
       if (optimisticPhotoURL) {
         URL.revokeObjectURL(optimisticPhotoURL)
       }
+      setTimeout(() => removePending(pendingWorkspaceIds, workspaceId), 120)
     }
   }
 
@@ -581,36 +534,35 @@ export const useWorkspaceStore = defineStore("workspaces", () => {
     }
 
     const teamId = currentTeamId.value
-
-    // Clone previous state for rollback
-    const previousWorkspaces = cloneState(workspaces.value)
+    const uid = currentUser.value.uid
+    const key = workspacesListKey(teamId)
+    const previousWorkspaces = queryClient.getQueryData<IWorkspace[]>(key)
     const previousWorkspaceId = currentWorkspaceId.value
-
     const isCurrentWorkspace = currentWorkspaceId.value === workspaceId
 
-    await withOptimisticUpdate(
-      pendingWorkspaceIds,
-      workspaceId,
-      // Apply optimistic update
-      () => {
-        optimisticWorkspaces.value = workspaces.value.filter(
-          (w) => w.id !== workspaceId
-        )
-        if (isCurrentWorkspace) {
-          addPending(pendingUserIds, currentUser.value!.uid)
-          authStore.setCurrentWorkspaceId(null)
-        }
-      },
-      // Rollback on error
-      () => {
-        optimisticWorkspaces.value = previousWorkspaces
-        if (isCurrentWorkspace) {
-          authStore.setCurrentWorkspaceId(previousWorkspaceId ?? null)
-        }
-      },
-      // Cloud Function call
-      async () => {
-        try {
+    addPending(pendingWorkspaceIds, workspaceId)
+    if (isCurrentWorkspace) addPending(pendingUserIds, uid)
+    try {
+      await workspaceMutation.mutateAsync({
+        keys: [key],
+        apply: () => {
+          queryClient.setQueryData<IWorkspace[]>(
+            key,
+            (queryClient.getQueryData<IWorkspace[]>(key) ?? []).filter(
+              (w) => w.id !== workspaceId
+            )
+          )
+          if (isCurrentWorkspace) {
+            authStore.setCurrentWorkspaceId(null)
+          }
+        },
+        rollback: () => {
+          queryClient.setQueryData(key, previousWorkspaces)
+          if (isCurrentWorkspace) {
+            authStore.setCurrentWorkspaceId(previousWorkspaceId ?? null)
+          }
+        },
+        run: async () => {
           const [deleteWorkspaceResult, deletePhotoResult] =
             await Promise.allSettled([
               deleteWorkspaceFn({ teamId, workspaceId }),
@@ -627,13 +579,12 @@ export const useWorkspaceStore = defineStore("workspaces", () => {
           if (deleteWorkspaceResult.status === "rejected") {
             throw deleteWorkspaceResult.reason
           }
-        } finally {
-          if (isCurrentWorkspace) {
-            removePending(pendingUserIds, currentUser.value!.uid)
-          }
-        }
-      }
-    )
+        },
+      })
+    } finally {
+      if (isCurrentWorkspace) removePending(pendingUserIds, uid)
+      setTimeout(() => removePending(pendingWorkspaceIds, workspaceId), 120)
+    }
   }
 
   return {

@@ -32,6 +32,7 @@ import {
   updateInvitationRole as updateInvitationRoleFn,
 } from "@/composables/useFunctions"
 import { firestore, functions } from "@/modules/firebase"
+import { queryClient } from "@/modules/queryClient"
 import { parseSafe } from "@/schemas/_utils"
 import { invitationSchema } from "@/schemas/invitation"
 import { membershipSchema } from "@/schemas/membership"
@@ -44,13 +45,13 @@ import {
 } from "@/types/membership"
 import { can, Capabilities, type Capability } from "@/types/permissions"
 import { getMembershipRef } from "@/utils/firebase/firebase-helpers"
+import { useFirestoreMutation } from "@/utils/firebase/firebase-mutation"
+import { generateOperationId } from "@/utils/firebase/firebase-optimistic"
+import { useCollectionQuery } from "@/utils/firebase/firebase-query"
 import {
-  cloneState,
-  createPendingSet,
-  generateOperationId,
-  mergeOptimisticCollectionByKey,
-  withOptimisticUpdate,
-} from "@/utils/firebase/firebase-optimistic"
+  queryKeys,
+  type FirestoreQueryKey,
+} from "@/utils/firebase/firebase-query-keys"
 import {
   collection,
   getDoc,
@@ -61,8 +62,7 @@ import {
 } from "firebase/firestore"
 import { httpsCallable } from "firebase/functions"
 import { defineStore, storeToRefs } from "pinia"
-import { computed, ref, shallowRef, unref, type MaybeRef } from "vue"
-import { useCollection } from "vuefire"
+import { computed, unref, type MaybeRef } from "vue"
 
 export interface IInvitation {
   id?: string
@@ -89,17 +89,33 @@ export const useInvitationStore = defineStore("invitations", () => {
   )
 
   // ============================================================================
-  // Optimistic State
+  // Optimistic mutation
   // ============================================================================
 
-  /** Local invitations that can be optimistically updated */
-  const optimisticInvitations = ref<IInvitation[]>([])
-
-  /** Pending operation tracking */
-  const pendingInvitationIds = shallowRef(createPendingSet())
+  // A single mutation drives every invitation write. Callers pass the affected
+  // cache list keys + an optimistic transform + the Cloud Function call via
+  // `runInvitationMutation`; the optimistic value is written straight into the
+  // invitations cache and held until the server-applied snapshot reconciles it.
+  const invitationMutation = useFirestoreMutation<
+    {
+      keys: FirestoreQueryKey[]
+      apply: () => void
+      rollback: () => void
+      run: () => Promise<void>
+    },
+    void
+  >({
+    mutationFn: (vars) => vars.run(),
+    optimistic: (vars) => ({
+      keys: vars.keys,
+      apply: vars.apply,
+      rollback: vars.rollback,
+    }),
+    source: "invitation",
+  })
 
   // ============================================================================
-  // VueFire Reactive Bindings
+  // Realtime Firestore bindings (TanStack Query)
   // ============================================================================
 
   // 1. Invitations for the current team (Visible to Admin/Owner)
@@ -126,8 +142,16 @@ export const useInvitationStore = defineStore("invitations", () => {
     )
   })
 
-  const { data: firestoreTeamInvitations, pending: isTeamInvitationsLoading } =
-    useCollection<IInvitation>(teamInvitationsQuery)
+  const {
+    data: firestoreTeamInvitations,
+    isLoading: isTeamInvitationsLoading,
+  } = useCollectionQuery<IInvitation>(() => {
+    const activeQuery = teamInvitationsQuery.value
+    const teamId = currentTeamId.value
+    return activeQuery && teamId
+      ? { query: activeQuery, path: "invitations", params: { teamId } }
+      : null
+  })
 
   // 2. Invitations for the current user (Visible on Join Page / Dashboard)
   const userInvitationsQuery = computed(() => {
@@ -139,48 +163,35 @@ export const useInvitationStore = defineStore("invitations", () => {
     )
   })
 
-  const { data: firestoreUserInvitations, pending: isUserInvitationsLoading } =
-    useCollection<IInvitation>(userInvitationsQuery)
+  const {
+    data: firestoreUserInvitations,
+    isLoading: isUserInvitationsLoading,
+  } = useCollectionQuery<IInvitation>(() => {
+    const activeQuery = userInvitationsQuery.value
+    const email = currentUser.value?.email?.toLowerCase()
+    return activeQuery && email
+      ? { query: activeQuery, path: "invitations", params: { email } }
+      : null
+  })
 
   // ============================================================================
   // Computed - Merged State
   // ============================================================================
 
-  const mergeInvitations = (
-    firestoreData: IInvitation[] | undefined,
-    includeOptimistic: (invitation: IInvitation) => boolean
-  ): IInvitation[] => {
-    const base = firestoreData || []
-    return mergeOptimisticCollectionByKey(
-      base,
-      optimisticInvitations.value,
-      pendingInvitationIds.value,
-      (invitation) => invitation.id ?? "",
-      {
-        includeOptimistic: (invitation) =>
-          Boolean(invitation.id) && includeOptimistic(invitation),
-      }
-    )
-  }
+  // Both lists read straight from their realtime cache queries (already filtered
+  // by teamId / email). Optimistic adds/updates/removes are written directly to
+  // these cache entries by the mutations below — no separate optimistic overlay.
 
-  /** Merged team invitations (live + optimistic) */
+  /** Team invitations for the current team. */
   const teamInvitations = computed(() => {
-    const teamId = currentTeamId.value
-    if (!teamId) return []
-    return mergeInvitations(
-      firestoreTeamInvitations.value,
-      (invitation) => invitation.teamId === teamId
-    )
+    if (!currentTeamId.value) return []
+    return firestoreTeamInvitations.value ?? []
   })
 
-  /** Merged user invitations (live + optimistic) */
+  /** Invitations addressed to the signed-in user. */
   const userInvitations = computed(() => {
-    const email = currentUser.value?.email?.toLowerCase()
-    if (!email) return []
-    return mergeInvitations(
-      firestoreUserInvitations.value,
-      (invitation) => invitation.email.toLowerCase() === email
-    )
+    if (!currentUser.value?.email) return []
+    return firestoreUserInvitations.value ?? []
   })
 
   const invitationsById = computed(() => {
@@ -262,26 +273,58 @@ export const useInvitationStore = defineStore("invitations", () => {
     assertTeamCapability(membership, capability, errorMessage)
   }
 
+  /**
+   * Cache list keys that currently show `invitation`: the team-invitations query
+   * (when the admin is viewing that team) and/or the user-invitations query
+   * (when it's addressed to the signed-in user). Optimistic changes are applied
+   * to whichever lists are present.
+   */
+  const invitationListKeys = (invitation: {
+    teamId: string
+    email: string
+  }): FirestoreQueryKey[] => {
+    const keys: FirestoreQueryKey[] = []
+    if (currentTeamId.value === invitation.teamId) {
+      keys.push(queryKeys.list("invitations", { teamId: invitation.teamId }))
+    }
+    const email = currentUser.value?.email?.toLowerCase()
+    if (email && email === invitation.email.toLowerCase()) {
+      keys.push(queryKeys.list("invitations", { email }))
+    }
+    return keys
+  }
+
+  /**
+   * Apply `applyOptimistic` to each affected invitations cache list, run the
+   * Cloud Function, and roll the cache back on failure. The hold inside
+   * `useFirestoreMutation` keeps the optimistic value visible until the
+   * server-applied snapshot reconciles it.
+   */
   async function runInvitationMutation(
-    invitationId: string,
+    keys: FirestoreQueryKey[],
     applyOptimistic: (invitations: IInvitation[]) => IInvitation[],
     mutation: () => Promise<void>
   ): Promise<void> {
-    const previousOptimistic = cloneState(optimisticInvitations.value)
+    const snapshots = keys.map((key) => ({
+      key,
+      previous: queryClient.getQueryData<IInvitation[]>(key),
+    }))
 
-    await withOptimisticUpdate(
-      pendingInvitationIds,
-      invitationId,
-      () => {
-        optimisticInvitations.value = applyOptimistic(
-          optimisticInvitations.value
-        )
+    await invitationMutation.mutateAsync({
+      keys,
+      apply: () => {
+        for (const key of keys) {
+          const current = queryClient.getQueryData<IInvitation[]>(key) ?? []
+          queryClient.setQueryData(key, applyOptimistic(current))
+        }
       },
-      () => {
-        optimisticInvitations.value = previousOptimistic
+      rollback: () => {
+        for (const { key, previous } of snapshots) {
+          queryClient.setQueryData(key, previous)
+        }
       },
-      mutation
-    )
+      run: mutation,
+    })
   }
 
   // ============================================================================
@@ -349,7 +392,7 @@ export const useInvitationStore = defineStore("invitations", () => {
     }
 
     await runInvitationMutation(
-      opId,
+      invitationListKeys(invitation),
       (invitations) => [...invitations, invitation],
       async () => {
         await sendInvitationFn({ teamId, email: normalizedEmail, role })
@@ -372,7 +415,7 @@ export const useInvitationStore = defineStore("invitations", () => {
     )
 
     await runInvitationMutation(
-      invitation.id,
+      invitationListKeys(invitation),
       (invitations) =>
         invitations.map((inv) =>
           inv.id === invitation.id
@@ -420,7 +463,7 @@ export const useInvitationStore = defineStore("invitations", () => {
     }
 
     await runInvitationMutation(
-      invitationId,
+      invitationListKeys(invitation),
       (invitations) =>
         invitations.map((inv) =>
           inv.id === invitationId ? { ...inv, role } : inv
@@ -441,8 +484,9 @@ export const useInvitationStore = defineStore("invitations", () => {
       "You do not have permission to cancel invitations"
     )
 
+    const invitation = findInvitationById(invitationId)
     await runInvitationMutation(
-      invitationId,
+      invitation ? invitationListKeys(invitation) : [],
       (invitations) => invitations.filter((inv) => inv.id !== invitationId),
       async () => {
         await cancelInvitationFn({ invitationId })
@@ -497,7 +541,7 @@ export const useInvitationStore = defineStore("invitations", () => {
     // Membership addition happens in its own store if we wanted full coverage,
     // but the invitation leaving the list is the most important immediate feedback.
     await runInvitationMutation(
-      invitationId,
+      invitationListKeys(invitation),
       (invitations) => invitations.filter((inv) => inv.id !== invitationId),
       async () => {
         await acceptInvitationFn({ invitationId })
@@ -509,8 +553,9 @@ export const useInvitationStore = defineStore("invitations", () => {
    * Decline an invitation
    */
   async function declineInvitation(invitationId: string): Promise<void> {
+    const invitation = findInvitationById(invitationId)
     await runInvitationMutation(
-      invitationId,
+      invitation ? invitationListKeys(invitation) : [],
       (invitations) =>
         invitations.map((inv) =>
           inv.id === invitationId ? { ...inv, status: "declined" } : inv
@@ -560,9 +605,15 @@ export function useTeamInvitations(
     )
   })
 
-  // We rely on vuefire's automatic unsubscription when the component unmounts
-  // or when the query becomes null.
-  const { data: localInvitations } = useCollection<IInvitation>(localQuery)
+  // The realtime listener is torn down automatically when this query goes
+  // unused (gc) or its source becomes null.
+  const { data: localInvitations } = useCollectionQuery<IInvitation>(() => {
+    const activeQuery = localQuery.value
+    const teamId = targetId.value
+    return activeQuery && teamId
+      ? { query: activeQuery, path: "invitations", params: { teamId } }
+      : null
+  })
 
   return computed(() => {
     if (isCurrentTeam.value) {

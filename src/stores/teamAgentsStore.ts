@@ -19,16 +19,19 @@
  *
  * Storage model:
  *   - Path:  teams/{teamId}/agents/{agentId}
- *   - Read:  direct Firestore subscription (Firestore rule allows
- *            `isTeamMember` reads). Writes are callable-only.
+ *   - Read:  via the shared TanStack query cache (`useCollectionQuery`),
+ *            which holds one ref-counted `onSnapshot` per team's agents
+ *            collection (Firestore rule allows `isTeamMember` reads).
+ *            Writes are callable-only.
  *   - Soft-delete: `archivedAt` set by the archive callable; archived
  *            docs stay readable so chat sessions referencing them
  *            still resolve. Pickers filter by `activeAgents`.
  *
- * Race safety: switching teams tears down the old `onSnapshot` and
- * spins up a fresh one for the new team. A snapshot that arrives after
- * a team switch is filtered out by `loadedTeamId` so a stale response
- * can't overwrite newer state. Pattern mirrors `agentConfigStore`.
+ * Race safety: the query key embeds the teamId, so switching teams is a
+ * key swap — the old team's listener is released and the new team's
+ * cached data renders while its listener reconnects. A late snapshot for
+ * the previous team lands under its own (now unobserved) key and can't
+ * clobber the active team's state, so no manual race guard is needed.
  */
 
 import {
@@ -47,14 +50,17 @@ import { useAgentConfigStore } from "@/stores/agentConfigStore"
 import { useAuthStore } from "@/stores/authStore"
 import type { ITeamAgent } from "@/types/domain"
 import {
+  useCollectionQuery,
+  type CollectionQuerySource,
+} from "@/utils/firebase/firebase-query"
+import {
   collection,
-  onSnapshot,
   Timestamp,
+  type FirestoreDataConverter,
   type QueryDocumentSnapshot,
-  type Unsubscribe,
 } from "firebase/firestore"
 import { defineStore, storeToRefs } from "pinia"
-import { computed, ref, watch } from "vue"
+import { computed, ref } from "vue"
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -85,6 +91,9 @@ const DEFAULT_TOOL_TOGGLES: ITeamAgent["tools"] = {
   // alignment; the per-agent value is never consumed by dispatch
   // (the team config's value is the canonical gate).
   customAgents: true,
+  // Team-wide gate for custom (user-authored) workflows; per-agent value
+  // ignored (the team config's value is canonical). Default true.
+  customWorkflows: true,
   // Likewise carried for type alignment with the team-level toggle
   // schema — the per-agent value is ignored. Custom tools are gated
   // by the team-level `customTools` flag and (in the future) per-tool
@@ -184,6 +193,10 @@ function snapshotToAgent(
         typeof toolsRaw.customAgents === "boolean"
           ? (toolsRaw.customAgents as boolean)
           : DEFAULT_TOOL_TOGGLES.customAgents,
+      customWorkflows:
+        typeof toolsRaw.customWorkflows === "boolean"
+          ? (toolsRaw.customWorkflows as boolean)
+          : DEFAULT_TOOL_TOGGLES.customWorkflows,
       // Likewise present for shape alignment only — see `DEFAULT_TOOL_TOGGLES.customTools`.
       customTools:
         typeof toolsRaw.customTools === "boolean"
@@ -250,67 +263,65 @@ export const useTeamAgentsStore = defineStore("teamAgents", () => {
   const customAgentsEnabled = computed<boolean>(
     () => teamAgentConfig.value.tools.customAgents !== false
   )
+  const customWorkflowsEnabled = computed<boolean>(
+    () => teamAgentConfig.value.tools.customWorkflows !== false
+  )
 
-  /**
-   * Every agent for the active team — active AND archived. Computed
-   * views (`activeAgents`, `archivedAgents`) filter by `archivedAt` so
-   * pickers and admin lists don't have to re-implement the predicate.
-   * Empty array while loading or when no team is selected.
-   */
-  const agents = ref<ITeamAgent[]>([])
-  const isLoading = ref(false)
   const isSaving = ref(false)
-  const loadError = ref<string | null>(null)
 
   /**
-   * The teamId that `agents` currently reflects. Used as a race guard:
-   * snapshot callbacks arriving after a team switch carry the stale
-   * teamId and are dropped instead of overwriting the new team's state.
-   * `null` means "no team loaded yet" (initial state or post-switch
-   * while the new subscription's first snapshot is pending).
+   * Firestore converter that funnels every read through `snapshotToAgent`
+   * (which mirrors the server's `normalizeAgentDoc`), so cached docs are
+   * normalized exactly as the old manual mapping did. `teamId` is recovered
+   * from the doc path (`teams/{teamId}/agents/{id}`). `toFirestore` is never
+   * exercised — writes go through the Cloud Functions above, not this ref.
    */
-  const loadedTeamId = ref<string | null>(null)
-
-  /**
-   * Handle to the active `onSnapshot` subscription. Stored at module
-   * scope (not in the watcher closure) so the watcher's cleanup can
-   * tear it down before spinning up a new one for the next team.
-   */
-  let unsubscribe: Unsubscribe | null = null
-
-  const teardownSubscription = (): void => {
-    if (unsubscribe) {
-      unsubscribe()
-      unsubscribe = null
-    }
+  const agentConverter: FirestoreDataConverter<ITeamAgent> = {
+    toFirestore: () => ({}),
+    fromFirestore: (snapshot) =>
+      snapshotToAgent(snapshot.ref.parent.parent?.id ?? "", snapshot),
   }
 
-  const startSubscription = (teamId: string): void => {
-    teardownSubscription()
-    isLoading.value = true
-    loadError.value = null
-
-    const ref = collection(firestore, `teams/${teamId}/agents`)
-    unsubscribe = onSnapshot(
-      ref,
-      (snap) => {
-        // Race guard: a snapshot arriving after the user switched teams
-        // is for the wrong collection — drop rather than clobber. The
-        // next subscription's first emission will land soon.
-        if (currentTeamId.value !== teamId) return
-        agents.value = snap.docs.map((doc) => snapshotToAgent(teamId, doc))
-        loadedTeamId.value = teamId
-        isLoading.value = false
-      },
-      (error) => {
-        if (currentTeamId.value !== teamId) return
-        console.error("[teamAgentsStore] subscription error:", error)
-        loadError.value =
-          error instanceof Error ? error.message : "Failed to load team agents."
-        isLoading.value = false
+  /**
+   * Every agent for the active team — active AND archived. Computed views
+   * (`activeAgents`, `archivedAgents`) filter by `archivedAt` so pickers and
+   * admin lists don't re-implement the predicate. Empty while loading or when
+   * no team is selected.
+   *
+   * Read through the shared TanStack cache: one live `onSnapshot` per
+   * `teams/{teamId}/agents`, ref-counted and gc-torn-down by
+   * `useCollectionQuery`. The query key embeds the teamId, so switching teams
+   * releases the old listener and renders the new team's cached data (if any)
+   * immediately while its listener reconnects — the per-team race guard the
+   * old manual subscription needed is now structural. Writes still flow through
+   * the Cloud Functions above; the listener reflects them within milliseconds.
+   */
+  const agentsQuery = useCollectionQuery<ITeamAgent>(
+    (): CollectionQuerySource | null => {
+      const teamId = currentTeamId.value
+      if (!teamId) return null
+      const path = `teams/${teamId}/agents`
+      return {
+        query: collection(firestore, path).withConverter(agentConverter),
+        path,
       }
-    )
-  }
+    }
+  )
+
+  const agents = computed<ITeamAgent[]>(() => agentsQuery.data.value ?? [])
+  const isLoading = computed<boolean>(() => agentsQuery.isLoading.value)
+  const loadError = computed<string | null>(
+    () => agentsQuery.error.value?.message ?? null
+  )
+
+  /**
+   * The teamId whose `agents` are currently loaded, or `null` while pending /
+   * teamless. Retained for API compatibility; with per-team query keys it is a
+   * thin derivation of the active team once the first snapshot has landed.
+   */
+  const loadedTeamId = computed<string | null>(() =>
+    agentsQuery.data.value !== undefined ? currentTeamId.value : null
+  )
 
   // ── Derived views ────────────────────────────────────────────────────────
   //
@@ -596,28 +607,6 @@ export const useTeamAgentsStore = defineStore("teamAgents", () => {
     }
   }
 
-  // ── Lifecycle: (re)subscribe when team flips ────────────────────────────
-  //
-  // `immediate: true` so the first mount kicks off a subscription. The
-  // subscription itself is what populates `agents`; until the first
-  // snapshot lands, consumers see `[]` (handled in the UI with a
-  // loading state via `isLoading`).
-  watch(
-    currentTeamId,
-    (teamId) => {
-      teardownSubscription()
-      if (!teamId) {
-        agents.value = []
-        loadedTeamId.value = null
-        isLoading.value = false
-        loadError.value = null
-        return
-      }
-      startSubscription(teamId)
-    },
-    { immediate: true }
-  )
-
   return {
     agents,
     builtInAgents,
@@ -628,6 +617,7 @@ export const useTeamAgentsStore = defineStore("teamAgents", () => {
     disabledAgents,
     archivedAgents,
     customAgentsEnabled,
+    customWorkflowsEnabled,
     isLoading,
     isSaving,
     loadError,

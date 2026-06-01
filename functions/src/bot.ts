@@ -73,7 +73,11 @@ import {
   type NodeRef,
 } from "./botContext.js"
 import { findRelatedNodesTool } from "./botLink.js"
-import { NODE_READ_TOOLS, NODE_WRITE_TOOLS } from "./botNodeTools.js"
+import {
+  NODE_READ_TOOLS,
+  NODE_WRITE_TOOLS,
+  type CapturedNodeChange,
+} from "./botNodeTools.js"
 import { searchWorkspaceNodesTool } from "./botRag.js"
 import { summarizeNodeTool } from "./botSummarize.js"
 import { listBuiltInAgents } from "./builtInAgents.js"
@@ -93,12 +97,66 @@ import {
   buildCustomToolForChat,
   listTeamCustomTools,
 } from "./teamCustomTools.js"
-import type { IMembershipRole } from "./types.js"
+import type { IMembershipRole, WorkspaceNodeScope } from "./types.js"
+import { assertWithinBudget, incrementTeamTokenUsage } from "./usageMetering.js"
 import { generateId } from "./utilities.js"
 
 // `AuthData` isn't re-exported from `firebase-functions/v2/https`, so derive
 // it from `CallableRequest["auth"]` to avoid reaching into internal paths.
 type AuthData = NonNullable<CallableRequest["auth"]>
+
+/**
+ * Who a chat turn runs as.
+ *
+ *   - `user`  — an interactive caller, built from the verified callable
+ *               request auth (`sendBotMessage` / `respondToBotInterrupt`).
+ *   - `agent` — a headless Workflows run, acting AS a team agent that is
+ *               itself a Member-role team member. No human is in the loop;
+ *               the agent's own membership role is the sole authority.
+ *
+ * `prepareChatTurn` resolves the acting role + node permissions from
+ * whichever principal it's handed, so the same turn engine drives both the
+ * interactive callables and the server-triggered Workflows worker.
+ */
+type TurnPrincipal =
+  | { kind: "user"; uid: string }
+  | { kind: "agent"; agentId: string }
+
+/**
+ * The id used for membership/role lookups, session ownership, audit + sender
+ * stamping, and the node-tool action context — the caller's uid for a user
+ * principal, the agent's id for an agent principal.
+ */
+function principalId(principal: TurnPrincipal): string {
+  return principal.kind === "user" ? principal.uid : principal.agentId
+}
+
+/**
+ * Resolve the membership role a turn acts under.
+ *
+ *   - user  → `getMembershipRole` (throws `permission-denied` when the caller
+ *             isn't a team member — unchanged interactive behavior).
+ *   - agent → `getMembershipRoleOrNull`; a missing membership is a hard
+ *             `failed-precondition` (a Workflows agent MUST be added as a
+ *             team member before it can run on team content).
+ */
+async function resolveActingRole(
+  principal: TurnPrincipal,
+  teamId: string
+): Promise<IMembershipRole> {
+  if (principal.kind === "user") {
+    return getMembershipRole(teamId, principal.uid)
+  }
+  const role = await getMembershipRoleOrNull(teamId, principal.agentId)
+  if (!role) {
+    throw new HttpsError(
+      "failed-precondition",
+      "This workflow's agent is not a team member, so it can't act on team " +
+        "content. Add it as a team member first."
+    )
+  }
+  return role
+}
 
 export type SessionVisibility = "private" | "shared" | "public"
 const ADMIN_ROLES: ReadonlyArray<IMembershipRole> = ["owner", "admin"]
@@ -756,7 +814,11 @@ export function pinnedNodeKey(
 function pickChatTools(
   config: BotAgentConfig,
   agent: TeamAgentDoc | null = null,
-  transferTargetCount: number = 0
+  transferTargetCount: number = 0,
+  // Headless Workflows runs pass `false`: an autonomous turn has no human to
+  // answer an `askQuestion` interrupt, so the interrupt tool is withheld
+  // rather than letting the run stall on a question nobody can resolve.
+  allowInterrupts: boolean = true
 ) {
   // `browseInternet` and `searchWorkspaceNodes` both run on the server's
   // Gemini key — web-search grounding and workspace embeddings
@@ -794,7 +856,7 @@ function pickChatTools(
     agentAllows("browseInternet")
   )
     tools.push(browseInternetTool)
-  if (config.tools.askQuestion && agentAllows("askQuestion"))
+  if (allowInterrupts && config.tools.askQuestion && agentAllows("askQuestion"))
     tools.push(askQuestionTool)
   if (
     config.tools.searchWorkspaceNodes &&
@@ -875,12 +937,14 @@ function buildTransferRoster(
       description: candidate.description,
     })
   }
-  if (activeAgent) {
-    // Synthetic "back to default" target — id is the empty string so
-    // `normalizeActiveAgentIdForStorage` translates it to `null` on
-    // the doc write below. Hardcoded English label/description here
-    // because the directive lives in the system prompt (server-side,
-    // not user-facing i18n).
+  // Synthetic "back to default" target — id is the empty string so
+  // `normalizeActiveAgentIdForStorage` translates it to `null` on the doc
+  // write below. Hardcoded English label/description here because the
+  // directive lives in the system prompt (server-side, not user-facing
+  // i18n). Skipped when the Default agent is ITSELF the active persona
+  // (e.g. a headless workflow run as `_default`) — transferring to default
+  // would be a no-op self-handoff.
+  if (activeAgent && activeAgent.id !== DEFAULT_AGENT_ID) {
     roster.push({
       id: "",
       name: "Default Assistant",
@@ -1002,13 +1066,28 @@ async function runTransferTurnIfRequested(opts: {
    */
   preTurnThreadLength: number
   firstActionContext: BotActionContext
-  auth: AuthData
+  principal: TurnPrincipal
   teamId: string
   workspaceId: string
   sessionId: string
   mode: BotChatMode
   contextNodes: NodeRef[]
   model: BotAgentModel | undefined
+  /**
+   * Forwarded so the handed-off turn captures, meters, and scope-restricts
+   * exactly like the first turn. All undefined for interactive chat (the
+   * second turn behaves as before); the Workflows worker sets them so a
+   * transferred run stages its changeset into the SAME sink, accumulates the
+   * SAME per-run usage, honors `targetScope`, and withholds interrupts.
+   */
+  captureChanges?: { sink: CapturedNodeChange[]; captureOnly: boolean }
+  onUsage?: (u: {
+    model: string
+    inputTokens: number
+    outputTokens: number
+  }) => void
+  targetScope?: WorkspaceNodeScope | null
+  allowInterrupts?: boolean
   archivedSessionMessage: string
   sendChunk: (chunk: SendBotMessageStreamPayload) => void
 }): Promise<Awaited<ChatStreamResult["response"]>> {
@@ -1071,7 +1150,7 @@ async function runTransferTurnIfRequested(opts: {
   // of it, target agent's model becoming unavailable mid-request, etc.
   try {
     const transferPrep = await prepareChatTurn({
-      auth: opts.auth,
+      principal: opts.principal,
       teamId: opts.teamId,
       workspaceId: opts.workspaceId,
       sessionId: opts.sessionId,
@@ -1079,6 +1158,14 @@ async function runTransferTurnIfRequested(opts: {
       contextNodes: opts.contextNodes,
       activeAgentId: targetAgentId,
       model: opts.model,
+      // Inherit the run's capture/metering/scope so a transferred Workflows
+      // turn stages its edits into the same changeset, accumulates into the
+      // same per-run usage, and stays inside `targetScope`. Undefined for
+      // interactive chat, so its second turn is unchanged.
+      captureChanges: opts.captureChanges,
+      onUsage: opts.onUsage,
+      targetScope: opts.targetScope,
+      allowInterrupts: opts.allowInterrupts,
       // Pin is a one-shot at session creation; the first turn already
       // wrote it (or we're resuming, in which case it was written ages
       // ago). Passing it again would be a no-op at best and a doc
@@ -1322,6 +1409,13 @@ export async function getMembershipRoleOrNull(
   teamId: string,
   principalId: string
 ): Promise<IMembershipRole | null> {
+  // The Default agent (`_default`) is an implicit, always-present team
+  // member with full content capabilities — it has no membership doc and
+  // needs none. Resolving it to `member` here powers BOTH the acting-role
+  // gate (`resolveActingRole`) and the node-permission gate (which reads
+  // the active agent's role), so a headless workflow running as the Default
+  // agent can read + edit content without an enrollment write.
+  if (principalId === DEFAULT_AGENT_ID) return "member"
   const snap = await db.doc(`teams/${teamId}/memberships/${principalId}`).get()
   if (!snap.exists) return null
   return (snap.data()?.role as IMembershipRole | undefined) ?? null
@@ -2008,7 +2102,7 @@ interface PreparedChatTurn {
  * requires an existing session).
  */
 async function prepareChatTurn(opts: {
-  auth: AuthData
+  principal: TurnPrincipal
   teamId: string
   workspaceId: string
   sessionId: string | null
@@ -2027,9 +2121,31 @@ async function prepareChatTurn(opts: {
    * confusing for the user and prone to deadline exhaustion.
    */
   disableTransfer?: boolean
+  /**
+   * Headless runs pass `false` to withhold the `askQuestion` interrupt tool
+   * (no human can answer it). Defaults to `true` for interactive turns.
+   */
+  allowInterrupts?: boolean
+  /**
+   * Workflows-only. Per-model-call usage notification — the headless runner
+   * accumulates this into the run's `usage` (per-run token + cost accounting).
+   * Fires alongside the team-monthly metering, never instead of it.
+   */
+  onUsage?: (u: {
+    model: string
+    inputTokens: number
+    outputTokens: number
+  }) => void
+  /**
+   * Workflows-only. When set, WRITE tools record edits into `sink`; with
+   * `captureOnly` they DON'T commit (a `require_review` run stages a changeset).
+   */
+  captureChanges?: { sink: CapturedNodeChange[]; captureOnly: boolean }
+  /** Workflows-only. Restricts WRITE tools to this scope (the `targetScope`). */
+  targetScope?: WorkspaceNodeScope | null
 }): Promise<PreparedChatTurn> {
   const {
-    auth,
+    principal,
     teamId,
     workspaceId,
     sessionId,
@@ -2040,18 +2156,27 @@ async function prepareChatTurn(opts: {
     requireExistingSession,
     archivedSessionMessage,
     disableTransfer,
+    allowInterrupts = true,
+    onUsage,
+    captureChanges,
+    targetScope,
   } = opts
 
+  // The acting id (uid for a user, agentId for an agent) — used for the
+  // membership lookup, the session edit gate, ownerUid/senderUid stamping,
+  // and the action-context identity below.
+  const actingId = principalId(principal)
+
   // Per-turn setup opens with three independent Firestore reads — the
-  // caller's membership role, the existing session doc (when resuming),
+  // principal's membership role, the existing session doc (when resuming),
   // and the team agent config. None depends on the others, so we issue
   // them concurrently and collapse three sequential round-trips into one.
   // The permission gate below runs on the resolved values, preserving the
   // original error precedence (membership → existence → archived →
-  // edit-rights): if `getMembershipRole` rejects, `Promise.all` rejects
+  // edit-rights): if `resolveActingRole` rejects, `Promise.all` rejects
   // with that same error first.
   const [role, loadedSession, agentConfig] = await Promise.all([
-    getMembershipRole(teamId, auth.uid),
+    resolveActingRole(principal, teamId),
     sessionId
       ? readSessionDoc(teamId, workspaceId, sessionId)
       : Promise.resolve(null),
@@ -2074,11 +2199,11 @@ async function prepareChatTurn(opts: {
     if (existingSession.archived) {
       throw new HttpsError("failed-precondition", archivedSessionMessage)
     }
-    const isOwner = existingSession.ownerUid === auth.uid
+    const isOwner = existingSession.ownerUid === actingId
     const canEdit =
       isOwner ||
       (existingSession.visibility === "shared" &&
-        can(auth.uid, Capabilities.MANAGE_WORKSPACE_CONTENT, {
+        can(actingId, Capabilities.MANAGE_WORKSPACE_CONTENT, {
           scope: "workspace",
           teamRole: role,
         }))
@@ -2115,7 +2240,11 @@ async function prepareChatTurn(opts: {
   // Order matters for the transfer roster (the model picks the FIRST
   // matching id when it has duplicates, though custom ids never collide
   // with the `_`-prefixed presets).
-  const agentsEnabled = agentConfig.tools.customAgents
+  // Headless agent runs always load custom agents so the workflow's bound
+  // persona (prompt + audit identity) resolves even when the team has the
+  // customAgents feature toggle off — the run is explicitly that agent.
+  const agentsEnabled =
+    agentConfig.tools.customAgents || principal.kind === "agent"
   const builtInAgents = agentsEnabled
     ? listBuiltInAgents(teamId, agentConfig.builtInAgents)
     : []
@@ -2127,30 +2256,29 @@ async function prepareChatTurn(opts: {
     availableAgents,
   })
   // Preserve the original session owner on shared-chat admin writes.
-  // `auth.uid` is the actor for this turn; it is only the owner for new
+  // `actingId` is the actor for this turn; it is only the owner for new
   // sessions. Rewriting `ownerUid` on every save would silently transfer
-  // shared chats to whichever admin replied most recently.
-  const sessionOwnerUid = existingSession?.ownerUid ?? auth.uid
+  // shared chats to whichever admin replied most recently. (Headless agent
+  // runs create their own sessions, so the agent id becomes the owner.)
+  const sessionOwnerUid = existingSession?.ownerUid ?? actingId
 
-  // Node-CRUD authorization for this turn:
-  //   - When a custom/built-in agent is active, BOTH the user and the agent
-  //     must be team members with content-management rights — the agent is
-  //     acting on the user's behalf, so the gate is the intersection.
-  //   - When the Default persona is active (`activeAgent === null`), there
-  //     is no agent identity to delegate to, so the user's own role is the
-  //     sole authority. The tool result is attributed in audit logs as
-  //     `{ userId: <driver>, agentId: "_default", agentName: "Default" }`
-  //     so reviewers can still tell a default-persona edit apart from a
-  //     direct (non-bot) edit. This matches the user's casual mental model
-  //     ("Default is the agent I'm currently using") and prevents the
-  //     tool-catalog drift bug where switching to Default mid-conversation
-  //     silently dropped node tools out from under the model — see
-  //     `getMissingToolName` above for the failure mode that motivated this.
-  const userCanManageNodes = can(
-    auth.uid,
-    Capabilities.MANAGE_WORKSPACE_CONTENT,
-    { scope: "workspace", teamRole: role }
-  )
+  // Node-CRUD authorization for this turn. Two regimes:
+  //
+  //   - **User principal (interactive):** when a custom/built-in agent is
+  //     active, BOTH the human and the agent must hold content-management
+  //     rights — the agent acts on the user's behalf, so the gate is the
+  //     intersection. The Default persona (`activeAgent === null`) borrows
+  //     the user's authority (agent half defaults to `true`). Audit logs
+  //     attribute the edit as `{ userId: <driver>, agentId, agentName }`.
+  //
+  //   - **Agent principal (headless Workflows run):** there is no human half
+  //     to intersect. The agent IS the principal, so its own Member-role
+  //     membership (`role`, resolved above for this same agent id) is the
+  //     sole authority. Audit logs carry no `userId` (agent-only actor).
+  //
+  // Either way `canManage/ReadNodes` stay the pure security checks, re-
+  // verified inside the tool handlers (`resolveNodeContext` fails closed),
+  // so a misconfigured run can only under-permit, never escalate.
   const activeAgentRole = activeAgent
     ? await getMembershipRoleOrNull(teamId, activeAgent.id)
     : null
@@ -2159,29 +2287,43 @@ async function prepareChatTurn(opts: {
         scope: "workspace",
         teamRole: activeAgentRole,
       })
-    : // Default persona: borrow the user's authority. The user's role is
-      // already checked separately via `userCanManageNodes`, so the
-      // composite gate stays `user × agent` — there's just no second
-      // identity to fail on.
-      true
-  const canManageNodes = userCanManageNodes && agentCanManageNodes
-
-  // Read gate — the same user×agent intersection but on the lighter
-  // READ_WORKSPACE capability (held by every role, guests included), so an
-  // agent can read full file content (`readNode`) without the edit rights
-  // the write tools require. Default-persona handling mirrors the write
-  // gate above (the user's role is the sole authority).
-  const userCanReadNodes = can(auth.uid, Capabilities.READ_WORKSPACE, {
-    scope: "workspace",
-    teamRole: role,
-  })
+    : true
   const agentCanReadNodes = activeAgent
     ? can(activeAgent.id, Capabilities.READ_WORKSPACE, {
         scope: "workspace",
         teamRole: activeAgentRole,
       })
     : true
-  const canReadNodes = userCanReadNodes && agentCanReadNodes
+
+  let canManageNodes: boolean
+  let canReadNodes: boolean
+  if (principal.kind === "user") {
+    const userCanManageNodes = can(
+      principal.uid,
+      Capabilities.MANAGE_WORKSPACE_CONTENT,
+      { scope: "workspace", teamRole: role }
+    )
+    const userCanReadNodes = can(principal.uid, Capabilities.READ_WORKSPACE, {
+      scope: "workspace",
+      teamRole: role,
+    })
+    canManageNodes = userCanManageNodes && agentCanManageNodes
+    canReadNodes = userCanReadNodes && agentCanReadNodes
+  } else {
+    // Agent principal: the agent's own role is the sole authority. We use
+    // `principal.agentId` + `role` directly (not the `activeAgent`-derived
+    // booleans above) so authority is correct even if the persona didn't
+    // resolve to a record — the membership role is what gates content edits.
+    canManageNodes = can(
+      principal.agentId,
+      Capabilities.MANAGE_WORKSPACE_CONTENT,
+      { scope: "workspace", teamRole: role }
+    )
+    canReadNodes = can(principal.agentId, Capabilities.READ_WORKSPACE, {
+      scope: "workspace",
+      teamRole: role,
+    })
+  }
 
   // Feature-toggle layer ON TOP of the membership gates. `canManageNodes` /
   // `canReadNodes` stay the pure security checks (re-verified inside the
@@ -2242,7 +2384,7 @@ async function prepareChatTurn(opts: {
     contextNodes,
     turnMode: mode,
     turnModel: effectiveModel,
-    senderUid: auth.uid,
+    senderUid: actingId,
     turnActiveAgentId: persistedActiveAgentId,
   })
 
@@ -2302,7 +2444,11 @@ async function prepareChatTurn(opts: {
   // `effectiveModel` lets promptTemplate custom tools fall back to the
   // chat's current model when no admin override is set.
   const actionContext: BotActionContext = {
-    auth: { uid: auth.uid },
+    // For a user principal this is the human's uid (audit `userId`). For an
+    // agent principal there is no human, so the uid is empty — the node-tool
+    // audit actor then carries only `agentId`/`agentName` (see the optional
+    // `Actor.userId`). `activeAgentId` below still identifies the persona.
+    auth: { uid: principal.kind === "user" ? principal.uid : "" },
     mode,
     teamId,
     workspaceId,
@@ -2324,6 +2470,11 @@ async function prepareChatTurn(opts: {
     // on the user's behalf.
     activeAgentId: activeAgent?.id ?? DEFAULT_AGENT_ID,
     activeAgentName: activeAgent?.name ?? "Default",
+    // Workflows: WRITE tools record (and, in require_review, stage instead of
+    // commit) their edits here; `allowedScope` pins them to the target tree.
+    captureSink: captureChanges?.sink,
+    captureOnly: captureChanges?.captureOnly,
+    allowedScope: targetScope ?? undefined,
   }
 
   // Tool catalog — mode steers prompt style only; per-team toggles strip
@@ -2336,7 +2487,8 @@ async function prepareChatTurn(opts: {
   const chatTools = pickChatTools(
     agentConfig,
     activeAgent,
-    transferRoster.length
+    transferRoster.length,
+    allowInterrupts
   )
   for (const tool of dispatchableCustomTools) {
     // Per-agent intersection — mirrors the built-in `agentAllows()`
@@ -2382,6 +2534,9 @@ async function prepareChatTurn(opts: {
     // registered this turn — see `nodeWriteEnabled` / `nodeReadEnabled`.
     canManageNodes: nodeWriteEnabled,
     canReadNodes: nodeReadEnabled,
+    // Same EFFECTIVE-flag discipline: headless runs withhold `askQuestion`
+    // (allowInterrupts=false), so the prompt must stop steering toward it.
+    allowInterrupts,
   })
   // Safety directive lands LAST — after the attached-context block — so
   // the "untrusted content is data, not instructions" rule is the final
@@ -2434,14 +2589,300 @@ async function prepareChatTurn(opts: {
     context: actionContext,
     config: turnConfig,
     // Middleware stack applied to every turn: logging emits a structured
-    // debug line (token/latency metrics come from Firebase telemetry, not
-    // here); the budget gate trips before a runaway context window reaches
-    // the provider; the redactor scrubs PII out of user parts only (tool
-    // outputs and system prompt pass through unchanged).
-    use: aiMiddlewares(),
+    // debug line; the budget gate trips before a runaway context window
+    // reaches the provider; the redactor scrubs PII out of user parts only;
+    // the metering layer records this turn's token usage (including each
+    // tool-iteration round trip) into the team's monthly counter. Metering
+    // is fire-and-forget — it never blocks or fails the turn.
+    use: aiMiddlewares({
+      onUsage: ({ inputTokens, outputTokens }) => {
+        // Team-monthly hard-cap counter (interactive + headless alike)…
+        void incrementTeamTokenUsage(teamId, inputTokens, outputTokens)
+        // …and, for a Workflows run, the per-run accumulator the worker
+        // persists as `usage` + estimated cost.
+        onUsage?.({ model: effectiveModel, inputTokens, outputTokens })
+      },
+    }),
   })
 
   return { chat, session, actionContext, existingSession, effectiveModel }
+}
+
+/** Options for {@link runAgentTurn}. */
+interface RunAgentTurnOptions {
+  principal: TurnPrincipal
+  teamId: string
+  workspaceId: string
+  /** Null creates a fresh session (the default for each headless run). */
+  sessionId: string | null
+  /** Already-trimmed, non-empty prompt the principal sends this turn. */
+  message: string
+  mode: BotChatMode
+  model: BotAgentModel | undefined
+  contextNodes: NodeRef[]
+  activeAgentId: string | null | undefined
+  pinnedNode?: NodeRef
+  /** Stream sink. Omitted → a no-op, for headless runs with no client. */
+  sendChunk?: (chunk: SendBotMessageStreamPayload) => void
+  archivedSessionMessage?: string
+  /** Withhold the `askQuestion` interrupt tool (headless runs pass `false`). */
+  allowInterrupts?: boolean
+  /** Workflows-only — forwarded to {@link prepareChatTurn}. */
+  onUsage?: (u: {
+    model: string
+    inputTokens: number
+    outputTokens: number
+  }) => void
+  captureChanges?: { sink: CapturedNodeChange[]; captureOnly: boolean }
+  targetScope?: WorkspaceNodeScope | null
+  /** Forwarded to prepareChatTurn — headless runs disable agent handoff. */
+  disableTransfer?: boolean
+}
+
+/**
+ * Drive ONE agent turn end-to-end: acquire the per-session lock, prepare the
+ * chat (`prepareChatTurn`), stream the model reply, run the transfer-induced
+ * second turn if requested, and persist. Returns the canonical
+ * `{ sessionId, reply }`.
+ *
+ * Shared by `sendBotMessageFlow` (interactive, user principal, real
+ * `sendChunk`) and the Workflows worker (headless, agent principal, no-op
+ * `sendChunk`). The streaming is a pure side-channel — the canonical result
+ * is the SessionStore save plus this return value — so dropping the stream
+ * for a headless run loses nothing. The interrupt-resume flow is NOT routed
+ * through here: it has a distinct `{ resume: { respond } }` invocation and a
+ * pre-stream toolResult emission, so it stays its own handler.
+ */
+async function runAgentTurn(
+  opts: RunAgentTurnOptions
+): Promise<{ sessionId: string; reply: string }> {
+  const sendChunk = opts.sendChunk ?? (() => {})
+  const archivedSessionMessage =
+    opts.archivedSessionMessage ??
+    "This chat is archived. Restore it before sending new messages."
+
+  // Hard-cap budget gate. Both interactive sends and headless Workflows runs
+  // flow through here, so the team's monthly token ceiling applies to both.
+  // Checked before acquiring the lock or touching the model so an over-budget
+  // turn fails fast. The transfer-induced second turn calls prepareChatTurn
+  // directly (not this fn), so it isn't re-gated — a handoff mid-turn
+  // shouldn't be blocked once the first turn was admitted.
+  await assertWithinBudget(opts.teamId)
+
+  // Serialize turns per existing session so two concurrent sends (common in
+  // shared chats where several admins post into one session, or a scheduled
+  // run racing a human) can't both load the same thread and clobber each
+  // other on save — Genkit's SessionStore is last-write-wins with no version
+  // guard. Acquired BEFORE prepareChatTurn (whose loadSession reads the
+  // thread) so the base we build on is current; new sessions (no sessionId)
+  // have a fresh id nothing else knows yet, so they skip the lock. Released
+  // in the finally below — including on a throw from prepareChatTurn — so a
+  // rejected turn never wedges the chat.
+  const releaseLock = opts.sessionId
+    ? await acquireSessionTurnLock(
+        opts.teamId,
+        opts.workspaceId,
+        opts.sessionId
+      )
+    : NOOP_RELEASE
+  try {
+    const { chat, session, actionContext, existingSession } =
+      await prepareChatTurn({
+        principal: opts.principal,
+        teamId: opts.teamId,
+        workspaceId: opts.workspaceId,
+        sessionId: opts.sessionId,
+        mode: opts.mode,
+        contextNodes: opts.contextNodes,
+        activeAgentId: opts.activeAgentId,
+        model: opts.model,
+        pinnedNode: opts.pinnedNode,
+        requireExistingSession: false,
+        archivedSessionMessage,
+        allowInterrupts: opts.allowInterrupts,
+        onUsage: opts.onUsage,
+        captureChanges: opts.captureChanges,
+        targetScope: opts.targetScope,
+        disableTransfer: opts.disableTransfer,
+      })
+
+    // Capture the thread length BEFORE the first turn appends anything.
+    // `runTransferTurnIfRequested` needs this to slice the thread back to
+    // "prior conversation + the just-sent message" if a transfer fires.
+    const preTurnThreadLength =
+      existingSession?.data?.threads?.[MAIN_THREAD]?.length ?? 0
+
+    // Emit the session id before we touch the model. For brand-new sessions
+    // this lets the client update the URL immediately; for resumed sessions
+    // it's a redundant confirmation but harmless (a no-op for headless runs).
+    sendChunk({ sessionId: session.id })
+
+    // Pre-mark every historical tool-call/result ref so the post-stream sweep
+    // doesn't re-emit them into the new turn's agent bubble — empty arrays for
+    // a brand-new session, so this is a no-op on first turns.
+    const priorRefs = collectPriorTurnToolRefs(existingSession?.data)
+
+    // Per-turn AbortController: its signal rides into `sendStream` and the
+    // deadline race (`streamChatToClient`) aborts it on expiry, so a hung
+    // provider call is genuinely cancelled rather than left to finish in the
+    // background. `maxTurns` raises Genkit's default tool-iteration budget.
+    const turnAbort = new AbortController()
+    const firstFinal = await streamChatToClient(
+      chat.sendStream({
+        prompt: opts.message,
+        abortSignal: turnAbort.signal,
+        maxTurns: TOOL_MAX_TURNS,
+      }) as ChatStreamResult,
+      sendChunk,
+      {
+        abortController: turnAbort,
+        preSentToolCalls: priorRefs.calls,
+        preSentToolResults: priorRefs.results,
+        preExistingToolCallCount: priorRefs.callCount,
+        preExistingToolResultCount: priorRefs.resultCount,
+      }
+    )
+
+    // If the model called `transferToAgent`, drive a second turn under the
+    // target agent inside this same request so the message gets answered
+    // immediately. Returns the first turn's response unchanged when no
+    // transfer fired. Non-`HttpsError` failures are converted to a streamed
+    // fallback + stub response inside the helper; `commitTransferIfRequested`
+    // below still lands the agent change either way.
+    let final: Awaited<ChatStreamResult["response"]>
+    try {
+      final = await runTransferTurnIfRequested({
+        firstFinal,
+        firstSession: session,
+        preTurnThreadLength,
+        firstActionContext: actionContext,
+        principal: opts.principal,
+        teamId: opts.teamId,
+        workspaceId: opts.workspaceId,
+        sessionId: session.id,
+        mode: opts.mode,
+        contextNodes: opts.contextNodes,
+        model: opts.model,
+        // Forward the run's capture/metering/scope so a handed-off Workflows
+        // turn is staged + metered like the first (undefined for chat).
+        captureChanges: opts.captureChanges,
+        onUsage: opts.onUsage,
+        targetScope: opts.targetScope,
+        allowInterrupts: opts.allowInterrupts,
+        archivedSessionMessage,
+        sendChunk,
+      })
+    } finally {
+      // Safety-net agent-id commit. Idempotent with the second turn's in-built
+      // save when that turn ran cleanly; the load-bearing case is when the
+      // second turn threw before its save, so the next message still routes to
+      // the requested target.
+      await commitTransferIfRequested(
+        opts.teamId,
+        opts.workspaceId,
+        session.id,
+        actionContext
+      )
+    }
+
+    return {
+      sessionId: session.id,
+      reply: final.text,
+    }
+  } finally {
+    await releaseLock()
+  }
+}
+
+/** Per-run token + estimated-cost inputs the worker persists as `usage`. */
+export interface HeadlessRunUsage {
+  model: string | null
+  inputTokens: number
+  outputTokens: number
+}
+
+/**
+ * Headless entry point for the Workflows worker: run ONE agent turn AS a team
+ * agent, with no client and no human. Creates a fresh session each call (so a
+ * run's history never grows unbounded), defaults to the proactive "agent"
+ * mode, withholds interrupts, disables agent handoff (so the whole run is one
+ * captured/metered turn), and discards the stream. Persists the turn to the
+ * agent-owned botSession where any returning teammate sees it live.
+ *
+ * Returns `{ sessionId, reply, usage, changes }`:
+ *   - `usage` accumulates every model round-trip's tokens for per-run cost.
+ *   - `changes` is the WRITE tools' capture sink. In `require_review` mode
+ *     (`captureOnly`) the edits are staged here and NOT committed; in
+ *     `automatic` mode they're committed AND recorded for the run's changeset.
+ *
+ * Throws `failed-precondition` if the agent isn't a team member, or
+ * `resource-exhausted` if the team is over its monthly token budget — the
+ * worker maps these to `error` / `blocked` run statuses.
+ */
+export async function runHeadlessAgentTurn(opts: {
+  agentId: string
+  teamId: string
+  workspaceId: string
+  message: string
+  mode?: BotChatMode
+  model?: BotAgentModel
+  contextNodes?: NodeRef[]
+  /** Defaults to `require_review` (stage edits) — `automatic` commits them. */
+  updateMode?: "automatic" | "require_review"
+  /** Tree the run may edit; restricts WRITE tools when set. */
+  targetScope?: WorkspaceNodeScope | null
+  /**
+   * Expose `transferToAgent` for this run so the agent can hand off to a
+   * specialist. Off by default (one self-contained turn); the workflow
+   * worker turns it on only for the Default agent, whose prompt steers it
+   * to transfer when a task needs expertise it lacks. The handed-off
+   * second turn still runs with transfer disabled (one hop, no chains).
+   */
+  allowTransfer?: boolean
+}): Promise<{
+  sessionId: string
+  reply: string
+  usage: HeadlessRunUsage
+  changes: CapturedNodeChange[]
+}> {
+  const usage: HeadlessRunUsage = {
+    model: null,
+    inputTokens: 0,
+    outputTokens: 0,
+  }
+  const changes: CapturedNodeChange[] = []
+  const captureOnly = (opts.updateMode ?? "require_review") === "require_review"
+
+  const { sessionId, reply } = await runAgentTurn({
+    principal: { kind: "agent", agentId: opts.agentId },
+    teamId: opts.teamId,
+    workspaceId: opts.workspaceId,
+    // Fresh session per run — bounds context growth and keeps run history
+    // cleanly separable in the agent-owned botSessions list.
+    sessionId: null,
+    message: opts.message,
+    mode: opts.mode ?? "agent",
+    model: opts.model,
+    contextNodes: opts.contextNodes ?? [],
+    // The workflow's agent is both the authorizing principal AND the persona.
+    activeAgentId: opts.agentId,
+    allowInterrupts: false,
+    // Transfer is opt-in (the worker turns it on only for the Default agent).
+    // When on, the handed-off second turn INHERITS this run's capture +
+    // metering hooks — `runAgentTurn` forwards `captureChanges`/`onUsage`/
+    // `targetScope`/`allowInterrupts` into `runTransferTurnIfRequested` — so a
+    // staged changeset and per-run usage still cover both agents' work.
+    disableTransfer: opts.allowTransfer !== true,
+    targetScope: opts.targetScope,
+    captureChanges: { sink: changes, captureOnly },
+    onUsage: (u) => {
+      usage.model = u.model
+      usage.inputTokens += u.inputTokens
+      usage.outputTokens += u.outputTokens
+    },
+  })
+
+  return { sessionId, reply, usage, changes }
 }
 
 const sendBotMessageFlow = ai.defineFlow(
@@ -2463,129 +2904,21 @@ const sendBotMessageFlow = ai.defineFlow(
       throw new HttpsError("invalid-argument", "message cannot be empty.")
     }
 
-    // Serialize turns per existing session so two concurrent sends (common
-    // in shared chats where several admins post into one session) can't both
-    // load the same thread and clobber each other on save — Genkit's
-    // SessionStore is last-write-wins with no version guard. Acquired BEFORE
-    // prepareChatTurn (whose loadSession reads the thread) so the base we
-    // build on is current; new sessions (no sessionId) have a fresh id
-    // nothing else knows yet, so they can't contend and skip the lock.
-    // Released in the finally below — including on a permission/not-found
-    // throw from prepareChatTurn — so a rejected turn never wedges the chat.
-    const releaseLock = input.sessionId
-      ? await acquireSessionTurnLock(
-          input.teamId,
-          input.workspaceId,
-          input.sessionId
-        )
-      : NOOP_RELEASE
-    try {
-      const { chat, session, actionContext, existingSession } =
-        await prepareChatTurn({
-          auth,
-          teamId: input.teamId,
-          workspaceId: input.workspaceId,
-          sessionId: input.sessionId ?? null,
-          mode: input.mode,
-          contextNodes: input.contextNodes,
-          activeAgentId: input.activeAgentId,
-          model: input.model,
-          pinnedNode: input.pinnedNode,
-          requireExistingSession: false,
-          archivedSessionMessage:
-            "This chat is archived. Restore it before sending new messages.",
-        })
-
-      // Capture the thread length BEFORE the first turn appends anything.
-      // `runTransferTurnIfRequested` needs this to slice the thread back
-      // to "prior conversation + the user's just-sent message" if a
-      // transfer fires. Reading it here (rather than inside the helper)
-      // keeps the truncation deterministic — we know exactly what the
-      // first turn was about to add.
-      const preTurnThreadLength =
-        existingSession?.data?.threads?.[MAIN_THREAD]?.length ?? 0
-
-      // Emit the session id before we touch the model. For brand-new sessions
-      // this lets the client update the URL immediately; for resumed sessions
-      // it's a redundant confirmation but harmless.
-      sendChunk({ sessionId: session.id })
-
-      // Pre-mark every historical tool-call/result ref so the post-stream
-      // sweep doesn't re-emit them into the new turn's agent bubble. See
-      // `collectPriorTurnToolRefs` for the why — empty arrays for a brand-
-      // new session (no existingSession), so this is a no-op on first turns.
-      const priorRefs = collectPriorTurnToolRefs(existingSession?.data)
-
-      // Per-turn AbortController: its signal rides into `sendStream` and the
-      // deadline race (`streamChatToClient`) aborts it on expiry, so a hung
-      // provider call is genuinely cancelled rather than left to finish in the
-      // background. `maxTurns` raises Genkit's default tool-iteration budget
-      // for this bot's legitimately tool-chaining agents.
-      const turnAbort = new AbortController()
-      const firstFinal = await streamChatToClient(
-        chat.sendStream({
-          prompt: message,
-          abortSignal: turnAbort.signal,
-          maxTurns: TOOL_MAX_TURNS,
-        }) as ChatStreamResult,
-        sendChunk,
-        {
-          abortController: turnAbort,
-          preSentToolCalls: priorRefs.calls,
-          preSentToolResults: priorRefs.results,
-          preExistingToolCallCount: priorRefs.callCount,
-          preExistingToolResultCount: priorRefs.resultCount,
-        }
-      )
-
-      // If the model called `transferToAgent`, drive a second turn
-      // under the target agent inside this same request so the user's
-      // message gets answered immediately — no resend needed. Returns
-      // the first turn's response unchanged when no transfer fired.
-      // Non-`HttpsError` failures inside the helper are converted to a
-      // streamed fallback chunk + stub response (see the helper's
-      // `catch`) so the chat ends gracefully instead of the client
-      // seeing an opaque `INTERNAL`. `commitTransferIfRequested` in
-      // the finally below still lands the agent change either way.
-      let final: Awaited<ChatStreamResult["response"]>
-      try {
-        final = await runTransferTurnIfRequested({
-          firstFinal,
-          firstSession: session,
-          preTurnThreadLength,
-          firstActionContext: actionContext,
-          auth,
-          teamId: input.teamId,
-          workspaceId: input.workspaceId,
-          sessionId: session.id,
-          mode: input.mode,
-          contextNodes: input.contextNodes,
-          model: input.model,
-          archivedSessionMessage:
-            "This chat is archived. Restore it before sending new messages.",
-          sendChunk,
-        })
-      } finally {
-        // Safety-net agent-id commit. Idempotent with the second
-        // turn's in-built save when that turn ran cleanly; the
-        // load-bearing case is when the second turn threw before its
-        // save, in which case this guarantees the next user message
-        // still routes to the requested target.
-        await commitTransferIfRequested(
-          input.teamId,
-          input.workspaceId,
-          session.id,
-          actionContext
-        )
-      }
-
-      return {
-        sessionId: session.id,
-        reply: final.text,
-      }
-    } finally {
-      await releaseLock()
-    }
+    return runAgentTurn({
+      principal: { kind: "user", uid: auth.uid },
+      teamId: input.teamId,
+      workspaceId: input.workspaceId,
+      sessionId: input.sessionId ?? null,
+      message,
+      mode: input.mode,
+      model: input.model,
+      contextNodes: input.contextNodes,
+      activeAgentId: input.activeAgentId,
+      pinnedNode: input.pinnedNode,
+      sendChunk,
+      archivedSessionMessage:
+        "This chat is archived. Restore it before sending new messages.",
+    })
   }
 )
 
@@ -2754,6 +3087,11 @@ const respondToBotInterruptFlow = ai.defineFlow(
 
     const { ref, name, response } = input
 
+    // Same monthly token hard-cap as the send path. Resuming an interrupt
+    // still runs the model, so it counts against (and is gated by) the team's
+    // budget.
+    await assertWithinBudget(input.teamId)
+
     // Serialize against concurrent turns on this session (another interrupt
     // response, or a plain send) so the resumed thread can't be clobbered —
     // same rationale as `sendBotMessageFlow`. Interrupts always run on an
@@ -2767,7 +3105,7 @@ const respondToBotInterruptFlow = ai.defineFlow(
     try {
       const { chat, session, actionContext, existingSession } =
         await prepareChatTurn({
-          auth,
+          principal: { kind: "user", uid: auth.uid },
           teamId: input.teamId,
           workspaceId: input.workspaceId,
           sessionId: input.sessionId,
@@ -2913,7 +3251,7 @@ const respondToBotInterruptFlow = ai.defineFlow(
           firstSession: session,
           preTurnThreadLength,
           firstActionContext: actionContext,
-          auth,
+          principal: { kind: "user", uid: auth.uid },
           teamId: input.teamId,
           workspaceId: input.workspaceId,
           sessionId: session.id,

@@ -18,7 +18,8 @@ import {
 import type { DocumentData } from "firebase/firestore"
 import { doc } from "firebase/firestore"
 import { useRoute, useRouter } from "vue-router"
-import { useCurrentUser, useDocument, useIsCurrentUserLoaded } from "vuefire"
+import { useDocumentQuery } from "@/utils/firebase/firebase-query"
+import { useCurrentUser, useIsCurrentUserLoaded } from "vuefire"
 
 definePage({
   // Public profile renders its own PageHeader, so no surrounding layout.
@@ -36,7 +37,7 @@ const currentUser = useCurrentUser()
 const currentUserRef = computed(() =>
   currentUser.value ? doc(firestore, "users", currentUser.value.uid) : null
 )
-const { data: currentUserData } = useDocument(currentUserRef)
+const { data: currentUserData } = useDocumentQuery(currentUserRef)
 
 const username = computed(() => {
   const name = (route.params as { username?: string }).username || ""

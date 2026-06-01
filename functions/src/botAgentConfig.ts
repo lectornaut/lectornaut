@@ -232,6 +232,13 @@ export interface BotAgentToolToggles extends Record<ChatToolName, boolean> {
    */
   customAgents: boolean
   /**
+   * Team-wide gate for custom (user-authored) workflows (Settings →
+   * Workflows). When false, members/admins can't create new custom
+   * workflows; predefined workflows are unaffected. Normalized missing →
+   * `true`.
+   */
+  customWorkflows: boolean
+  /**
    * Team-wide gate for admin-authored custom tools. When false,
    * `listTeamCustomTools` is skipped on the dispatch path and no
    * `defineTool`-built custom tools are registered with Genkit that
@@ -345,6 +352,7 @@ const DEFAULT_BOT_AGENT_CONFIG: BotAgentConfig = {
     manageContent: true,
     readContent: true,
     customAgents: true,
+    customWorkflows: true,
     customTools: true,
   },
   // Default every shipped preset to enabled. Adding a new preset id
@@ -445,6 +453,7 @@ const botAgentConfigUpdateSchema = z.object({
       manageContent: z.boolean(),
       readContent: z.boolean(),
       customAgents: z.boolean(),
+      customWorkflows: z.boolean(),
       customTools: z.boolean(),
     })
     .partial()
@@ -686,6 +695,9 @@ const botAgentConfigDocSchema = z
         ),
         customAgents: cappedToolToggle(
           DEFAULT_BOT_AGENT_CONFIG.tools.customAgents
+        ),
+        customWorkflows: cappedToolToggle(
+          DEFAULT_BOT_AGENT_CONFIG.tools.customWorkflows
         ),
         customTools: cappedToolToggle(
           DEFAULT_BOT_AGENT_CONFIG.tools.customTools

@@ -26,15 +26,15 @@ import {
 import { useAuthStore } from "@/stores/authStore"
 import type { IBotSession } from "@/types/domain"
 import { createWorkspaceBotSessionsQuery } from "@/utils/firebase/firebase-helpers"
+import { useCollectionQuery } from "@/utils/firebase/firebase-query"
 import { storeToRefs } from "pinia"
 import { computed, ref, type ComputedRef, type Ref } from "vue"
 import { toast } from "vue-sonner"
-import { useCollection } from "vuefire"
 
 export interface UseWorkspaceBotSessionsReturn {
   /** Every bot session in the current workspace, ordered by `updatedAt` desc. */
   sessions: ComputedRef<IBotSession[]>
-  /** True while vuefire is still settling the initial snapshot. */
+  /** True while the query is still settling the initial snapshot. */
   isLoading: ComputedRef<boolean>
   /** Admin-or-owner gate. False = render the no-permission empty state. */
   canManage: ComputedRef<boolean>
@@ -60,15 +60,24 @@ export function useWorkspaceBotSessions(): UseWorkspaceBotSessionsReturn {
     return createWorkspaceBotSessionsQuery(teamId, workspaceId)
   })
 
-  const _vuefireSessions = useCollection<IBotSession>(queryRef, {
-    reset: true,
+  const sessionsQuery = useCollectionQuery<IBotSession>(() => {
+    const activeQuery = queryRef.value
+    const teamId = currentTeamId.value
+    const workspaceId = currentWorkspaceId.value
+    return activeQuery && teamId && workspaceId
+      ? {
+          query: activeQuery,
+          path: `teams/${teamId}/workspaces/${workspaceId}/botSessions`,
+          // Distinguishes this unfiltered admin view from useBotChat's
+          // owned/shared queries on the same collection.
+          params: { scope: "workspace-all" },
+        }
+      : null
   })
 
-  const sessions = computed<IBotSession[]>(
-    () => _vuefireSessions.data.value ?? []
-  )
+  const sessions = computed<IBotSession[]>(() => sessionsQuery.data.value ?? [])
 
-  const isLoading = computed<boolean>(() => _vuefireSessions.pending.value)
+  const isLoading = computed<boolean>(() => sessionsQuery.isLoading.value)
 
   // Single in-flight flag shared across all mutation paths — bulk
   // actions in the UI iterate sequentially and rely on this guard to

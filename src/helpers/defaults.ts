@@ -39,6 +39,7 @@ import {
   IconUserCog,
   IconUserRound,
   IconUsersRound,
+  IconWorkflow,
   IconWrench,
 } from "@/data/icons"
 import type {
@@ -567,6 +568,7 @@ export const defaultBotAgentConfig: IBotAgentConfig = {
     manageContent: true,
     readContent: true,
     customAgents: true,
+    customWorkflows: true,
     customTools: true,
   },
   /**
@@ -672,18 +674,18 @@ export const defaultMenu = [
     shortcut: "⌘A",
   },
   {
-    title: "Tasks",
-    action: "Plan and track your tasks",
-    description: "Track work, deadlines, and progress across projects.",
-    url: "/tasks",
-    id: "tasks",
-    icon: IconBadgeCheck,
+    title: "Workflows",
+    action: "Create and manage automations",
+    description: "Automate an agent on a schedule, on changes, or on demand.",
+    url: "/workflows",
+    id: "workflows",
+    icon: IconWorkflow,
     style: {
-      text: "text-green-700/90 dark:text-green-300/90",
-      bg: "bg-green-50 dark:bg-green-950/40",
+      text: "text-violet-700/90 dark:text-violet-300/90",
+      bg: "bg-violet-50 dark:bg-violet-950/40",
       grid: "",
     },
-    shortcut: "⌘T",
+    shortcut: "⌘F",
   },
   {
     title: "Runs",
@@ -1146,7 +1148,6 @@ export const footerSections = [
     title: "Features",
     links: [
       { title: "Agents", href: "#" },
-      { title: "Tasks", href: "#" },
       { title: "Runs", href: "#" },
       { title: "Teams", href: "#" },
       { title: "Builder", href: "#" },
@@ -1466,6 +1467,18 @@ export const defaultSettingsTabs = [
         icon: IconBot,
         id: "agents",
         description: "settings.descriptions.agents",
+      },
+      {
+        name: "settings.titles.workflows",
+        icon: IconWorkflow,
+        id: "workflows",
+        description: "settings.descriptions.workflows",
+      },
+      {
+        name: "settings.titles.runs",
+        icon: IconActivity,
+        id: "runs",
+        description: "settings.descriptions.runs",
       },
     ],
   },

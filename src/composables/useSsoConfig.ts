@@ -12,9 +12,9 @@ import { useLoadingState } from "@/composables/useLoadingState"
 import { firestore } from "@/modules/firebase"
 import type { ITeamSecurityConfig } from "@/types/sso"
 import { defaultLoginMethods, defaultSsoConfig } from "@/types/sso"
-import { doc } from "firebase/firestore"
+import { useDocumentQuery } from "@/utils/firebase/firebase-query"
+import { doc, type DocumentReference } from "firebase/firestore"
 import { toValue, type MaybeRefOrGetter } from "vue"
-import { useDocument } from "vuefire"
 
 type SsoOperation =
   | "save"
@@ -35,11 +35,16 @@ export function useSsoConfig(teamId: MaybeRefOrGetter<string | null>) {
   const securityDocRef = computed(() => {
     const id = toValue(teamId)
     if (!id) return null
-    return doc(firestore, `teams/${id}/settings/security`)
+    // This collection has no Zod converter; assert the row shape on the ref
+    // (what the previous `useDocument<ITeamSecurityConfig>` did implicitly).
+    return doc(
+      firestore,
+      `teams/${id}/settings/security`
+    ) as DocumentReference<ITeamSecurityConfig>
   })
 
-  const { data: securityConfig, pending: loadingConfig } =
-    useDocument<ITeamSecurityConfig>(securityDocRef)
+  const { data: securityConfig, isLoading: loadingConfig } =
+    useDocumentQuery(securityDocRef)
 
   // Computed helpers
   const loginMethods = computed(

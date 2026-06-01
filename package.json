@@ -47,7 +47,10 @@
     "@internationalized/date": "^3.12.2",
     "@lectornaut/shared": "workspace:*",
     "@tailwindcss/vite": "^4.3.0",
+    "@tanstack/query-persist-client-core": "^5.100.14",
+    "@tanstack/query-sync-storage-persister": "^5.100.14",
     "@tanstack/vue-hotkeys": "^0.10.0",
+    "@tanstack/vue-query": "^5.100.14",
     "@tanstack/vue-table": "^8.21.3",
     "@tauri-apps/api": "^2.11.0",
     "@tauri-apps/plugin-autostart": "~2.5.1",
@@ -183,7 +186,7 @@
     "eslint-plugin-vue": "^10.9.1",
     "globals": "^17.6.0",
     "husky": "^9.1.7",
-    "lint-staged": "^17.0.6",
+    "lint-staged": "^17.0.7",
     "prettier": "^3.8.3",
     "prettier-plugin-organize-imports": "^4.3.0",
     "prettier-plugin-tailwindcss": "^0.8.0",
@@ -219,7 +222,8 @@
     "overrides": {
       "vite-plugin-pwa>vite": "$vite",
       "sharp": "^0.34.5",
-      "@lezer/common": "1.5.2"
+      "@lezer/common": "1.5.2",
+      "@internationalized/date": "3.12.2"
     }
   }
 }

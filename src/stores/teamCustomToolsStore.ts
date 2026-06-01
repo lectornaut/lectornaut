@@ -2,11 +2,13 @@
  * Team Custom Tools Store — Firestore-backed catalog of admin-authored
  * Genkit tools. Mirrors `teamAgentsStore.ts` in shape and intent:
  *
- *   - Live subscription to `teams/{teamId}/tools` for any team member
- *     (reads are open by the Firestore rule; writes are callable-only
- *     and gated server-side).
- *   - Race-safe team-switching: stale snapshots after a team switch
- *     are dropped instead of clobbering newer state.
+ *   - Reads via the shared TanStack query cache (`useCollectionQuery`),
+ *     one ref-counted `onSnapshot` per `teams/{teamId}/tools` for any
+ *     team member (reads are open by the Firestore rule; writes are
+ *     callable-only and gated server-side).
+ *   - Race-safe team-switching: the query key embeds the teamId, so a
+ *     late snapshot for the previous team lands under its own unobserved
+ *     key and can't clobber the active team's state — no manual guard.
  *   - Derived views (`selectableTools` / `disabledTools` /
  *     `archivedTools`) mirror the agent lifecycle so the settings UI
  *     can reuse the same active/disabled/archived collapsible pattern.
@@ -32,14 +34,17 @@ import { useAgentConfigStore } from "@/stores/agentConfigStore"
 import { useAuthStore } from "@/stores/authStore"
 import type { ICustomToolAction, ITeamCustomTool } from "@/types/domain"
 import {
+  useCollectionQuery,
+  type CollectionQuerySource,
+} from "@/utils/firebase/firebase-query"
+import {
   collection,
-  onSnapshot,
   Timestamp,
+  type FirestoreDataConverter,
   type QueryDocumentSnapshot,
-  type Unsubscribe,
 } from "firebase/firestore"
 import { defineStore, storeToRefs } from "pinia"
-import { computed, ref, watch } from "vue"
+import { computed, ref } from "vue"
 
 // ─── Defaults ──────────────────────────────────────────────────────────────
 
@@ -194,43 +199,55 @@ export const useTeamCustomToolsStore = defineStore("teamCustomTools", () => {
     () => teamAgentConfig.value.tools.customTools !== false
   )
 
-  const tools = ref<ITeamCustomTool[]>([])
-  const isLoading = ref(false)
   const isSaving = ref(false)
-  const loadError = ref<string | null>(null)
-  const loadedTeamId = ref<string | null>(null)
 
-  let unsubscribe: Unsubscribe | null = null
-
-  const teardownSubscription = (): void => {
-    if (unsubscribe) {
-      unsubscribe()
-      unsubscribe = null
-    }
+  /**
+   * Firestore converter that funnels every read through `snapshotToTool`, so
+   * cached docs are normalized exactly as the old manual mapping did. `teamId`
+   * is recovered from the doc path (`teams/{teamId}/tools/{id}`). `toFirestore`
+   * is never exercised — writes go through the Cloud Functions above.
+   */
+  const toolConverter: FirestoreDataConverter<ITeamCustomTool> = {
+    toFirestore: () => ({}),
+    fromFirestore: (snapshot) =>
+      snapshotToTool(snapshot.ref.parent.parent?.id ?? "", snapshot),
   }
 
-  const startSubscription = (teamId: string): void => {
-    teardownSubscription()
-    isLoading.value = true
-    loadError.value = null
-    const ref = collection(firestore, `teams/${teamId}/tools`)
-    unsubscribe = onSnapshot(
-      ref,
-      (snap) => {
-        if (currentTeamId.value !== teamId) return
-        tools.value = snap.docs.map((doc) => snapshotToTool(teamId, doc))
-        loadedTeamId.value = teamId
-        isLoading.value = false
-      },
-      (error) => {
-        if (currentTeamId.value !== teamId) return
-        console.error("[teamCustomToolsStore] subscription error:", error)
-        loadError.value =
-          error instanceof Error ? error.message : "Failed to load tools."
-        isLoading.value = false
+  /**
+   * Every custom tool for the active team — read through the shared TanStack
+   * cache (one live `onSnapshot` per `teams/{teamId}/tools`, ref-counted and
+   * gc-torn-down by `useCollectionQuery`). The query key embeds the teamId, so
+   * switching teams releases the old listener and renders the new team's cached
+   * data immediately while its listener reconnects — the per-team race guard
+   * the old manual subscription needed is now structural. Writes still flow
+   * through the Cloud Functions above; the listener reflects them within ms.
+   */
+  const toolsQuery = useCollectionQuery<ITeamCustomTool>(
+    (): CollectionQuerySource | null => {
+      const teamId = currentTeamId.value
+      if (!teamId) return null
+      const path = `teams/${teamId}/tools`
+      return {
+        query: collection(firestore, path).withConverter(toolConverter),
+        path,
       }
-    )
-  }
+    }
+  )
+
+  const tools = computed<ITeamCustomTool[]>(() => toolsQuery.data.value ?? [])
+  const isLoading = computed<boolean>(() => toolsQuery.isLoading.value)
+  const loadError = computed<string | null>(
+    () => toolsQuery.error.value?.message ?? null
+  )
+
+  /**
+   * The teamId whose `tools` are currently loaded, or `null` while pending /
+   * teamless. Retained for API compatibility; with per-team query keys it is a
+   * thin derivation of the active team once the first snapshot has landed.
+   */
+  const loadedTeamId = computed<string | null>(() =>
+    toolsQuery.data.value !== undefined ? currentTeamId.value : null
+  )
 
   // ── Derived views ──────────────────────────────────────────────────────
 
@@ -358,24 +375,6 @@ export const useTeamCustomToolsStore = defineStore("teamCustomTools", () => {
       isSaving.value = false
     }
   }
-
-  // ── Lifecycle: (re)subscribe when team flips ──────────────────────────
-
-  watch(
-    currentTeamId,
-    (teamId) => {
-      teardownSubscription()
-      if (!teamId) {
-        tools.value = []
-        loadedTeamId.value = null
-        isLoading.value = false
-        loadError.value = null
-        return
-      }
-      startSubscription(teamId)
-    },
-    { immediate: true }
-  )
 
   return {
     tools,

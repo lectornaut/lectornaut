@@ -162,6 +162,16 @@ const tabContentClass = "overflow-auto overscroll-none scroll-smooth h-full"
                 <SettingsAgents />
               </OverlayScrollbarsWrapper>
             </TabsContent>
+            <TabsContent :class="tabContentClass" value="workflows">
+              <OverlayScrollbarsWrapper>
+                <SettingsWorkflows />
+              </OverlayScrollbarsWrapper>
+            </TabsContent>
+            <TabsContent :class="tabContentClass" value="runs">
+              <OverlayScrollbarsWrapper>
+                <SettingsRuns />
+              </OverlayScrollbarsWrapper>
+            </TabsContent>
             <TabsContent :class="tabContentClass" value="sessions">
               <OverlayScrollbarsWrapper>
                 <SettingsSessions />

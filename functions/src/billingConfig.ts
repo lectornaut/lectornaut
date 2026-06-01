@@ -294,3 +294,74 @@ export async function mapPriceIdToPlan(
 export function getPlanRank(planKey: PlanKey): number {
   return PLAN_ORDER.indexOf(planKey)
 }
+
+/**
+ * Monthly LLM token allowance per plan, in TOTAL tokens (input + output)
+ * summed across every agent turn a team runs in a calendar month —
+ * interactive chat AND autonomous Workflows runs draw from the same pool.
+ * Enforced as a HARD CAP by `assertWithinBudget` (usageMetering.ts): once a
+ * team's `teams/{teamId}/usage/{YYYY-MM}.totalTokens` reaches its allowance,
+ * further turns throw `resource-exhausted` until the month rolls over (or the
+ * team upgrades). `-1` means unlimited.
+ *
+ * Default allowances below — calibrate to your unit economics (cross-check
+ * against `estimateTokenCostUsd` and each plan's price). `-1` = unlimited;
+ * enterprise stays uncapped here but automatic Workflows runs additionally
+ * require entitlement (`assertWorkflowAutomaticEntitled`) and are bounded
+ * per-run by the turn caps, so "unlimited" still can't run away unattended.
+ */
+export const PLAN_TOKEN_ALLOWANCES: Record<PlanKey, number> = {
+  personal: 1_500_000,
+  professional: 25_000_000,
+  business: 150_000_000,
+  enterprise: -1,
+}
+
+/**
+ * Monthly token allowance for a plan. Unknown/missing plans fall back to the
+ * most restrictive (`personal`) so a misconfigured team can never accidentally
+ * get unlimited spend. A negative return means "unlimited".
+ */
+export function getPlanTokenAllowance(
+  planKey: PlanKey | null | undefined
+): number {
+  if (!planKey) return PLAN_TOKEN_ALLOWANCES.personal
+  return PLAN_TOKEN_ALLOWANCES[planKey] ?? PLAN_TOKEN_ALLOWANCES.personal
+}
+
+/**
+ * Approximate per-MILLION-token USD prices `[input, output]` by model family,
+ * matched on a substring of the model wire-name. Used to estimate a Workflows
+ * run's cost (`workflowRun.usage.estimatedCostUsd`) for the Runs view — a
+ * display/budgeting estimate, NOT a billing source of truth. Calibrate to your
+ * provider contracts; unknown models fall back to a conservative default.
+ */
+const MODEL_PRICE_PER_MTOK: {
+  match: string
+  input: number
+  output: number
+}[] = [
+  { match: "opus", input: 15, output: 75 },
+  { match: "sonnet", input: 3, output: 15 },
+  { match: "haiku", input: 1, output: 5 },
+  { match: "gemini-2.5-pro", input: 1.25, output: 10 },
+  { match: "gemini", input: 0.3, output: 2.5 },
+  { match: "gpt-4o-mini", input: 0.15, output: 0.6 },
+  { match: "gpt", input: 2.5, output: 10 },
+]
+const DEFAULT_PRICE_PER_MTOK = { input: 3, output: 15 }
+
+/** Estimated USD cost of a turn/run given its model + token counts. */
+export function estimateTokenCostUsd(
+  model: string | null | undefined,
+  inputTokens: number,
+  outputTokens: number
+): number {
+  const name = (model ?? "").toLowerCase()
+  const price =
+    MODEL_PRICE_PER_MTOK.find((p) => name.includes(p.match)) ??
+    DEFAULT_PRICE_PER_MTOK
+  const inTok = Number.isFinite(inputTokens) ? Math.max(0, inputTokens) : 0
+  const outTok = Number.isFinite(outputTokens) ? Math.max(0, outputTokens) : 0
+  return (inTok * price.input + outTok * price.output) / 1_000_000
+}

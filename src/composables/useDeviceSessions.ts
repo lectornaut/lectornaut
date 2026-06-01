@@ -13,6 +13,7 @@ import { generateRandomString } from "@/helpers/utilities"
 import { auth, firestore } from "@/modules/firebase"
 import { emitter } from "@/modules/mitt"
 import type { IUserSession } from "@/types/session"
+import { useCollectionQuery } from "@/utils/firebase/firebase-query"
 import {
   useDocumentVisibility,
   useEventListener,
@@ -30,7 +31,7 @@ import {
   serverTimestamp,
   updateDoc,
 } from "firebase/firestore"
-import { useCollection, useCurrentUser } from "vuefire"
+import { useCurrentUser } from "vuefire"
 
 const SESSION_ID_KEY = "lectornaut.session.id"
 const SESSION_REGISTERED_KEY = "lectornaut.session.registered"
@@ -569,8 +570,14 @@ export function useDeviceSessions() {
     )
   })
 
-  const { data: sessionsData, pending } =
-    useCollection<IUserSession>(sessionsQueryRef)
+  const { data: sessionsData, isLoading: pending } =
+    useCollectionQuery<IUserSession>(() => {
+      const activeQuery = sessionsQueryRef.value
+      const uid = user.value?.uid
+      return activeQuery && uid
+        ? { query: activeQuery, path: `users/${uid}/sessions` }
+        : null
+    })
 
   // Sort current device to the front, keep the rest sorted by lastActiveAt desc
   const sessions = computed(() => {

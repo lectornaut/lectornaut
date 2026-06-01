@@ -42,6 +42,9 @@ import { HttpsError } from "firebase-functions/v2/https"
 import { z } from "genkit/beta"
 
 import { ai, isAiModelProviderConfigured } from "./genkitClient.js"
+// Type-only imports (erased at runtime — no import cycle with botNodeTools).
+import type { CapturedNodeChange } from "./botNodeTools.js"
+import type { WorkspaceNodeScope } from "./types.js"
 
 // ===========================================================================
 // Modes + action context — the contract tools share with the chat flow
@@ -139,6 +142,16 @@ export interface BotActionContext {
    */
   activeAgentId?: string
   activeAgentName?: string
+  /**
+   * Workflows-only. When present, WRITE tools record each edit here (the run's
+   * changeset). When `captureOnly` is also true (`require_review`), they record
+   * WITHOUT committing — the edit is applied later on admin approval. Absent on
+   * interactive chat, so chat behaviour is unchanged. See `botNodeTools.ts`.
+   */
+  captureSink?: CapturedNodeChange[]
+  captureOnly?: boolean
+  /** Workflows-only. Restricts WRITE tools to a single scope (`targetScope`). */
+  allowedScope?: WorkspaceNodeScope | null
 }
 
 // ===========================================================================

@@ -26,6 +26,7 @@
  *     there's no doc to put `enabled: false` on.
  */
 
+import { DEFAULT_AGENT_ID } from "./agents.js"
 import { admin } from "./firebase.js"
 import type { TeamAgentDoc } from "./teamAgents.js"
 
@@ -183,10 +184,66 @@ export const BUILT_IN_AGENTS: ReadonlyArray<BuiltInAgentDefinition> = [
   },
 ] as const
 
+/**
+ * The team's **Default agent** — a general-purpose persona that workflows
+ * run as when "Run as a specific agent" is off. Unlike the four presets
+ * above it is NOT a togglable preset: it's kept OUT of `BUILT_IN_AGENTS`
+ * (so it never appears in the chat composer's agent picker, which still
+ * represents "default" as `null`/run-under-the-user) but IS merged into
+ * `BUILT_IN_AGENTS_BY_ID` and always prepended by `listBuiltInAgents`, so
+ * a headless run with `agentId === DEFAULT_AGENT_ID` resolves to THIS
+ * persona (its own prompt + full tools) rather than falling through to the
+ * team's base system prompt.
+ *
+ * It carries `member`-level capabilities (see `getMembershipRoleOrNull`'s
+ * special-case in bot.ts) and, when running a workflow, has transfer
+ * enabled — its prompt steers it to hand off to a specialist agent when a
+ * task needs domain expertise or it hits something it can't do itself.
+ * Keep in sync with `DEFAULT_AGENT_DEFINITION` in `src/data/builtInAgents.ts`.
+ */
+export const DEFAULT_AGENT_DEFINITION: BuiltInAgentDefinition = {
+  id: DEFAULT_AGENT_ID,
+  name: "Default",
+  description:
+    "Runs the workflow itself and hands off to a specialist agent when " +
+    "one is better suited.",
+  avatarSeed: "default",
+  systemPromptBase:
+    "You are the team's default automation agent. You run unattended as " +
+    "part of a scheduled or triggered workflow, so there is no human to " +
+    "ask — assess the provided context and the workflow's instructions, " +
+    "then carry the task out end to end with the tools available to you. " +
+    "You can read and edit workspace content. If a task would be handled " +
+    "better by a specialist agent, or you hit something you can't do " +
+    "yourself (a tool reports you lack permission, or it needs domain " +
+    "expertise you don't have), hand off with `transferToAgent` to the " +
+    "most suitable agent instead of stopping. Prefer the smallest, safest " +
+    "change that satisfies the instructions; when torn between options, " +
+    "pick the one most consistent with the existing content.",
+  promptSuffixes: {
+    auto: "",
+    agent:
+      "Chain tools as needed to finish the job. If you're blocked or a " +
+      "specialist would do better, transfer to that agent and let them " +
+      "continue rather than leaving the task half-done.",
+    manual: "",
+  },
+  tools: {
+    ...ALL_TOOLS_ENABLED,
+    // No die rolls in an unattended automation.
+    rollDice: false,
+  },
+}
+
 export const BUILT_IN_AGENTS_BY_ID: Readonly<
   Record<string, BuiltInAgentDefinition>
 > = Object.freeze(
-  Object.fromEntries(BUILT_IN_AGENTS.map((agent) => [agent.id, agent]))
+  Object.fromEntries(
+    [...BUILT_IN_AGENTS, DEFAULT_AGENT_DEFINITION].map((agent) => [
+      agent.id,
+      agent,
+    ])
+  )
 )
 
 export function isBuiltInAgentId(agentId: string | null | undefined): boolean {
@@ -242,7 +299,14 @@ export function listBuiltInAgents(
   teamId: string,
   toggles: Record<string, boolean> | undefined
 ): TeamAgentDoc[] {
-  return BUILT_IN_AGENTS.filter((agent) => toggles?.[agent.id] !== false).map(
-    (agent) => hydrateBuiltInAgent(teamId, agent)
-  )
+  const presets = BUILT_IN_AGENTS.filter(
+    (agent) => toggles?.[agent.id] !== false
+  ).map((agent) => hydrateBuiltInAgent(teamId, agent))
+  // The Default agent is always present (ungated by the toggle map) and
+  // first, so a headless run requested as `DEFAULT_AGENT_ID` resolves to
+  // its persona via `resolveActiveAgent`. It's never a transfer target
+  // (`buildTransferRoster` reads only custom agents) and never surfaces in
+  // user-facing pickers (the client store filters the chat composer to the
+  // four presets), so its presence here is dispatch-only.
+  return [hydrateBuiltInAgent(teamId, DEFAULT_AGENT_DEFINITION), ...presets]
 }

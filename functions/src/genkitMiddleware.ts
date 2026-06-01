@@ -186,6 +186,44 @@ export function tokenBudgetMiddleware(
   }
 }
 
+/** Token counts a single model call reported (zeros when absent). */
+export interface TurnUsage {
+  inputTokens: number
+  outputTokens: number
+}
+
+/**
+ * Metering middleware — records the model response's token usage AFTER the
+ * call resolves. Unlike the chat-flow return (which only carries `text` +
+ * `messages`), the model-layer response DOES expose `usage`, so this is the
+ * one place token counts are observable. Fires once per model call, so a
+ * tool-chaining turn (multiple `generate` round-trips under one `sendStream`)
+ * accumulates every round's usage.
+ *
+ * `onUsage` is invoked best-effort: it must not throw and must not block (the
+ * recorder is expected to be fire-and-forget). A response with no usage (some
+ * providers/fallback paths) is silently skipped.
+ */
+export function meteringMiddleware(
+  onUsage: (usage: TurnUsage) => void
+): ModelMiddleware {
+  return async (req, next) => {
+    const resp = await next(req)
+    try {
+      const usage = (resp as { usage?: Partial<TurnUsage> } | undefined)?.usage
+      if (usage) {
+        onUsage({
+          inputTokens: usage.inputTokens ?? 0,
+          outputTokens: usage.outputTokens ?? 0,
+        })
+      }
+    } catch {
+      // Metering is best-effort — never let it disturb the turn.
+    }
+    return resp
+  }
+}
+
 /**
  * Redaction middleware — scrubs PII patterns from inbound user-role
  * text parts. Touches neither system messages (engineer-authored) nor
@@ -222,11 +260,23 @@ export const redactionMiddleware: ModelMiddleware = async (req, next) => {
  * declared order.
  */
 export function aiMiddlewares(
-  opts: { maxInputTokens?: number } = {}
+  opts: {
+    maxInputTokens?: number
+    /**
+     * When provided, a metering layer is appended (innermost, closest to the
+     * model) so it observes the raw response usage. Used by chat turns to feed
+     * per-team token accounting; omit for surfaces that shouldn't meter.
+     */
+    onUsage?: (usage: TurnUsage) => void
+  } = {}
 ): ModelMiddleware[] {
-  return [
+  const stack: ModelMiddleware[] = [
     loggingMiddleware,
     tokenBudgetMiddleware(opts.maxInputTokens ?? DEFAULT_MAX_INPUT_TOKENS),
     redactionMiddleware,
   ]
+  if (opts.onUsage) {
+    stack.push(meteringMiddleware(opts.onUsage))
+  }
+  return stack
 }

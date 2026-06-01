@@ -14,7 +14,8 @@ import {
 import { generateId } from "@/helpers/utilities"
 import { resolveMimeTypeForUpload } from "@/modules/fileCapture"
 import { firestore } from "@/modules/firebase"
-import { parseSafe } from "@/schemas/_utils"
+import { queryClient } from "@/modules/queryClient"
+import { zodConverter } from "@/schemas/_utils"
 import { workspaceNodeAttachmentSchema } from "@/schemas/nodes"
 import {
   ATTACHMENT_NAME_MAX_LENGTH,
@@ -27,31 +28,35 @@ import {
   getStorageFileRef,
 } from "@/utils/firebase/firebase-helpers"
 import {
-  cloneState,
+  addPending,
   createPendingSet,
-  mergeOptimisticCollection,
-  withOptimisticBatchUpdate,
+  removePending,
+  withCloudSyncOperation,
 } from "@/utils/firebase/firebase-optimistic"
 import {
-  collection,
-  doc,
-  onSnapshot,
-  orderBy,
-  query,
-  Timestamp,
-  type DocumentData,
-  type QueryDocumentSnapshot,
-} from "firebase/firestore"
+  holdOptimistic,
+  useCollectionQuery,
+} from "@/utils/firebase/firebase-query"
+import {
+  queryKeys,
+  type FirestoreQueryKey,
+} from "@/utils/firebase/firebase-query-keys"
+import { collection, doc, orderBy, query, Timestamp } from "firebase/firestore"
 import { uploadBytes } from "firebase/storage"
 import {
   computed,
   onUnmounted,
-  ref,
   shallowRef,
   toValue,
-  watch,
   type MaybeRefOrGetter,
 } from "vue"
+
+// Read-side converter so `useCollectionQuery` parses/validates attachment docs
+// (the collection has no ref-level converter; reads used `toAttachment` before).
+const attachmentConverter = zodConverter<WorkspaceNodeAttachment>(
+  workspaceNodeAttachmentSchema,
+  "attachment"
+)
 
 export interface AttachmentMutationContext {
   teamId: string
@@ -107,28 +112,6 @@ const getAttachmentDocRef = (
     ),
     attachmentId
   )
-
-/**
- * Parse a Firestore snapshot into a `WorkspaceNodeAttachment`. Returns
- * `null` when validation fails — one corrupt attachment should never
- * collapse the whole attachment list. Callers filter nulls via `isAttachment`.
- *
- * Attachment paths are constructed dynamically via the collab helpers and
- * don't flow through a `firebase-helpers.ts` ref getter, so no converter
- * is attached at the ref level — validation happens here instead.
- */
-const toAttachment = (
-  docSnap: QueryDocumentSnapshot<DocumentData>
-): WorkspaceNodeAttachment | null =>
-  parseSafe(
-    workspaceNodeAttachmentSchema,
-    { id: docSnap.id, ...docSnap.data() },
-    `attachment:${docSnap.ref.path}`
-  )
-
-const isAttachment = (
-  attachment: WorkspaceNodeAttachment | null
-): attachment is WorkspaceNodeAttachment => attachment !== null
 
 const toTimestampMs = (
   value:
@@ -429,29 +412,48 @@ export const deleteWorkspaceNodeAttachmentEntry = async (
 export function useNodeAttachmentsState(
   context: MaybeRefOrGetter<AttachmentMutationContext | null>
 ) {
-  const firestoreAttachments = ref<WorkspaceNodeAttachment[]>([])
-  const optimisticAttachments = ref<WorkspaceNodeAttachment[]>([])
   const pendingAttachmentIds = shallowRef(createPendingSet())
-  const loading = ref(false)
-  const error = ref<string | null>(null)
-  const reloadToken = ref(0)
 
-  const attachments = computed(() =>
-    mergeOptimisticCollection(
-      firestoreAttachments.value,
-      optimisticAttachments.value,
-      pendingAttachmentIds.value,
-      {
-        sort: (left, right) =>
-          toTimestampMs(right.updatedAt ?? right.createdAt) -
-          toTimestampMs(left.updatedAt ?? left.createdAt),
-      }
+  const attachmentsCacheKey = (
+    ctx: AttachmentMutationContext
+  ): FirestoreQueryKey =>
+    queryKeys.list(
+      getWorkspaceNodeAttachmentsCollectionPath(
+        ctx.teamId,
+        ctx.workspaceId,
+        ctx.scope,
+        ctx.nodeId
+      )
     )
-  )
 
-  const setOptimisticAttachments = (next: WorkspaceNodeAttachment[]) => {
-    optimisticAttachments.value = sortAttachments(next)
-  }
+  // Realtime attachment list (TanStack Query + onSnapshot), parsed via the Zod
+  // converter. Optimistic writes apply directly into this cache entry and hold
+  // it until the server-applied snapshot reconciles.
+  const attachmentsQuery = useCollectionQuery<WorkspaceNodeAttachment>(() => {
+    const ctx = toValue(context)
+    if (!ctx?.teamId || !ctx.workspaceId || !ctx.nodeId || !ctx.scope) {
+      return null
+    }
+    const path = getWorkspaceNodeAttachmentsCollectionPath(
+      ctx.teamId,
+      ctx.workspaceId,
+      ctx.scope,
+      ctx.nodeId
+    )
+    return {
+      query: query(
+        collection(firestore, path).withConverter(attachmentConverter),
+        orderBy("updatedAt", "desc")
+      ),
+      path,
+    }
+  })
+
+  const attachments = computed(() => attachmentsQuery.data.value ?? [])
+  const loading = computed(() => attachmentsQuery.isLoading.value)
+  const error = computed(() =>
+    attachmentsQuery.error.value ? "Failed to load attachments." : null
+  )
 
   const getRequiredContext = (): AttachmentMutationContext => {
     const resolved = toValue(context)
@@ -462,76 +464,51 @@ export function useNodeAttachmentsState(
   }
 
   const refresh = () => {
-    reloadToken.value += 1
+    const ctx = toValue(context)
+    if (ctx?.teamId && ctx.workspaceId && ctx.nodeId && ctx.scope) {
+      void queryClient.invalidateQueries({ queryKey: attachmentsCacheKey(ctx) })
+    }
   }
 
   const isAttachmentPending = (attachmentId: string) =>
     pendingAttachmentIds.value.has(attachmentId)
 
-  watch(
-    [
-      () => toValue(context)?.teamId ?? null,
-      () => toValue(context)?.workspaceId ?? null,
-      () => toValue(context)?.nodeId ?? null,
-      () => toValue(context)?.scope ?? null,
-      reloadToken,
-    ],
-    ([teamId, workspaceId, nodeId, scope], _oldValue, onCleanup) => {
-      firestoreAttachments.value = []
-      optimisticAttachments.value = []
-      pendingAttachmentIds.value = createPendingSet()
-      error.value = null
-
-      if (!teamId || !workspaceId || !nodeId || !scope) {
-        loading.value = false
-        return
-      }
-
-      loading.value = true
-
-      const unsubscribe = onSnapshot(
-        query(
-          collection(
-            firestore,
-            getWorkspaceNodeAttachmentsCollectionPath(
-              teamId,
-              workspaceId,
-              scope,
-              nodeId
-            )
-          ),
-          orderBy("updatedAt", "desc")
-        ),
-        (snapshot) => {
-          firestoreAttachments.value = snapshot.docs
-            .map(toAttachment)
-            .filter(isAttachment)
-          error.value = null
-          loading.value = false
-        },
-        (snapshotError) => {
-          console.error(
-            "[useNodeAttachments] Failed to subscribe:",
-            snapshotError
-          )
-          firestoreAttachments.value = []
-          error.value = "Failed to load attachments."
-          loading.value = false
-        }
+  // Apply an optimistic transform to the attachments cache, hold the key, run
+  // the Cloud Function, and roll the cache back on failure. Returns the CF
+  // result so callers keep their previous return value.
+  const runAttachmentWrite = async <T>(
+    ctx: AttachmentMutationContext,
+    attachmentIds: string[],
+    applyOptimistic: (
+      current: WorkspaceNodeAttachment[]
+    ) => WorkspaceNodeAttachment[],
+    run: () => Promise<T>,
+    source: string
+  ): Promise<T> => {
+    const key = attachmentsCacheKey(ctx)
+    const previous = queryClient.getQueryData<WorkspaceNodeAttachment[]>(key)
+    const release = holdOptimistic(key)
+    attachmentIds.forEach((id) => addPending(pendingAttachmentIds, id))
+    queryClient.setQueryData<WorkspaceNodeAttachment[]>(
+      key,
+      sortAttachments(
+        applyOptimistic(
+          queryClient.getQueryData<WorkspaceNodeAttachment[]>(key) ?? []
+        )
       )
-
-      onCleanup(() => {
-        unsubscribe()
-      })
-    },
-    { immediate: true }
-  )
-
-  watch(firestoreAttachments, (data) => {
-    if (pendingAttachmentIds.value.size === 0) {
-      optimisticAttachments.value = cloneState(data)
+    )
+    try {
+      return await withCloudSyncOperation(run, { source })
+    } catch (writeError) {
+      queryClient.setQueryData(key, previous)
+      throw writeError
+    } finally {
+      setTimeout(() => {
+        release()
+        attachmentIds.forEach((id) => removePending(pendingAttachmentIds, id))
+      }, 120)
     }
-  })
+  }
 
   onUnmounted(() => {
     pendingAttachmentIds.value = createPendingSet()
@@ -545,48 +522,36 @@ export function useNodeAttachmentsState(
       attachmentId,
       attachmentContext
     )
-    const previousOptimistic = cloneState(optimisticAttachments.value)
+    const key = attachmentsCacheKey(attachmentContext)
 
-    await withOptimisticBatchUpdate(
-      pendingAttachmentIds,
+    await runAttachmentWrite(
+      attachmentContext,
       [attachmentId],
-      () => {
-        setOptimisticAttachments([
-          ...cloneState(attachments.value),
-          optimisticAttachment,
-        ])
-        error.value = null
-      },
-      () => {
-        optimisticAttachments.value = previousOptimistic
-      },
+      (current) => [...current, optimisticAttachment],
       async () => {
         const created = await createWorkspaceNodeAttachmentFromFile(
           file,
           attachmentContext,
-          {
-            attachmentId,
-          }
+          { attachmentId }
         )
-
-        setOptimisticAttachments(
-          cloneState(attachments.value).map((attachment) =>
-            attachment.id === created.attachmentId
-              ? {
-                  ...attachment,
-                  displayName: created.displayName,
-                  originalName: created.originalName,
-                  storagePath: created.storagePath,
-                }
-              : attachment
+        // Patch the optimistic row with the server-resolved fields.
+        queryClient.setQueryData<WorkspaceNodeAttachment[]>(
+          key,
+          (queryClient.getQueryData<WorkspaceNodeAttachment[]>(key) ?? []).map(
+            (attachment) =>
+              attachment.id === created.attachmentId
+                ? {
+                    ...attachment,
+                    displayName: created.displayName,
+                    originalName: created.originalName,
+                    storagePath: created.storagePath,
+                  }
+                : attachment
           )
         )
-
         return created
       },
-      {
-        source: "attachments.create",
-      }
+      "attachments.create"
     )
   }
 
@@ -602,37 +567,31 @@ export function useNodeAttachmentsState(
       ) ?? input.attachment
     const nextDisplayName = validateAttachmentDisplayName(input.displayName)
     const nextFile = input.replacementFile ?? null
-    const previousOptimistic = cloneState(optimisticAttachments.value)
     const now = Timestamp.now()
+    const key = attachmentsCacheKey(attachmentContext)
 
-    await withOptimisticBatchUpdate(
-      pendingAttachmentIds,
+    await runAttachmentWrite(
+      attachmentContext,
       [currentAttachment.id],
-      () => {
-        setOptimisticAttachments(
-          cloneState(attachments.value).map((attachment) =>
-            attachment.id === currentAttachment.id
-              ? {
-                  ...attachment,
-                  displayName: nextDisplayName,
-                  originalName: nextFile?.name ?? attachment.originalName,
-                  mimeType: nextFile
-                    ? (resolveMimeTypeForUpload({
-                        fileName: nextFile.name,
-                        mimeType: nextFile.type,
-                      }) ?? null)
-                    : (attachment.mimeType ?? null),
-                  size: nextFile?.size ?? attachment.size ?? null,
-                  updatedAt: now,
-                  updatedBy: "local",
-                }
-              : attachment
-          )
-        )
-      },
-      () => {
-        optimisticAttachments.value = previousOptimistic
-      },
+      (current) =>
+        current.map((attachment) =>
+          attachment.id === currentAttachment.id
+            ? {
+                ...attachment,
+                displayName: nextDisplayName,
+                originalName: nextFile?.name ?? attachment.originalName,
+                mimeType: nextFile
+                  ? (resolveMimeTypeForUpload({
+                      fileName: nextFile.name,
+                      mimeType: nextFile.type,
+                    }) ?? null)
+                  : (attachment.mimeType ?? null),
+                size: nextFile?.size ?? attachment.size ?? null,
+                updatedAt: now,
+                updatedBy: "local",
+              }
+            : attachment
+        ),
       async () => {
         const updated = await updateWorkspaceNodeAttachmentEntry({
           context: attachmentContext,
@@ -640,63 +599,44 @@ export function useNodeAttachmentsState(
           displayName: nextDisplayName,
           replacementFile: nextFile,
         })
-
-        setOptimisticAttachments(
-          cloneState(attachments.value).map((attachment) =>
-            attachment.id === currentAttachment.id
-              ? {
-                  ...attachment,
-                  displayName: updated.displayName,
-                  originalName: updated.originalName,
-                  storagePath: updated.storagePath,
-                  mimeType: updated.mimeType,
-                  size: updated.size,
-                  updatedAt: now,
-                  updatedBy: "local",
-                }
-              : attachment
+        queryClient.setQueryData<WorkspaceNodeAttachment[]>(
+          key,
+          (queryClient.getQueryData<WorkspaceNodeAttachment[]>(key) ?? []).map(
+            (attachment) =>
+              attachment.id === currentAttachment.id
+                ? {
+                    ...attachment,
+                    displayName: updated.displayName,
+                    originalName: updated.originalName,
+                    storagePath: updated.storagePath,
+                    mimeType: updated.mimeType,
+                    size: updated.size,
+                    updatedAt: now,
+                    updatedBy: "local",
+                  }
+                : attachment
           )
         )
-
         return updated
       },
-      {
-        source: "attachments.update",
-      }
+      "attachments.update"
     )
   }
 
   const deleteAttachment = async (attachment: WorkspaceNodeAttachment) => {
     const attachmentContext = getRequiredContext()
-    const previousOptimistic = cloneState(optimisticAttachments.value)
-    const previousFirestore = cloneState(firestoreAttachments.value)
 
-    await withOptimisticBatchUpdate(
-      pendingAttachmentIds,
+    await runAttachmentWrite(
+      attachmentContext,
       [attachment.id],
-      () => {
-        firestoreAttachments.value = firestoreAttachments.value.filter(
-          (current) => current.id !== attachment.id
-        )
-        setOptimisticAttachments(
-          cloneState(attachments.value).filter(
-            (current) => current.id !== attachment.id
-          )
-        )
-      },
-      () => {
-        optimisticAttachments.value = previousOptimistic
-        firestoreAttachments.value = previousFirestore
-      },
+      (current) => current.filter((entry) => entry.id !== attachment.id),
       async () => {
         await deleteWorkspaceNodeAttachmentEntry(
           attachmentContext,
           attachment.id
         )
       },
-      {
-        source: "attachments.delete",
-      }
+      "attachments.delete"
     )
   }
 

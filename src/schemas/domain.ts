@@ -166,14 +166,9 @@ export const usernameClaimSchema = z.object({
  * Timestamp is expected (current bug).
  *
  * Output types are structurally identical to the non-hydration variants —
- * callers can treat `userHydrationSchema` and `userSchema` as producing
- * the same `IUser` shape.
+ * callers can treat a hydration schema and its base schema as producing
+ * the same output shape.
  */
-
-export const userHydrationSchema = userProfileSchema.extend({
-  createdAt: timestampHydratedSchema,
-  updatedAt: timestampHydratedSchema,
-})
 
 export const userPreferencesHydrationSchema = userPreferencesSchema.extend({
   updatedAt: timestampHydratedSchema.optional(),
@@ -183,13 +178,6 @@ export const membershipPreferencesHydrationSchema =
   membershipPreferencesSchema.extend({
     updatedAt: timestampHydratedSchema.optional(),
   })
-
-export const workspaceHydrationSchema = workspaceSchema.extend({
-  createdAt: timestampHydratedSchema,
-  updatedAt: timestampHydratedSchema,
-})
-
-export const workspacesHydrationSchema = z.array(workspaceHydrationSchema)
 
 // ─── Bot Session ─────────────────────────────────────────────────────────────
 
@@ -423,6 +411,16 @@ export const botAgentToolTogglesSchema = z.object({
    * predate this field keep the feature enabled by default.
    */
   customAgents: z.boolean(),
+  /**
+   * Team-wide gate for the custom (user-authored) workflows feature
+   * (Settings → Workflows). When false, members/admins can't create new
+   * custom workflows — predefined workflows are unaffected. Sibling of
+   * `customAgents`; per-agent docs carry it for shape alignment but it's
+   * ignored there (only the team config's value gates anything). Server
+   * normalizes a missing key to `true`, so teams predating it keep the
+   * feature enabled.
+   */
+  customWorkflows: z.boolean(),
   /**
    * Team-wide gate for the entire custom-tools feature — sibling of
    * `customAgents` for the second axis of admin-authored bot
@@ -870,4 +868,171 @@ export const botSessionSchema = z.object({
    * session automatically — no migration needed.
    */
   activeAgentId: z.string().nullable().optional(),
+})
+
+// ─── Workflows ───────────────────────────────────────────────────────────────
+
+/** Structured schedule presets (mirror `functions/src/workflows.ts`). */
+export const workflowScheduleSchema = z.discriminatedUnion("type", [
+  z.object({
+    type: z.literal("interval"),
+    everyHours: z.number().int().min(1).max(720),
+  }),
+  z.object({
+    type: z.literal("daily"),
+    atMinuteUTC: z.number().int().min(0).max(1439),
+  }),
+  z.object({
+    type: z.literal("weekly"),
+    dayOfWeek: z.number().int().min(0).max(6),
+    atMinuteUTC: z.number().int().min(0).max(1439),
+  }),
+])
+
+export const workflowTriggerSchema = z.discriminatedUnion("type", [
+  z.object({ type: z.literal("schedule"), schedule: workflowScheduleSchema }),
+  // `event` is the brief's `node_change` — fires on a code/write node edit.
+  // `debounceMinutes` coalesces a burst of rapid edits into one run.
+  z.object({
+    type: z.literal("event"),
+    scope: z.enum(["code", "write"]),
+    debounceMinutes: z.number().int().min(0).max(1440).default(0),
+  }),
+  z.object({ type: z.literal("manual") }),
+])
+
+export const workflowNodeRefSchema = z.object({
+  scope: z.enum(["code", "write"]),
+  nodeId: z.string(),
+})
+
+/**
+ * How a run's edits land:
+ *   - `automatic`: the agent writes nodes directly (gated by metering +
+ *     entitlement, see `usageMetering.ts`).
+ *   - `require_review`: edits are captured as a proposed changeset that an
+ *     admin approves before they're applied. Cost-bounded by a human, so it's
+ *     the safe default.
+ */
+export const workflowUpdateModeSchema = z.enum(["automatic", "require_review"])
+
+export const workflowRunStatusSchema = z.enum([
+  "queued",
+  "running",
+  "success", // automatic run that applied its edits directly
+  "awaiting_review", // require_review run: changes captured, pending approval
+  "applied", // require_review run: approved + applied
+  "cancelled", // require_review run: rejected by an admin
+  "error",
+  "blocked", // over budget / not entitled — no spend
+  "skipped", // workflow disabled or removed before it ran
+])
+
+/** A team automation. Written server-side; read here for the admin UI. */
+export const workflowSchema = z.object({
+  id: z.string(),
+  teamId: z.string(),
+  /** null = custom; non-null (e.g. "_grammar") = a seeded predefined instance. */
+  presetKey: z.string().nullable().default(null),
+  name: z.string(),
+  description: z.string().default(""),
+  agentId: z.string(),
+  workspaceId: z.string(),
+  /** Tree the workflow may edit. null = the workspace's `write` tree. */
+  targetScope: z.enum(["code", "write"]).nullable().default(null),
+  /** The procedure the agent follows each run (the brief's `instructions`). */
+  instructions: z.string().default(""),
+  /** Optional supplementary instructions appended to `instructions`. */
+  additionalPrompt: z.string().default(""),
+  trigger: workflowTriggerSchema,
+  contextNodes: z.array(workflowNodeRefSchema).default([]),
+  updateMode: workflowUpdateModeSchema.default("require_review"),
+  enabled: z.boolean(),
+  archivedAt: timestampSchema.nullable().optional(),
+  nextRunAt: timestampSchema.nullable().optional(),
+  lastRunAt: timestampSchema.nullable().optional(),
+  lastRunStatus: workflowRunStatusSchema.nullable().optional(),
+  createdByUid: z.string().optional(),
+  createdAt: timestampSchema.optional(),
+  updatedAt: timestampSchema.optional(),
+})
+
+/**
+ * Write variant — accepts FieldValue sentinels for timestamps and lets the
+ * server fill id / teamId / createdByUid + the denormalized run pointers.
+ */
+export const workflowWriteSchema = workflowSchema.extend({
+  id: z.string().optional(),
+  teamId: z.string().optional(),
+  createdByUid: z.string().optional(),
+  archivedAt: z.union([timestampInputSchema, z.null()]).optional(),
+  nextRunAt: z.union([timestampInputSchema, z.null()]).optional(),
+  lastRunAt: z.union([timestampInputSchema, z.null()]).optional(),
+  createdAt: timestampInputSchema.optional(),
+  updatedAt: timestampInputSchema.optional(),
+})
+
+/** One node edit a run proposed (require_review) or applied (automatic). */
+export const workflowRunChangeSchema = z.object({
+  scope: z.enum(["code", "write"]),
+  nodeId: z.string().nullable(), // null for a create
+  op: z.enum(["create", "update", "rename", "move", "archive"]),
+  summary: z.string(),
+  /** The source node this edit was derived from, if any (citation). */
+  sourceNodeId: z.string().nullable().optional(),
+})
+
+/** What fired a run (the brief's `triggeredBy`). */
+export const workflowRunTriggeredBySchema = z.discriminatedUnion("type", [
+  z.object({ type: z.literal("schedule") }),
+  z.object({
+    type: z.literal("event"),
+    scope: z.enum(["code", "write"]),
+    nodeId: z.string(),
+  }),
+  z.object({ type: z.literal("manual"), uid: z.string() }),
+])
+
+/** Per-run token + estimated-cost accounting (the metering gate's output). */
+export const workflowRunUsageSchema = z.object({
+  model: z.string().nullable(),
+  inputTokens: z.number().int(),
+  outputTokens: z.number().int(),
+  estimatedCostUsd: z.number(),
+})
+
+/** One execution of a workflow (queue + history). */
+export const workflowRunSchema = z.object({
+  id: z.string(),
+  teamId: z.string().optional(),
+  workflowId: z.string(),
+  agentId: z.string(),
+  workspaceId: z.string(),
+  presetKey: z.string().nullable().optional(),
+  /** Snapshot of the workflow's update mode at enqueue (drives the review UI). */
+  updateMode: workflowUpdateModeSchema.optional(),
+  status: workflowRunStatusSchema,
+  triggeredBy: workflowRunTriggeredBySchema.optional(),
+  /** Node edits this run proposed/applied; empty until the agent acts. */
+  changes: z.array(workflowRunChangeSchema).default([]),
+  usage: workflowRunUsageSchema.nullable().optional(),
+  /** Snapshot of the composed instruction the agent ran (for history). */
+  prompt: z.string().optional(),
+  sessionId: z.string().optional(),
+  replyPreview: z.string().optional(),
+  error: z.string().optional(),
+  /** Admin who approved/rejected a require_review run. */
+  reviewedByUid: z.string().nullable().optional(),
+  queuedAt: timestampSchema.nullable().optional(),
+  startedAt: timestampSchema.nullable().optional(),
+  finishedAt: timestampSchema.nullable().optional(),
+  reviewedAt: timestampSchema.nullable().optional(),
+})
+
+export const workflowRunWriteSchema = workflowRunSchema.extend({
+  id: z.string().optional(),
+  queuedAt: z.union([timestampInputSchema, z.null()]).optional(),
+  startedAt: z.union([timestampInputSchema, z.null()]).optional(),
+  finishedAt: z.union([timestampInputSchema, z.null()]).optional(),
+  reviewedAt: z.union([timestampInputSchema, z.null()]).optional(),
 })

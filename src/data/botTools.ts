@@ -5,12 +5,12 @@
  * + interrupt tools), `functions/src/botRag.ts` (semantic search),
  * and `functions/src/botSummarize.ts` (structured summarization).
  *
- * `BotToolName` excludes `customAgents`, `customTools`,
+ * `BotToolName` excludes `customAgents`, `customWorkflows`, `customTools`,
  * `summarizeNodeInspector`, `manageContent`, AND `readContent`
  * deliberately — those keys on `IBotAgentToolToggles` are *feature gates*
- * (whole custom-agents UI; whole custom-tools UI; the node inspector's
- * Generate-summary button; the node-WRITE tool block; the node-READ tool
- * block) rather than single model-callable tools. Including any in this
+ * (whole custom-agents UI; whole custom-workflows UI; whole custom-tools UI;
+ * the node inspector's Generate-summary button; the node-WRITE tool block;
+ * the node-READ tool block) rather than single model-callable tools. Including any in this
  * catalog would surface a meaningless entry in the composer's slash menu.
  * (`manageContent` / `readContent` still get per-agent toggles, but the
  * agent editor appends those rows explicitly — see
@@ -59,6 +59,7 @@ import type { Component } from "vue"
 export type BotToolName = Exclude<
   keyof IBotAgentToolToggles,
   | "customAgents"
+  | "customWorkflows"
   | "customTools"
   | "summarizeNodeInspector"
   | "manageContent"

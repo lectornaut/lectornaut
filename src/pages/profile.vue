@@ -11,7 +11,8 @@ import { getInitials } from "@/helpers/utilities"
 import { firestore } from "@/modules/firebase"
 import { emitter } from "@/modules/mitt"
 import { doc } from "firebase/firestore"
-import { useCurrentUser, useDocument } from "vuefire"
+import { useDocumentQuery } from "@/utils/firebase/firebase-query"
+import { useCurrentUser } from "vuefire"
 
 definePage({
   meta: {
@@ -32,7 +33,7 @@ const user = useCurrentUser()
 const userDocRef = computed(() =>
   user.value ? doc(firestore, "users", user.value.uid) : null
 )
-const { data: userData } = useDocument(userDocRef)
+const { data: userData } = useDocumentQuery(userDocRef)
 const isPublic = computed(() => userData.value?.isPublic ?? false)
 const username = computed(() => userData.value?.username ?? "")
 const {

@@ -76,6 +76,30 @@ function nodesCollectionPath(
 
 // ─── Shared context + result shapes ──────────────────────────────────────────
 
+/** Op kinds a WRITE tool can record for review / audit. */
+export type NodeChangeOp =
+  | "create"
+  | "update"
+  | "rename"
+  | "move"
+  | "archive"
+  | "unarchive"
+
+/**
+ * A node edit recorded by a WRITE tool. In `require_review` (capture-only)
+ * mode it's a PROPOSAL replayed on approval; in `automatic` mode it's an
+ * audit record of an edit already applied. `input` is the verbatim tool input
+ * so `applyProposedChange` can re-run it.
+ */
+export interface CapturedNodeChange {
+  op: NodeChangeOp
+  scope: WorkspaceNodeScope
+  nodeId: string | null
+  summary: string
+  input: Record<string, unknown>
+  sourceNodeId?: string | null
+}
+
 interface NodeToolContext {
   auth?: { uid?: string }
   teamId?: string
@@ -86,9 +110,26 @@ interface NodeToolContext {
   canReadNodes?: boolean
   activeAgentId?: string
   activeAgentName?: string
+  /**
+   * When present, WRITE tools push a {@link CapturedNodeChange} here. Set by
+   * the Workflows worker so a headless run's edits are recorded (for the run's
+   * changeset + cost view).
+   */
+  captureSink?: CapturedNodeChange[]
+  /**
+   * When true (a `require_review` workflow run), WRITE tools record the change
+   * into `captureSink` and return success WITHOUT committing — the edit is
+   * applied later, on admin approval, via {@link applyProposedChange}.
+   */
+  captureOnly?: boolean
+  /**
+   * When set, WRITE tools refuse edits to any other scope — enforces a
+   * workflow's `targetScope` so an automation can't wander outside its tree.
+   */
+  allowedScope?: WorkspaceNodeScope | null
 }
 
-interface ResolvedNodeContext {
+export interface ResolvedNodeContext {
   teamId: string
   workspaceId: string
   agentId: string
@@ -134,6 +175,54 @@ function resolveNodeContext(
     agentName: ctx.activeAgentName ?? "Agent",
     actorUid: ctx.auth?.uid ?? "",
   }
+}
+
+type MutationResult = {
+  ok: boolean
+  nodeId?: string
+  name?: string
+  message: string
+}
+
+/** Reject a WRITE op whose scope is outside the run's allowed target tree. */
+function scopeBlocked(
+  context: unknown,
+  scope: WorkspaceNodeScope
+): MutationResult | null {
+  const ctx = (context ?? {}) as NodeToolContext
+  if (ctx.allowedScope && ctx.allowedScope !== scope) {
+    return {
+      ok: false,
+      message:
+        `This workflow may only edit the "${ctx.allowedScope}" tree, ` +
+        `not the "${scope}" tree.`,
+    }
+  }
+  return null
+}
+
+/**
+ * Record a WRITE op on the run's capture sink (if present). In capture-only
+ * mode (a `require_review` run) returns a success result so the caller SKIPS
+ * committing — the edit is applied later on approval via
+ * {@link applyProposedChange}. Otherwise returns null and the caller commits.
+ */
+function captureGate(
+  context: unknown,
+  change: CapturedNodeChange
+): MutationResult | null {
+  const ctx = (context ?? {}) as NodeToolContext
+  if (ctx.captureSink) ctx.captureSink.push(change)
+  if (ctx.captureOnly) {
+    return {
+      ok: true,
+      nodeId: change.nodeId ?? undefined,
+      name:
+        typeof change.input.name === "string" ? change.input.name : undefined,
+      message: `Proposed for review: ${change.summary}`,
+    }
+  }
+  return null
 }
 
 const nodeScopeSchema = z
@@ -206,94 +295,119 @@ export const createNodeTool = ai.defineTool(
   async (input, { context }) => {
     const resolved = resolveNodeContext(context)
     if ("error" in resolved) return { ok: false, message: resolved.error }
-    const { teamId, workspaceId, agentId, agentName, actorUid } = resolved
-
-    const named = validateName(input.name)
-    if ("error" in named) return { ok: false, message: named.error }
-    const { name } = named
-
-    const scope = input.scope
-    const type = input.type
-    const parentId =
-      typeof input.parentId === "string" && input.parentId.trim()
-        ? input.parentId.trim()
-        : ROOT_PARENT_ID
-
-    try {
-      const nodeId = await db.runTransaction(async (transaction) => {
-        if (parentId !== ROOT_PARENT_ID) {
-          const parentRef = db.doc(
-            `${nodesCollectionPath(teamId, workspaceId, scope)}/${parentId}`
-          )
-          const parentSnap = await transaction.get(parentRef)
-          if (!parentSnap.exists) throw new Error("Parent folder not found.")
-          const parentData = parentSnap.data() ?? {}
-          if (parentData.type !== "folder") {
-            throw new Error("Parent must be a folder.")
-          }
-          if (parentData.isArchived)
-            throw new Error("Parent folder is archived.")
-        }
-
-        const nodeRef = db
-          .collection(nodesCollectionPath(teamId, workspaceId, scope))
-          .doc()
-        const now = admin.firestore.FieldValue.serverTimestamp()
-        const nameLower = toNameLower(name)
-        const fileContent =
-          type === "file" && typeof input.content === "string" && input.content
-            ? serializeContent(scope, input.content)
-            : ""
-
-        transaction.set(nodeRef, {
-          workspaceId,
-          type,
-          typeOrder: getTypeOrder(type),
-          name,
-          nameLower,
-          parentId,
-          isArchived: false,
-          createdAt: now,
-          createdBy: agentId,
-          updatedAt: now,
-          updatedBy: agentId,
-          sortKey: nameLower,
-          ...(type === "file" ? { content: fileContent } : {}),
-        })
-
-        await logEvent(
-          {
-            teamId,
-            workspaceId,
-            actor: { userId: actorUid, agentId, agentName },
-            action: "content.create",
-            resource: {
-              type: "content",
-              id: nodeRef.id,
-              parentId: workspaceId,
-            },
-            changes: {
-              fields: ["name", "type", "parentId"],
-              after: { name, type, parentId },
-            },
-          },
-          { transaction }
-        )
-
-        return nodeRef.id
-      })
-
-      return {
-        ok: true,
-        nodeId,
-        name,
-        message: `Created ${type} "${name}".`,
-      }
-    } catch (error) {
-      return { ok: false, message: (error as Error).message }
-    }
+    const blocked = scopeBlocked(context, input.scope)
+    if (blocked) return blocked
+    const gated = captureGate(context, {
+      op: "create",
+      scope: input.scope,
+      nodeId: null,
+      summary: `Create ${input.type} "${input.name}"`,
+      input: { ...input },
+    })
+    if (gated) return gated
+    return applyCreateNode(resolved, input)
   }
 )
+
+interface CreateNodeInput {
+  scope: WorkspaceNodeScope
+  type: "file" | "folder"
+  name: string
+  parentId?: string
+  content?: string
+}
+
+/** Commit core for `createNode` — shared by the live tool + approval replay. */
+export async function applyCreateNode(
+  resolved: ResolvedNodeContext,
+  input: CreateNodeInput
+): Promise<MutationResult> {
+  const { teamId, workspaceId, agentId, agentName, actorUid } = resolved
+
+  const named = validateName(input.name)
+  if ("error" in named) return { ok: false, message: named.error }
+  const { name } = named
+
+  const scope = input.scope
+  const type = input.type
+  const parentId =
+    typeof input.parentId === "string" && input.parentId.trim()
+      ? input.parentId.trim()
+      : ROOT_PARENT_ID
+
+  try {
+    const nodeId = await db.runTransaction(async (transaction) => {
+      if (parentId !== ROOT_PARENT_ID) {
+        const parentRef = db.doc(
+          `${nodesCollectionPath(teamId, workspaceId, scope)}/${parentId}`
+        )
+        const parentSnap = await transaction.get(parentRef)
+        if (!parentSnap.exists) throw new Error("Parent folder not found.")
+        const parentData = parentSnap.data() ?? {}
+        if (parentData.type !== "folder") {
+          throw new Error("Parent must be a folder.")
+        }
+        if (parentData.isArchived) throw new Error("Parent folder is archived.")
+      }
+
+      const nodeRef = db
+        .collection(nodesCollectionPath(teamId, workspaceId, scope))
+        .doc()
+      const now = admin.firestore.FieldValue.serverTimestamp()
+      const nameLower = toNameLower(name)
+      const fileContent =
+        type === "file" && typeof input.content === "string" && input.content
+          ? serializeContent(scope, input.content)
+          : ""
+
+      transaction.set(nodeRef, {
+        workspaceId,
+        type,
+        typeOrder: getTypeOrder(type),
+        name,
+        nameLower,
+        parentId,
+        isArchived: false,
+        createdAt: now,
+        createdBy: agentId,
+        updatedAt: now,
+        updatedBy: agentId,
+        sortKey: nameLower,
+        ...(type === "file" ? { content: fileContent } : {}),
+      })
+
+      await logEvent(
+        {
+          teamId,
+          workspaceId,
+          actor: { userId: actorUid || undefined, agentId, agentName },
+          action: "content.create",
+          resource: {
+            type: "content",
+            id: nodeRef.id,
+            parentId: workspaceId,
+          },
+          changes: {
+            fields: ["name", "type", "parentId"],
+            after: { name, type, parentId },
+          },
+        },
+        { transaction }
+      )
+
+      return nodeRef.id
+    })
+
+    return {
+      ok: true,
+      nodeId,
+      name,
+      message: `Created ${type} "${name}".`,
+    }
+  } catch (error) {
+    return { ok: false, message: (error as Error).message }
+  }
+}
 
 // ─── readNode ────────────────────────────────────────────────────────────────
 
@@ -426,72 +540,96 @@ export const updateNodeContentTool = ai.defineTool(
   async (input, { context }) => {
     const resolved = resolveNodeContext(context)
     if ("error" in resolved) return { ok: false, message: resolved.error }
-    const { teamId, workspaceId, agentId, agentName, actorUid } = resolved
-
-    const scope = input.scope
-    const nodeId = input.nodeId
-    const content = serializeContent(scope, input.content ?? "")
-
-    try {
-      await db.runTransaction(async (transaction) => {
-        const nodeRef = db.doc(
-          `${nodesCollectionPath(teamId, workspaceId, scope)}/${nodeId}`
-        )
-        const nodeSnap = await transaction.get(nodeRef)
-        if (!nodeSnap.exists) throw new Error("File not found.")
-        const before = nodeSnap.data() ?? {}
-        if (before.type !== "file") throw new Error("Only files have content.")
-        if (before.isArchived) throw new Error("Cannot edit an archived file.")
-
-        const now = admin.firestore.FieldValue.serverTimestamp()
-        transaction.update(nodeRef, {
-          content,
-          updatedAt: now,
-          updatedBy: agentId,
-        })
-
-        // Invalidate the live collaborative snapshot so a *fresh* open re-seeds
-        // from the new `content` instead of restoring the stale pre-edit CRDT.
-        transaction.delete(db.doc(`snapshots/${nodeId}`))
-
-        // Relay the new content to any client currently in this doc's collab
-        // room. One elected editor (client-side) applies it through its live
-        // editor binding — propagating to other peers via the WebRTC mesh and
-        // re-saving the snapshot — so the edit shows up live without a reopen.
-        // `seq` increments each edit so clients distinguish a new edit from the
-        // baseline they subscribed on. Single overwritten doc → no growth.
-        transaction.set(
-          db.doc(`signaling/${nodeId}/agentRelay/state`),
-          {
-            scope,
-            content,
-            by: agentId,
-            byName: agentName,
-            seq: admin.firestore.FieldValue.increment(1),
-            updatedAt: now,
-          },
-          { merge: true }
-        )
-
-        await logEvent(
-          {
-            teamId,
-            workspaceId,
-            actor: { userId: actorUid, agentId, agentName },
-            action: "content.update",
-            resource: { type: "content", id: nodeId, parentId: workspaceId },
-            changes: { fields: ["content"] },
-          },
-          { transaction }
-        )
-      })
-
-      return { ok: true, nodeId, message: "Updated file content." }
-    } catch (error) {
-      return { ok: false, message: (error as Error).message }
-    }
+    const blocked = scopeBlocked(context, input.scope)
+    if (blocked) return blocked
+    const gated = captureGate(context, {
+      op: "update",
+      scope: input.scope,
+      nodeId: input.nodeId,
+      summary: `Replace content of ${input.nodeId}`,
+      input: { ...input },
+    })
+    if (gated) return gated
+    return applyUpdateNodeContent(resolved, input)
   }
 )
+
+interface UpdateNodeContentInput {
+  scope: WorkspaceNodeScope
+  nodeId: string
+  content?: string
+}
+
+/** Commit core for `updateNodeContent` — shared by the live tool + replay. */
+export async function applyUpdateNodeContent(
+  resolved: ResolvedNodeContext,
+  input: UpdateNodeContentInput
+): Promise<MutationResult> {
+  const { teamId, workspaceId, agentId, agentName, actorUid } = resolved
+
+  const scope = input.scope
+  const nodeId = input.nodeId
+  const content = serializeContent(scope, input.content ?? "")
+
+  try {
+    await db.runTransaction(async (transaction) => {
+      const nodeRef = db.doc(
+        `${nodesCollectionPath(teamId, workspaceId, scope)}/${nodeId}`
+      )
+      const nodeSnap = await transaction.get(nodeRef)
+      if (!nodeSnap.exists) throw new Error("File not found.")
+      const before = nodeSnap.data() ?? {}
+      if (before.type !== "file") throw new Error("Only files have content.")
+      if (before.isArchived) throw new Error("Cannot edit an archived file.")
+
+      const now = admin.firestore.FieldValue.serverTimestamp()
+      transaction.update(nodeRef, {
+        content,
+        updatedAt: now,
+        updatedBy: agentId,
+      })
+
+      // Invalidate the live collaborative snapshot so a *fresh* open re-seeds
+      // from the new `content` instead of restoring the stale pre-edit CRDT.
+      transaction.delete(db.doc(`snapshots/${nodeId}`))
+
+      // Relay the new content to any client currently in this doc's collab
+      // room. One elected editor (client-side) applies it through its live
+      // editor binding — propagating to other peers via the WebRTC mesh and
+      // re-saving the snapshot — so the edit shows up live without a reopen.
+      // `seq` increments each edit so clients distinguish a new edit from the
+      // baseline they subscribed on. Single overwritten doc → no growth.
+      transaction.set(
+        db.doc(`signaling/${nodeId}/agentRelay/state`),
+        {
+          scope,
+          content,
+          by: agentId,
+          byName: agentName,
+          seq: admin.firestore.FieldValue.increment(1),
+          updatedAt: now,
+        },
+        { merge: true }
+      )
+
+      await logEvent(
+        {
+          teamId,
+          workspaceId,
+          actor: { userId: actorUid || undefined, agentId, agentName },
+          action: "content.update",
+          resource: { type: "content", id: nodeId, parentId: workspaceId },
+          changes: { fields: ["content"] },
+        },
+        { transaction }
+      )
+    })
+
+    return { ok: true, nodeId, message: "Updated file content." }
+  } catch (error) {
+    return { ok: false, message: (error as Error).message }
+  }
+}
 
 // ─── renameNode ──────────────────────────────────────────────────────────────
 
@@ -511,53 +649,77 @@ export const renameNodeTool = ai.defineTool(
   async (input, { context }) => {
     const resolved = resolveNodeContext(context)
     if ("error" in resolved) return { ok: false, message: resolved.error }
-    const { teamId, workspaceId, agentId, agentName, actorUid } = resolved
-
-    const named = validateName(input.name)
-    if ("error" in named) return { ok: false, message: named.error }
-    const { name } = named
-    const { scope, nodeId } = input
-
-    try {
-      await db.runTransaction(async (transaction) => {
-        const nodeRef = db.doc(
-          `${nodesCollectionPath(teamId, workspaceId, scope)}/${nodeId}`
-        )
-        const nodeSnap = await transaction.get(nodeRef)
-        if (!nodeSnap.exists) throw new Error("Node not found.")
-        if ((nodeSnap.data() ?? {}).isArchived) {
-          throw new Error("Cannot rename an archived node.")
-        }
-
-        const now = admin.firestore.FieldValue.serverTimestamp()
-        const nameLower = toNameLower(name)
-        transaction.update(nodeRef, {
-          name,
-          nameLower,
-          sortKey: nameLower,
-          updatedAt: now,
-          updatedBy: agentId,
-        })
-
-        await logEvent(
-          {
-            teamId,
-            workspaceId,
-            actor: { userId: actorUid, agentId, agentName },
-            action: "content.rename",
-            resource: { type: "content", id: nodeId, parentId: workspaceId },
-            changes: { fields: ["name"], after: { name } },
-          },
-          { transaction }
-        )
-      })
-
-      return { ok: true, nodeId, name, message: `Renamed to "${name}".` }
-    } catch (error) {
-      return { ok: false, message: (error as Error).message }
-    }
+    const blocked = scopeBlocked(context, input.scope)
+    if (blocked) return blocked
+    const gated = captureGate(context, {
+      op: "rename",
+      scope: input.scope,
+      nodeId: input.nodeId,
+      summary: `Rename ${input.nodeId} to "${input.name}"`,
+      input: { ...input },
+    })
+    if (gated) return gated
+    return applyRenameNode(resolved, input)
   }
 )
+
+interface RenameNodeInput {
+  scope: WorkspaceNodeScope
+  nodeId: string
+  name: string
+}
+
+/** Commit core for `renameNode` — shared by the live tool + replay. */
+export async function applyRenameNode(
+  resolved: ResolvedNodeContext,
+  input: RenameNodeInput
+): Promise<MutationResult> {
+  const { teamId, workspaceId, agentId, agentName, actorUid } = resolved
+
+  const named = validateName(input.name)
+  if ("error" in named) return { ok: false, message: named.error }
+  const { name } = named
+  const { scope, nodeId } = input
+
+  try {
+    await db.runTransaction(async (transaction) => {
+      const nodeRef = db.doc(
+        `${nodesCollectionPath(teamId, workspaceId, scope)}/${nodeId}`
+      )
+      const nodeSnap = await transaction.get(nodeRef)
+      if (!nodeSnap.exists) throw new Error("Node not found.")
+      if ((nodeSnap.data() ?? {}).isArchived) {
+        throw new Error("Cannot rename an archived node.")
+      }
+
+      const now = admin.firestore.FieldValue.serverTimestamp()
+      const nameLower = toNameLower(name)
+      transaction.update(nodeRef, {
+        name,
+        nameLower,
+        sortKey: nameLower,
+        updatedAt: now,
+        updatedBy: agentId,
+      })
+
+      await logEvent(
+        {
+          teamId,
+          workspaceId,
+          actor: { userId: actorUid || undefined, agentId, agentName },
+          action: "content.rename",
+          resource: { type: "content", id: nodeId, parentId: workspaceId },
+          changes: { fields: ["name"], after: { name } },
+        },
+        { transaction }
+      )
+    })
+
+    return { ok: true, nodeId, name, message: `Renamed to "${name}".` }
+  } catch (error) {
+    return { ok: false, message: (error as Error).message }
+  }
+}
 
 // ─── moveNode ────────────────────────────────────────────────────────────────
 
@@ -583,69 +745,92 @@ export const moveNodeTool = ai.defineTool(
   async (input, { context }) => {
     const resolved = resolveNodeContext(context)
     if ("error" in resolved) return { ok: false, message: resolved.error }
-    const { teamId, workspaceId, agentId, agentName, actorUid } = resolved
-
-    const { scope, nodeId } = input
-    const parentId =
-      typeof input.parentId === "string" && input.parentId.trim()
-        ? input.parentId.trim()
-        : ROOT_PARENT_ID
-
-    if (nodeId === parentId) {
-      return { ok: false, message: "A node cannot be its own parent." }
-    }
-
-    try {
-      await db.runTransaction(async (transaction) => {
-        const nodeRef = db.doc(
-          `${nodesCollectionPath(teamId, workspaceId, scope)}/${nodeId}`
-        )
-        const nodeSnap = await transaction.get(nodeRef)
-        if (!nodeSnap.exists) throw new Error("Node not found.")
-        if ((nodeSnap.data() ?? {}).isArchived) {
-          throw new Error("Cannot move an archived node.")
-        }
-
-        if (parentId !== ROOT_PARENT_ID) {
-          const parentRef = db.doc(
-            `${nodesCollectionPath(teamId, workspaceId, scope)}/${parentId}`
-          )
-          const parentSnap = await transaction.get(parentRef)
-          if (!parentSnap.exists) throw new Error("Parent folder not found.")
-          const parentData = parentSnap.data() ?? {}
-          if (parentData.type !== "folder") {
-            throw new Error("Parent must be a folder.")
-          }
-          if (parentData.isArchived)
-            throw new Error("Parent folder is archived.")
-        }
-
-        const now = admin.firestore.FieldValue.serverTimestamp()
-        transaction.update(nodeRef, {
-          parentId,
-          updatedAt: now,
-          updatedBy: agentId,
-        })
-
-        await logEvent(
-          {
-            teamId,
-            workspaceId,
-            actor: { userId: actorUid, agentId, agentName },
-            action: "content.move",
-            resource: { type: "content", id: nodeId, parentId: workspaceId },
-            changes: { fields: ["parentId"], after: { parentId } },
-          },
-          { transaction }
-        )
-      })
-
-      return { ok: true, nodeId, message: "Moved node." }
-    } catch (error) {
-      return { ok: false, message: (error as Error).message }
-    }
+    const blocked = scopeBlocked(context, input.scope)
+    if (blocked) return blocked
+    const gated = captureGate(context, {
+      op: "move",
+      scope: input.scope,
+      nodeId: input.nodeId,
+      summary: `Move ${input.nodeId} to ${input.parentId ?? "root"}`,
+      input: { ...input },
+    })
+    if (gated) return gated
+    return applyMoveNode(resolved, input)
   }
 )
+
+interface MoveNodeInput {
+  scope: WorkspaceNodeScope
+  nodeId: string
+  parentId?: string
+}
+
+/** Commit core for `moveNode` — shared by the live tool + replay. */
+export async function applyMoveNode(
+  resolved: ResolvedNodeContext,
+  input: MoveNodeInput
+): Promise<MutationResult> {
+  const { teamId, workspaceId, agentId, agentName, actorUid } = resolved
+
+  const { scope, nodeId } = input
+  const parentId =
+    typeof input.parentId === "string" && input.parentId.trim()
+      ? input.parentId.trim()
+      : ROOT_PARENT_ID
+
+  if (nodeId === parentId) {
+    return { ok: false, message: "A node cannot be its own parent." }
+  }
+
+  try {
+    await db.runTransaction(async (transaction) => {
+      const nodeRef = db.doc(
+        `${nodesCollectionPath(teamId, workspaceId, scope)}/${nodeId}`
+      )
+      const nodeSnap = await transaction.get(nodeRef)
+      if (!nodeSnap.exists) throw new Error("Node not found.")
+      if ((nodeSnap.data() ?? {}).isArchived) {
+        throw new Error("Cannot move an archived node.")
+      }
+
+      if (parentId !== ROOT_PARENT_ID) {
+        const parentRef = db.doc(
+          `${nodesCollectionPath(teamId, workspaceId, scope)}/${parentId}`
+        )
+        const parentSnap = await transaction.get(parentRef)
+        if (!parentSnap.exists) throw new Error("Parent folder not found.")
+        const parentData = parentSnap.data() ?? {}
+        if (parentData.type !== "folder") {
+          throw new Error("Parent must be a folder.")
+        }
+        if (parentData.isArchived) throw new Error("Parent folder is archived.")
+      }
+
+      const now = admin.firestore.FieldValue.serverTimestamp()
+      transaction.update(nodeRef, {
+        parentId,
+        updatedAt: now,
+        updatedBy: agentId,
+      })
+
+      await logEvent(
+        {
+          teamId,
+          workspaceId,
+          actor: { userId: actorUid || undefined, agentId, agentName },
+          action: "content.move",
+          resource: { type: "content", id: nodeId, parentId: workspaceId },
+          changes: { fields: ["parentId"], after: { parentId } },
+        },
+        { transaction }
+      )
+    })
+
+    return { ok: true, nodeId, message: "Moved node." }
+  } catch (error) {
+    return { ok: false, message: (error as Error).message }
+  }
+}
 
 // ─── archive / unarchive ─────────────────────────────────────────────────────
 
@@ -669,55 +854,79 @@ function defineArchiveTool(archived: boolean) {
     async (input, { context }) => {
       const resolved = resolveNodeContext(context)
       if ("error" in resolved) return { ok: false, message: resolved.error }
-      const { teamId, workspaceId, agentId, agentName, actorUid } = resolved
-      const { scope, nodeId } = input
-
-      try {
-        await db.runTransaction(async (transaction) => {
-          const nodeRef = db.doc(
-            `${nodesCollectionPath(teamId, workspaceId, scope)}/${nodeId}`
-          )
-          const nodeSnap = await transaction.get(nodeRef)
-          if (!nodeSnap.exists) throw new Error("Node not found.")
-          if (Boolean((nodeSnap.data() ?? {}).isArchived) === archived) {
-            throw new Error(
-              archived ? "Node is already archived." : "Node is not archived."
-            )
-          }
-
-          const now = admin.firestore.FieldValue.serverTimestamp()
-          transaction.update(nodeRef, {
-            isArchived: archived,
-            updatedAt: now,
-            updatedBy: agentId,
-          })
-
-          await logEvent(
-            {
-              teamId,
-              workspaceId,
-              actor: { userId: actorUid, agentId, agentName },
-              action: archived ? "content.archive" : "content.unarchive",
-              resource: { type: "content", id: nodeId, parentId: workspaceId },
-              changes: {
-                fields: ["isArchived"],
-                after: { isArchived: archived },
-              },
-            },
-            { transaction }
-          )
-        })
-
-        return {
-          ok: true,
-          nodeId,
-          message: archived ? "Archived node." : "Restored node.",
-        }
-      } catch (error) {
-        return { ok: false, message: (error as Error).message }
-      }
+      const blocked = scopeBlocked(context, input.scope)
+      if (blocked) return blocked
+      const gated = captureGate(context, {
+        op: archived ? "archive" : "unarchive",
+        scope: input.scope,
+        nodeId: input.nodeId,
+        summary: `${archived ? "Archive" : "Restore"} ${input.nodeId}`,
+        input: { ...input },
+      })
+      if (gated) return gated
+      return applyArchiveNode(resolved, input, archived)
     }
   )
+}
+
+interface ArchiveNodeInput {
+  scope: WorkspaceNodeScope
+  nodeId: string
+}
+
+/** Commit core for archive/unarchive — shared by the live tool + replay. */
+export async function applyArchiveNode(
+  resolved: ResolvedNodeContext,
+  input: ArchiveNodeInput,
+  archived: boolean
+): Promise<MutationResult> {
+  const { teamId, workspaceId, agentId, agentName, actorUid } = resolved
+  const { scope, nodeId } = input
+
+  try {
+    await db.runTransaction(async (transaction) => {
+      const nodeRef = db.doc(
+        `${nodesCollectionPath(teamId, workspaceId, scope)}/${nodeId}`
+      )
+      const nodeSnap = await transaction.get(nodeRef)
+      if (!nodeSnap.exists) throw new Error("Node not found.")
+      if (Boolean((nodeSnap.data() ?? {}).isArchived) === archived) {
+        throw new Error(
+          archived ? "Node is already archived." : "Node is not archived."
+        )
+      }
+
+      const now = admin.firestore.FieldValue.serverTimestamp()
+      transaction.update(nodeRef, {
+        isArchived: archived,
+        updatedAt: now,
+        updatedBy: agentId,
+      })
+
+      await logEvent(
+        {
+          teamId,
+          workspaceId,
+          actor: { userId: actorUid || undefined, agentId, agentName },
+          action: archived ? "content.archive" : "content.unarchive",
+          resource: { type: "content", id: nodeId, parentId: workspaceId },
+          changes: {
+            fields: ["isArchived"],
+            after: { isArchived: archived },
+          },
+        },
+        { transaction }
+      )
+    })
+
+    return {
+      ok: true,
+      nodeId,
+      message: archived ? "Archived node." : "Restored node.",
+    }
+  } catch (error) {
+    return { ok: false, message: (error as Error).message }
+  }
 }
 
 export const archiveNodeTool = defineArchiveTool(true)
@@ -745,3 +954,42 @@ export const NODE_WRITE_TOOLS = [
   archiveNodeTool,
   unarchiveNodeTool,
 ]
+
+/**
+ * Apply ONE captured change (a `require_review` proposal) on admin approval,
+ * replaying the verbatim tool input through the same commit core the live
+ * tool uses — so an approved edit is byte-identical to an immediate one. The
+ * approving admin's role is the authority (checked by the caller); the edit
+ * stays attributed to the workflow's agent via `resolved`.
+ */
+export async function applyProposedChange(
+  resolved: ResolvedNodeContext,
+  change: CapturedNodeChange
+): Promise<MutationResult> {
+  const input = change.input
+  switch (change.op) {
+    case "create":
+      return applyCreateNode(resolved, input as unknown as CreateNodeInput)
+    case "update":
+      return applyUpdateNodeContent(
+        resolved,
+        input as unknown as UpdateNodeContentInput
+      )
+    case "rename":
+      return applyRenameNode(resolved, input as unknown as RenameNodeInput)
+    case "move":
+      return applyMoveNode(resolved, input as unknown as MoveNodeInput)
+    case "archive":
+      return applyArchiveNode(
+        resolved,
+        input as unknown as ArchiveNodeInput,
+        true
+      )
+    case "unarchive":
+      return applyArchiveNode(
+        resolved,
+        input as unknown as ArchiveNodeInput,
+        false
+      )
+  }
+}

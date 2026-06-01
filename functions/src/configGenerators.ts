@@ -1,12 +1,13 @@
 /**
  * AI config generators — turn a plain-English admin prompt into a
- * ready-to-save agent or custom-tool configuration.
+ * ready-to-save agent, custom-tool, or workflow configuration.
  *
- * Two callables, both structured-output `ai.generate` calls (same shape
+ * Three callables, all structured-output `ai.generate` calls (same shape
  * as `botSummarize.ts`'s `output: { schema }` path):
  *
  *   1. `generateTeamAgentConfig`      — Settings → Agents "Prompt" tab.
  *   2. `generateTeamCustomToolConfig` — Settings → Custom tools "Prompt" tab.
+ *   3. `generateTeamWorkflowConfig`   — Workflow editor "Prompt" tab.
  *
  * Both:
  *   - Require an authenticated owner/admin (same gate as create/update —
@@ -623,6 +624,280 @@ export const generateTeamCustomToolConfig = onCall<GenerateConfigRequest>(
       inputSchema: { fields: normalizeFields(output.inputFields) },
       outputSchema: { fields: normalizeFields(output.outputFields) },
       action: normalizeAction(output.action),
+      model: modelWireName,
+    }
+  }
+)
+
+// ===========================================================================
+// Workflow generation
+// ===========================================================================
+
+const WORKFLOW_BOUNDS = {
+  name: 120,
+  description: 500,
+  instructions: 8000,
+  additionalPrompt: 2000,
+} as const
+
+/**
+ * Flat trigger shape the model fills. Like `generatedActionZod`, this is a
+ * single object with every field present rather than a discriminated union —
+ * far more reliable across Gemini / Claude / OpenAI structured-output
+ * backends than a `oneOf`. `normalizeWorkflowTrigger` collapses it to the
+ * strict `WorkflowTrigger` based on `type`, discarding the irrelevant fields
+ * and clamping every number to its domain bound.
+ */
+const generatedWorkflowTriggerZod = z.object({
+  type: z
+    .enum(["schedule", "event", "manual"])
+    .describe(
+      "How the workflow fires. 'schedule' = repeats (interval/daily/weekly); " +
+        "'event' = runs when 'code' or 'write' content changes; 'manual' = " +
+        "only when an admin runs it on demand."
+    ),
+  scheduleType: z
+    .enum(["interval", "daily", "weekly"])
+    .describe(
+      "schedule only: 'interval' (every N hours), 'daily' (once a day), or " +
+        "'weekly' (once a week)."
+    ),
+  everyHours: z
+    .number()
+    .describe("schedule+interval only: repeat every N hours (1–720)."),
+  dayOfWeek: z
+    .number()
+    .describe("schedule+weekly only: weekday, 0=Sunday … 6=Saturday."),
+  atMinuteUTC: z
+    .number()
+    .describe(
+      "schedule+daily/weekly only: minute-of-day in UTC, 0–1439 (e.g. 540 = " +
+        "09:00 UTC)."
+    ),
+  scope: z
+    .enum(["code", "write"])
+    .describe(
+      "event only: run when 'code' files change or 'write' documents change."
+    ),
+  debounceMinutes: z
+    .number()
+    .describe(
+      "event only: coalesce a burst of edits into at most one run per N " +
+        "minutes (0–1440). Use 30 unless the admin asks otherwise."
+    ),
+})
+
+const generatedWorkflowZod = z.object({
+  name: z
+    .string()
+    .describe(
+      "Short, human-friendly workflow name (max 120 chars), e.g. 'Weekly " +
+        "Docs Digest' or 'Keep README in sync'. Title Case, no quotes."
+    ),
+  description: z
+    .string()
+    .describe(
+      "One sentence (max 500 chars) describing what this workflow does and " +
+        "when it runs, so teammates understand it at a glance."
+    ),
+  instructions: z
+    .string()
+    .describe(
+      "The procedure the agent follows on EVERY run (max 8000 chars). This " +
+        "is the most important field. The agent runs headless with NO user " +
+        "to ask, so write a complete, self-contained, step-by-step procedure " +
+        "in the imperative ('Read …', 'Find …', 'Propose edits to …'). State " +
+        "explicitly when it should make no changes, and tell it to cite the " +
+        "source node id for any edit it proposes."
+    ),
+  additionalPrompt: z
+    .string()
+    .describe(
+      "Optional extra guidance appended after the instructions (max 2000 " +
+        "chars) — tone, output format, or edge cases. Empty unless it " +
+        "genuinely helps."
+    ),
+  targetScope: z
+    .enum(["code", "write", "default"])
+    .describe(
+      "Which tree the agent may edit: 'code' (source files), 'write' " +
+        "(documents), or 'default' for the workspace's write tree. Most " +
+        "workflows edit 'write'."
+    ),
+  trigger: generatedWorkflowTriggerZod.describe("When the workflow runs."),
+  updateMode: z
+    .enum(["require_review", "automatic"])
+    .describe(
+      "'require_review' (strongly preferred) stages the agent's edits for an " +
+        "admin to approve; 'automatic' applies them unattended. Only choose " +
+        "'automatic' when the admin explicitly wants hands-off automation."
+    ),
+})
+
+const WORKFLOW_SYSTEM_INSTRUCTIONS =
+  "You configure autonomous workflows for Lectornaut, a team workspace whose " +
+  "content lives in two trees of nodes — 'write' (rich-text documents) and " +
+  "'code' (source files). A workflow is a procedure a team agent runs " +
+  "server-side with NO human in the loop: on a schedule, when content " +
+  "changes, or on demand. A team admin will describe the automation they " +
+  "want. Produce a single, complete, ready-to-use workflow configuration. " +
+  "The instructions field matters most — because the agent runs headless and " +
+  "cannot ask questions, write a clear, self-contained, step-by-step " +
+  "procedure in the imperative and say explicitly when the agent should make " +
+  "no changes. Pick the trigger that matches the intent: 'schedule' for " +
+  "recurring work, 'event' for 'react when content changes', 'manual' for " +
+  "on-demand. Strongly prefer the 'require_review' update mode so an admin " +
+  "approves edits before they apply; only choose 'automatic' when the admin " +
+  "explicitly wants hands-off automation. Keep the name and description " +
+  "concise. You never see team content, so do NOT invent node ids — leave " +
+  "grounding to the admin."
+
+/**
+ * Structural mirror of `workflows.ts`'s module-private `WorkflowTrigger`
+ * (and the client's `WorkflowTriggerInput`). Re-declared here because the
+ * source type isn't exported; kept in sync with `triggerSchema`.
+ */
+type GeneratedWorkflowTrigger =
+  | {
+      type: "schedule"
+      schedule:
+        | { type: "interval"; everyHours: number }
+        | { type: "daily"; atMinuteUTC: number }
+        | { type: "weekly"; dayOfWeek: number; atMinuteUTC: number }
+    }
+  | { type: "event"; scope: "code" | "write"; debounceMinutes: number }
+  | { type: "manual" }
+
+interface GeneratedWorkflowConfig {
+  name: string
+  description: string
+  instructions: string
+  additionalPrompt: string
+  /** null = the workspace's default `write` tree. */
+  targetScope: "code" | "write" | null
+  trigger: GeneratedWorkflowTrigger
+  updateMode: "automatic" | "require_review"
+  model: string
+}
+
+type RawWorkflowTrigger = z.infer<typeof generatedWorkflowTriggerZod>
+
+/** Round + clamp a model-supplied number into [min, max], defaulting NaN. */
+const clampInt = (
+  value: unknown,
+  min: number,
+  max: number,
+  fallback: number
+): number => {
+  const n =
+    typeof value === "number" && Number.isFinite(value)
+      ? Math.round(value)
+      : fallback
+  return Math.max(min, Math.min(max, n))
+}
+
+/**
+ * Collapse the flat generated trigger into the strict discriminated union.
+ * Mirrors `normalizeAction`: switch on the discriminant, keep only that
+ * branch's fields, and clamp/default the numbers the model never sees bounds
+ * for. Falls back to `manual` for any unrecognized shape.
+ */
+function normalizeWorkflowTrigger(
+  raw: RawWorkflowTrigger | undefined
+): GeneratedWorkflowTrigger {
+  switch (raw?.type) {
+    case "schedule":
+      switch (raw.scheduleType) {
+        case "interval":
+          return {
+            type: "schedule",
+            schedule: {
+              type: "interval",
+              everyHours: clampInt(raw.everyHours, 1, 720, 24),
+            },
+          }
+        case "weekly":
+          return {
+            type: "schedule",
+            schedule: {
+              type: "weekly",
+              dayOfWeek: clampInt(raw.dayOfWeek, 0, 6, 1),
+              atMinuteUTC: clampInt(raw.atMinuteUTC, 0, 1439, 540),
+            },
+          }
+        case "daily":
+        default:
+          return {
+            type: "schedule",
+            schedule: {
+              type: "daily",
+              atMinuteUTC: clampInt(raw.atMinuteUTC, 0, 1439, 540),
+            },
+          }
+      }
+    case "event":
+      return {
+        type: "event",
+        scope: raw.scope === "code" ? "code" : "write",
+        debounceMinutes: clampInt(raw.debounceMinutes, 0, 1440, 30),
+      }
+    case "manual":
+    default:
+      return { type: "manual" }
+  }
+}
+
+export const generateTeamWorkflowConfig = onCall<GenerateConfigRequest>(
+  {
+    ...GENKIT_OPTS,
+    secrets: [geminiApiKey, anthropicApiKey, openaiApiKey],
+    enforceAppCheck: true,
+  },
+  async (request): Promise<GeneratedWorkflowConfig> => {
+    const auth = requireVerifiedAuth(request.auth)
+    const teamId = readTeamId(request.data?.teamId)
+    const prompt = readPrompt(request.data?.prompt)
+
+    await assertAdminRole(teamId, auth.uid)
+
+    const { model, modelWireName, config } =
+      await resolveGenerationContext(teamId)
+
+    const response = await ai.generate({
+      model,
+      system: WORKFLOW_SYSTEM_INSTRUCTIONS,
+      prompt,
+      output: { schema: generatedWorkflowZod },
+      config,
+      use: aiMiddlewares(),
+    })
+
+    const output = response.output
+    if (!output) {
+      throw new HttpsError(
+        "internal",
+        "The model didn't return a valid configuration. Try rephrasing your prompt."
+      )
+    }
+
+    return {
+      name:
+        clampText(output.name, WORKFLOW_BOUNDS.name).trim() || "New workflow",
+      description: clampText(output.description, WORKFLOW_BOUNDS.description),
+      instructions:
+        clampText(output.instructions, WORKFLOW_BOUNDS.instructions).trim() ||
+        "Describe the procedure the agent should follow each run.",
+      additionalPrompt: clampText(
+        output.additionalPrompt,
+        WORKFLOW_BOUNDS.additionalPrompt
+      ),
+      targetScope:
+        output.targetScope === "code" || output.targetScope === "write"
+          ? output.targetScope
+          : null,
+      trigger: normalizeWorkflowTrigger(output.trigger),
+      updateMode:
+        output.updateMode === "automatic" ? "automatic" : "require_review",
       model: modelWireName,
     }
   }

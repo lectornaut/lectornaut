@@ -55,10 +55,13 @@ import {
   createSharedBotSessionsQuery,
   getBotSessionRef,
 } from "@/utils/firebase/firebase-helpers"
+import {
+  useCollectionQuery,
+  useDocumentQuery,
+} from "@/utils/firebase/firebase-query"
 import { storeToRefs } from "pinia"
 import { computed, ref, watch, type InjectionKey, type Ref } from "vue"
 import { toast } from "vue-sonner"
-import { useCollection, useDocument } from "vuefire"
 
 export type BotChatRole = "user" | "agent"
 
@@ -645,10 +648,20 @@ export function useBotChat(): BotChatContext {
     if (!teamId || !workspaceId || !uid) return null
     return createBotSessionsQuery(teamId, workspaceId, uid)
   })
-  const _vuefireMySessions = useCollection<IBotSession>(mySessionsQueryRef, {
-    reset: true,
+  const mySessionsQuery = useCollectionQuery<IBotSession>(() => {
+    const activeQuery = mySessionsQueryRef.value
+    const teamId = currentTeamId.value
+    const workspaceId = currentWorkspaceId.value
+    const uid = currentUser.value?.uid
+    return activeQuery && teamId && workspaceId && uid
+      ? {
+          query: activeQuery,
+          path: `teams/${teamId}/workspaces/${workspaceId}/botSessions`,
+          params: { ownerUid: uid },
+        }
+      : null
   })
-  const allMySessions = computed(() => _vuefireMySessions.data.value ?? [])
+  const allMySessions = computed(() => mySessionsQuery.data.value ?? [])
   // Active (non-archived) sessions — what the main "Your chats" list shows.
   const mySessions = computed(() =>
     allMySessions.value.filter((s) => !isArchived(s))
@@ -663,13 +676,21 @@ export function useBotChat(): BotChatContext {
     if (!teamId || !workspaceId) return null
     return createSharedBotSessionsQuery(teamId, workspaceId)
   })
-  const _vuefireSharedSessions = useCollection<IBotSession>(
-    sharedSessionsQueryRef,
-    { reset: true }
-  )
+  const sharedSessionsQuery = useCollectionQuery<IBotSession>(() => {
+    const activeQuery = sharedSessionsQueryRef.value
+    const teamId = currentTeamId.value
+    const workspaceId = currentWorkspaceId.value
+    return activeQuery && teamId && workspaceId
+      ? {
+          query: activeQuery,
+          path: `teams/${teamId}/workspaces/${workspaceId}/botSessions`,
+          params: { visibility: "shared" },
+        }
+      : null
+  })
   const sharedSessions = computed(() => {
     const uid = currentUser.value?.uid
-    const all = _vuefireSharedSessions.data.value ?? []
+    const all = sharedSessionsQuery.data.value ?? []
     // Exclude my own shared sessions (they live in `mySessions` already)
     // and archived sessions (their owners moved them out of view).
     return all.filter(
@@ -678,8 +699,7 @@ export function useBotChat(): BotChatContext {
   })
 
   const isLoadingSessions = computed(
-    () =>
-      _vuefireMySessions.pending.value || _vuefireSharedSessions.pending.value
+    () => mySessionsQuery.isLoading.value || sharedSessionsQuery.isLoading.value
   )
 
   // ── Real-time subscription to the active session ──────────────────────────
@@ -697,10 +717,7 @@ export function useBotChat(): BotChatContext {
     return getBotSessionRef(teamId, workspaceId, id)
   })
 
-  const _vuefireActiveSessionDoc = useDocument<IBotSession>(
-    activeSessionDocRef,
-    { reset: true }
-  )
+  const activeSessionQuery = useDocumentQuery<IBotSession>(activeSessionDocRef)
 
   // Sync server-driven messages into local state. Skipped during in-flight
   // sends so the optimistic / streaming agent message stays visible until
@@ -713,7 +730,7 @@ export function useBotChat(): BotChatContext {
   // text could be overwritten with a stale pre-write snapshot before the
   // post-write snapshot arrived.
   watch(
-    () => _vuefireActiveSessionDoc.data.value?.messages,
+    () => activeSessionQuery.data.value?.messages,
     (serverMessages) => {
       if (!serverMessages) return
       if (isSending.value) return
@@ -728,7 +745,7 @@ export function useBotChat(): BotChatContext {
     if (!id) return null
     return (
       allMySessions.value.find((s) => s.id === id) ??
-      _vuefireSharedSessions.data.value?.find((s) => s.id === id) ??
+      sharedSessionsQuery.data.value?.find((s) => s.id === id) ??
       null
     )
   })
@@ -762,24 +779,15 @@ export function useBotChat(): BotChatContext {
   // pre-transfer agent until the user reloaded the chat, and the
   // next `sendMessage` would forward the stale id.
   //
-  // We watch the DOC-LEVEL subscription (`_vuefireActiveSessionDoc`)
-  // rather than the collection-derived `activeSession`. Both *could*
-  // work in theory, but in practice the collection path is unreliable
-  // for in-place field updates:
-  //   - `useCollection` keeps the same array `.value` across
-  //     snapshots and patches items via `splice(index, 1)` +
-  //     `splice(newIndex, 0, newData)`. The new item is a fresh
-  //     object reference, but a downstream `computed` like
-  //     `activeSession.value?.activeAgentId` that traversed the
-  //     array via `.find(...)` doesn't always re-trigger on item
-  //     replacement under the converter+Pinia stack this codebase
-  //     uses — symptom: the agent badge stays stuck on the previous
-  //     agent until a manual page reload.
-  //   - `useDocument` reassigns `.value` to a fresh object on EVERY
-  //     snapshot. A ref reassignment is the most basic reactive
-  //     write in Vue and ALWAYS schedules dependent watchers. The
-  //     messages-sync watcher above sources from the same ref for
-  //     the same reason.
+  // We watch the DOC-LEVEL subscription (`activeSessionQuery`) rather than the
+  // collection-derived `activeSession`. The document query reassigns its `data`
+  // ref to a fresh object on every snapshot, which ALWAYS schedules dependent
+  // watchers — the messages-sync watcher above sources the same ref for the
+  // same reason. (The collection-derived path was historically flaky for
+  // in-place field updates under the previous VueFire stack, which reused one
+  // array instance and patched items in place, so a `.find(...)`-based computed
+  // didn't reliably re-trigger — symptom: the agent badge stuck on the previous
+  // agent until reload.)
   //
   // The guard `next !== activeAgentId.value` prevents re-firing on
   // the local-mutation path: `selectAgent()` writes
@@ -791,7 +799,7 @@ export function useBotChat(): BotChatContext {
   // Also handles cross-tab/device updates: another tab changes the
   // agent → doc updates → this tab's badge follows.
   watch(
-    () => _vuefireActiveSessionDoc.data.value?.activeAgentId ?? null,
+    () => activeSessionQuery.data.value?.activeAgentId ?? null,
     (next) => {
       // Only sync while a session is bound — otherwise this would
       // clobber the new-chat default-null state with an unrelated

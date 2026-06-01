@@ -10,7 +10,7 @@
  * - authStore: User authentication and profile
  * - membershipStore: Team memberships and members
  *
- * Uses VueFire composables for reactive Firestore bindings.
+ * Reactive Firestore reads flow through TanStack Query (onSnapshot-backed).
  * All mutations go through Cloud Functions for automatic audit logging.
  */
 
@@ -19,6 +19,7 @@ import {
   deleteTeam as deleteTeamFn,
   updateTeam as updateTeamFn,
 } from "@/composables/useFunctions"
+import { queryClient } from "@/modules/queryClient"
 import { useAuthStore } from "@/stores/authStore"
 import { useMembershipStore } from "@/stores/membershipStore"
 import type { ITeam } from "@/types/domain"
@@ -28,17 +29,20 @@ import {
   getTeamRef,
   uploadTeamPhoto,
 } from "@/utils/firebase/firebase-helpers"
-import { useLocalHydration } from "@/utils/firebase/firebase-hydration"
+import { useFirestoreMutation } from "@/utils/firebase/firebase-mutation"
 import {
   addPending,
   cloneState,
   createPendingSet,
   removePending,
-  withOptimisticUpdate,
 } from "@/utils/firebase/firebase-optimistic"
+import { useDocumentQuery } from "@/utils/firebase/firebase-query"
+import {
+  queryKeys,
+  type FirestoreQueryKey,
+} from "@/utils/firebase/firebase-query-keys"
 import { Timestamp } from "firebase/firestore"
 import { defineStore, storeToRefs } from "pinia"
-import { useDocument } from "vuefire"
 
 export const useTeamStore = defineStore("teams", () => {
   const authStore = useAuthStore()
@@ -59,7 +63,7 @@ export const useTeamStore = defineStore("teams", () => {
   } = storeToRefs(membershipStore)
 
   // ============================================================================
-  // VueFire Reactive Bindings
+  // Realtime Firestore bindings (TanStack Query)
   // ============================================================================
 
   // Computed document reference - null when no team selected
@@ -75,54 +79,74 @@ export const useTeamStore = defineStore("teams", () => {
     return getTeamRef(teamId)
   })
 
-  // VueFire reactive document binding for current team
-  // Use intermediate variables with type assertions to isolate VueFire types
-  const _vuefireTeamDoc = useDocument<ITeam>(teamDocRef)
+  // Realtime document binding (TanStack Query + onSnapshot) for current team.
+  const teamQuery = useDocumentQuery<ITeam>(teamDocRef)
   const firestoreCurrentTeam: ComputedRef<ITeam | null | undefined> = computed(
-    () => _vuefireTeamDoc.data.value
+    () => teamQuery.data.value
   )
   const isFirestoreLoading: ComputedRef<boolean> = computed(
-    () => _vuefireTeamDoc.pending.value
+    () => teamQuery.isLoading.value
   )
 
   // ============================================================================
   // State (for optimistic updates)
   // ============================================================================
 
-  // Local team that can be optimistically updated
-  const optimisticCurrentTeam = ref<ITeam | null>(null)
-
   // Pending operation tracking
   const pendingTeamIds = shallowRef(createPendingSet())
+
+  const teamDocKey = (teamId: string): FirestoreQueryKey =>
+    queryKeys.doc(`teams/${teamId}`)
+
+  // Drives team-doc writes (update/delete; create seeds a temp doc then the
+  // real one). Selection (currentTeamId) stays on authStore's Pinia overlay.
+  const teamMutation = useFirestoreMutation<
+    {
+      keys: FirestoreQueryKey[]
+      apply: () => void
+      rollback: () => void
+      run: () => Promise<void>
+    },
+    void
+  >({
+    mutationFn: (vars) => vars.run(),
+    optimistic: (vars) => ({
+      keys: vars.keys,
+      apply: vars.apply,
+      rollback: vars.rollback,
+    }),
+    source: "team",
+  })
+
+  const runTeamMutation = (
+    keys: FirestoreQueryKey[],
+    apply: () => void,
+    rollback: () => void,
+    run: () => Promise<void>
+  ): Promise<void> => teamMutation.mutateAsync({ keys, apply, rollback, run })
 
   // ============================================================================
   // Computed
   // ============================================================================
 
-  // Merged current team: optimistic updates take precedence when pending
-  const currentTeam = computed({
-    get: () => {
-      const teamId = currentTeamId.value
-      // Return null if no team is selected
-      if (!teamId) {
-        return null
-      }
-      if (pendingTeamIds.value.has(teamId)) {
-        return optimisticCurrentTeam.value
-      }
-      return firestoreCurrentTeam.value ?? optimisticCurrentTeam.value
-    },
-    set: (value) => {
-      optimisticCurrentTeam.value = value
-    },
+  // Current team straight from the realtime cache, falling back to the
+  // denormalized `team` snapshot on the membership row for instant display
+  // before the team-doc query resolves (cold-start is covered by the persisted
+  // cache + this fallback). update/delete apply their optimistic value into the
+  // team-doc cache (held until the server ack reconciles).
+  // Annotated `ITeam | null`: the membership fallback is a `team` snapshot
+  // (a `pick` of the team schema, no `billing`), which is assignable to ITeam
+  // since `billing` is optional — so `currentTeam.billing` stays `undefined`
+  // while the snapshot shows, exactly as before, until the team-doc query lands.
+  const currentTeam = computed<ITeam | null>(() => {
+    const teamId = currentTeamId.value
+    if (!teamId) return null
+    return (
+      firestoreCurrentTeam.value ??
+      memberships.value.find((m) => m.teamId === teamId)?.team ??
+      null
+    )
   })
-
-  // Hydrate from localStorage for instant cold-start rendering
-  useLocalHydration(
-    "currentTeam",
-    optimisticCurrentTeam,
-    () => currentTeam.value
-  )
 
   const isLoading = computed(() => {
     // Still loading if auth/user profile is loading
@@ -132,7 +156,7 @@ export const useTeamStore = defineStore("teams", () => {
     // If user has a currentTeamId, wait for team data to load
     const teamId = currentTeamId.value
     if (teamId) {
-      return isFirestoreLoading.value && !optimisticCurrentTeam.value
+      return isFirestoreLoading.value && !currentTeam.value
     }
     // No team selected - not loading
     return false
@@ -149,47 +173,6 @@ export const useTeamStore = defineStore("teams", () => {
       pendingMembershipIds.value.size > 0
   )
 
-  // ============================================================================
-  // Sync Optimistic State with Firestore
-  // ============================================================================
-
-  // Sync optimistic team with Firestore data when not pending
-  watch(
-    firestoreCurrentTeam,
-    (team) => {
-      const teamId = currentTeamId.value
-      if (team && teamId && !pendingTeamIds.value.has(teamId)) {
-        optimisticCurrentTeam.value = team
-      }
-    },
-    { immediate: true }
-  )
-
-  // Also try to get team from cached memberships for faster initial load
-  watch(
-    currentTeamId,
-    (teamId) => {
-      if (!teamId) {
-        optimisticCurrentTeam.value = null
-        return
-      }
-
-      // Skip if team has pending operations or already have data
-      if (pendingTeamIds.value.has(teamId) || firestoreCurrentTeam.value) {
-        return
-      }
-
-      // Try to get team from cached memberships first (optimistic)
-      const cachedMembership = memberships.value.find(
-        (m) => m.teamId === teamId
-      )
-      if (cachedMembership?.team) {
-        optimisticCurrentTeam.value = cachedMembership.team
-      }
-    },
-    { immediate: true }
-  )
-
   // Handle stale currentTeamId (e.g. team deleted by owner or membership removed)
   watch(
     [
@@ -201,7 +184,7 @@ export const useTeamStore = defineStore("teams", () => {
     async ([teamId, team, loading, membershipLoading]) => {
       if (!teamId || loading || membershipLoading) return
 
-      // VueFire emits `undefined` between docRef becoming non-null and the
+      // The query emits `undefined` between docRef becoming non-null and the
       // first snapshot landing. Only `null` signals "team genuinely missing".
       // Without this distinction the watch can warn-log on the loading window
       // and (in narrow timing windows) clear a valid currentTeamId.
@@ -226,7 +209,6 @@ export const useTeamStore = defineStore("teams", () => {
             )
             authStore.setCurrentTeamIdLocal(null)
           }
-          optimisticCurrentTeam.value = null
         }
       }
     }
@@ -237,7 +219,6 @@ export const useTeamStore = defineStore("teams", () => {
   // ============================================================================
 
   function cleanup() {
-    optimisticCurrentTeam.value = null
     authStore.cleanup()
     membershipStore.cleanup()
   }
@@ -278,50 +259,44 @@ export const useTeamStore = defineStore("teams", () => {
       updatedAt: now,
     }
 
-    // Clone previous state for rollback
+    const creatorUid = currentUser.value!.uid
     const previousCurrentTeamId = currentTeamId.value
-    const previousCurrentTeam = cloneState(currentTeam.value)
     const previousMemberships = cloneState(memberships.value)
     const previousTeamMembers = cloneState(teamMembers.value)
+    const tempKey = teamDocKey(tempId)
 
     let actualTeamId: string | undefined
     let resolvedPhotoURL: string | null = photoURL
     let resolvedUsername: string | null = null
     let resolvedIsPublic = false
 
-    await withOptimisticUpdate(
-      pendingTeamIds,
-      tempId,
-      // Apply optimistic updates
-      () => {
-        addPending(pendingUserIds, currentUser.value!.uid)
-
-        // Update user profile through authStore (optimistically)
-        authStore.setCurrentTeamIdLocal(tempId)
-        optimisticCurrentTeam.value = newTeam
-      },
-      // Rollback on error
-      () => {
-        authStore.setCurrentTeamIdLocal(previousCurrentTeamId ?? null)
-        optimisticCurrentTeam.value = previousCurrentTeam
-        membershipStore.rollbackMemberships(previousMemberships)
-        membershipStore.rollbackTeamMembers(previousTeamMembers)
-        removePending(pendingUserIds, currentUser.value!.uid)
-      },
-      // Cloud Function call
-      async () => {
-        try {
+    addPending(pendingTeamIds, tempId)
+    addPending(pendingUserIds, creatorUid)
+    try {
+      await runTeamMutation(
+        [tempKey],
+        () => {
+          // Seed the temp team doc + select it (selection = Pinia overlay).
+          queryClient.setQueryData<ITeam>(tempKey, newTeam)
+          authStore.setCurrentTeamIdLocal(tempId)
+        },
+        () => {
+          queryClient.removeQueries({ queryKey: tempKey, exact: true })
+          authStore.setCurrentTeamIdLocal(previousCurrentTeamId ?? null)
+          membershipStore.rollbackMemberships(previousMemberships)
+          membershipStore.rollbackTeamMembers(previousTeamMembers)
+        },
+        async () => {
           const result = await createTeamFn({ name, photoURL })
           actualTeamId = result.data.teamId
 
-          // If photo was provided, upload it now and update the team
+          // Best-effort photo upload after the team exists.
           if (photoFile && actualTeamId) {
             try {
               const uploadedPhotoURL = await uploadTeamPhoto(
                 actualTeamId,
                 photoFile
               )
-              // Update team with photo URL using cloud function
               await updateTeamFn({
                 teamId: actualTeamId,
                 photoURL: uploadedPhotoURL,
@@ -342,12 +317,8 @@ export const useTeamStore = defineStore("teams", () => {
                 ...(username !== undefined ? { username } : {}),
                 ...(isPublic !== undefined ? { isPublic } : {}),
               })
-              if (username !== undefined) {
-                resolvedUsername = username
-              }
-              if (isPublic !== undefined) {
-                resolvedIsPublic = isPublic
-              }
+              if (username !== undefined) resolvedUsername = username
+              if (isPublic !== undefined) resolvedIsPublic = isPublic
             } catch (error) {
               console.error(
                 "[teamStore] Error applying public team settings:",
@@ -356,20 +327,21 @@ export const useTeamStore = defineStore("teams", () => {
             }
           }
 
-          // Update local state with actual team ID
-          optimisticCurrentTeam.value = {
+          // Seed the real team doc + switch the selection to the server id.
+          queryClient.setQueryData<ITeam>(teamDocKey(actualTeamId), {
             ...newTeam,
             id: actualTeamId,
             photoURL: resolvedPhotoURL,
             username: resolvedUsername,
             isPublic: resolvedIsPublic,
-          }
+          })
           authStore.setCurrentTeamIdLocal(actualTeamId)
-        } finally {
-          removePending(pendingUserIds, currentUser.value!.uid)
         }
-      }
-    )
+      )
+    } finally {
+      removePending(pendingUserIds, creatorUid)
+      setTimeout(() => removePending(pendingTeamIds, tempId), 120)
+    }
 
     return actualTeamId
   }
@@ -381,21 +353,10 @@ export const useTeamStore = defineStore("teams", () => {
     if (!currentUser.value || !userProfile.value) return
     if (currentTeamId.value === teamId) return
 
-    // Clone previous state for rollback
-    const previousCurrentTeam = cloneState(currentTeam.value)
-
-    const cachedMembership = memberships.value.find((m) => m.teamId === teamId)
-
-    if (cachedMembership?.team) {
-      optimisticCurrentTeam.value = cloneState(cachedMembership.team)
-    }
-
-    try {
-      await authStore.setCurrentTeamId(teamId)
-    } catch (error) {
-      optimisticCurrentTeam.value = previousCurrentTeam
-      throw error
-    }
+    // Selection is the Pinia overlay (authStore). `currentTeam` falls back to
+    // the target team's denormalized membership snapshot for instant display,
+    // and authStore.setCurrentTeamId rolls the selection back on error.
+    await authStore.setCurrentTeamId(teamId)
   }
 
   /**
@@ -435,32 +396,30 @@ export const useTeamStore = defineStore("teams", () => {
           : {}),
     }
 
-    // Clone previous state for rollback
-    const previousCurrentTeam = cloneState(currentTeam.value)
+    const teamKey = teamDocKey(teamId)
+    const previousTeamDoc = queryClient.getQueryData<ITeam>(teamKey)
     const previousMemberships = cloneState(memberships.value)
     let resolvedPhotoURL: string | null | undefined =
       photoFile === null ? null : undefined
 
+    // Patch the team-doc cache + the denormalized copy on the membership rows.
+    const patchTeam = (patch: Partial<ITeam>) => {
+      const current = queryClient.getQueryData<ITeam>(teamKey)
+      if (current) {
+        queryClient.setQueryData<ITeam>(teamKey, { ...current, ...patch })
+      }
+      membershipStore.updateTeamInMemberships(teamId, patch)
+    }
+
+    addPending(pendingTeamIds, teamId)
     try {
-      await withOptimisticUpdate(
-        pendingTeamIds,
-        teamId,
-        // Apply optimistic update
+      await runTeamMutation(
+        [teamKey],
+        () => patchTeam(teamUpdates),
         () => {
-          if (currentTeam.value?.id === teamId) {
-            optimisticCurrentTeam.value = {
-              ...currentTeam.value,
-              ...teamUpdates,
-            }
-          }
-          membershipStore.updateTeamInMemberships(teamId, teamUpdates)
-        },
-        // Rollback on error
-        () => {
-          optimisticCurrentTeam.value = previousCurrentTeam
+          queryClient.setQueryData(teamKey, previousTeamDoc)
           membershipStore.rollbackMemberships(previousMemberships)
         },
-        // Cloud Function call
         async () => {
           if (photoFile instanceof File) {
             resolvedPhotoURL = await uploadTeamPhoto(teamId, photoFile)
@@ -476,18 +435,12 @@ export const useTeamStore = defineStore("teams", () => {
               : {}),
           })
 
+          // Replace the optimistic blob URL with the uploaded URL.
           if (photoFile !== undefined && resolvedPhotoURL !== undefined) {
-            const syncedTeamUpdates = { photoURL: resolvedPhotoURL }
-            if (currentTeam.value?.id === teamId) {
-              optimisticCurrentTeam.value = {
-                ...currentTeam.value,
-                ...syncedTeamUpdates,
-              }
-            }
-            membershipStore.updateTeamInMemberships(teamId, syncedTeamUpdates)
+            patchTeam({ photoURL: resolvedPhotoURL })
           }
 
-          // Cleanup photo object when profile picture is explicitly removed.
+          // Clean up the storage object when the photo is explicitly removed.
           if (resolvedPhotoURL === null) {
             await deleteTeamPhotoFile(teamId)
           }
@@ -497,6 +450,7 @@ export const useTeamStore = defineStore("teams", () => {
       if (optimisticPhotoURL) {
         URL.revokeObjectURL(optimisticPhotoURL)
       }
+      setTimeout(() => removePending(pendingTeamIds, teamId), 120)
     }
   }
 
@@ -513,43 +467,44 @@ export const useTeamStore = defineStore("teams", () => {
       throw new Error("Only team owners can delete the team")
     }
 
-    // Clone previous state for rollback
+    const teamKey = teamDocKey(teamId)
     const previousMemberships = cloneState(memberships.value)
-    const previousCurrentTeam = cloneState(currentTeam.value)
+    const previousTeamDoc = queryClient.getQueryData<ITeam>(teamKey)
     const previousCurrentTeamId = currentTeamId.value
+    const isCurrent = currentTeam.value?.id === teamId
 
-    await withOptimisticUpdate(
-      pendingTeamIds,
-      teamId,
-      // Apply optimistic update
-      () => {
-        membershipStore.removeMembershipsForTeam(teamId)
-        if (currentTeam.value?.id === teamId) {
-          optimisticCurrentTeam.value = null
-          authStore.setCurrentTeamIdLocal(null)
+    addPending(pendingTeamIds, teamId)
+    try {
+      await runTeamMutation(
+        [teamKey],
+        () => {
+          membershipStore.removeMembershipsForTeam(teamId)
+          if (isCurrent) {
+            queryClient.setQueryData(teamKey, null)
+            authStore.setCurrentTeamIdLocal(null)
+          }
+        },
+        () => {
+          membershipStore.rollbackMemberships(previousMemberships)
+          queryClient.setQueryData(teamKey, previousTeamDoc)
+          if (isCurrent) {
+            authStore.setCurrentTeamIdLocal(previousCurrentTeamId ?? null)
+          }
+        },
+        async () => {
+          // Delete storage files before the cloud function (which may revoke
+          // permission before the storage cleanup could run).
+          await deleteTeamPhotoFile(teamId)
+          await deleteTeamFn({ teamId })
         }
-      },
-      // Rollback on error
-      () => {
-        membershipStore.rollbackMemberships(previousMemberships)
-        optimisticCurrentTeam.value = previousCurrentTeam
-        authStore.setCurrentTeamIdLocal(previousCurrentTeamId ?? null)
-      },
-      // Cloud Function call + Storage cleanup
-      async () => {
-        // Delete storage files before calling cloud function
-        // (cloud function may revoke permission before storage cleanup)
-        await deleteTeamPhotoFile(teamId)
-
-        // Call cloud function to delete team, workspaces, and memberships
-        await deleteTeamFn({ teamId })
-      }
-    )
+      )
+    } finally {
+      setTimeout(() => removePending(pendingTeamIds, teamId), 120)
+    }
   }
 
   async function clearCurrentTeam(): Promise<void> {
     await authStore.setCurrentTeamId(null)
-    optimisticCurrentTeam.value = null
     membershipStore.clearTeamMembers()
   }
 

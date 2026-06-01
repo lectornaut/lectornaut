@@ -7,14 +7,15 @@
  * - User-scoped preferences (team selection, onboarding)
  * - Team-membership-scoped workspace selection
  *
- * Uses VueFire composables for reactive Firestore bindings
+ * Reactive Firestore reads flow through TanStack Query; auth state via VueFire.
  */
 
 import { updateOwnUserProfile as updateOwnUserProfileFn } from "@/composables/useFunctions"
+import { queryClient } from "@/modules/queryClient"
+import { clearPersistedQueryCache } from "@/modules/queryPersister"
 import { syncCurrentUserAccountProfile } from "@/queries/userSettings"
 import {
   membershipPreferencesHydrationSchema,
-  userHydrationSchema,
   userPreferencesHydrationSchema,
 } from "@/schemas/domain"
 import { useMembershipStore } from "@/stores/membershipStore"
@@ -38,11 +39,18 @@ import {
   useLocalHydration,
   writeHydrationCache,
 } from "@/utils/firebase/firebase-hydration"
+import { useFirestoreMutation } from "@/utils/firebase/firebase-mutation"
 import {
+  addPending,
   cloneState,
   createPendingSet,
-  withOptimisticUpdate,
+  removePending,
 } from "@/utils/firebase/firebase-optimistic"
+import { useDocumentQuery } from "@/utils/firebase/firebase-query"
+import {
+  queryKeys,
+  type FirestoreQueryKey,
+} from "@/utils/firebase/firebase-query-keys"
 import {
   buildUpdatedAtBaseVersion,
   mutateWithCoordinator,
@@ -51,7 +59,7 @@ import type { User } from "firebase/auth"
 import { Timestamp } from "firebase/firestore"
 import { defineStore } from "pinia"
 import { toast } from "vue-sonner"
-import { useCurrentUser, useDocument } from "vuefire"
+import { useCurrentUser, useIsCurrentUserLoaded } from "vuefire"
 
 const defaultUserPreferences = (): IUserPreferences => ({
   currentTeamId: null,
@@ -68,6 +76,17 @@ const getMembershipPreferencesCacheKey = (teamId: string) =>
 export const useAuthStore = defineStore("auth", () => {
   const currentUser = useCurrentUser() as Ref<User | null>
 
+  // VueFire's `currentUser` is TRI-STATE (see the auth guide):
+  //   undefined → Firebase Auth is still restoring the persisted session
+  //               ("not yet known"); null → confirmed signed out; User → signed in.
+  // The `as Ref<User | null>` cast above collapses undefined→null only for
+  // ergonomic downstream typing — it does NOT make the runtime value safe to
+  // read as "signed out". `useIsCurrentUserLoaded()` (the doc-recommended
+  // readiness signal, already used in the landing components) is `false` until
+  // that first auth event lands, so the store can wait on the indeterminate
+  // window instead of mistaking it for a sign-out and bouncing the user.
+  const isCurrentUserLoaded = useIsCurrentUserLoaded()
+
   const userDocRef = computed(() =>
     currentUser.value ? getUserRef(currentUser.value.uid) : null
   )
@@ -75,25 +94,24 @@ export const useAuthStore = defineStore("auth", () => {
     currentUser.value ? getUserPreferencesRef(currentUser.value.uid) : null
   )
 
-  const _vuefireUserDoc = useDocument<IUser>(userDocRef)
+  const userQuery = useDocumentQuery<IUser>(userDocRef)
   const firestoreUserProfile: ComputedRef<IUser | null | undefined> = computed(
-    () => _vuefireUserDoc.data.value
+    () => userQuery.data.value
   )
   const isFirestoreLoading: ComputedRef<boolean> = computed(
-    () => _vuefireUserDoc.pending.value
+    () => userQuery.isLoading.value
   )
 
-  const _vuefireUserPreferencesDoc = useDocument<IUserPreferences>(
+  const userPreferencesQuery = useDocumentQuery<IUserPreferences>(
     userPreferencesDocRef
   )
   const firestoreUserPreferences: ComputedRef<
     IUserPreferences | null | undefined
-  > = computed(() => _vuefireUserPreferencesDoc.data.value)
+  > = computed(() => userPreferencesQuery.data.value)
   const isUserPreferencesLoading: ComputedRef<boolean> = computed(
-    () => _vuefireUserPreferencesDoc.pending.value
+    () => userPreferencesQuery.isLoading.value
   )
 
-  const optimisticUserProfile = ref<IUser | null>(null)
   const optimisticUserPreferences = ref<IUserPreferences | null>(null)
   const optimisticMembershipPreferences = ref<IMembershipPreferences | null>(
     null
@@ -102,20 +120,30 @@ export const useAuthStore = defineStore("auth", () => {
 
   const pendingUserIds = shallowRef(createPendingSet())
 
-  const userProfile = computed({
-    get: () => {
-      if (
-        currentUser.value &&
-        pendingUserIds.value.has(currentUser.value.uid)
-      ) {
-        return optimisticUserProfile.value
-      }
-      return firestoreUserProfile.value ?? optimisticUserProfile.value
+  // Per-mutation optimistic writes go through the cache. Selection state
+  // (currentTeamId/currentWorkspaceId) stays on the Pinia overlay below — it is
+  // persistent UI state, not per-mutation optimism, so it doesn't fit the hold.
+  const userProfileMutation = useFirestoreMutation<
+    {
+      keys: FirestoreQueryKey[]
+      apply: () => void
+      rollback: () => void
+      run: () => Promise<void>
     },
-    set: (value) => {
-      optimisticUserProfile.value = value
-    },
+    void
+  >({
+    mutationFn: (vars) => vars.run(),
+    optimistic: (vars) => ({
+      keys: vars.keys,
+      apply: vars.apply,
+      rollback: vars.rollback,
+    }),
+    source: "auth.updateUserProfile",
   })
+
+  // Profile reads straight from the realtime cache; `updateUserProfile` applies
+  // its optimistic value into that cache (held until the server ack).
+  const userProfile = computed(() => firestoreUserProfile.value ?? null)
 
   const userPreferences = computed({
     get: () => {
@@ -152,24 +180,53 @@ export const useAuthStore = defineStore("auth", () => {
     )
   })
 
-  const _vuefireMembershipPreferencesDoc = useDocument<IMembershipPreferences>(
-    membershipPreferencesDocRef,
-    {
-      reset: true,
-    }
+  // `reset: true` is unneeded here: when the team changes the query key changes,
+  // so `data` reflects the new team's prefs (undefined until its first snapshot)
+  // rather than lingering on the previous team's value.
+  const membershipPreferencesQuery = useDocumentQuery<IMembershipPreferences>(
+    membershipPreferencesDocRef
   )
   const firestoreMembershipPreferences: ComputedRef<
     IMembershipPreferences | null | undefined
-  > = computed(() => _vuefireMembershipPreferencesDoc.data.value)
+  > = computed(() => membershipPreferencesQuery.data.value)
   const isMembershipPreferencesLoading: ComputedRef<boolean> = computed(
-    () => _vuefireMembershipPreferencesDoc.pending.value
+    () => membershipPreferencesQuery.isLoading.value
   )
 
+  // Mirror `userPreferences`: Firestore (incl. the surviving TanStack read
+  // cache) is authoritative when idle; the optimistic overlay only wins while a
+  // selection mutation is in flight (`pendingUserIds`). The previous
+  // overlay-first order was the reason the selected workspace failed to persist
+  // where the selected team did. The two share identical write machinery, but
+  // are read with OPPOSITE authority — and they degrade differently when the
+  // overlay is reset out from under a surviving cache:
+  //   - HMR re-instantiates the Pinia store (no `acceptHMRUpdate`), so every
+  //     `ref` — including `optimisticMembershipPreferences` — resets to null,
+  //     while the module-singleton `queryClient` cache keeps the real value.
+  //     Overlay-first then reads the reset overlay (→ WorkspaceSelector) even
+  //     though the value is right there in the cache; the re-subscribed
+  //     listener re-delivers the SAME value, so the reconciliation watch never
+  //     re-fires to repopulate the overlay and it stays wrong.
+  //   - Same failure shape on any cold start where the persisted query cache
+  //     rehydrates the doc but the per-team localStorage overlay seed is
+  //     missing/stale.
+  // Reading Firestore-first makes the workspace selection survive exactly as
+  // the team selection already does.
   const membershipPreferences = computed({
     get: () => {
+      if (
+        currentUser.value &&
+        pendingUserIds.value.has(currentUser.value.uid)
+      ) {
+        return (
+          optimisticMembershipPreferences.value ??
+          firestoreMembershipPreferences.value ??
+          defaultMembershipPreferences()
+        )
+      }
       return (
-        optimisticMembershipPreferences.value ??
         firestoreMembershipPreferences.value ??
+        optimisticMembershipPreferences.value ??
         defaultMembershipPreferences()
       )
     },
@@ -187,7 +244,7 @@ export const useAuthStore = defineStore("auth", () => {
 
     // Membership preferences are team-scoped; hydrate the active team's
     // cached selection synchronously so team switches do not flash the app
-    // shell spinner while VueFire rebinds the new document.
+    // shell spinner while the new team's document query loads its first snapshot.
     const cacheKey = getMembershipPreferencesCacheKey(teamId)
     const cached = readHydrationCache<IMembershipPreferences>(cacheKey, {
       schema: membershipPreferencesHydrationSchema,
@@ -219,12 +276,8 @@ export const useAuthStore = defineStore("auth", () => {
   // Hydrate from localStorage for instant cold-start rendering. The hydration
   // schemas validate the cached entry and rehydrate Timestamp fields (which
   // JSON.stringify strips to plain { seconds, nanoseconds } objects).
-  useLocalHydration(
-    "userProfile",
-    optimisticUserProfile,
-    () => userProfile.value,
-    { schema: userHydrationSchema }
-  )
+  // userProfile cold-start is now covered by the persisted query cache
+  // (persistQueryClient); only the still-Pinia-overlaid preferences hydrate here.
   useLocalHydration(
     "userPreferences",
     optimisticUserPreferences,
@@ -242,10 +295,18 @@ export const useAuthStore = defineStore("auth", () => {
     return resolvedMembershipPreferencesTeamId.value === teamId
   })
 
+  // Treat the auth-restoration window (currentUser === undefined) as "loading",
+  // NOT "signed out". Otherwise the app shell evaluates the gate while
+  // `isAuthenticated`/`userProfile` are still indeterminate and momentarily
+  // concludes the user is signed out — flashing the shell/landing right after
+  // login. While auth is unknown the user-doc query is disabled (so
+  // `isFirestoreLoading` is false); `isCurrentUserLoaded` is what carries the
+  // "still resolving" signal during that gap.
   const isLoading = computed(
     () =>
-      (isFirestoreLoading.value || isUserPreferencesLoading.value) &&
-      !optimisticUserProfile.value
+      !isCurrentUserLoaded.value ||
+      ((isFirestoreLoading.value || isUserPreferencesLoading.value) &&
+        !userProfile.value)
   )
 
   const isUserPending = computed(
@@ -259,11 +320,11 @@ export const useAuthStore = defineStore("auth", () => {
     [currentUser, firestoreUserProfile, isFirestoreLoading],
     async ([user, profile, loading]) => {
       if (!user || loading) return
-      // VueFire's `data` is `undefined` until the first snapshot arrives;
+      // The query's `data` is `undefined` until the first snapshot arrives;
       // it only becomes `null` when the document genuinely doesn't exist.
-      // The immediate fire here runs during store setup, before VueFire's
-      // async internal watcher has reacted to the docRef becoming non-null,
-      // so `pending` is still false. Without this guard the `!profile`
+      // The immediate fire here can run before that first snapshot lands
+      // (during store setup, right after the docRef becomes non-null), so we
+      // guard on `undefined`. Without this guard the `!profile`
       // branch below would (a) overwrite hydrated profile fields like
       // `username` and `isPublic` with defaults, briefly flashing them in
       // dependent UI, and (b) trigger an unnecessary cloud function call
@@ -284,27 +345,17 @@ export const useAuthStore = defineStore("auth", () => {
             createdAt: now,
             updatedAt: now,
           }
-          // Set optimistic state immediately (before async write)
-          optimisticUserProfile.value = optimisticUser
+          // Show the default profile immediately (before the async write) by
+          // seeding the cache; the create then lands and the listener reconciles.
+          queryClient.setQueryData(
+            queryKeys.doc(getUserRef(user.uid).path),
+            optimisticUser
+          )
           await syncCurrentUserAccountProfile()
         } catch (error) {
           console.error("[authStore] Failed to create user profile:", error)
           toast.error("Failed to create user profile. Please try again.")
         }
-      }
-    },
-    { immediate: true }
-  )
-
-  watch(
-    firestoreUserProfile,
-    (profile) => {
-      if (
-        profile &&
-        currentUser.value &&
-        !pendingUserIds.value.has(currentUser.value.uid)
-      ) {
-        optimisticUserProfile.value = profile
       }
     },
     { immediate: true }
@@ -334,16 +385,15 @@ export const useAuthStore = defineStore("auth", () => {
       if (!currentUser.value || !teamId || loading) {
         return
       }
-      // VueFire's `data` ref is `undefined` until the first snapshot lands;
+      // The query's `data` is `undefined` until the first snapshot lands;
       // it only becomes `null` when the document genuinely doesn't exist.
       // Without this guard, the immediate fire here would (a) wipe the
       // hydrated cache by writing defaults to localStorage and (b) mark
       // the selection as Firestore-resolved before Firestore has spoken —
       // briefly flashing WorkspaceSelector before MainLayout renders.
-      // The race exists because `pending` is `false` at the moment the
-      // immediate fire runs: VueFire's internal watcher on the docRef is
-      // async (flush: 'pre'), so it hasn't yet reacted to the hydration
-      // that just set `currentTeamId`.
+      // The race exists because the immediate fire can run before the query
+      // has delivered its first snapshot for the docRef that the just-applied
+      // `currentTeamId` hydration produced.
       if (preferences === undefined) return
 
       const nextPreferences = preferences ?? defaultMembershipPreferences()
@@ -364,15 +414,22 @@ export const useAuthStore = defineStore("auth", () => {
   )
 
   function cleanup() {
-    optimisticUserProfile.value = null
     optimisticUserPreferences.value = null
     optimisticMembershipPreferences.value = null
     resolvedMembershipPreferencesTeamId.value = null
     clearHydrationCache()
+    // Also drop the persisted + in-memory read cache so the next user never
+    // sees the previous user's Firestore data on cold start.
+    void clearPersistedQueryCache()
   }
 
-  watch(currentUser, (user) => {
-    if (!user) {
+  watch(currentUser, () => {
+    // Tear down ONLY on a confirmed sign-out. VueFire emits `undefined` during
+    // the initial auth-restoration window; treating that like a sign-out would
+    // run `clearPersistedQueryCache()` (a full cache wipe) mid-bootstrap and
+    // bounce the signed-in user back to the shell/landing. Gating on
+    // `isCurrentUserLoaded` collapses this to a real `null` (signed out) only.
+    if (isCurrentUserLoaded.value && !currentUser.value) {
       cleanup()
     }
   })
@@ -448,9 +505,11 @@ export const useAuthStore = defineStore("auth", () => {
   async function updateUserProfile(
     updates: Partial<IUserProfile>
   ): Promise<void> {
-    if (!currentUser.value || !userProfile.value) return
+    const user = currentUser.value
+    const baseProfile = userProfile.value
+    if (!user || !baseProfile) return
 
-    const userId = currentUser.value.uid
+    const userId = user.uid
     const { displayName, photoURL } = updates
 
     // Empty string is the legacy "clear" signal — normalize to null
@@ -477,30 +536,31 @@ export const useAuthStore = defineStore("auth", () => {
 
     if (Object.keys(payload).length === 0) return
 
-    const previousUserProfile = cloneState(userProfile.value)
+    const key = queryKeys.doc(getUserRef(userId).path)
+    const previous = queryClient.getQueryData<IUser>(key)
+    const optimisticProfile: IUser = {
+      ...baseProfile,
+      ...(displayName !== undefined ? { displayName } : {}),
+      ...(photoURL !== undefined ? { photoURL: normalizedPhotoURL } : {}),
+    }
 
-    await withOptimisticUpdate(
-      pendingUserIds,
-      userId,
-      () => {
-        optimisticUserProfile.value = {
-          ...userProfile.value!,
-          ...(displayName !== undefined ? { displayName } : {}),
-          ...(photoURL !== undefined ? { photoURL: normalizedPhotoURL } : {}),
-        }
-      },
-      () => {
-        optimisticUserProfile.value = previousUserProfile
-      },
-      async () => {
-        // Single round-trip: the server updates Firestore + Firebase
-        // Auth atomically (Admin SDK), eliminating the divergence
-        // window the prior client-side parallel-writes pattern had.
-        // The audit entry lands in Cloud Logging — see the JSDoc on
-        // `updateOwnUserProfile` in `useFunctions.ts`.
-        await updateOwnUserProfileFn(payload)
-      }
-    )
+    addPending(pendingUserIds, userId)
+    try {
+      await userProfileMutation.mutateAsync({
+        keys: [key],
+        apply: () => queryClient.setQueryData(key, optimisticProfile),
+        rollback: () => queryClient.setQueryData(key, previous),
+        // Single round-trip: the server updates Firestore + Firebase Auth
+        // atomically (Admin SDK), eliminating the divergence window the prior
+        // client-side parallel-writes pattern had. The audit entry lands in
+        // Cloud Logging — see the JSDoc on `updateOwnUserProfile`.
+        run: async () => {
+          await updateOwnUserProfileFn(payload)
+        },
+      })
+    } finally {
+      setTimeout(() => removePending(pendingUserIds, userId), 120)
+    }
   }
 
   async function uploadProfilePhoto(file: File): Promise<string> {

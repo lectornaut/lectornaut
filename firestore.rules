@@ -316,6 +316,28 @@ service cloud.firestore {
         allow write: if false;
       }
 
+      // Team automations ("Workflows"). Admin-only read (management is an
+      // admin surface); all writes go through admin-gated callables + the
+      // dispatcher / event triggers, never directly from clients.
+      match /workflows/{workflowId} {
+        allow read: if isTeamAdmin(teamId);
+        allow write: if false;
+      }
+
+      // Workflow run history + queue. Admin-only read; written only by the
+      // dispatcher, event triggers, and worker via the admin SDK.
+      match /workflowRuns/{runId} {
+        allow read: if isTeamAdmin(teamId);
+        allow write: if false;
+      }
+
+      // Monthly LLM token-usage counters. Admin-only read (usage/billing
+      // views); written only by the server-side metering middleware.
+      match /usage/{monthId} {
+        allow read: if isTeamAdmin(teamId);
+        allow write: if false;
+      }
+
       match /memberships/{userId} {
         allow read: if isTeamMember(teamId) || isOwnMembershipDoc();
         // Create is handled by Cloud Functions (invite/accept flow)

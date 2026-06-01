@@ -242,13 +242,20 @@ export type LogResourceType =
   | "security"
 
 export interface Actor {
-  userId: string
+  /**
+   * The human who drove the action. Optional: a headless Workflows run has no
+   * human, so an autonomous agent edit carries only `agentId`/`agentName` and
+   * omits `userId`. An interactive (or agent-on-user's-behalf) action always
+   * sets it.
+   */
+  userId?: string
   email?: string
   role?: string
   /**
-   * Set when an agent member performed the action on the user's behalf.
-   * `userId` then identifies the human who drove the turn; `agentId` /
-   * `agentName` identify the agent that actually executed it.
+   * Set when an agent member performed the action. For an interactive turn
+   * `userId` identifies the driving human and these identify the agent that
+   * executed it; for an autonomous Workflows run there is no `userId` and
+   * these are the sole actor identity.
    */
   agentId?: string
   agentName?: string

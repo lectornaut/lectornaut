@@ -26,6 +26,7 @@ import {
 } from "@/helpers/defaults"
 import { isDefaultHotkey } from "@/helpers/shortcuts"
 import { firestore } from "@/modules/firebase"
+import { queryClient } from "@/modules/queryClient"
 import { parseSafe } from "@/schemas/_utils"
 import { settingsThemeDocSchema } from "@/schemas/settings"
 import {
@@ -38,7 +39,13 @@ import {
 } from "@/types/notifications"
 import type { SettingsThemeDoc, ThemeMode } from "@/types/settings"
 import { getErrorMessage } from "@/utils/firebase/firebase-errors"
+import { useFirestoreMutation } from "@/utils/firebase/firebase-mutation"
 import { createDebouncedCloudSync } from "@/utils/firebase/firebase-optimistic"
+import { useDocumentQuery } from "@/utils/firebase/firebase-query"
+import {
+  queryKeys,
+  type FirestoreQueryKey,
+} from "@/utils/firebase/firebase-query-keys"
 import {
   mutateSetDocument,
   safeSetDocument as safeSetDoc,
@@ -62,7 +69,7 @@ import { useStorage, watchDebounced } from "@vueuse/core"
 import { collection, doc } from "firebase/firestore"
 import { defineStore } from "pinia"
 import { toast } from "vue-sonner"
-import { useCurrentUser, useDocument } from "vuefire"
+import { useCurrentUser } from "vuefire"
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null
@@ -132,7 +139,8 @@ export const useSettingsStore = defineStore("settings", () => {
     )
   })
 
-  const { data: themeDocData, pending: themePending } = useDocument(themeDocRef)
+  const { data: themeDocData, isLoading: themePending } =
+    useDocumentQuery(themeDocRef)
 
   async function persistTheme(): Promise<boolean> {
     return safeSetDoc(
@@ -318,35 +326,35 @@ export const useSettingsStore = defineStore("settings", () => {
     return doc(firestore, "users", user.value.uid, "settings", "notifications")
   })
 
-  const { data: notificationSettingsDoc, pending: notificationPending } =
-    useDocument(notificationSettingsDocRef)
+  const { data: notificationSettingsDoc, isLoading: notificationPending } =
+    useDocumentQuery(notificationSettingsDocRef)
 
-  const optimisticNotificationSettings = ref<UserNotificationSettings | null>(
-    null
-  )
   const isUpdatingNotifications = ref<string | null>(null)
 
+  // Reads straight from the realtime cache; the toggle below applies its
+  // optimistic value into that cache (held until the server ack reconciles it),
+  // which replaces the former optimistic-ref + reconcile-clear watch.
   const notificationSettings = computed(() =>
-    optimisticNotificationSettings.value
-      ? cloneNotificationSettings(optimisticNotificationSettings.value)
-      : normalizeNotificationSettings(notificationSettingsDoc.value)
+    normalizeNotificationSettings(notificationSettingsDoc.value)
   )
 
-  watch(
-    () => notificationSettingsDoc.value,
-    (nextValue) => {
-      if (!optimisticNotificationSettings.value) return
-      const remote = normalizeNotificationSettings(nextValue)
-      if (
-        areNotificationSettingsEqual(
-          remote,
-          optimisticNotificationSettings.value
-        )
-      ) {
-        optimisticNotificationSettings.value = null
-      }
-    }
-  )
+  const notificationMutation = useFirestoreMutation<
+    {
+      keys: FirestoreQueryKey[]
+      apply: () => void
+      rollback: () => void
+      run: () => Promise<void>
+    },
+    void
+  >({
+    mutationFn: (vars) => vars.run(),
+    optimistic: (vars) => ({
+      keys: vars.keys,
+      apply: vars.apply,
+      rollback: vars.rollback,
+    }),
+    source: "settings.notifications",
+  })
 
   async function persistNotificationSettings(
     key: string,
@@ -356,10 +364,8 @@ export const useSettingsStore = defineStore("settings", () => {
       error: string
     }
   ): Promise<boolean> {
-    if (
-      !notificationSettingsDocRef.value ||
-      isUpdatingNotifications.value !== null
-    ) {
+    const docRef = notificationSettingsDocRef.value
+    if (!docRef || isUpdatingNotifications.value !== null) {
       return false
     }
 
@@ -370,22 +376,34 @@ export const useSettingsStore = defineStore("settings", () => {
       return true
     }
 
-    optimisticNotificationSettings.value = next
+    const cacheKey = queryKeys.doc(docRef.path)
+    const previousCache =
+      queryClient.getQueryData<Record<string, unknown>>(cacheKey)
     isUpdatingNotifications.value = key
 
     try {
-      await mutateSetDocument(
-        notificationSettingsDocRef.value,
-        next as unknown as Record<string, unknown>,
-        {
-          source: "settings.notifications.persist",
-          merge: true,
-        }
-      )
+      await notificationMutation.mutateAsync({
+        keys: [cacheKey],
+        apply: () =>
+          queryClient.setQueryData(
+            cacheKey,
+            next as unknown as Record<string, unknown>
+          ),
+        rollback: () => queryClient.setQueryData(cacheKey, previousCache),
+        run: async () => {
+          await mutateSetDocument(
+            docRef,
+            next as unknown as Record<string, unknown>,
+            {
+              source: "settings.notifications.persist",
+              merge: true,
+            }
+          )
+        },
+      })
       toast.success(messages.success)
       return true
     } catch (error) {
-      optimisticNotificationSettings.value = previous
       toast.error(messages.error, {
         description: getErrorMessage(error),
       })
@@ -523,8 +541,8 @@ export const useSettingsStore = defineStore("settings", () => {
     return doc(firestore, "users", user.value.uid, "settings", "preferences")
   })
 
-  const { data: preferencesDocData, pending: preferencesPending } =
-    useDocument(preferencesDocRef)
+  const { data: preferencesDocData, isLoading: preferencesPending } =
+    useDocumentQuery(preferencesDocRef)
 
   const runOnStartup = useStorage<boolean>("runOnStartup", false)
   const menuBar = useStorage<boolean>("menuBar", true)
@@ -807,8 +825,8 @@ export const useSettingsStore = defineStore("settings", () => {
     return doc(firestore, "users", user.value.uid, "settings", "shortcuts")
   })
 
-  const { data: shortcutsDocData, pending: shortcutsPending } =
-    useDocument(shortcutsDocRef)
+  const { data: shortcutsDocData, isLoading: shortcutsPending } =
+    useDocumentQuery(shortcutsDocRef)
 
   // Incoming sync: Firestore → localStorage
   let isShortcutSyncPending = false

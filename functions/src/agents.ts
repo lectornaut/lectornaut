@@ -180,6 +180,19 @@ export function buildAgentSystemPrompt(args: {
     name: string
     description: string
   }>
+  /**
+   * Whether human-in-the-loop interrupts (`askQuestion`) are wired this
+   * turn. Headless Workflows runs pass `false` — there is no human in the
+   * session to answer — so `pickChatTools` withholds the interrupt tool.
+   * When false we MUST also stop the prompt from telling the model to ask:
+   * the persona's mode suffix (and some tool descriptions) instruct it to
+   * "ask via `askQuestion`", and following that instruction with the tool
+   * absent makes the model emit a call Genkit can't resolve, killing the
+   * run with `NOT_FOUND: Tool askQuestion not found`. Mirrors the
+   * withhold-tool-AND-correct-the-prompt pattern of `buildTransferDirective`.
+   * Defaults to interactive (`true`) when omitted.
+   */
+  allowInterrupts?: boolean
 }): string {
   const { agent, teamBaseSystem, teamModeSuffix, mode, otherAgents } = args
 
@@ -210,6 +223,9 @@ export function buildAgentSystemPrompt(args: {
   const directives = [
     buildTransferDirective(otherAgents),
     args.canManageNodes ? buildNodeEditingDirective(!!args.canReadNodes) : "",
+    // Autonomous run with no human to answer — append AFTER the mode suffix
+    // so it overrides any "ask via askQuestion" steer the persona carries.
+    args.allowInterrupts === false ? buildHeadlessDirective() : "",
   ].filter(Boolean)
 
   return [base, ...directives].join("\n\n")
@@ -306,6 +322,34 @@ export function buildTransferDirective(
     "call leaves the user stranded on the current agent with no " +
     "visible state change. If you decide NOT to transfer, just answer " +
     "the question; do not invent a handoff as a polite deflection."
+  )
+}
+
+/**
+ * Directive appended when the turn runs autonomously with no human present
+ * (`allowInterrupts === false` — the headless Workflows path). The
+ * `askQuestion` interrupt tool is deliberately withheld from such runs
+ * (`pickChatTools` in bot.ts), but the persona's mode suffix still tells the
+ * model to "ask via `askQuestion`" when it needs a decision. Following that
+ * with the tool absent makes the model call a tool Genkit can't resolve,
+ * which throws `NOT_FOUND: Tool askQuestion not found` and fails the whole
+ * run. This is the prompt half of the fix — the exact analogue of the
+ * no-targets branch of `buildTransferDirective`: when a tool is withheld,
+ * tell the model so explicitly AND tell it what to do instead (here: proceed
+ * on a stated best-effort assumption) rather than leaving a contradictory
+ * "ask the user" steer in place.
+ */
+export function buildHeadlessDirective(): string {
+  return (
+    "You are running autonomously as part of a scheduled or triggered " +
+    "workflow. No human is present in this session, and the `askQuestion` " +
+    "tool is NOT available on this run — do not call it, and do not wait for " +
+    "or request user input by any means. If anything is ambiguous or " +
+    "under-specified, choose the most reasonable interpretation, state the " +
+    "assumption you made in one short sentence, and carry the task through to " +
+    "completion. Declining or stalling for a clarification nobody can answer " +
+    "is a failed run; a sensible, clearly-stated assumption is the correct " +
+    "outcome."
   )
 }
 

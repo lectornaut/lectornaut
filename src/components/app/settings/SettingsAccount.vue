@@ -59,7 +59,8 @@ import { collection, doc, getDocs } from "firebase/firestore"
 import QRCode from "qrcode"
 import { REGEXP_ONLY_DIGITS } from "vue-input-otp"
 import { toast } from "vue-sonner"
-import { useCurrentUser, useDocument, useStorageFile } from "vuefire"
+import { useDocumentQuery } from "@/utils/firebase/firebase-query"
+import { useCurrentUser, useStorageFile } from "vuefire"
 
 const { t, locale } = useI18n()
 
@@ -71,7 +72,7 @@ const userDocRef = computed(() => {
   return doc(collection(firestore, "users"), user.value.uid)
 })
 
-const { data: userData } = useDocument(userDocRef)
+const { data: userData } = useDocumentQuery(userDocRef)
 
 const currentUsername = computed(() => userData.value?.username ?? "")
 const currentIsPublic = computed(() => userData.value?.isPublic ?? false)

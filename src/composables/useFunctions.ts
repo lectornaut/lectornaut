@@ -1799,6 +1799,150 @@ export const deleteTeamAgent = createTypedCallable<
 >("deleteTeamAgent")
 
 // =============================================================================
+// Workflows (team automations)
+// =============================================================================
+
+export type WorkflowScheduleInput =
+  | { type: "interval"; everyHours: number }
+  | { type: "daily"; atMinuteUTC: number }
+  | { type: "weekly"; dayOfWeek: number; atMinuteUTC: number }
+
+export type WorkflowTriggerInput =
+  | { type: "schedule"; schedule: WorkflowScheduleInput }
+  | { type: "event"; scope: "code" | "write"; debounceMinutes?: number }
+  | { type: "manual" }
+
+export interface WorkflowNodeRefInput {
+  scope: "code" | "write"
+  nodeId: string
+}
+
+export type WorkflowUpdateModeInput = "automatic" | "require_review"
+
+export interface CreateWorkflowDraft {
+  name: string
+  description?: string
+  agentId: string
+  workspaceId: string
+  /** Tree the workflow may edit; null/undefined = the workspace's `write` tree. */
+  targetScope?: "code" | "write" | null
+  /** The procedure the agent follows each run (the brief's `instructions`). */
+  instructions: string
+  /** Optional supplementary instructions appended to `instructions`. */
+  additionalPrompt?: string
+  trigger: WorkflowTriggerInput
+  contextNodes?: WorkflowNodeRefInput[]
+  /** `require_review` (default) stages edits for approval; `automatic` applies. */
+  updateMode?: WorkflowUpdateModeInput
+  enabled?: boolean
+}
+
+/** Update can change anything except the immutable agent/workspace binding. */
+export type UpdateWorkflowPatch = Partial<
+  Omit<CreateWorkflowDraft, "agentId" | "workspaceId">
+>
+
+export interface CreateTeamWorkflowRequest {
+  teamId: string
+  draft: CreateWorkflowDraft
+}
+export interface CreateTeamWorkflowResponse {
+  workflowId: string
+}
+export interface UpdateTeamWorkflowRequest {
+  teamId: string
+  workflowId: string
+  patch: UpdateWorkflowPatch
+}
+export interface SetTeamWorkflowEnabledRequest {
+  teamId: string
+  workflowId: string
+  enabled: boolean
+}
+export interface ArchiveTeamWorkflowRequest {
+  teamId: string
+  workflowId: string
+  archived: boolean
+}
+export interface DeleteTeamWorkflowRequest {
+  teamId: string
+  workflowId: string
+}
+export interface RunTeamWorkflowNowRequest {
+  teamId: string
+  workflowId: string
+}
+export interface RunTeamWorkflowNowResponse {
+  runId: string
+}
+
+export const createTeamWorkflow = createTypedCallable<
+  CreateTeamWorkflowRequest,
+  CreateTeamWorkflowResponse
+>("createTeamWorkflow")
+
+export const updateTeamWorkflow = createTypedCallable<
+  UpdateTeamWorkflowRequest,
+  { ok: boolean }
+>("updateTeamWorkflow")
+
+export const setTeamWorkflowEnabled = createTypedCallable<
+  SetTeamWorkflowEnabledRequest,
+  { ok: boolean }
+>("setTeamWorkflowEnabled")
+
+export const archiveTeamWorkflow = createTypedCallable<
+  ArchiveTeamWorkflowRequest,
+  { ok: boolean }
+>("archiveTeamWorkflow")
+
+export const deleteTeamWorkflow = createTypedCallable<
+  DeleteTeamWorkflowRequest,
+  { ok: boolean }
+>("deleteTeamWorkflow")
+
+export const runTeamWorkflowNow = createTypedCallable<
+  RunTeamWorkflowNowRequest,
+  RunTeamWorkflowNowResponse
+>("runTeamWorkflowNow")
+
+/** Approve (apply staged edits) or reject (discard) a `require_review` run. */
+export type WorkflowReviewDecision = "approve" | "reject"
+export interface ReviewTeamWorkflowRunRequest {
+  teamId: string
+  runId: string
+  decision: WorkflowReviewDecision
+}
+export interface ReviewTeamWorkflowRunResponse {
+  ok: boolean
+  /** The run's terminal status after the decision ("applied" | "cancelled"). */
+  status: string
+}
+export const reviewTeamWorkflowRun = createTypedCallable<
+  ReviewTeamWorkflowRunRequest,
+  ReviewTeamWorkflowRunResponse
+>("reviewTeamWorkflowRun")
+
+/**
+ * Materialize a predefined catalog workflow as a `presetKey != null` instance.
+ * The server fills name/description/instructions/trigger/updateMode from the
+ * preset; the caller picks which agent + workspace it binds to.
+ */
+export interface EnableTeamWorkflowPresetRequest {
+  teamId: string
+  presetKey: string
+  workspaceId: string
+  agentId: string
+}
+export interface EnableTeamWorkflowPresetResponse {
+  workflowId: string
+}
+export const enableTeamWorkflowPreset = createTypedCallable<
+  EnableTeamWorkflowPresetRequest,
+  EnableTeamWorkflowPresetResponse
+>("enableTeamWorkflowPreset")
+
+// =============================================================================
 // Team Custom Tools Functions
 // =============================================================================
 
@@ -1986,6 +2130,37 @@ export const generateTeamCustomToolConfig = createTypedCallable<
   GenerateConfigRequest,
   GeneratedTeamCustomToolConfig
 >("generateTeamCustomToolConfig")
+
+/**
+ * Structured workflow config produced by `generateTeamWorkflowConfig`. Shapes
+ * the workflow editor draft directly — every string is clamped server-side and
+ * the `trigger` is normalized to a valid discriminated union. `agentId`,
+ * `workspaceId`, `contextNodes`, and `enabled` are intentionally NOT generated
+ * (the model never sees team data and can't know node ids): the editor keeps
+ * its own values for those and merges only the fields below.
+ */
+export interface GeneratedTeamWorkflowConfig {
+  name: string
+  description: string
+  instructions: string
+  additionalPrompt: string
+  /** null = the workspace's default `write` tree. */
+  targetScope: "code" | "write" | null
+  trigger: WorkflowTriggerInput
+  updateMode: WorkflowUpdateModeInput
+  model: string
+}
+
+/**
+ * Generate a workflow configuration from a natural-language prompt.
+ * Owner/admin only. Same model + draft semantics as
+ * {@link generateTeamAgentConfig}; the editor merges the result into its draft
+ * (preserving the chosen agent + workspace) for review before saving.
+ */
+export const generateTeamWorkflowConfig = createTypedCallable<
+  GenerateConfigRequest,
+  GeneratedTeamWorkflowConfig
+>("generateTeamWorkflowConfig")
 
 // =============================================================================
 // Composable Hook

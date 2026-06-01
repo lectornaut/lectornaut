@@ -6,12 +6,18 @@ import { initDeepLink } from "@/modules/deepLink"
 import { authReady, firebaseApp } from "@/modules/firebase"
 import { i18n, initLanguage } from "@/modules/i18n"
 import { initPwa } from "@/modules/pwa"
+import { queryClient } from "@/modules/queryClient"
+import {
+  restoreQueryCache,
+  startQueryCachePersistence,
+} from "@/modules/queryPersister"
 import { router } from "@/modules/router"
 import { initTheme } from "@/modules/theme"
 import { initUpdater } from "@/modules/updater"
 import { setSchemaViolationSink } from "@/schemas"
 import "@/styles/index.css"
 import { initSync } from "@/utils/firebase/firebase-sync-engine"
+import { VueQueryPlugin } from "@tanstack/vue-query"
 import { createHead } from "@unhead/vue/client"
 import { MotionPlugin } from "@vueuse/motion"
 import {
@@ -35,6 +41,7 @@ const pinia = createPinia()
 const app = createApp(App)
 
 app.use(pinia)
+app.use(VueQueryPlugin, { queryClient })
 app.use(VueFire, {
   firebaseApp,
   modules: [createAppCheckModule(), VueFireAuth()],
@@ -67,6 +74,13 @@ void preloadExtendedLanguageIcons()
 // Order matters: authReady must resolve before router.isReady() so the
 // initial navigation guard sees a settled `auth.currentUser`.
 await authReady
+
+// Restore the persisted read cache for an instant cold start, then begin
+// persisting future changes. Done after auth settles so we hydrate the
+// signed-in user's cache (logout clears it via clearPersistedQueryCache).
+await restoreQueryCache()
+startQueryCachePersistence()
+
 await router.isReady()
 
 // Block mount until the active Shiki editor theme is loaded so the Tiptap,

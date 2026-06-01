@@ -26,6 +26,16 @@ import type {
   userProfileSchema,
   userSchema,
   usernameClaimSchema,
+  workflowNodeRefSchema,
+  workflowRunChangeSchema,
+  workflowRunSchema,
+  workflowRunStatusSchema,
+  workflowRunTriggeredBySchema,
+  workflowRunUsageSchema,
+  workflowScheduleSchema,
+  workflowSchema,
+  workflowTriggerSchema,
+  workflowUpdateModeSchema,
   workspaceSchema,
 } from "@/schemas/domain"
 import type { z } from "zod"
@@ -81,6 +91,21 @@ export type IBotAgentBuiltInAgentToggles = z.infer<
 export type IBotAgentConfig = z.infer<typeof botAgentConfigSchema>
 
 export type ITeamAgent = z.infer<typeof teamAgentSchema>
+
+// ─── Workflows ──────────────────────────────────────────────────────────────
+
+export type IWorkflow = z.infer<typeof workflowSchema>
+export type IWorkflowRun = z.infer<typeof workflowRunSchema>
+export type IWorkflowTrigger = z.infer<typeof workflowTriggerSchema>
+export type IWorkflowSchedule = z.infer<typeof workflowScheduleSchema>
+export type IWorkflowRunStatus = z.infer<typeof workflowRunStatusSchema>
+export type IWorkflowUpdateMode = z.infer<typeof workflowUpdateModeSchema>
+export type IWorkflowNodeRef = z.infer<typeof workflowNodeRefSchema>
+export type IWorkflowRunChange = z.infer<typeof workflowRunChangeSchema>
+export type IWorkflowRunTriggeredBy = z.infer<
+  typeof workflowRunTriggeredBySchema
+>
+export type IWorkflowRunUsage = z.infer<typeof workflowRunUsageSchema>
 
 // ─── Custom tools ───────────────────────────────────────────────────────────
 

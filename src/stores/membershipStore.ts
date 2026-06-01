@@ -7,7 +7,7 @@
  * - Role management (owner, admin, member)
  * - Invite/remove members
  *
- * Uses VueFire composables for reactive Firestore bindings.
+ * Reactive Firestore reads flow through TanStack Query (onSnapshot-backed).
  * All mutations go through Cloud Functions for automatic audit logging.
  */
 
@@ -20,6 +20,7 @@ import {
   sendInvitation as sendInvitationFn,
 } from "@/composables/useFunctions"
 import { defaultTeamRole } from "@/helpers/defaults"
+import { queryClient } from "@/modules/queryClient"
 import { parseSafe } from "@/schemas/_utils"
 import { membershipSchema, teamMemberSchema } from "@/schemas/membership"
 import { useAuthStore } from "@/stores/authStore"
@@ -41,16 +42,18 @@ import {
   getMembershipRef,
   getTeamMembershipsCollection,
 } from "@/utils/firebase/firebase-helpers"
-import { useLocalHydration } from "@/utils/firebase/firebase-hydration"
+import { useFirestoreMutation } from "@/utils/firebase/firebase-mutation"
 import {
   addPending,
   cloneState,
   createPendingSet,
-  mergeOptimisticCollectionByKey,
   removePending,
-  withOptimisticBatchUpdate,
-  withOptimisticUpdate,
 } from "@/utils/firebase/firebase-optimistic"
+import { useCollectionQuery } from "@/utils/firebase/firebase-query"
+import {
+  queryKeys,
+  type FirestoreQueryKey,
+} from "@/utils/firebase/firebase-query-keys"
 import {
   getCountFromServer,
   getDoc,
@@ -61,25 +64,10 @@ import {
 } from "firebase/firestore"
 import { defineStore, storeToRefs } from "pinia"
 import { computed, ref, shallowRef } from "vue"
-import { useCollection } from "vuefire"
 
 // Helper to get ownership count (used for ownerCount computed property)
 const getOwnerCount = (members: ITeamMember[]) =>
   members.filter((m) => m.role === "owner").length
-
-const membershipKey = (membership: Pick<IMembership, "teamId" | "userId">) =>
-  `${membership.teamId}-${membership.userId}`
-
-/**
- * Optimistic-merge key for a team member row. Users keep the historical
- * `${teamId}-${userId}` format byte-for-byte (so existing optimistic
- * role/remove flows keep matching their pending keys); agents get an
- * `agent:`-prefixed key. The two namespaces can't collide.
- */
-const teamMemberKey = (member: ITeamMember) =>
-  isAgentMembership(member)
-    ? `${member.teamId}-agent:${member.agentId}`
-    : `${member.teamId}-${member.userId}`
 
 const isPermissionDeniedError = (error: unknown) =>
   Boolean(
@@ -95,7 +83,7 @@ export const useMembershipStore = defineStore("memberships", () => {
     storeToRefs(authStore)
 
   // ============================================================================
-  // VueFire Reactive Bindings
+  // Realtime Firestore bindings (TanStack Query)
   // ============================================================================
 
   // Query for user's memberships - null when not authenticated
@@ -108,11 +96,18 @@ export const useMembershipStore = defineStore("memberships", () => {
       : null
   )
 
-  // VueFire reactive collection binding for memberships
-  // Use intermediate variables with type assertions to isolate VueFire types
-  const _vuefireMemberships = useCollection<IMembership>(membershipsQueryRef)
+  // Realtime collection binding (TanStack Query + onSnapshot) for memberships.
+  // `membershipsQueryRef` is a collectionGroup query (no `.path`), so the cache
+  // identity is a synthetic "memberships" group key disambiguated by userId.
+  const membershipsQuery = useCollectionQuery<IMembership>(() => {
+    const query = membershipsQueryRef.value
+    const uid = currentUser.value?.uid
+    return query && uid
+      ? { query, path: "memberships", params: { userId: uid } }
+      : null
+  })
   const firestoreMemberships: ComputedRef<IMembership[]> = computed(
-    () => _vuefireMemberships.data.value ?? []
+    () => membershipsQuery.data.value ?? []
   )
 
   // ============================================================================
@@ -120,18 +115,53 @@ export const useMembershipStore = defineStore("memberships", () => {
   // guard can check membership without a forward reference to the merged computed.
   // ============================================================================
 
-  /** Local memberships that can be optimistically updated */
-  const optimisticMemberships = ref<IMembership[]>([])
-
-  /** Local team members that can be optimistically updated */
-  const optimisticTeamMembers = ref<ITeamMember[]>([])
-
-  // Pending operation tracking
+  // Pending operation tracking (per-membership-key; drives `isMembershipPending`).
   const pendingMembershipIds = shallowRef(createPendingSet())
 
-  // Hydrate from localStorage for instant cold-start rendering.
-  // Must happen before teamMembersQueryRef so the guard has cached membership data.
-  useLocalHydration("memberships", optimisticMemberships)
+  // Cache keys matching the realtime read queries. Per-mutation optimism writes
+  // the optimistic value directly into these cache entries and holds them until
+  // the server-applied snapshot reconciles (see runMembershipMutation).
+  const membershipsCacheKey = (): FirestoreQueryKey | null =>
+    currentUser.value
+      ? queryKeys.list("memberships", { userId: currentUser.value.uid })
+      : null
+  const teamMembersCacheKey = (teamId: string): FirestoreQueryKey =>
+    queryKeys.list(`teams/${teamId}/memberships`)
+
+  const readMemberships = (): IMembership[] => {
+    const key = membershipsCacheKey()
+    return key ? (queryClient.getQueryData<IMembership[]>(key) ?? []) : []
+  }
+  const readTeamMembers = (teamId: string): ITeamMember[] =>
+    queryClient.getQueryData<ITeamMember[]>(teamMembersCacheKey(teamId)) ?? []
+
+  // One mutation drives every membership/teamMember list write. Callers pass the
+  // affected cache key(s) + optimistic apply/rollback + the Cloud Function call.
+  const membershipMutation = useFirestoreMutation<
+    {
+      keys: FirestoreQueryKey[]
+      apply: () => void
+      rollback: () => void
+      run: () => Promise<void>
+    },
+    void
+  >({
+    mutationFn: (vars) => vars.run(),
+    optimistic: (vars) => ({
+      keys: vars.keys,
+      apply: vars.apply,
+      rollback: vars.rollback,
+    }),
+    source: "membership",
+  })
+
+  const runMembershipMutation = (
+    keys: FirestoreQueryKey[],
+    apply: () => void,
+    rollback: () => void,
+    run: () => Promise<void>
+  ): Promise<void> =>
+    membershipMutation.mutateAsync({ keys, apply, rollback, run })
 
   // Query for team members - null when no team selected
 
@@ -143,59 +173,38 @@ export const useMembershipStore = defineStore("memberships", () => {
     // This prevents the "Missing or insufficient permissions" error.
     // Uses firestoreMemberships (not merged `memberships` computed) to avoid forward reference
     // during cold-start hydration when currentTeamId may already be set from localStorage cache.
-    const isMember =
-      firestoreMemberships.value.some((m) => m.teamId === teamId) ||
-      optimisticMemberships.value.some((m) => m.teamId === teamId)
+    const isMember = firestoreMemberships.value.some((m) => m.teamId === teamId)
     if (!isMember) return null
 
     return getTeamMembershipsCollection(teamId)
   })
 
-  // VueFire reactive collection binding for team members (users + agents)
-  const _vuefireTeamMembers = useCollection<ITeamMember>(teamMembersQueryRef)
+  // Realtime collection binding (TanStack Query + onSnapshot) for team members.
+  const teamMembersQuery = useCollectionQuery<ITeamMember>(() => {
+    const query = teamMembersQueryRef.value
+    return query ? { query, path: query.path } : null
+  })
   const firestoreTeamMembers: ComputedRef<ITeamMember[]> = computed(
-    () => _vuefireTeamMembers.data.value ?? []
+    () => teamMembersQuery.data.value ?? []
   )
 
   // ============================================================================
   // Computed - Merged State
   // ============================================================================
 
-  /** All memberships for the current user (teams they belong to) */
-  const memberships = computed({
-    get: () =>
-      mergeOptimisticCollectionByKey(
-        firestoreMemberships.value,
-        optimisticMemberships.value,
-        pendingMembershipIds.value,
-        membershipKey
-      ),
-    set: (value) => {
-      optimisticMemberships.value = value
-    },
-  })
+  /** All memberships for the current user (straight from the realtime cache). */
+  const memberships = computed(() => firestoreMemberships.value)
 
-  /** Members of the currently selected team */
-  const teamMembers = computed({
-    get: () =>
-      currentTeamId.value
-        ? mergeOptimisticCollectionByKey(
-            firestoreTeamMembers.value,
-            optimisticTeamMembers.value,
-            pendingMembershipIds.value,
-            teamMemberKey
-          )
-        : [],
-    set: (value) => {
-      optimisticTeamMembers.value = value
-    },
-  })
+  /** Members of the currently selected team (straight from the realtime cache). */
+  const teamMembers = computed(() =>
+    currentTeamId.value ? firestoreTeamMembers.value : []
+  )
 
   // ============================================================================
   // Computed
   // ============================================================================
 
-  const isLoading = computed(() => _vuefireMemberships.pending.value)
+  const isLoading = computed(() => membershipsQuery.isLoading.value)
 
   const isMembershipPending = computed(
     () => (id: string) => pendingMembershipIds.value.has(id)
@@ -343,7 +352,7 @@ export const useMembershipStore = defineStore("memberships", () => {
 
   const syncCurrentTeamMemberCount = () => {
     const teamId = currentTeamId.value
-    if (!teamId || _vuefireTeamMembers.pending.value) return
+    if (!teamId || teamMembersQuery.isLoading.value) return
 
     const nextCount = Math.max(teamMembers.value.length, 1)
     if (teamMemberCounts.value[teamId] === nextCount) return
@@ -356,7 +365,7 @@ export const useMembershipStore = defineStore("memberships", () => {
 
   /** Get member count for a specific team */
   const getTeamMemberCount = (teamId: string): number => {
-    if (currentTeamId.value === teamId && !_vuefireTeamMembers.pending.value) {
+    if (currentTeamId.value === teamId && !teamMembersQuery.isLoading.value) {
       return Math.max(teamMembers.value.length, 1)
     }
 
@@ -367,7 +376,7 @@ export const useMembershipStore = defineStore("memberships", () => {
     teamId: string
   ): Promise<number> => {
     // If this is the current team and members are loaded, use local count
-    if (currentTeamId.value === teamId && !_vuefireTeamMembers.pending.value) {
+    if (currentTeamId.value === teamId && !teamMembersQuery.isLoading.value) {
       return Math.max(teamMembers.value.length, 1)
     }
 
@@ -497,53 +506,10 @@ export const useMembershipStore = defineStore("memberships", () => {
     [
       currentTeamId,
       firestoreTeamMembers,
-      () => _vuefireTeamMembers.pending.value,
+      () => teamMembersQuery.isLoading.value,
     ],
     () => {
       syncCurrentTeamMemberCount()
-    },
-    { immediate: true }
-  )
-
-  // ============================================================================
-  // Sync Optimistic State with Firestore
-  // ============================================================================
-
-  // Sync optimistic memberships with Firestore data only once VueFire has
-  // actually fetched. Guarding on `membershipsQueryRef` and `pending`
-  // prevents the immediate fire from clobbering the hydrated cache with
-  // VueFire's initial empty-array default — which would otherwise stall
-  // the cold-start waterfall by hiding cached membership data, blocking
-  // `teamDocRef`, `workspacesQueryRef`, and `teamMembersQueryRef` (all
-  // gated on `memberships.some(...)`) until the firestore round-trip
-  // completes.
-  watch(
-    [
-      firestoreMemberships,
-      membershipsQueryRef,
-      () => _vuefireMemberships.pending.value,
-    ],
-    ([data, queryRef, pending]) => {
-      if (!queryRef || pending) return
-      if (pendingMembershipIds.value.size > 0) return
-      optimisticMemberships.value = [...data]
-    },
-    { immediate: true }
-  )
-
-  // Sync optimistic team members with Firestore data only once VueFire has
-  // actually fetched. Same hydration-clobber concern as the memberships
-  // watch above.
-  watch(
-    [
-      firestoreTeamMembers,
-      teamMembersQueryRef,
-      () => _vuefireTeamMembers.pending.value,
-    ],
-    ([data, queryRef, pending]) => {
-      if (!queryRef || pending) return
-      if (pendingMembershipIds.value.size > 0) return
-      optimisticTeamMembers.value = [...data]
     },
     { immediate: true }
   )
@@ -559,9 +525,8 @@ export const useMembershipStore = defineStore("memberships", () => {
       teamMemberCountRefreshTimer = null
     }
     teamMemberCounts.value = {}
-    optimisticMemberships.value = []
-    optimisticTeamMembers.value = []
-    // VueFire handles subscription cleanup automatically
+    // Read state lives in the query cache (cleared centrally on logout); realtime
+    // listeners are torn down automatically once their queries go unused (gc).
   }
 
   // Watch for logout to cleanup
@@ -579,8 +544,17 @@ export const useMembershipStore = defineStore("memberships", () => {
    * Add a membership optimistically (used by teamStore when creating teams)
    */
   function addMembershipOptimistic(membership: IMembership) {
-    optimisticMemberships.value = [...memberships.value, membership]
-    optimisticTeamMembers.value = [membership]
+    const mKey = membershipsCacheKey()
+    if (mKey) {
+      queryClient.setQueryData<IMembership[]>(mKey, [
+        ...readMemberships(),
+        membership,
+      ])
+    }
+    queryClient.setQueryData<ITeamMember[]>(
+      teamMembersCacheKey(membership.teamId),
+      [membership]
+    )
   }
 
   /**
@@ -590,45 +564,56 @@ export const useMembershipStore = defineStore("memberships", () => {
     teamId: string,
     teamUpdates: Partial<ITeam>
   ) {
-    optimisticMemberships.value = memberships.value.map((m) => {
-      if (m.teamId === teamId && m.team) {
-        return {
-          ...m,
-          team: { ...m.team, ...teamUpdates },
-        }
-      }
-      return m
-    })
+    const mKey = membershipsCacheKey()
+    if (!mKey) return
+    queryClient.setQueryData<IMembership[]>(
+      mKey,
+      readMemberships().map((m) =>
+        m.teamId === teamId && m.team
+          ? { ...m, team: { ...m.team, ...teamUpdates } }
+          : m
+      )
+    )
   }
 
   /**
    * Remove memberships for a team (used by teamStore when deleting teams)
    */
   function removeMembershipsForTeam(teamId: string) {
-    optimisticMemberships.value = memberships.value.filter(
-      (m) => m.teamId !== teamId
+    const mKey = membershipsCacheKey()
+    if (!mKey) return
+    queryClient.setQueryData<IMembership[]>(
+      mKey,
+      readMemberships().filter((m) => m.teamId !== teamId)
     )
   }
 
   /**
-   * Clear team members (used when deleting/exiting the current team)
+   * Clear the current team's members (used when deleting/exiting the team)
    */
   function clearTeamMembers() {
-    optimisticTeamMembers.value = []
+    const teamId = currentTeamId.value
+    if (teamId) {
+      queryClient.setQueryData<ITeamMember[]>(teamMembersCacheKey(teamId), [])
+    }
   }
 
   /**
-   * Rollback memberships state
+   * Rollback memberships to a prior cache snapshot
    */
   function rollbackMemberships(previousMemberships: IMembership[]) {
-    optimisticMemberships.value = previousMemberships
+    const mKey = membershipsCacheKey()
+    if (mKey) queryClient.setQueryData(mKey, previousMemberships)
   }
 
   /**
-   * Rollback team members state
+   * Rollback the current team's members to a prior cache snapshot
    */
   function rollbackTeamMembers(previousTeamMembers: ITeamMember[]) {
-    optimisticTeamMembers.value = previousTeamMembers
+    const teamId = currentTeamId.value
+    if (teamId) {
+      queryClient.setQueryData(teamMembersCacheKey(teamId), previousTeamMembers)
+    }
   }
 
   /**
@@ -693,38 +678,39 @@ export const useMembershipStore = defineStore("memberships", () => {
     }
 
     const membershipKey = `${teamId}-${userId}`
+    const teamKey = teamMembersCacheKey(teamId)
     const previousTeamMembers = isCurrentTeamTarget
-      ? cloneState(teamMembers.value)
+      ? readTeamMembers(teamId)
       : []
 
-    await withOptimisticUpdate(
-      pendingMembershipIds,
-      membershipKey,
-      // Apply optimistic update
-      () => {
-        if (isCurrentTeamTarget) {
-          optimisticTeamMembers.value = teamMembers.value.map((m) =>
-            isUserMembership(m) && m.userId === userId
-              ? { ...m, role: newRole }
-              : m
-          )
+    markPending(membershipKey)
+    try {
+      await runMembershipMutation(
+        isCurrentTeamTarget ? [teamKey] : [],
+        () => {
+          if (isCurrentTeamTarget) {
+            queryClient.setQueryData<ITeamMember[]>(
+              teamKey,
+              readTeamMembers(teamId).map((m) =>
+                isUserMembership(m) && m.userId === userId
+                  ? { ...m, role: newRole }
+                  : m
+              )
+            )
+          }
+        },
+        () => {
+          if (isCurrentTeamTarget) {
+            queryClient.setQueryData(teamKey, previousTeamMembers)
+          }
+        },
+        async () => {
+          await assignRoleToUserFn({ teamId, userId, role: newRole })
         }
-      },
-      // Rollback on error
-      () => {
-        if (isCurrentTeamTarget) {
-          optimisticTeamMembers.value = previousTeamMembers
-        }
-      },
-      // Cloud Function call
-      async () => {
-        await assignRoleToUserFn({
-          teamId,
-          userId,
-          role: newRole,
-        })
-      }
-    )
+      )
+    } finally {
+      setTimeout(() => clearPending(membershipKey), 120)
+    }
   }
 
   /**
@@ -755,57 +741,64 @@ export const useMembershipStore = defineStore("memberships", () => {
     }
 
     const membershipKey = `${teamId}-${userId}`
+    const teamKey = teamMembersCacheKey(teamId)
+    const mKey = membershipsCacheKey()
     const previousTeamMembers = isCurrentTeamTarget
-      ? cloneState(teamMembers.value)
+      ? readTeamMembers(teamId)
       : []
-    const previousMemberships = cloneState(memberships.value)
+    const previousMemberships = readMemberships()
     const previousCurrentTeamId = currentTeamId.value
 
     const isRemovingSelf = userId === currentUser.value.uid
     const isRemovingSelfFromCurrentTeam = isRemovingSelf && isCurrentTeamTarget
 
-    await withOptimisticUpdate(
-      pendingMembershipIds,
-      membershipKey,
-      // Apply optimistic update
-      () => {
-        if (isCurrentTeamTarget) {
-          optimisticTeamMembers.value = teamMembers.value.filter(
-            (m) => isAgentMembership(m) || m.userId !== userId
-          )
-        }
+    const keys: FirestoreQueryKey[] = []
+    if (isCurrentTeamTarget) keys.push(teamKey)
+    if (isRemovingSelf && mKey) keys.push(mKey)
 
-        if (isRemovingSelf) {
-          addPending(pendingUserIds, userId)
-          optimisticMemberships.value = memberships.value.filter(
-            (m) => m.teamId !== teamId
-          )
-          if (isRemovingSelfFromCurrentTeam && userProfile.value) {
-            authStore.setCurrentTeamIdLocal(null)
+    markPending(membershipKey)
+    if (isRemovingSelf) addPending(pendingUserIds, userId)
+    try {
+      await runMembershipMutation(
+        keys,
+        () => {
+          if (isCurrentTeamTarget) {
+            queryClient.setQueryData<ITeamMember[]>(
+              teamKey,
+              readTeamMembers(teamId).filter(
+                (m) => isAgentMembership(m) || m.userId !== userId
+              )
+            )
           }
-        }
-      },
-      // Rollback on error
-      () => {
-        if (isCurrentTeamTarget) {
-          optimisticTeamMembers.value = previousTeamMembers
-        }
-        optimisticMemberships.value = previousMemberships
-        if (isRemovingSelfFromCurrentTeam) {
-          authStore.setCurrentTeamIdLocal(previousCurrentTeamId ?? null)
-        }
-      },
-      // Cloud Function call
-      async () => {
-        try {
-          await removeMemberFn({ teamId, userId })
-        } finally {
           if (isRemovingSelf) {
-            removePending(pendingUserIds, userId)
+            if (mKey) {
+              queryClient.setQueryData<IMembership[]>(
+                mKey,
+                readMemberships().filter((m) => m.teamId !== teamId)
+              )
+            }
+            if (isRemovingSelfFromCurrentTeam && userProfile.value) {
+              authStore.setCurrentTeamIdLocal(null)
+            }
           }
+        },
+        () => {
+          if (isCurrentTeamTarget) {
+            queryClient.setQueryData(teamKey, previousTeamMembers)
+          }
+          if (mKey) queryClient.setQueryData(mKey, previousMemberships)
+          if (isRemovingSelfFromCurrentTeam) {
+            authStore.setCurrentTeamIdLocal(previousCurrentTeamId ?? null)
+          }
+        },
+        async () => {
+          await removeMemberFn({ teamId, userId })
         }
-      }
-    )
+      )
+    } finally {
+      if (isRemovingSelf) removePending(pendingUserIds, userId)
+      setTimeout(() => clearPending(membershipKey), 120)
+    }
   }
 
   /**
@@ -844,63 +837,64 @@ export const useMembershipStore = defineStore("memberships", () => {
       throw new Error("Only team owners can remove owners")
     }
     const membershipKeys = userIds.map((userId) => `${teamId}-${userId}`)
+    const teamKey = teamMembersCacheKey(teamId)
+    const mKey = membershipsCacheKey()
     const previousTeamMembers = isCurrentTeamTarget
-      ? cloneState(teamMembers.value)
+      ? readTeamMembers(teamId)
       : []
-    const previousMemberships = cloneState(memberships.value)
+    const previousMemberships = readMemberships()
     const previousCurrentTeamId = currentTeamId.value
 
     const isRemovingSelf = userIds.includes(currentUserId)
     const isRemovingSelfFromCurrentTeam = isRemovingSelf && isCurrentTeamTarget
 
-    // Batch optimistic helper tracks pending for every membership key and runs
-    // rollback on failure — mirroring the singular `removeMember` above instead
-    // of the previous hand-rolled try/catch/finally. `pendingUserIds` is a
-    // separate collection the helper doesn't manage, so the self key is
-    // added/released by hand inside the apply/cloud callbacks.
-    await withOptimisticBatchUpdate(
-      pendingMembershipIds,
-      membershipKeys,
-      // Apply optimistic updates
-      () => {
-        if (isCurrentTeamTarget) {
-          optimisticTeamMembers.value = teamMembers.value.filter(
-            (m) => isAgentMembership(m) || !userIdSet.has(m.userId)
-          )
-        }
+    const keys: FirestoreQueryKey[] = []
+    if (isCurrentTeamTarget) keys.push(teamKey)
+    if (isRemovingSelf && mKey) keys.push(mKey)
 
-        if (isRemovingSelf) {
-          addPending(pendingUserIds, currentUserId)
-          optimisticMemberships.value = memberships.value.filter(
-            (m) => m.teamId !== teamId
-          )
-          if (isRemovingSelfFromCurrentTeam && userProfile.value) {
-            authStore.setCurrentTeamIdLocal(null)
+    membershipKeys.forEach((key) => markPending(key))
+    if (isRemovingSelf) addPending(pendingUserIds, currentUserId)
+    try {
+      await runMembershipMutation(
+        keys,
+        () => {
+          if (isCurrentTeamTarget) {
+            queryClient.setQueryData<ITeamMember[]>(
+              teamKey,
+              readTeamMembers(teamId).filter(
+                (m) => isAgentMembership(m) || !userIdSet.has(m.userId)
+              )
+            )
           }
-        }
-      },
-      // Rollback on error
-      () => {
-        if (isCurrentTeamTarget) {
-          optimisticTeamMembers.value = previousTeamMembers
-        }
-        optimisticMemberships.value = previousMemberships
-        if (isRemovingSelfFromCurrentTeam) {
-          authStore.setCurrentTeamIdLocal(previousCurrentTeamId ?? null)
-        }
-      },
-      // Cloud Function call
-      async () => {
-        try {
-          await removeMembersFn({ teamId, userIds })
-        } finally {
           if (isRemovingSelf) {
-            removePending(pendingUserIds, currentUserId)
+            if (mKey) {
+              queryClient.setQueryData<IMembership[]>(
+                mKey,
+                readMemberships().filter((m) => m.teamId !== teamId)
+              )
+            }
+            if (isRemovingSelfFromCurrentTeam && userProfile.value) {
+              authStore.setCurrentTeamIdLocal(null)
+            }
           }
+        },
+        () => {
+          if (isCurrentTeamTarget) {
+            queryClient.setQueryData(teamKey, previousTeamMembers)
+          }
+          if (mKey) queryClient.setQueryData(mKey, previousMemberships)
+          if (isRemovingSelfFromCurrentTeam) {
+            authStore.setCurrentTeamIdLocal(previousCurrentTeamId ?? null)
+          }
+        },
+        async () => {
+          await removeMembersFn({ teamId, userIds })
         }
-      },
-      { source: "membership.removeMembers" }
-    )
+      )
+    } finally {
+      if (isRemovingSelf) removePending(pendingUserIds, currentUserId)
+      membershipKeys.forEach((key) => setTimeout(() => clearPending(key), 120))
+    }
   }
 
   /**
@@ -930,38 +924,46 @@ export const useMembershipStore = defineStore("memberships", () => {
 
     const isCurrentTeamTarget = currentTeamId.value === teamId
     const key = `${teamId}-agent:${agentId}`
+    const teamKey = teamMembersCacheKey(teamId)
     const previousTeamMembers = isCurrentTeamTarget
-      ? cloneState(teamMembers.value)
+      ? readTeamMembers(teamId)
       : []
     const teamSnapshot = membershipsByTeamId.value.get(teamId)?.team
 
-    await withOptimisticUpdate(
-      pendingMembershipIds,
-      key,
-      () => {
-        if (!isCurrentTeamTarget || !teamSnapshot) return
-        const now = Timestamp.now()
-        const optimisticMember: IAgentMembership = {
-          kind: "agent",
-          agentId,
-          teamId,
-          role: "member",
-          agent: agentSnapshot,
-          team: teamSnapshot,
-          createdAt: now,
-          updatedAt: now,
+    markPending(key)
+    try {
+      await runMembershipMutation(
+        isCurrentTeamTarget && teamSnapshot ? [teamKey] : [],
+        () => {
+          if (!isCurrentTeamTarget || !teamSnapshot) return
+          const now = Timestamp.now()
+          const optimisticMember: IAgentMembership = {
+            kind: "agent",
+            agentId,
+            teamId,
+            role: "member",
+            agent: agentSnapshot,
+            team: teamSnapshot,
+            createdAt: now,
+            updatedAt: now,
+          }
+          queryClient.setQueryData<ITeamMember[]>(teamKey, [
+            ...readTeamMembers(teamId),
+            optimisticMember,
+          ])
+        },
+        () => {
+          if (isCurrentTeamTarget) {
+            queryClient.setQueryData(teamKey, previousTeamMembers)
+          }
+        },
+        async () => {
+          await addTeamAgentMemberFn({ teamId, agentId })
         }
-        optimisticTeamMembers.value = [...teamMembers.value, optimisticMember]
-      },
-      () => {
-        if (isCurrentTeamTarget) {
-          optimisticTeamMembers.value = previousTeamMembers
-        }
-      },
-      async () => {
-        await addTeamAgentMemberFn({ teamId, agentId })
-      }
-    )
+      )
+    } finally {
+      setTimeout(() => clearPending(key), 120)
+    }
   }
 
   /**
@@ -986,30 +988,38 @@ export const useMembershipStore = defineStore("memberships", () => {
 
     const isCurrentTeamTarget = currentTeamId.value === teamId
     const key = `${teamId}-agent:${agentId}`
+    const teamKey = teamMembersCacheKey(teamId)
     const previousTeamMembers = isCurrentTeamTarget
-      ? cloneState(teamMembers.value)
+      ? readTeamMembers(teamId)
       : []
 
-    await withOptimisticUpdate(
-      pendingMembershipIds,
-      key,
-      () => {
-        if (isCurrentTeamTarget) {
-          optimisticTeamMembers.value = teamMembers.value.filter(
-            (member) =>
-              !(isAgentMembership(member) && member.agentId === agentId)
-          )
+    markPending(key)
+    try {
+      await runMembershipMutation(
+        isCurrentTeamTarget ? [teamKey] : [],
+        () => {
+          if (isCurrentTeamTarget) {
+            queryClient.setQueryData<ITeamMember[]>(
+              teamKey,
+              readTeamMembers(teamId).filter(
+                (member) =>
+                  !(isAgentMembership(member) && member.agentId === agentId)
+              )
+            )
+          }
+        },
+        () => {
+          if (isCurrentTeamTarget) {
+            queryClient.setQueryData(teamKey, previousTeamMembers)
+          }
+        },
+        async () => {
+          await removeTeamAgentMemberFn({ teamId, agentId })
         }
-      },
-      () => {
-        if (isCurrentTeamTarget) {
-          optimisticTeamMembers.value = previousTeamMembers
-        }
-      },
-      async () => {
-        await removeTeamAgentMemberFn({ teamId, agentId })
-      }
-    )
+      )
+    } finally {
+      setTimeout(() => clearPending(key), 120)
+    }
   }
 
   /**
@@ -1054,7 +1064,7 @@ export const useMembershipStore = defineStore("memberships", () => {
    * Get members for a specific team (without switching current team)
    */
   async function getMembersForTeam(teamId: string): Promise<ITeamMember[]> {
-    if (currentTeamId.value === teamId && !_vuefireTeamMembers.pending.value) {
+    if (currentTeamId.value === teamId && !teamMembersQuery.isLoading.value) {
       return cloneState(teamMembers.value)
     }
 

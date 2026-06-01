@@ -194,13 +194,6 @@ declare module 'vue-router/auto-routes' {
       Record<never, never>,
       | never
     >,
-    '/tasks': RouteRecordInfo<
-      '/tasks',
-      '/tasks',
-      Record<never, never>,
-      Record<never, never>,
-      | never
-    >,
     '/teams/': RouteRecordInfo<
       '/teams/',
       '/teams',
@@ -218,6 +211,13 @@ declare module 'vue-router/auto-routes' {
     '/welcome': RouteRecordInfo<
       '/welcome',
       '/welcome',
+      Record<never, never>,
+      Record<never, never>,
+      | never
+    >,
+    '/workflows': RouteRecordInfo<
+      '/workflows',
+      '/workflows',
       Record<never, never>,
       Record<never, never>,
       | never
@@ -430,14 +430,6 @@ declare module 'vue-router/auto-routes' {
       pathParamNames:
         | never
     }
-    'src/pages/tasks.vue': {
-      routes:
-        | '/tasks'
-      views:
-        | never
-      pathParamNames:
-        | never
-    }
     'src/pages/teams/index.vue': {
       routes:
         | '/teams/'
@@ -457,6 +449,14 @@ declare module 'vue-router/auto-routes' {
     'src/pages/welcome.vue': {
       routes:
         | '/welcome'
+      views:
+        | never
+      pathParamNames:
+        | never
+    }
+    'src/pages/workflows.vue': {
+      routes:
+        | '/workflows'
       views:
         | never
       pathParamNames:
