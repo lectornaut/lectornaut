@@ -1,7 +1,9 @@
 import type {
+  agentIntegrationDraftSchema,
+  agentIntegrationPatchSchema,
+  agentIntegrationSpecSchema,
   billingIntervalSchema,
   billingPlanKeySchema,
-  botAgentBuiltInAgentTogglesSchema,
   botAgentConfigSchema,
   botAgentDefaultModeSchema,
   botAgentModelSchema,
@@ -17,11 +19,17 @@ import type {
   botToolCallSchema,
   customToolActionSchema,
   customToolFieldSchema,
+  integrationSchema,
+  integrationSourceSchema,
+  integrationTypeSchema,
   membershipPreferencesSchema,
   teamAgentSchema,
   teamBillingSchema,
   teamCustomToolSchema,
   teamSchema,
+  toolIntegrationDraftSchema,
+  toolIntegrationPatchSchema,
+  toolIntegrationSpecSchema,
   userPreferencesSchema,
   userProfileSchema,
   userSchema,
@@ -85,9 +93,6 @@ export type IBotAgentModel = z.infer<typeof botAgentModelSchema>
 export type IBotAgentModelToggles = z.infer<typeof botAgentModelTogglesSchema>
 export type IBotAgentDefaultMode = z.infer<typeof botAgentDefaultModeSchema>
 export type IBotAgentToolToggles = z.infer<typeof botAgentToolTogglesSchema>
-export type IBotAgentBuiltInAgentToggles = z.infer<
-  typeof botAgentBuiltInAgentTogglesSchema
->
 export type IBotAgentConfig = z.infer<typeof botAgentConfigSchema>
 
 export type ITeamAgent = z.infer<typeof teamAgentSchema>
@@ -113,3 +118,25 @@ export type ICustomToolField = z.infer<typeof customToolFieldSchema>
 export type ICustomToolAction = z.infer<typeof customToolActionSchema>
 export type ICustomToolActionKind = ICustomToolAction["kind"]
 export type ITeamCustomTool = z.infer<typeof teamCustomToolSchema>
+
+// ─── Integrations (agent | tool) ─────────────────────────────────────────────
+// Workflows are their own model (`IWorkflow`, above) — a dedicated collection,
+// not a member of the integration doc union. The catalog taxonomy
+// (`IIntegrationType`) still spans all three for the marketplace seam.
+
+export type IIntegrationType = z.infer<typeof integrationTypeSchema>
+export type IIntegrationSource = z.infer<typeof integrationSourceSchema>
+
+export type IAgentIntegrationSpec = z.infer<typeof agentIntegrationSpecSchema>
+export type IToolIntegrationSpec = z.infer<typeof toolIntegrationSpecSchema>
+
+/** The integration doc (discriminated by `type`). */
+export type IIntegration = z.infer<typeof integrationSchema>
+/** Narrowed per-type aliases for call sites that already know the type. */
+export type IAgentIntegration = Extract<IIntegration, { type: "agent" }>
+export type IToolIntegration = Extract<IIntegration, { type: "tool" }>
+
+export type IAgentIntegrationDraft = z.infer<typeof agentIntegrationDraftSchema>
+export type IAgentIntegrationPatch = z.infer<typeof agentIntegrationPatchSchema>
+export type IToolIntegrationDraft = z.infer<typeof toolIntegrationDraftSchema>
+export type IToolIntegrationPatch = z.infer<typeof toolIntegrationPatchSchema>

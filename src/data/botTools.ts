@@ -6,16 +6,14 @@
  * and `functions/src/botSummarize.ts` (structured summarization).
  *
  * `BotToolName` excludes `customAgents`, `customWorkflows`, `customTools`,
- * `summarizeNodeInspector`, `manageContent`, AND `readContent`
- * deliberately — those keys on `IBotAgentToolToggles` are *feature gates*
- * (whole custom-agents UI; whole custom-workflows UI; whole custom-tools UI;
- * the node inspector's Generate-summary button; the node-WRITE tool block;
- * the node-READ tool block) rather than single model-callable tools. Including any in this
- * catalog would surface a meaningless entry in the composer's slash menu.
- * (`manageContent` / `readContent` still get per-agent toggles, but the
- * agent editor appends those rows explicitly — see
- * `SettingsCustomAgents.vue` — precisely because they're not catalog
- * tools.)
+ * `manageContent`, AND `readContent` deliberately — those keys on
+ * `IBotAgentToolToggles` are *feature gates* (whole custom-agents UI; whole
+ * custom-workflows UI; whole custom-tools UI; the node-WRITE tool block; the
+ * node-READ tool block) rather than single model-callable tools. Including
+ * any in this catalog would surface a meaningless entry in the composer's
+ * slash menu. (`manageContent` / `readContent` still get per-agent toggles,
+ * but the agent editor appends those rows explicitly — see
+ * `SettingsCustomAgents.vue` — precisely because they're not catalog tools.)
  *
  * Type-level exhaustiveness: `CATALOG_BY_NAME` is typed as
  * `Record<BotToolName, BotToolDescriptor>`, so adding a new tool to
@@ -62,7 +60,6 @@ export type BotToolName = Exclude<
   | "customAgents"
   | "customWorkflows"
   | "customTools"
-  | "summarizeNodeInspector"
   | "manageContent"
   | "readContent"
 >

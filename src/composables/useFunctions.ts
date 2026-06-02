@@ -9,14 +9,19 @@ import { functions } from "@/modules/firebase"
 import type {
   BillingInterval,
   BillingPlanKey,
+  IAgentIntegrationDraft,
+  IAgentIntegrationPatch,
   IBotAgentConfig,
   IBotAgentModel,
   IBotAgentToolToggles,
   IBotSessionVisibility,
   ICustomToolAction,
+  IIntegration,
   ITeamAgent,
   ITeamBilling,
   ITeamCustomTool,
+  IToolIntegrationDraft,
+  IToolIntegrationPatch,
 } from "@/types/domain"
 import type { IMembershipRole } from "@/types/membership"
 import type { WorkspaceNodeScope } from "@/types/nodes"
@@ -808,7 +813,6 @@ export type UpdateTeamAgentConfigPatch = Partial<{
   systemPromptBase: string
   promptSuffixes: Partial<IBotAgentConfig["promptSuffixes"]>
   tools: Partial<IBotAgentConfig["tools"]>
-  builtInAgents: Partial<IBotAgentConfig["builtInAgents"]>
   titleMaxLength: number
   previewMaxLength: number
 }>
@@ -823,13 +827,18 @@ export interface UpdateTeamAgentConfigResponse {
 }
 
 // =============================================================================
-// Team Custom Agents Request/Response Types
+// Team Agent editor draft types
 // =============================================================================
+// Agent CRUD now flows through the unified `integration*` callables
+// (createIntegration / updateIntegration / setIntegrationEnabled /
+// installIntegration / uninstallIntegration / deleteIntegration). These two
+// draft/patch shapes remain the agent editor's view-model; teamAgentsStore /
+// useTeamAgents map them onto the unified integration payloads.
 
 /**
- * Creation payload for `createTeamAgent`. `name` and `systemPromptBase`
- * are required because the agent can't function without them. Everything
- * else defaults server-side (empty strings for text, all-true for tools).
+ * Creation payload for an agent. `name` and `systemPromptBase` are required
+ * because the agent can't function without them. Everything else defaults
+ * server-side (empty strings for text, all-true for tools).
  *
  * Tools is partial — the server fills missing keys with `true`, so an
  * older client that doesn't know about a newly-added tool still creates
@@ -854,100 +863,25 @@ export interface CreateTeamAgentDraft {
   customTools?: Record<string, boolean>
 }
 
-export interface CreateTeamAgentRequest {
-  teamId: string
-  draft: CreateTeamAgentDraft
-}
-
-export interface CreateTeamAgentResponse {
-  agent: ITeamAgent
-}
-
 /**
  * Update payload — every field optional. Only sent fields are written;
- * nested `promptSuffixes` and `tools` patches are merged server-side
- * onto the saved record so omitted keys keep their prior values.
- *
- * `enabled` rides along here for symmetry, but the dedicated
- * `setTeamAgentEnabled` callable is preferred for the row's
- * Switch — narrower surface, cleaner audit trail, no risk of
- * clobbering an in-flight inline edit on another field.
+ * nested `promptSuffixes` and `tools` patches are merged server-side onto
+ * the saved record so omitted keys keep their prior values. `enabled` rides
+ * along for symmetry.
  */
 export type UpdateTeamAgentPatch = Partial<CreateTeamAgentDraft> & {
   enabled?: boolean
 }
 
-export interface UpdateTeamAgentRequest {
-  teamId: string
-  agentId: string
-  patch: UpdateTeamAgentPatch
-}
-
-export interface UpdateTeamAgentResponse {
-  agent: ITeamAgent
-}
-
-export interface ArchiveTeamAgentRequest {
-  teamId: string
-  agentId: string
-}
-
-export interface ArchiveTeamAgentResponse {
-  agent: ITeamAgent
-}
-
-export interface RestoreTeamAgentRequest {
-  teamId: string
-  agentId: string
-}
-
-export interface RestoreTeamAgentResponse {
-  agent: ITeamAgent
-}
-
-/**
- * Set the agent's `enabled` toggle. Mirrors the team provider toggle
- * pattern — a dedicated callable rather than piggybacking on
- * `updateTeamAgent` so the audit trail reads cleanly ("admin disabled
- * X" vs "admin updated X with {enabled:false}") and the click can't
- * race with a concurrent inline edit on another field.
- */
-export interface SetTeamAgentEnabledRequest {
-  teamId: string
-  agentId: string
-  enabled: boolean
-}
-
-export interface SetTeamAgentEnabledResponse {
-  agent: ITeamAgent
-}
-
-/**
- * Hard-delete an agent (irreversible). The doc is removed from
- * Firestore; existing chats that referenced the agent fall back to
- * the team default at dispatch time and the client renders a "Deleted"
- * badge for the now-missing record. No server-side confirmation gate
- * beyond the admin role check — the client owns the AlertDialog.
- *
- * Idempotent: calling on an already-deleted id returns success
- * without error (the end state matches what the caller asked for).
- */
-export interface DeleteTeamAgentRequest {
-  teamId: string
-  agentId: string
-}
-
-export interface DeleteTeamAgentResponse {
-  agentId: string
-  deleted: true
-}
-
 // =============================================================================
-// Team Custom Tools Request/Response Types
+// Team Custom Tool editor draft types
 // =============================================================================
+// Custom-tool CRUD now flows through the unified `integration*` callables.
+// These draft/patch shapes remain the tool editor's view-model;
+// teamCustomToolsStore / useTeamCustomTools map them onto the unified payloads.
 
 /**
- * Creation payload for `createTeamCustomTool`. Required fields:
+ * Creation payload for a custom tool. Required fields:
  *   - `name`        — wire-name. Must match `/^[a-z][a-zA-Z0-9_]*$/`.
  *   - `description` — the description the model sees.
  *   - `inputSchema` / `outputSchema` — field lists (may be empty).
@@ -965,70 +899,12 @@ export interface CreateTeamCustomToolDraft {
   action: ICustomToolAction
 }
 
-export interface CreateTeamCustomToolRequest {
-  teamId: string
-  draft: CreateTeamCustomToolDraft
-}
-
-export interface CreateTeamCustomToolResponse {
-  tool: ITeamCustomTool
-}
-
 /**
  * Update payload — every field optional; only sent fields are written.
- * `enabled` rides along here for symmetry; prefer `setTeamCustomToolEnabled`
- * for the row's Switch (cleaner audit trail).
+ * `enabled` rides along for symmetry.
  */
 export type UpdateTeamCustomToolPatch = Partial<CreateTeamCustomToolDraft> & {
   enabled?: boolean
-}
-
-export interface UpdateTeamCustomToolRequest {
-  teamId: string
-  toolId: string
-  patch: UpdateTeamCustomToolPatch
-}
-
-export interface UpdateTeamCustomToolResponse {
-  tool: ITeamCustomTool
-}
-
-export interface ArchiveTeamCustomToolRequest {
-  teamId: string
-  toolId: string
-}
-
-export interface ArchiveTeamCustomToolResponse {
-  tool: ITeamCustomTool
-}
-
-export interface RestoreTeamCustomToolRequest {
-  teamId: string
-  toolId: string
-}
-
-export interface RestoreTeamCustomToolResponse {
-  tool: ITeamCustomTool
-}
-
-export interface SetTeamCustomToolEnabledRequest {
-  teamId: string
-  toolId: string
-  enabled: boolean
-}
-
-export interface SetTeamCustomToolEnabledResponse {
-  tool: ITeamCustomTool
-}
-
-export interface DeleteTeamCustomToolRequest {
-  teamId: string
-  toolId: string
-}
-
-export interface DeleteTeamCustomToolResponse {
-  toolId: string
-  deleted: true
 }
 
 // =============================================================================
@@ -1731,74 +1607,6 @@ export const updateTeamAgentConfig = createTypedCallable<
 >("updateTeamAgentConfig")
 
 // =============================================================================
-// Team Custom Agents Functions
-// =============================================================================
-
-/**
- * Create a new team-scoped custom agent. Owner / admin only — non-admins
- * receive `permission-denied`. Server caps active (non-archived) agents
- * at 50; over the cap the call fails with `failed-precondition`.
- */
-export const createTeamAgent = createTypedCallable<
-  CreateTeamAgentRequest,
-  CreateTeamAgentResponse
->("createTeamAgent")
-
-/**
- * Update an existing team agent. Owner / admin only. Nested objects
- * (promptSuffixes, tools) are deep-merged server-side; omitted keys
- * retain their previous values.
- */
-export const updateTeamAgent = createTypedCallable<
-  UpdateTeamAgentRequest,
-  UpdateTeamAgentResponse
->("updateTeamAgent")
-
-/**
- * Soft-delete an agent. Sets `archivedAt` to the server timestamp. The
- * doc stays readable for sessions that reference it; pickers and
- * cross-agent transfer references skip archived agents. Reversible via
- * `restoreTeamAgent`.
- */
-export const archiveTeamAgent = createTypedCallable<
-  ArchiveTeamAgentRequest,
-  ArchiveTeamAgentResponse
->("archiveTeamAgent")
-
-/**
- * Restore an archived agent. Clears `archivedAt` back to null. Re-counts
- * against the active cap, so restoring requires headroom (archive
- * another first if at the cap).
- */
-export const restoreTeamAgent = createTypedCallable<
-  RestoreTeamAgentRequest,
-  RestoreTeamAgentResponse
->("restoreTeamAgent")
-
-/**
- * Flip an agent's `enabled` toggle. Disabled agents are filtered out
- * of pickers AND gated out of dispatch — even when a session has the
- * agent persisted as its `activeAgentId`, the server falls back to
- * the team default until re-enabled. Owner / admin only.
- */
-export const setTeamAgentEnabled = createTypedCallable<
-  SetTeamAgentEnabledRequest,
-  SetTeamAgentEnabledResponse
->("setTeamAgentEnabled")
-
-/**
- * Hard-delete an agent (irreversible). The Firestore doc is removed;
- * the team's selectable agent count drops by one immediately. Owner /
- * admin only. Existing chats referencing the deleted agent continue
- * to function under the team default persona — the badge renders
- * "Deleted" so the user sees what happened.
- */
-export const deleteTeamAgent = createTypedCallable<
-  DeleteTeamAgentRequest,
-  DeleteTeamAgentResponse
->("deleteTeamAgent")
-
-// =============================================================================
 // Workflows (team automations)
 // =============================================================================
 
@@ -1925,6 +1733,104 @@ export const reviewTeamWorkflowRun = createTypedCallable<
   ReviewTeamWorkflowRunResponse
 >("reviewTeamWorkflowRun")
 
+// =============================================================================
+// Unified Integrations (agent | tool)
+// =============================================================================
+//
+// The unified CRUD + install/uninstall surface for the AGENT and TOOL
+// integration types (workflows keep their dedicated callables above — the
+// client registry in `useIntegrations` routes per type). Every mutation
+// returns the resolved integration so the caller can reconcile optimistically.
+
+/** Mutation response carrying the resolved integration (null if it vanished). */
+export interface IntegrationMutationResponse {
+  integration: IIntegration | null
+}
+
+export interface CreateIntegrationRequest {
+  teamId: string
+  type: "agent" | "tool"
+  draft: IAgentIntegrationDraft | IToolIntegrationDraft
+}
+
+export interface UpdateIntegrationRequest {
+  teamId: string
+  integrationId: string
+  patch: IAgentIntegrationPatch | IToolIntegrationPatch
+}
+
+/**
+ * Toggle enable. For an existing doc pass `integrationId`; for a built-in with
+ * no divergence doc yet, pass `type` + `sourceKey` (the server materializes a
+ * thin doc carrying the flag).
+ */
+export interface SetIntegrationEnabledRequest {
+  teamId: string
+  integrationId?: string
+  type?: "agent" | "tool"
+  sourceKey?: string
+  enabled: boolean
+}
+
+/**
+ * Install a built-in (or, later, published) integration by catalog key, OR
+ * re-install (un-archive) an existing custom integration by id.
+ */
+export interface InstallIntegrationRequest {
+  teamId: string
+  type?: "agent" | "tool"
+  sourceKey?: string
+  integrationId?: string
+}
+
+/** Uninstall = soft-archive. Built-in via type+sourceKey, custom via id. */
+export interface UninstallIntegrationRequest {
+  teamId: string
+  integrationId?: string
+  type?: "agent" | "tool"
+  sourceKey?: string
+}
+
+export interface DeleteIntegrationRequest {
+  teamId: string
+  integrationId: string
+}
+
+export interface DeleteIntegrationResponse {
+  integrationId: string
+  deleted: true
+}
+
+export const createIntegration = createTypedCallable<
+  CreateIntegrationRequest,
+  IntegrationMutationResponse
+>("createIntegration")
+
+export const updateIntegration = createTypedCallable<
+  UpdateIntegrationRequest,
+  IntegrationMutationResponse
+>("updateIntegration")
+
+export const setIntegrationEnabled = createTypedCallable<
+  SetIntegrationEnabledRequest,
+  IntegrationMutationResponse
+>("setIntegrationEnabled")
+
+export const installIntegration = createTypedCallable<
+  InstallIntegrationRequest,
+  IntegrationMutationResponse
+>("installIntegration")
+
+export const uninstallIntegration = createTypedCallable<
+  UninstallIntegrationRequest,
+  IntegrationMutationResponse
+>("uninstallIntegration")
+
+export const deleteIntegration = createTypedCallable<
+  DeleteIntegrationRequest,
+  DeleteIntegrationResponse
+>("deleteIntegration")
+
 /**
  * Materialize a predefined catalog workflow as a `presetKey != null` instance.
  * The server fills name/description/instructions/trigger/updateMode from the
@@ -1943,40 +1849,6 @@ export const enableTeamWorkflowPreset = createTypedCallable<
   EnableTeamWorkflowPresetRequest,
   EnableTeamWorkflowPresetResponse
 >("enableTeamWorkflowPreset")
-
-// =============================================================================
-// Team Custom Tools Functions
-// =============================================================================
-
-export const createTeamCustomTool = createTypedCallable<
-  CreateTeamCustomToolRequest,
-  CreateTeamCustomToolResponse
->("createTeamCustomTool")
-
-export const updateTeamCustomTool = createTypedCallable<
-  UpdateTeamCustomToolRequest,
-  UpdateTeamCustomToolResponse
->("updateTeamCustomTool")
-
-export const archiveTeamCustomTool = createTypedCallable<
-  ArchiveTeamCustomToolRequest,
-  ArchiveTeamCustomToolResponse
->("archiveTeamCustomTool")
-
-export const restoreTeamCustomTool = createTypedCallable<
-  RestoreTeamCustomToolRequest,
-  RestoreTeamCustomToolResponse
->("restoreTeamCustomTool")
-
-export const setTeamCustomToolEnabled = createTypedCallable<
-  SetTeamCustomToolEnabledRequest,
-  SetTeamCustomToolEnabledResponse
->("setTeamCustomToolEnabled")
-
-export const deleteTeamCustomTool = createTypedCallable<
-  DeleteTeamCustomToolRequest,
-  DeleteTeamCustomToolResponse
->("deleteTeamCustomTool")
 
 // =============================================================================
 // Node Summarize Request/Response Types — structured output demo.
@@ -2286,22 +2158,6 @@ export function useFunctions() {
     // Team agent config operations
     getTeamAgentConfig,
     updateTeamAgentConfig,
-
-    // Team custom agent CRUD
-    createTeamAgent,
-    updateTeamAgent,
-    archiveTeamAgent,
-    restoreTeamAgent,
-    setTeamAgentEnabled,
-    deleteTeamAgent,
-
-    // Team custom tool CRUD
-    createTeamCustomTool,
-    updateTeamCustomTool,
-    archiveTeamCustomTool,
-    restoreTeamCustomTool,
-    setTeamCustomToolEnabled,
-    deleteTeamCustomTool,
 
     // Structured-output sub-flows
     summarizeNode,

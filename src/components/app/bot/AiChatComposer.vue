@@ -22,7 +22,7 @@ import {
   IconX,
 } from "@/data/icons"
 import { findBotModel } from "@/helpers/defaults"
-import { useAgentConfigStore } from "@/stores/agentConfigStore"
+import { useIntegrationsStore } from "@/stores/integrationsStore"
 import { useAuthStore } from "@/stores/authStore"
 import { useFileTreeStore } from "@/stores/fileTreeStore"
 import { useMembershipStore } from "@/stores/membershipStore"
@@ -574,8 +574,17 @@ watch(
 // `functions/src/bot.ts`, intersecting team-level and agent-level toggles
 // so a badge never inserts a prompt the model has no tool to satisfy.
 
-const agentConfigStore = useAgentConfigStore()
-const { config: teamAgentConfig } = storeToRefs(agentConfigStore)
+// Built-in tool install + enable resolves from the unified integrations store
+// (catalog overlay). A built-in tool is active when its integration is
+// installed AND enabled — the install + team-enable axes the old
+// `installedBuiltInTools` map and `tools.<name>` toggle covered separately.
+const integrationsStore = useIntegrationsStore()
+const isBuiltInToolActive = (name: string): boolean => {
+  const i = integrationsStore.toolIntegrations.find(
+    (t) => t.source !== "custom" && t.sourceKey === name
+  )
+  return i ? i.installed && i.enabled : true
+}
 
 const teamCustomToolsStore = useTeamCustomToolsStore()
 const { selectableTools: teamSelectableCustomTools } =
@@ -661,7 +670,9 @@ const nodeWriteEnabled = computed(() => {
     { scope: "workspace", teamRole: activeAgentMembershipRole.value }
   )
   if (!userCan || !agentCan) return false
-  if (teamAgentConfig.value.tools.manageContent === false) return false
+  // No team-wide switch — membership (MANAGE_WORKSPACE_CONTENT) is the
+  // team-level authorization; the per-agent toggle is the only feature flag,
+  // mirroring `nodeWriteEnabled` on the server.
   if (activeAgent.value.tools.manageContent === false) return false
   return true
 })
@@ -677,21 +688,22 @@ const nodeReadEnabled = computed(() => {
     teamRole: activeAgentMembershipRole.value,
   })
   if (!userCan || !agentCan) return false
-  if (teamAgentConfig.value.tools.readContent === false) return false
+  // Read has no team-wide switch (unlike write's `manageContent`); the
+  // per-agent toggle is the only feature gate, mirroring `nodeReadEnabled`
+  // on the server.
   if (activeAgent.value.tools.readContent === false) return false
   return true
 })
 
 const availableTools = computed<readonly ComposerToolEntry[]>(() => {
-  const teamTools = teamAgentConfig.value.tools
   const agentTools = activeAgent.value?.tools
   const agentCustomToolOverrides = activeAgent.value?.customTools
   const entries: ComposerToolEntry[] = []
 
-  // Built-ins — apply the same team×agent intersection the server
-  // dispatcher uses (`pickChatTools` in `functions/src/bot.ts`).
+  // Built-ins — installed + enabled (unified integrations state) intersected
+  // with the active agent's per-tool toggle, mirroring server dispatch.
   for (const tool of BOT_TOOL_CATALOG) {
-    if (teamTools[tool.name] === false) continue
+    if (!isBuiltInToolActive(tool.name)) continue
     if (agentTools && agentTools[tool.name] === false) continue
     entries.push({
       key: tool.name,

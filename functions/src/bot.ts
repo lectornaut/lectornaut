@@ -51,7 +51,6 @@ import {
   PREVIEW_MAX_LENGTH,
   resolveEffectiveModel,
   TITLE_MAX_LENGTH,
-  type BotAgentConfig,
   type BotAgentModel,
   type ChatToolName,
 } from "./botAgentConfig.js"
@@ -80,7 +79,10 @@ import {
 } from "./botNodeTools.js"
 import { listWorkspaceNodesTool, searchWorkspaceNodesTool } from "./botRag.js"
 import { summarizeNodeTool } from "./botSummarize.js"
-import { listBuiltInAgents } from "./builtInAgents.js"
+import {
+  DEFAULT_AGENT_DEFINITION,
+  hydrateBuiltInAgent,
+} from "./builtInAgents.js"
 import { admin, db } from "./firebase.js"
 import {
   ai,
@@ -89,13 +91,20 @@ import {
   resolveModel,
 } from "./genkitClient.js"
 import { aiMiddlewares } from "./genkitMiddleware.js"
+import {
+  listDispatchable,
+  listIntegrations,
+  type AgentSpec,
+  type ResolvedIntegration,
+  type ToolSpec,
+} from "./integrations.js"
 import { can, Capabilities } from "./permissions.js"
 import { GENKIT_OPTS } from "./runtimeConfig.js"
 import { anthropicApiKey, geminiApiKey, openaiApiKey } from "./secrets.js"
-import { listTeamAgents, type TeamAgentDoc } from "./teamAgents.js"
+import type { TeamAgentDoc } from "./teamAgents.js"
 import {
   buildCustomToolForChat,
-  listTeamCustomTools,
+  type TeamCustomToolDoc,
 } from "./teamCustomTools.js"
 import type { IMembershipRole, WorkspaceNodeScope } from "./types.js"
 import { assertWithinBudget, incrementTeamTokenUsage } from "./usageMetering.js"
@@ -159,7 +168,6 @@ async function resolveActingRole(
 }
 
 export type SessionVisibility = "private" | "shared" | "public"
-const ADMIN_ROLES: ReadonlyArray<IMembershipRole> = ["owner", "admin"]
 
 const MAIN_THREAD = "main"
 // TITLE_MAX_LENGTH and PREVIEW_MAX_LENGTH are imported from
@@ -801,6 +809,78 @@ export function pinnedNodeKey(
   return `${ownerUid}:${scope}:${nodeId}`
 }
 
+// ───────────────────────────────────────────────────────────────────────────
+// Integration → dispatch-shape adapters.
+//
+// The unified `teams/{teamId}/integrations` collection is resolved by
+// `integrations.ts` into `ResolvedIntegration`s (built-in specs overlaid from
+// the code catalog). Dispatch still speaks the original per-kind shapes
+// (`TeamAgentDoc` for the persona / transfer machinery, `TeamCustomToolDoc`
+// for the Genkit tool factory), so we adapt at the boundary rather than
+// rewriting every downstream consumer.
+// ───────────────────────────────────────────────────────────────────────────
+
+const ALL_AGENT_TOOLS_ENABLED: TeamAgentDoc["tools"] = {
+  rollDice: true,
+  browseInternet: true,
+  askQuestion: true,
+  searchWorkspaceNodes: true,
+  listWorkspaceNodes: true,
+  summarizeNode: true,
+  compareNodes: true,
+  findRelatedNodes: true,
+  manageContent: true,
+  readContent: true,
+}
+
+/** Hydrate an agent integration into the canonical `TeamAgentDoc`. */
+function agentIntegrationToDoc(
+  teamId: string,
+  i: ResolvedIntegration
+): TeamAgentDoc {
+  const spec = (i.spec ?? null) as AgentSpec | null
+  return {
+    id: i.id,
+    teamId,
+    name: i.name,
+    description: i.description,
+    avatarSeed: i.avatarSeed,
+    systemPromptBase: spec?.systemPromptBase ?? "",
+    promptSuffixes: spec?.promptSuffixes ?? { auto: "", agent: "", manual: "" },
+    tools: spec?.tools ?? { ...ALL_AGENT_TOOLS_ENABLED },
+    customTools: spec?.customTools ?? {},
+    enabled: i.enabled,
+    archivedAt: i.archivedAt,
+    createdAt: i.createdAt,
+    updatedAt: i.updatedAt,
+    createdByUid: i.createdByUid,
+  }
+}
+
+/** Adapt a custom tool integration into the `TeamCustomToolDoc` the factory wants. */
+function customToolIntegrationToDoc(
+  teamId: string,
+  i: ResolvedIntegration
+): TeamCustomToolDoc {
+  const spec = i.spec as ToolSpec
+  return {
+    id: i.id,
+    teamId,
+    name: spec.wireName,
+    displayName: i.name,
+    description: i.description,
+    avatarSeed: i.avatarSeed,
+    inputSchema: spec.inputSchema,
+    outputSchema: spec.outputSchema,
+    action: spec.action,
+    enabled: i.enabled,
+    archivedAt: i.archivedAt,
+    createdAt: i.createdAt,
+    updatedAt: i.updatedAt,
+    createdByUid: i.createdByUid,
+  }
+}
+
 /**
  * Pick which tools to register with the chat for a given config.
  *   - Tools are available in EVERY mode (auto / agent / manual). Mode
@@ -812,7 +892,9 @@ export function pinnedNodeKey(
  *     Gemini key, independent of the team's chat-provider policy.
  */
 function pickChatTools(
-  config: BotAgentConfig,
+  // Wire-names of the built-in tools that are installed + enabled this turn
+  // (resolved from the unified integrations collection in `prepareChatTurn`).
+  enabledBuiltInTools: ReadonlySet<string>,
   agent: TeamAgentDoc | null = null,
   transferTargetCount: number = 0,
   // Headless Workflows runs pass `false`: an autonomous turn has no human to
@@ -837,6 +919,12 @@ function pickChatTools(
   // — that flag is team-only and has no per-agent counterpart.
   const agentAllows = (name: ChatToolName): boolean =>
     !agent || agent.tools[name] !== false
+  // A built-in tool fires when its integration is installed + enabled (the
+  // unified `teams/{teamId}/integrations` collection, resolved upstream into
+  // `enabledBuiltInTools`). Per-agent intersection (`agentAllows`) and the
+  // per-tool special gates below still apply on top.
+  const toolEnabled = (name: ChatToolName): boolean =>
+    enabledBuiltInTools.has(name)
   // Typed as Genkit's `ToolArgument` union — accepts every flavor of
   // tool reference Genkit's `chat({ tools })` understands: strict
   // ToolAction (the built-in tools), MultipartToolAction (any
@@ -845,21 +933,26 @@ function pickChatTools(
   // come back as a wider ZodObject; `ToolArgument` is the supertype
   // that lets the heterogeneous mix coexist without per-push casts.
   const tools: ToolArgument[] = []
-  if (config.tools.rollDice && agentAllows("rollDice")) tools.push(rollDiceTool)
+  if (toolEnabled("rollDice") && agentAllows("rollDice"))
+    tools.push(rollDiceTool)
   // Read-only retrieval — exposed in every mode (incl. `manual`), like
   // searchWorkspaceNodes. Gated on the server Gemini key, NOT
   // `config.providers.google`: web search is its own capability axis, so
   // a team that chats on Claude/GPT can still enable it.
   if (
-    config.tools.browseInternet &&
+    toolEnabled("browseInternet") &&
     googleSecretConfigured &&
     agentAllows("browseInternet")
   )
     tools.push(browseInternetTool)
-  if (allowInterrupts && config.tools.askQuestion && agentAllows("askQuestion"))
+  if (
+    allowInterrupts &&
+    toolEnabled("askQuestion") &&
+    agentAllows("askQuestion")
+  )
     tools.push(askQuestionTool)
   if (
-    config.tools.searchWorkspaceNodes &&
+    toolEnabled("searchWorkspaceNodes") &&
     googleSecretConfigured &&
     agentAllows("searchWorkspaceNodes")
   )
@@ -868,21 +961,21 @@ function pickChatTools(
   // model uses instead of abusing `searchWorkspaceNodes` with a wildcard). A
   // plain Firestore read — no embeddings — so NO Google-key gate, unlike
   // search; same as summarizeNode / compareNodes / findRelatedNodes.
-  if (config.tools.listWorkspaceNodes && agentAllows("listWorkspaceNodes"))
+  if (toolEnabled("listWorkspaceNodes") && agentAllows("listWorkspaceNodes"))
     tools.push(listWorkspaceNodesTool)
-  if (config.tools.summarizeNode && agentAllows("summarizeNode"))
+  if (toolEnabled("summarizeNode") && agentAllows("summarizeNode"))
     tools.push(summarizeNodeTool)
   // `compareNodes` is provider-agnostic — uses the team's selected chat
   // model (same as `summarizeNode`) and reads node bodies directly from
   // Firestore, so no embedder/Google-key dependency.
-  if (config.tools.compareNodes && agentAllows("compareNodes"))
+  if (toolEnabled("compareNodes") && agentAllows("compareNodes"))
     tools.push(compareNodesTool)
   // `findRelatedNodes` reuses each node's pre-computed embedding (stored
   // by the embed-on-write triggers in `botRag.ts`) as the query vector,
   // so it never calls the embedder at lookup time. No Gemini-key gate
   // here — the source embedding already exists on disk; the query is
   // pure Firestore vector search.
-  if (config.tools.findRelatedNodes && agentAllows("findRelatedNodes"))
+  if (toolEnabled("findRelatedNodes") && agentAllows("findRelatedNodes"))
     tools.push(findRelatedNodesTool)
   // `transferToAgent` is only exposed when at least one OTHER agent
   // (or the team default, when an agent is currently active) is
@@ -1399,10 +1492,6 @@ export async function getMembershipRole(
     )
   }
   return snap.data()?.role as IMembershipRole
-}
-
-export function isAdminRole(role: IMembershipRole | null | undefined): boolean {
-  return !!role && ADMIN_ROLES.includes(role)
 }
 
 /**
@@ -2307,11 +2396,21 @@ async function prepareChatTurn(opts: {
   // customAgents feature toggle off — the run is explicitly that agent.
   const agentsEnabled =
     agentConfig.tools.customAgents || principal.kind === "agent"
-  const builtInAgents = agentsEnabled
-    ? listBuiltInAgents(teamId, agentConfig.builtInAgents)
-    : []
-  const customAgents = agentsEnabled ? await listTeamAgents(teamId) : []
-  const availableAgents: TeamAgentDoc[] = [...builtInAgents, ...customAgents]
+  // Unified: built-in + custom agents are one collection now. Pass ALL agent
+  // states (not just installed+enabled) to `resolveActiveAgent` so an
+  // archived/deprecated agent a session still references keeps dispatching
+  // (deprecate-but-run); `resolveActiveAgent` applies the enabled/archived
+  // gates and `buildTransferRoster` filters to selectable targets. The ungated
+  // Default persona is prepended first (it lives outside the catalog).
+  const availableAgents: TeamAgentDoc[] = []
+  if (agentsEnabled) {
+    availableAgents.push(hydrateBuiltInAgent(teamId, DEFAULT_AGENT_DEFINITION))
+    for (const integration of await listIntegrations(teamId)) {
+      if (integration.type === "agent") {
+        availableAgents.push(agentIntegrationToDoc(teamId, integration))
+      }
+    }
+  }
   const activeAgent = resolveActiveAgent({
     requestedId: activeAgentId,
     sessionPersistedId: existingSession?.activeAgentId ?? null,
@@ -2388,21 +2487,22 @@ async function prepareChatTurn(opts: {
   }
 
   // Feature-toggle layer ON TOP of the membership gates. `canManageNodes` /
-  // `canReadNodes` stay the pure security checks (re-verified inside the
-  // tool handlers); the `*Enabled` flags additionally require the team-wide
-  // switch (Settings → Tools) AND the active agent's own toggle — mirroring
-  // how every other built-in tool intersects team × agent. These drive tool
-  // registration AND the node system-prompt directive, so a toggled-off
-  // agent is never told it can use tools it has none of. `!== false` keeps a
-  // missing key (older config/agent docs) meaning "enabled."
+  // `canReadNodes` stay the pure security checks (re-verified inside the tool
+  // handlers); the `*Enabled` flags additionally require the active agent's
+  // own per-agent toggle. NEITHER read nor write has a team-wide switch —
+  // agents are real team members, so their MANAGE_WORKSPACE_CONTENT /
+  // READ_WORKSPACE role IS the team-level authorization (a parallel team
+  // toggle would just duplicate, and could silently conflict with,
+  // membership). The per-agent toggle stays as a persona-design choice (a
+  // read-only agent vs. an editing one) and can only narrow within what
+  // membership already grants. These drive tool registration AND the node
+  // system-prompt directive, so a toggled-off agent is never told it can use
+  // tools it has none of. `!== false` keeps a missing key (older agent docs)
+  // meaning "enabled."
   const nodeWriteEnabled =
-    canManageNodes &&
-    agentConfig.tools.manageContent !== false &&
-    activeAgent?.tools.manageContent !== false
+    canManageNodes && activeAgent?.tools.manageContent !== false
   const nodeReadEnabled =
-    canReadNodes &&
-    agentConfig.tools.readContent !== false &&
-    activeAgent?.tools.readContent !== false
+    canReadNodes && activeAgent?.tools.readContent !== false
 
   // What gets persisted on the doc this turn. Three cases:
   //   - undefined: client didn't send the field → leave the doc's
@@ -2463,15 +2563,27 @@ async function prepareChatTurn(opts: {
   //     team-wide `customTools` flag; the factory rebuilds each one per
   //     turn so admin schema changes propagate without a deploy. Empty
   //     when the feature is off OR the team has none.
-  const [session, contextBlock, customTools] = await Promise.all([
-    sessionId
-      ? ai.loadSession(sessionId, { store })
-      : Promise.resolve(ai.createSession({ store })),
-    loadAndBuildContextBlock(teamId, workspaceId, contextNodes),
-    agentConfig.tools.customTools
-      ? listTeamCustomTools(teamId)
-      : Promise.resolve([] as Awaited<ReturnType<typeof listTeamCustomTools>>),
-  ])
+  const [session, contextBlock, dispatchableToolIntegrations] =
+    await Promise.all([
+      sessionId
+        ? ai.loadSession(sessionId, { store })
+        : Promise.resolve(ai.createSession({ store })),
+      loadAndBuildContextBlock(teamId, workspaceId, contextNodes),
+      // Installed + enabled tool integrations (built-in via catalog overlay +
+      // custom). Built-in keys gate the static tools in `pickChatTools`;
+      // custom integrations are rebuilt per-turn via `buildCustomToolForChat`.
+      listDispatchable(teamId, "tool"),
+    ])
+  // Built-in tool wire-names installed + enabled this turn.
+  const enabledBuiltInTools = new Set(
+    dispatchableToolIntegrations
+      .filter((t) => t.source !== "custom")
+      .map((t) => t.sourceKey ?? "")
+  )
+  // Custom tools additionally require the team-wide customTools feature gate.
+  const dispatchableCustomToolIntegrations = agentConfig.tools.customTools
+    ? dispatchableToolIntegrations.filter((t) => t.source === "custom")
+    : []
 
   // Transfer roster — other agents the active one can hand off to.
   // When a custom agent is active we include the team default
@@ -2489,10 +2601,6 @@ async function prepareChatTurn(opts: {
   const transferRoster = disableTransfer
     ? []
     : buildTransferRoster(activeAgent, availableAgents)
-
-  const dispatchableCustomTools = customTools.filter(
-    (tool) => tool.enabled && !tool.archivedAt
-  )
 
   // Action context fed into `chat({ context })`. `availableTransferAgentIds`
   // is the runtime allowlist enforced by `transferToAgent`'s handler;
@@ -2547,21 +2655,23 @@ async function prepareChatTurn(opts: {
   // its Genkit registration per-turn (admin schema changes apply
   // without a deploy).
   const chatTools = pickChatTools(
-    agentConfig,
+    enabledBuiltInTools,
     activeAgent,
     transferRoster.length,
     allowInterrupts
   )
-  for (const tool of dispatchableCustomTools) {
+  for (const ti of dispatchableCustomToolIntegrations) {
     // Per-agent intersection — mirrors the built-in `agentAllows()`
     // pattern. Missing keys normalize to `true` (the `!== false`
     // check), so a custom tool the admin hasn't explicitly opted-
     // out of stays available to every agent automatically. Default
     // persona (`activeAgent === null`) always gets every tool.
-    if (activeAgent && activeAgent.customTools[tool.id] === false) {
+    if (activeAgent && activeAgent.customTools[ti.id] === false) {
       continue
     }
-    chatTools.push(buildCustomToolForChat(tool))
+    chatTools.push(
+      buildCustomToolForChat(customToolIntegrationToDoc(teamId, ti))
+    )
   }
 
   // Node tools — registered in two independently-gated groups. WRITE

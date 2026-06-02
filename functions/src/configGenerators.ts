@@ -29,35 +29,25 @@
 
 import { HttpsError, onCall } from "firebase-functions/v2/https"
 import { z } from "genkit/beta"
-import { getMembershipRole, requireVerifiedAuth } from "./bot.js"
+import { assertAdminRole as assertTeamAdminRole } from "./authGuards.js"
+import { requireVerifiedAuth } from "./bot.js"
 import { loadTeamAgentConfig } from "./botAgentConfig.js"
 import { ai, resolveModel } from "./genkitClient.js"
 import { aiMiddlewares } from "./genkitMiddleware.js"
 import { GENKIT_OPTS } from "./runtimeConfig.js"
 import { anthropicApiKey, geminiApiKey, openaiApiKey } from "./secrets.js"
-import type { IMembershipRole } from "./types.js"
 
 // ===========================================================================
 // Shared helpers
 // ===========================================================================
 
-const ADMIN_ROLES: ReadonlyArray<IMembershipRole> = ["owner", "admin"]
-
-/**
- * Admin gate — mirrors `assertAdminRole` in `teamAgents.ts` /
- * `teamCustomTools.ts`. Inlined (rather than imported) because those
- * helpers are module-private; the policy is identical: only owners and
- * admins can author agents/tools, so only they may generate one.
- */
-async function assertAdminRole(teamId: string, uid: string): Promise<void> {
-  const role = await getMembershipRole(teamId, uid)
-  if (!role || !ADMIN_ROLES.includes(role)) {
-    throw new HttpsError(
-      "permission-denied",
-      "Only team owners and admins can generate configurations."
-    )
-  }
-}
+/** Owner/admin gate (shared role logic — see authGuards.ts + shared/permissions). */
+const assertAdminRole = (teamId: string, uid: string): Promise<void> =>
+  assertTeamAdminRole(
+    teamId,
+    uid,
+    "Only team owners and admins can generate configurations."
+  )
 
 /** Hard cap on the admin's prompt — keeps token cost predictable. */
 const PROMPT_MAX = 4000
@@ -114,8 +104,9 @@ function toIdentifier(raw: unknown, fallback: string, max: number): string {
 
 // ===========================================================================
 // Bounds (mirror the canonical create-schema bounds so generated drafts
-// validate on Save). Keep in sync with AGENT_BOUNDS / TOOL_BOUNDS in
-// teamAgents.ts / teamCustomTools.ts and botAgentBounds on the client.
+// validate on Save). Keep in sync with the integration write schemas in
+// integrations.ts (server) and the *IntegrationSpec/Draft schemas in
+// src/schemas/domain.ts (client).
 // ===========================================================================
 
 const AGENT_BOUNDS = {

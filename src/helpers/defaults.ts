@@ -6,8 +6,6 @@ import {
   IconBadgeDollarSign,
   IconBell,
   IconBlocks,
-  IconBolt,
-  IconBookOpen,
   IconBot,
   IconBox,
   IconBriefcase,
@@ -565,26 +563,11 @@ export const defaultBotAgentConfig: IBotAgentConfig = {
     summarizeNode: true,
     compareNodes: true,
     findRelatedNodes: true,
-    summarizeNodeInspector: true,
     manageContent: true,
     readContent: true,
     customAgents: true,
     customWorkflows: true,
     customTools: true,
-  },
-  /**
-   * Default-true for every shipped preset id — see the registry in
-   * `src/data/builtInAgents.ts`. New teams pick up every preset
-   * automatically; admins toggle off the ones they don't want their
-   * members to see in the picker. Server normalizes missing keys to
-   * `true` so a newly-added preset is opt-out (not opt-in) for
-   * existing teams.
-   */
-  builtInAgents: {
-    _researcher: true,
-    _writer: true,
-    _summarizer: true,
-    _code: true,
   },
   titleMaxLength: 80,
   previewMaxLength: 200,
@@ -1410,18 +1393,6 @@ export const defaultSettingsTabs = [
         description: "settings.descriptions.data",
       },
       {
-        name: "settings.titles.knowledge",
-        icon: IconBookOpen,
-        id: "knowledge",
-        description: "settings.descriptions.knowledge",
-      },
-      {
-        name: "settings.titles.integrations",
-        icon: IconBlocks,
-        id: "integrations",
-        description: "settings.descriptions.integrations",
-      },
-      {
         name: "settings.titles.logs",
         icon: IconLogs,
         id: "logs",
@@ -1458,6 +1429,12 @@ export const defaultSettingsTabs = [
         description: "settings.descriptions.models",
       },
       {
+        name: "settings.titles.integrations",
+        icon: IconBlocks,
+        id: "integrations",
+        description: "settings.descriptions.integrations",
+      },
+      {
         name: "settings.titles.tools",
         icon: IconWrench,
         id: "tools",
@@ -1487,12 +1464,6 @@ export const defaultSettingsTabs = [
     title: "settings.titles.administration",
     id: "administration",
     links: [
-      {
-        name: "settings.titles.general",
-        icon: IconBolt,
-        id: "organization",
-        description: "settings.descriptions.general",
-      },
       {
         name: "settings.titles.teams",
         icon: IconComponent,

@@ -80,9 +80,6 @@ const ALL_TOOLS_ENABLED: ITeamAgent["tools"] = {
   customAgents: true,
   customWorkflows: true,
   customTools: true,
-  // Team feature gate (inspector summary button) — carried for type
-  // alignment only; never consumed per-agent.
-  summarizeNodeInspector: true,
 }
 
 /**

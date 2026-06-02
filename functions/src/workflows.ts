@@ -18,8 +18,10 @@
  * plus the monthly token budget gate inside `runAgentTurn` — an over-budget
  * run lands as `blocked`, never an unbounded spend.
  *
- * Writes to `workflows` / `workflowRuns` are server-only (admin SDK); the
- * Firestore rules expose admin-only reads.
+ * Workflows persist in `teams/{teamId}/workflows`; run history in the sibling
+ * `teams/{teamId}/workflowRuns` queue. Both are written server-only (admin SDK);
+ * the Firestore rules expose member reads for workflows (the picker/automations
+ * UI) and admin-only reads for runs.
  */
 
 import * as logger from "firebase-functions/logger"
@@ -32,11 +34,10 @@ import { onSchedule } from "firebase-functions/v2/scheduler"
 import { z } from "zod"
 
 import { DEFAULT_AGENT_ID } from "./agents.js"
+import { assertAdminRole as assertTeamAdminRole } from "./authGuards.js"
 import { estimateTokenCostUsd } from "./billingConfig.js"
 import {
-  getMembershipRole,
   getMembershipRoleOrNull,
-  isAdminRole,
   requireVerifiedAuth,
   runHeadlessAgentTurn,
 } from "./bot.js"
@@ -66,6 +67,8 @@ const Timestamp = admin.firestore.Timestamp
 const DISPATCH_BATCH = 200
 /** Truncated agent reply stored on a run for the history view. */
 const REPLY_PREVIEW_MAX = 600
+/** Max active (non-archived) workflows per team (workflows cap themselves). */
+const MAX_ACTIVE_WORKFLOWS = 50
 
 // ─── Schema ──────────────────────────────────────────────────────────────────
 
@@ -145,7 +148,11 @@ interface WorkflowDoc {
   name: string
   description: string
   avatarSeed: string
-  /** null = custom; non-null = a seeded predefined instance. */
+  /**
+   * Provenance: the catalog preset key for a materialized preset, or null for a
+   * hand-authored custom workflow. The custom-workflows gate keys off
+   * `!presetKey`.
+   */
   presetKey: string | null
   agentId: string
   workspaceId: string
@@ -172,15 +179,37 @@ type RunStatus =
 
 // ─── Paths + auth helpers ─────────────────────────────────────────────────────
 
+// Workflows persist in their own collection; run history is a sibling queue.
+// `integrationsPath` is retained for AGENT lookups only — a workflow runs AS a
+// team agent, and agents live in the agent+tool integrations collection.
 const workflowsPath = (teamId: string) => `teams/${teamId}/workflows`
 const workflowRunsPath = (teamId: string) => `teams/${teamId}/workflowRuns`
+const integrationsPath = (teamId: string) => `teams/${teamId}/integrations`
 
-async function assertAdminRole(teamId: string, uid: string): Promise<void> {
-  const role = await getMembershipRole(teamId, uid)
-  if (!isAdminRole(role)) {
+/** Owner/admin gate (shared role logic — see authGuards.ts + shared/permissions). */
+const assertAdminRole = (teamId: string, uid: string): Promise<void> =>
+  assertTeamAdminRole(
+    teamId,
+    uid,
+    "Only team owners and admins can manage workflows."
+  )
+
+/**
+ * Cap active (non-archived) workflows per team. Enforced on BOTH create paths
+ * (custom + preset) so workflows can't grow unbounded, mirroring the agent/tool
+ * caps in integrations.ts.
+ */
+async function assertWorkflowSlotAvailable(teamId: string): Promise<void> {
+  const snap = await db
+    .collection(workflowsPath(teamId))
+    .where("archivedAt", "==", null)
+    .count()
+    .get()
+  if (snap.data().count >= MAX_ACTIVE_WORKFLOWS) {
     throw new HttpsError(
-      "permission-denied",
-      "Only team owners and admins can manage workflows."
+      "failed-precondition",
+      `Active workflow limit reached (${MAX_ACTIVE_WORKFLOWS}). ` +
+        "Archive or delete one to free a slot."
     )
   }
 }
@@ -210,7 +239,9 @@ async function assertAgentRunnable(
       )
     }
   } else {
-    const agentSnap = await db.doc(`teams/${teamId}/agents/${agentId}`).get()
+    const agentSnap = await db
+      .doc(`${integrationsPath(teamId)}/${agentId}`)
+      .get()
     if (!agentSnap.exists || agentSnap.data()?.archivedAt) {
       throw new HttpsError(
         "failed-precondition",
@@ -352,10 +383,12 @@ function buildWorkflowDocData(
 ) {
   const enabled = draft.enabled ?? true
   return {
+    // Provenance: a non-null presetKey marks a materialized catalog preset;
+    // null is a hand-authored custom workflow.
+    presetKey,
     name: draft.name,
     description: draft.description ?? "",
     avatarSeed: draft.avatarSeed ?? "",
-    presetKey,
     agentId: draft.agentId,
     workspaceId: draft.workspaceId,
     targetScope: draft.targetScope ?? null,
@@ -400,6 +433,7 @@ export const createTeamWorkflow = onCall<{ teamId: string; draft: unknown }>(
       )
     }
     await assertAgentRunnable(teamId, parsed.data.agentId)
+    await assertWorkflowSlotAvailable(teamId)
 
     const ref = db.collection(workflowsPath(teamId)).doc()
     await ref.set(buildWorkflowDocData(parsed.data, auth.uid, Date.now()))
@@ -623,7 +657,9 @@ export const reviewTeamWorkflowRun = onCall<{
   if (isBuiltInAgentId(agentId)) {
     agentName = BUILT_IN_AGENTS_BY_ID[agentId]?.name ?? "Agent"
   } else if (agentId) {
-    const agentSnap = await db.doc(`teams/${teamId}/agents/${agentId}`).get()
+    const agentSnap = await db
+      .doc(`${integrationsPath(teamId)}/${agentId}`)
+      .get()
     agentName = (agentSnap.data()?.name as string | undefined) ?? "Agent"
   }
   const resolved: ResolvedNodeContext = {
@@ -707,6 +743,7 @@ export const enableTeamWorkflowPreset = onCall<{
   if (!parsed.success) {
     throw new HttpsError("internal", `Invalid preset: ${parsed.error.message}`)
   }
+  await assertWorkflowSlotAvailable(teamId)
 
   const ref = db.collection(workflowsPath(teamId)).doc()
   await ref.set(

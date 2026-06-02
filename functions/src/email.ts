@@ -1,7 +1,6 @@
 import * as logger from "firebase-functions/logger"
-import { HttpsError, onCall } from "firebase-functions/v2/https"
 import { ServerClient } from "postmark"
-import { EMAIL_FROM, EMAIL_OPTS } from "./runtimeConfig.js"
+import { EMAIL_FROM } from "./runtimeConfig.js"
 import { postmarkApiKey } from "./secrets.js"
 import { EmailData } from "./types.js"
 
@@ -104,31 +103,3 @@ export async function sendEmailInternal(data: EmailData) {
     throw new Error(`Error sending email: ${detail}`, { cause: error })
   }
 }
-
-/**
- * Callable function to send emails
- */
-export const sendEmail = onCall(
-  { ...EMAIL_OPTS, secrets: [postmarkApiKey], enforceAppCheck: true },
-  async (request) => {
-    if (!request.auth) {
-      throw new HttpsError(
-        "unauthenticated",
-        "The function must be called while authenticated."
-      )
-    }
-
-    try {
-      return await sendEmailInternal(request.data)
-    } catch (error: unknown) {
-      const message = error instanceof Error ? error.message : String(error)
-      if (
-        message.includes("Email is required") ||
-        message.includes("Either body or template")
-      ) {
-        throw new HttpsError("invalid-argument", message)
-      }
-      throw new HttpsError("internal", message)
-    }
-  }
-)

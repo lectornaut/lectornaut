@@ -9,21 +9,22 @@
  * avoid it, keep the file structure identical and edit them together
  * in the same change.
  *
- * The runtime contract:
+ * The runtime contract (unified-integrations model):
  *
- *   - `listBuiltInAgents(toggles, teamId)` is called by `bot.ts` on
- *     every chat turn alongside `listTeamAgents`. Its output is
- *     concatenated into the available-agents list passed to
- *     `resolveActiveAgent` and `buildTransferRoster`.
+ *   - These definitions feed the integration catalog
+ *     (`integrationCatalog.ts`); `integrations.ts::listIntegrations` resolves
+ *     each built-in agent as an installed+enabled overlay unless the team has
+ *     a divergence doc. `bot.ts` builds the per-turn available-agents list
+ *     from `listIntegrations` (type == agent), prepending the Default persona
+ *     via `hydrateBuiltInAgent`.
  *
- *   - The team config's `builtInAgents` map gates inclusion: a missing
- *     key (= newly-added preset on an existing team) normalizes to
- *     `true`, so admins opt out, not in.
+ *   - Install/enable state is a divergence doc in `teams/{teamId}/integrations`
+ *     (uninstall → `archivedAt`, disable → `enabled: false`); no doc means
+ *     installed + enabled, so a newly-shipped preset rolls out opt-out.
  *
- *   - Hydrated records carry `enabled: true` and `archivedAt: null`
- *     unconditionally. The "disabled" state for a built-in is
- *     represented purely by the team config's toggle being `false` —
- *     there's no doc to put `enabled: false` on.
+ *   - `hydrateBuiltInAgent` records carry `enabled: true` and
+ *     `archivedAt: null`; the effective state comes from the overlay, not the
+ *     hydrated shape.
  */
 
 import { DEFAULT_AGENT_ID } from "./agents.js"
@@ -192,8 +193,9 @@ export const BUILT_IN_AGENTS: ReadonlyArray<BuiltInAgentDefinition> = [
  * above it is NOT a togglable preset: it's kept OUT of `BUILT_IN_AGENTS`
  * (so it never appears in the chat composer's agent picker, which still
  * represents "default" as `null`/run-under-the-user) but IS merged into
- * `BUILT_IN_AGENTS_BY_ID` and always prepended by `listBuiltInAgents`, so
- * a headless run with `agentId === DEFAULT_AGENT_ID` resolves to THIS
+ * `BUILT_IN_AGENTS_BY_ID` and always prepended by bot.ts's per-turn agent
+ * resolution (via `hydrateBuiltInAgent`), so a headless run with
+ * `agentId === DEFAULT_AGENT_ID` resolves to THIS
  * persona (its own prompt + full tools) rather than falling through to the
  * team's base system prompt.
  *
@@ -284,31 +286,4 @@ export function hydrateBuiltInAgent(
     updatedAt: now,
     createdByUid: "",
   }
-}
-
-/**
- * Filter + hydrate the team's enabled built-ins into the same shape
- * `listTeamAgents` returns. Designed to be concatenated with the
- * custom-agents list before passing to `resolveActiveAgent`.
- *
- * `toggles` carries the team's saved on/off map. A missing key
- * normalizes to "enabled" — same convention used elsewhere so a
- * newly-shipped preset rolls out without migration. Pass an empty
- * object `{}` (the post-normalization default for teams with no
- * config doc) and all presets show up.
- */
-export function listBuiltInAgents(
-  teamId: string,
-  toggles: Record<string, boolean> | undefined
-): TeamAgentDoc[] {
-  const presets = BUILT_IN_AGENTS.filter(
-    (agent) => toggles?.[agent.id] !== false
-  ).map((agent) => hydrateBuiltInAgent(teamId, agent))
-  // The Default agent is always present (ungated by the toggle map) and
-  // first, so a headless run requested as `DEFAULT_AGENT_ID` resolves to
-  // its persona via `resolveActiveAgent`. It's never a transfer target
-  // (`buildTransferRoster` reads only custom agents) and never surfaces in
-  // user-facing pickers (the client store filters the chat composer to the
-  // four presets), so its presence here is dispatch-only.
-  return [hydrateBuiltInAgent(teamId, DEFAULT_AGENT_DEFINITION), ...presets]
 }

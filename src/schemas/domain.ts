@@ -379,15 +379,16 @@ export const botAgentToolTogglesSchema = z.object({
    * single model-callable tool but a switch over a block, so it's excluded
    * from `BotToolName` / the composer slash menu (like `customTools`).
    *
-   * Two surfaces both bind this key:
-   *   - team-wide, in Settings → Tools (`agentConfig.tools.manageContent`);
-   *   - per-agent, in the agent editor (`agent.tools.manageContent`).
-   * They intersect with each other AND with the membership gate: the write
-   * tools register only when the driving user AND the active agent are
-   * each content-capable members (`MANAGE_WORKSPACE_CONTENT`) AND both
-   * toggles allow. Off at either layer removes the write tools and the
-   * matching system-prompt directive. Server normalizes a missing key to
-   * `true`, so existing teams/agents keep node editing.
+   * Per-agent only — bound in the agent editor (`agent.tools.manageContent`).
+   * Like `readContent`, it has NO team-wide switch: agents are real team
+   * members, so the `MANAGE_WORKSPACE_CONTENT` role IS the team-level
+   * authorization (a parallel team toggle would just duplicate, and could
+   * conflict with, membership). The write tools register only when the
+   * driving user AND the active agent are each content-capable members AND
+   * this per-agent toggle allows — so the toggle can only narrow within what
+   * membership already grants, never widen it. The field stays in the shared
+   * team shape (schema uniformity) but the team value is not consulted.
+   * Normalizes missing → `true`, so existing agents keep node editing.
    */
   manageContent: z.boolean(),
   /**
@@ -397,8 +398,11 @@ export const botAgentToolTogglesSchema = z.object({
    * `manageContent` so an agent can be allowed to READ workspace content
    * without being granted edit rights: this gates on `READ_WORKSPACE`
    * (held by every role, including guests) rather than
-   * `MANAGE_WORKSPACE_CONTENT`. Same two surfaces + team×agent×membership
-   * intersection as `manageContent`. Normalizes missing → `true`.
+   * `MANAGE_WORKSPACE_CONTENT`. Unlike `manageContent`, READ is low-risk
+   * enough that it has NO team-wide switch — it's a per-agent toggle only,
+   * intersected with the READ_WORKSPACE membership at dispatch. The field
+   * stays part of the shared team shape (so the schema is uniform) but the
+   * team value is no longer consulted. Normalizes missing → `true`.
    */
   readContent: z.boolean(),
   /**
@@ -441,18 +445,6 @@ export const botAgentToolTogglesSchema = z.object({
    * of admin-authored tools as a category."
    */
   customTools: z.boolean(),
-  /**
-   * Team-wide gate for the node inspector's "Generate summary" button
-   * (the `summarizeNode` callable). A feature flag, not a model-callable
-   * tool — sibling of `customTools`, surfaced in the Tools settings
-   * section and excluded from the composer tool catalog (`BotToolName`).
-   * Distinct from the `summarizeNode` toggle, which gates the chat tool;
-   * the two surfaces toggle independently. Provider-agnostic — summaries
-   * run on the team's chosen model, so it's never coupled to Google.
-   * Carried on per-agent docs for type alignment but ignored there (only
-   * the team config's value gates anything).
-   */
-  summarizeNodeInspector: z.boolean(),
 })
 
 /**
@@ -461,24 +453,6 @@ export const botAgentToolTogglesSchema = z.object({
  * type carries it cleanly without a circular import.
  */
 export const botAgentDefaultModeSchema = z.enum(["auto", "agent", "manual"])
-
-/**
- * Per-built-in-agent feature flags. Each key is a fixed preset id
- * (`_researcher`, `_writer`, etc.) and the value is whether the team
- * has the preset enabled. Disabled built-ins are filtered out of
- * pickers, the transfer roster, and dispatch — they behave exactly
- * like a custom agent with `enabled: false`. Missing keys normalize
- * to `true` server-side so a newly-added preset is opt-out, not
- * opt-in, for existing teams.
- *
- * Lives at the config level (not under `tools`) so the toggles read
- * symmetrically with per-model toggles (`models: { … }`) rather than
- * leaking the agent feature into the per-tool feature-flag space.
- */
-export const botAgentBuiltInAgentTogglesSchema = z.record(
-  z.string(),
-  z.boolean()
-)
 
 /**
  * Effective workspace agent config — every field is required because
@@ -501,12 +475,6 @@ export const botAgentConfigSchema = z.object({
     manual: z.string().max(2000),
   }),
   tools: botAgentToolTogglesSchema,
-  /**
-   * Per-built-in-agent on/off map. See
-   * `botAgentBuiltInAgentTogglesSchema`. Sibling of `tools` — a
-   * separate axis (which *agents* exist) from which *tools* exist.
-   */
-  builtInAgents: botAgentBuiltInAgentTogglesSchema,
   titleMaxLength: z.number().int().min(20).max(200),
   previewMaxLength: z.number().int().min(50).max(500),
 })
@@ -1054,3 +1022,195 @@ export const workflowRunWriteSchema = workflowRunSchema.extend({
   finishedAt: z.union([timestampInputSchema, z.null()]).optional(),
   reviewedAt: z.union([timestampInputSchema, z.null()]).optional(),
 })
+
+// ─── Integrations (agent | tool) ────────────────────────────────────────────
+
+/**
+ * The integrations model. An "integration" is the single concept behind the two
+ * DISPATCH-TIME building blocks the chat runtime composes: agents (personas)
+ * and tools (capabilities). Every installed integration is a doc at
+ *   teams/{teamId}/integrations/{integrationId}
+ *
+ * Workflows are the third building block conceptually (automations that drive
+ * personas), but they are NOT integration docs. They have a different lifecycle
+ * (materialized / opt-in) and a runtime (triggers, runs, scheduler), so they
+ * live in their own collection `teams/{teamId}/workflows` under `workflowSchema`
+ * (above). The three are unified ONLY where it's cheap and lossless — the code
+ * catalog (`integrationCatalog.ts`) and the client registry facade
+ * (`useIntegrationsRegistry`) — never in storage. See the layering note in
+ * `src/stores/integrationsStore.ts`.
+ *
+ * Three facts shape the agent/tool model:
+ *
+ *   1. MANAGEMENT is unified, RUNTIME is not. Modeling, storage, CRUD,
+ *      install/enable, and UI collapse into one shape — but dispatch still
+ *      forks by `type` (an agent is a turn *persona*; a tool is a *callable*
+ *      the model invokes).
+ *
+ *   2. `source` is the provenance axis that makes a future marketplace purely
+ *      additive: `builtin` (shipped in code), `custom` (hand-authored by the
+ *      team), `published` (installed from another team — reserved, not built).
+ *      `sourceKey` is the catalog key for `builtin`/`published` and `null` for
+ *      hand-authored `custom`.
+ *
+ *   3. `spec` (the type-specific body) is NULL for built-in agents and built-in
+ *      tools — their definition/behavior lives in the code catalog and is
+ *      resolved by `sourceKey` at read/dispatch time (built-in tool handlers
+ *      are literally code, not data). It is PRESENT for every custom integration.
+ *
+ * INSTALL/ENABLE are two orthogonal axes (the CATALOG OVERLAY, opt-out):
+ *   - installed = no divergence doc, OR an active (non-archived) one exists.
+ *   - enabled   = the `enabled` field.
+ * A built-in with no doc reads as installed+enabled, so newly-shipped built-ins
+ * roll out with no migration. Uninstall = soft-archive (`archivedAt`);
+ * re-install restores the same doc. Delete = hard-remove (custom only).
+ */
+
+// The catalog TAXONOMY spans all three building blocks (the marketplace seam in
+// `integrationCatalog.ts` lists agents, tools, AND workflow presets). The stored
+// integration DOC, however, is only ever an agent or a tool — workflows persist
+// in their own collection. Hence this enum keeps "workflow" for catalog code,
+// while `integrationSchema` below unions only agent | tool.
+export const integrationTypeSchema = z.enum(["agent", "tool", "workflow"])
+
+export const integrationSourceSchema = z.enum([
+  "builtin",
+  "custom",
+  "published",
+])
+
+/** Shared identifier message for wire-name / field-name constraints. */
+const IDENTIFIER_MESSAGE =
+  "Must start with a lowercase letter and contain only letters, digits, or underscores."
+
+// ─── Per-type spec bodies ────────────────────────────────────────────────────
+// The type-specific payload. Common envelope fields (id/teamId/name/etc.) live
+// on the integration doc itself, NOT here. Each spec reuses the stable
+// sub-schemas the old per-kind schemas were built from.
+
+/**
+ * Agent persona. Stored only for `source: "custom"`; null for built-in agents
+ * (the persona is resolved from the code catalog so shipped prompt updates keep
+ * propagating and admins can't edit a built-in's prompt — today's behavior).
+ */
+export const agentIntegrationSpecSchema = z.object({
+  systemPromptBase: z.string().min(1).max(4000),
+  promptSuffixes: z.object({
+    auto: z.string().max(2000),
+    agent: z.string().max(2000),
+    manual: z.string().max(2000),
+  }),
+  /** Per-agent tool toggles; intersected with the tool's own state at dispatch. */
+  tools: botAgentToolTogglesSchema,
+  /** Per-tool-integration opt-out map, keyed by the tool integration's id. */
+  customTools: z.record(z.string(), z.boolean()),
+})
+
+/**
+ * Custom-tool definition. Stored only for `source: "custom"`; null for built-in
+ * tools (their handler is an `ai.defineTool` closure in
+ * `functions/src/botBuiltinTools.ts`, resolved by `sourceKey`).
+ */
+export const toolIntegrationSpecSchema = z.object({
+  /**
+   * The wire-name the model invokes (a valid identifier). Distinct from the
+   * envelope's human-facing `name` (which was the old tool `displayName`).
+   */
+  wireName: z
+    .string()
+    .min(1)
+    .max(40)
+    .regex(/^[a-z][a-zA-Z0-9_]*$/, {
+      message: IDENTIFIER_MESSAGE,
+    }),
+  inputSchema: z.object({ fields: z.array(customToolFieldSchema).max(10) }),
+  outputSchema: z.object({ fields: z.array(customToolFieldSchema).max(10) }),
+  action: customToolActionSchema,
+})
+
+// ─── The integration doc (read schema) ───────────────────────────────────────
+
+/**
+ * Common envelope shared by every integration type. Spread into each member of
+ * the discriminated union below.
+ */
+const integrationBaseShape = {
+  id: z.string(),
+  teamId: z.string(),
+  source: integrationSourceSchema,
+  /** Catalog key for builtin/published; null for hand-authored custom. */
+  sourceKey: z.string().nullable().default(null),
+  /** Human-facing display name. Empty allowed for tools (falls back to wireName). */
+  name: z.string().max(120),
+  description: z.string().max(500).default(""),
+  avatarSeed: z.string().max(40).default(""),
+  /** On/off — orthogonal to install (archivedAt). */
+  enabled: z.boolean(),
+  /** Set = uninstalled/deprecated (history-preserving). null = installed. */
+  archivedAt: timestampSchema.nullable().optional(),
+  createdAt: timestampSchema,
+  updatedAt: timestampSchema,
+  createdByUid: z.string(),
+}
+
+export const integrationSchema = z.discriminatedUnion("type", [
+  z.object({
+    ...integrationBaseShape,
+    type: z.literal("agent"),
+    // null for built-in agents (persona resolved from the code catalog).
+    spec: agentIntegrationSpecSchema.nullable(),
+  }),
+  z.object({
+    ...integrationBaseShape,
+    type: z.literal("tool"),
+    // null for built-in tools (handler lives in code).
+    spec: toolIntegrationSpecSchema.nullable(),
+  }),
+])
+
+// ─── Create drafts + update patches (callable payloads) ──────────────────────
+// Only CUSTOM integrations are "created" via a draft; built-ins/published are
+// "installed" from a catalog by (type, sourceKey). Patches feed the unified
+// `updateIntegration` callable; the server's per-type merge policy decides
+// deep-merge vs wholesale-replace.
+
+export const agentIntegrationDraftSchema = z.object({
+  name: z.string().min(1).max(40),
+  description: z.string().max(200).default(""),
+  avatarSeed: z.string().max(40).default(""),
+  spec: agentIntegrationSpecSchema,
+})
+
+export const agentIntegrationPatchSchema = z
+  .object({
+    name: z.string().min(1).max(40),
+    description: z.string().max(200),
+    avatarSeed: z.string().max(40),
+    enabled: z.boolean(),
+    spec: agentIntegrationSpecSchema.partial(),
+  })
+  .partial()
+
+export const toolIntegrationDraftSchema = z.object({
+  /** Display label (was `displayName`); empty falls back to the wire-name. */
+  name: z.string().max(60).default(""),
+  /** Model-facing description — required, kept strict on purpose. */
+  description: z.string().min(1).max(500),
+  avatarSeed: z.string().max(40).default(""),
+  spec: toolIntegrationSpecSchema,
+})
+
+export const toolIntegrationPatchSchema = z
+  .object({
+    name: z.string().max(60),
+    description: z.string().min(1).max(500),
+    avatarSeed: z.string().max(40),
+    enabled: z.boolean(),
+    spec: toolIntegrationSpecSchema.partial(),
+  })
+  .partial()
+
+// NOTE: workflow integrations have no draft/patch schema here. Workflow CRUD
+// flows through the dedicated workflow* callables (functions/src/workflows.ts),
+// not the unified createIntegration / updateIntegration callables; the workflow
+// arm of `integrationSchema` above is the read-model only.

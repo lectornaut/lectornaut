@@ -2,10 +2,11 @@
 import SettingsRestricted from "@/components/app/settings/SettingsRestricted.vue"
 import { useCanViewTeamSettings } from "@/composables/useCanViewTeamSettings"
 import { cloneAgentConfig, useAgentConfig } from "@/composables/useAgentConfig"
+import { useIntegrations } from "@/composables/useIntegrations"
 import { useTeamAgents } from "@/composables/useTeamAgents"
-import { BUILT_IN_AGENTS } from "@/data/builtInAgents"
 import { IconBot, IconChevronDown, IconCirclePlus } from "@/data/icons"
 import { emitter } from "@/modules/mitt"
+import { useIntegrationsStore } from "@/stores/integrationsStore"
 import type { IBotAgentConfig, ITeamAgent } from "@/types/domain"
 
 /**
@@ -64,22 +65,15 @@ const { config, isLoading, isSaving, canEdit, save } =
 const draft = ref<IBotAgentConfig>(cloneAgentConfig(config.value))
 
 /**
- * Dirty check is scoped to the fields this page owns:
- * `builtInAgents` (top-level) and `tools.customAgents` (single nested
- * key — the rest of `tools.*` belongs to SettingsTools). A `tools`
- * save from SettingsTools must NOT register as dirty here.
+ * Dirty check is scoped to the single field this page's save owns:
+ * `tools.customAgents` (the team-wide feature gate). Built-in agent
+ * enable/disable is now an immediate per-integration write (see below), no
+ * longer part of the dirty-bar form. The rest of `tools.*` belongs to
+ * SettingsTools, so a `tools` save from there must NOT register as dirty here.
  */
-const isDirty = computed(() => {
-  const draftSlice = {
-    builtInAgents: draft.value.builtInAgents,
-    customAgents: draft.value.tools.customAgents,
-  }
-  const configSlice = {
-    builtInAgents: config.value.builtInAgents,
-    customAgents: config.value.tools.customAgents,
-  }
-  return JSON.stringify(draftSlice) !== JSON.stringify(configSlice)
-})
+const isDirty = computed(
+  () => draft.value.tools.customAgents !== config.value.tools.customAgents
+)
 
 // Dirty-aware re-clone: snap to the canonical config only when this
 // page has no unsaved changes. Lets a sibling-tab save (AI or Tools)
@@ -105,7 +99,6 @@ const handleSave = async () => {
       ...config.value.tools,
       customAgents: draft.value.tools.customAgents,
     },
-    builtInAgents: { ...draft.value.builtInAgents },
   })
 }
 
@@ -113,30 +106,35 @@ const handleDiscard = () => {
   draft.value = cloneAgentConfig(config.value)
 }
 
-// ── Built-in agents (per-preset toggles) ───────────────────────────────────
+// ── Built-in agents (per-preset enable toggles) ─────────────────────────────
 
 /**
- * Static catalog of presets to render. Each row binds against
- * `draft.builtInAgents[<id>]` — missing keys default to `true` on the
- * client AND server, so a newly-shipped preset starts enabled for
- * every team.
+ * Installed built-in agents + their enabled state, resolved from the unified
+ * integrations store (catalog overlay). Install is a separate axis from the
+ * enable/disable toggle this section controls: an uninstalled preset (removed
+ * on the Integrations page) drops out here. Toggling enable is an IMMEDIATE
+ * per-integration write — `setEnabled` materializes a thin doc carrying the
+ * flag — so it's no longer part of the dirty-bar form.
  */
+const integrationsStore = useIntegrationsStore()
+const { setEnabled: setIntegrationEnabled } = useIntegrations()
+
 const builtInAgentRows = computed(() =>
-  BUILT_IN_AGENTS.map((agent) => ({
-    id: agent.id,
-    fallbackName: agent.name,
-    fallbackDescription: agent.description,
-  }))
+  integrationsStore.agentIntegrations
+    .filter((i) => i.source !== "custom" && i.installed)
+    .map((i) => ({
+      id: i.sourceKey ?? i.id,
+      enabled: i.enabled,
+      fallbackName: i.name,
+      fallbackDescription: i.description,
+    }))
 )
 
-const isBuiltInAgentEnabled = (id: string): boolean =>
-  draft.value.builtInAgents[id] !== false
-
-const setBuiltInAgentEnabled = (id: string, value: boolean): void => {
-  draft.value.builtInAgents = {
-    ...draft.value.builtInAgents,
-    [id]: value,
-  }
+const handleToggleBuiltInAgent = async (
+  id: string,
+  value: boolean
+): Promise<void> => {
+  await setIntegrationEnabled({ type: "agent", sourceKey: id }, value)
 }
 
 // ── Custom agents (inline list) ─────────────────────────────────────────────
@@ -269,13 +267,21 @@ const handleRemoveAgent = async (agent: ITeamAgent): Promise<void> => {
             </FieldContent>
             <Switch
               :id="`builtin-agent-${row.id}`"
-              :model-value="isBuiltInAgentEnabled(row.id)"
+              :model-value="row.enabled"
               :disabled="!canEdit"
               @update:model-value="
-                (value) => setBuiltInAgentEnabled(row.id, Boolean(value))
+                (value) => handleToggleBuiltInAgent(row.id, Boolean(value))
               "
             />
           </Field>
+
+          <!-- Every preset removed via Integrations — nothing left to toggle. -->
+          <p
+            v-if="builtInAgentRows.length === 0"
+            class="text-muted-foreground rounded-md border border-dashed p-4 text-sm"
+          >
+            {{ t("settings.agents.builtInAgents.empty") }}
+          </p>
         </FieldSet>
 
         <FieldSeparator />

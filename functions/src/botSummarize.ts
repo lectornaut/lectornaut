@@ -426,20 +426,11 @@ export const summarizeNode = onCall<SummarizeNodeInput>(
     // the node exists. `getMembershipRole` throws permission-denied.
     await getMembershipRole(input.teamId, auth.uid)
 
-    // Feature gate — admins can disable the inspector's summary surface
-    // independently of the chat `summarizeNode` tool. Authoritative
-    // enforcement lives here (the inspector hides the button to match,
-    // but the server is the real gate). Missing key normalizes to
-    // enabled, so teams predating this flag keep the feature.
+    // The inspector's summary surface is always available to members — the
+    // membership gate above is the authoritative check (non-members never
+    // reach here). Load the team config once and hand it to `runSummarize`
+    // so it doesn't re-read.
     const agentConfig = await loadTeamAgentConfig(input.teamId)
-    if (agentConfig.tools.summarizeNodeInspector === false) {
-      throw new HttpsError(
-        "failed-precondition",
-        "Node summaries are disabled for this team."
-      )
-    }
-
-    // Pass the already-loaded config so `runSummarize` doesn't re-read it.
     return runSummarize(input, agentConfig)
   }
 )

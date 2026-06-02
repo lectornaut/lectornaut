@@ -29,7 +29,6 @@ import {
 import {
   extractMessagesFromSessionData,
   getMembershipRole,
-  isAdminRole,
   pinnedNodeKey,
   readSessionDoc,
   requireVerifiedAuth,
@@ -37,6 +36,7 @@ import {
   type SessionVisibility,
 } from "./bot.js"
 import { admin, db } from "./firebase.js"
+import { isAdminRole } from "./permissions.js"
 import { CALLABLE_OPTS } from "./runtimeConfig.js"
 
 // `AuthData` isn't re-exported from `firebase-functions/v2/https`, so derive

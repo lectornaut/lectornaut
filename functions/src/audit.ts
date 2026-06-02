@@ -2947,7 +2947,8 @@ interface AgentMemberSnapshot {
 /**
  * Resolve the denormalized snapshot for an agent being added as a member.
  * Built-ins come from the in-process registry (no Firestore doc); custom
- * agents are read from `teams/{teamId}/agents/{agentId}`. Archived custom
+ * agents are read from the unified `teams/{teamId}/integrations/{agentId}`
+ * collection. Archived custom
  * agents are rejected — they're being deprecated, so they shouldn't gain
  * a fresh membership (mirrors the client's selectable-agents filter).
  */
@@ -2970,7 +2971,7 @@ async function resolveAgentMemberSnapshot(
     }
   }
 
-  const agentRef = db.doc(`teams/${teamId}/agents/${agentId}`)
+  const agentRef = db.doc(`teams/${teamId}/integrations/${agentId}`)
   const agentSnap = await transaction.get(agentRef)
   if (!agentSnap.exists) {
     throw new HttpsError("not-found", "Agent not found.")

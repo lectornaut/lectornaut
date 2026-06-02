@@ -1,59 +1,54 @@
 /**
- * Team Custom Tools Store — Firestore-backed catalog of admin-authored
- * Genkit tools. Mirrors `teamAgentsStore.ts` in shape and intent:
+ * Team Custom Tools Store — the tool-facing view over the unified integrations
+ * collection (`teams/{teamId}/integrations`, `type == "tool"`, `source ==
+ * "custom"`). Mirrors `teamAgentsStore`: reads derive from `integrationsStore`
+ * mapped back into the `ITeamCustomTool` shape the settings UI speaks; writes
+ * route through the unified `integration*` callables.
  *
- *   - Reads via the shared TanStack query cache (`useCollectionQuery`),
- *     one ref-counted `onSnapshot` per `teams/{teamId}/tools` for any
- *     team member (reads are open by the Firestore rule; writes are
- *     callable-only and gated server-side).
- *   - Race-safe team-switching: the query key embeds the teamId, so a
- *     late snapshot for the previous team lands under its own unobserved
- *     key and can't clobber the active team's state — no manual guard.
- *   - Derived views (`selectableTools` / `disabledTools` /
- *     `archivedTools`) mirror the agent lifecycle so the settings UI
- *     can reuse the same active/disabled/archived collapsible pattern.
- *   - The team-wide `customTools` feature gate (from
- *     `agentConfigStore.config.tools.customTools`) short-circuits
- *     `selectableTools` to an empty array — the chat dispatcher
- *     enforces the same gate server-side.
+ * The envelope/spec split: a custom tool's wire-name (the identifier the model
+ * invokes) lives at `spec.wireName`, and the friendly label is the envelope
+ * `name`. We translate so `ITeamCustomTool.name` stays the wire-name and
+ * `.displayName` the label, exactly as the editor expects.
+ *
+ * The team-wide `customTools` feature gate stays on the agent-config doc
+ * (a capability flag) and short-circuits `selectableTools` as before.
  */
 
 import {
-  archiveTeamCustomTool as archiveTeamCustomToolFn,
-  createTeamCustomTool as createTeamCustomToolFn,
-  deleteTeamCustomTool as deleteTeamCustomToolFn,
-  restoreTeamCustomTool as restoreTeamCustomToolFn,
-  setTeamCustomToolEnabled as setTeamCustomToolEnabledFn,
-  updateTeamCustomTool as updateTeamCustomToolFn,
+  createIntegration as createIntegrationFn,
+  deleteIntegration as deleteIntegrationFn,
+  installIntegration as installIntegrationFn,
+  setIntegrationEnabled as setIntegrationEnabledFn,
+  uninstallIntegration as uninstallIntegrationFn,
+  updateIntegration as updateIntegrationFn,
   type CreateTeamCustomToolDraft,
   type UpdateTeamCustomToolPatch,
 } from "@/composables/useFunctions"
-import { firestore } from "@/modules/firebase"
 import { botAgentModelSchema } from "@/schemas/domain"
 import { useAgentConfigStore } from "@/stores/agentConfigStore"
 import { useAuthStore } from "@/stores/authStore"
-import type { ICustomToolAction, ITeamCustomTool } from "@/types/domain"
 import {
-  useCollectionQuery,
-  type CollectionQuerySource,
-} from "@/utils/firebase/firebase-query"
-import {
-  collection,
-  Timestamp,
-  type FirestoreDataConverter,
-  type QueryDocumentSnapshot,
-} from "firebase/firestore"
+  useIntegrationsStore,
+  type ResolvedIntegration,
+} from "@/stores/integrationsStore"
+import type {
+  ICustomToolAction,
+  IIntegration,
+  ITeamCustomTool,
+  IToolIntegrationDraft,
+  IToolIntegrationPatch,
+  IToolIntegrationSpec,
+} from "@/types/domain"
+import { Timestamp } from "firebase/firestore"
 import { defineStore, storeToRefs } from "pinia"
 import { computed, ref } from "vue"
 
-// ─── Defaults ──────────────────────────────────────────────────────────────
+// ─── Defaults + normalization (defensive — client reads raw docs) ────────────
 
 const DEFAULT_ACTION: ICustomToolAction = {
   kind: "constant",
   value: '{ "ok": true }',
 }
-
-// ─── Helpers ───────────────────────────────────────────────────────────────
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value)
@@ -125,9 +120,6 @@ function normalizeAction(raw: unknown): ICustomToolAction {
       return {
         kind: "promptTemplate",
         prompt: typeof raw.prompt === "string" ? raw.prompt : "",
-        // Validate against the known model enum instead of `as never`-casting
-        // an arbitrary string. An unrecognized/legacy model id falls back to
-        // `null`, which the schema permits ("use the chat's current model").
         model: botAgentModelSchema.safeParse(raw.model).data ?? null,
       }
     case "workspaceSearch":
@@ -143,40 +135,103 @@ function normalizeAction(raw: unknown): ICustomToolAction {
   }
 }
 
-function snapshotToTool(
-  teamId: string,
-  snap: QueryDocumentSnapshot
-): ITeamCustomTool {
-  const data = snap.data() ?? {}
-  const inputSchemaRaw = isRecord(data.inputSchema) ? data.inputSchema : {}
-  const outputSchemaRaw = isRecord(data.outputSchema) ? data.outputSchema : {}
-  return {
-    id: snap.id,
-    teamId,
-    name: typeof data.name === "string" ? data.name : "",
-    displayName: typeof data.displayName === "string" ? data.displayName : "",
-    description: typeof data.description === "string" ? data.description : "",
-    avatarSeed: typeof data.avatarSeed === "string" ? data.avatarSeed : "",
-    inputSchema: {
-      fields: normalizeFields(
-        (inputSchemaRaw as Record<string, unknown>).fields
-      ),
-    },
-    outputSchema: {
-      fields: normalizeFields(
-        (outputSchemaRaw as Record<string, unknown>).fields
-      ),
-    },
-    action: normalizeAction(data.action),
-    enabled: typeof data.enabled === "boolean" ? data.enabled : true,
-    archivedAt: data.archivedAt instanceof Timestamp ? data.archivedAt : null,
-    createdAt:
-      data.createdAt instanceof Timestamp ? data.createdAt : Timestamp.now(),
-    updatedAt:
-      data.updatedAt instanceof Timestamp ? data.updatedAt : Timestamp.now(),
-    createdByUid:
-      typeof data.createdByUid === "string" ? data.createdByUid : "",
+// ─── Mapping helpers ─────────────────────────────────────────────────────────
+
+function specToTool(
+  spec: IToolIntegrationSpec | null,
+  base: {
+    id: string
+    teamId: string
+    displayName: string
+    description: string
+    avatarSeed: string
+    enabled: boolean
+    archivedAt: Timestamp | null
+    createdAt: Timestamp
+    updatedAt: Timestamp
+    createdByUid: string
   }
+): ITeamCustomTool {
+  return {
+    id: base.id,
+    teamId: base.teamId,
+    name: spec?.wireName ?? "",
+    displayName: base.displayName,
+    description: base.description,
+    avatarSeed: base.avatarSeed,
+    inputSchema: { fields: normalizeFields(spec?.inputSchema?.fields) },
+    outputSchema: { fields: normalizeFields(spec?.outputSchema?.fields) },
+    action: normalizeAction(spec?.action),
+    enabled: base.enabled,
+    archivedAt: base.archivedAt,
+    createdAt: base.createdAt,
+    updatedAt: base.updatedAt,
+    createdByUid: base.createdByUid,
+  }
+}
+
+/** Map a resolved tool integration into the legacy `ITeamCustomTool` shape. */
+function toCustomTool(i: ResolvedIntegration): ITeamCustomTool {
+  return specToTool(i.spec as IToolIntegrationSpec | null, {
+    id: i.id,
+    teamId: i.teamId,
+    displayName: i.name,
+    description: i.description,
+    avatarSeed: i.avatarSeed,
+    enabled: i.enabled,
+    archivedAt: i.archivedAt,
+    createdAt: i.createdAt,
+    updatedAt: i.updatedAt,
+    createdByUid: i.createdByUid,
+  })
+}
+
+/** Map a mutation response (full `IIntegration`) to `ITeamCustomTool`. */
+function integrationToTool(i: IIntegration | null): ITeamCustomTool {
+  const spec =
+    i && i.type === "tool" ? (i.spec as IToolIntegrationSpec | null) : null
+  const now = Timestamp.now()
+  return specToTool(spec, {
+    id: i?.id ?? "",
+    teamId: i?.teamId ?? "",
+    displayName: i?.name ?? "",
+    description: i?.description ?? "",
+    avatarSeed: i?.avatarSeed ?? "",
+    enabled: i?.enabled ?? true,
+    archivedAt: i?.archivedAt ?? null,
+    createdAt: now,
+    updatedAt: now,
+    createdByUid: i?.createdByUid ?? "",
+  })
+}
+
+/** Editor's flat draft (name == wire-name) → the nested integration draft. */
+function toToolDraft(d: CreateTeamCustomToolDraft): IToolIntegrationDraft {
+  return {
+    name: d.displayName ?? "",
+    description: d.description,
+    avatarSeed: d.avatarSeed ?? "",
+    spec: {
+      wireName: d.name,
+      inputSchema: d.inputSchema,
+      outputSchema: d.outputSchema,
+      action: d.action,
+    },
+  }
+}
+
+function toToolPatch(p: UpdateTeamCustomToolPatch): IToolIntegrationPatch {
+  const spec: NonNullable<IToolIntegrationPatch["spec"]> = {}
+  if (p.name !== undefined) spec.wireName = p.name
+  if (p.inputSchema !== undefined) spec.inputSchema = p.inputSchema
+  if (p.outputSchema !== undefined) spec.outputSchema = p.outputSchema
+  if (p.action !== undefined) spec.action = p.action
+  const patch: IToolIntegrationPatch = {}
+  if (p.displayName !== undefined) patch.name = p.displayName
+  if (p.description !== undefined) patch.description = p.description
+  if (p.avatarSeed !== undefined) patch.avatarSeed = p.avatarSeed
+  if (Object.keys(spec).length > 0) patch.spec = spec
+  return patch
 }
 
 // ─── Store ─────────────────────────────────────────────────────────────────
@@ -185,73 +240,31 @@ export const useTeamCustomToolsStore = defineStore("teamCustomTools", () => {
   const authStore = useAuthStore()
   const { currentTeamId } = storeToRefs(authStore)
 
+  const integrationsStore = useIntegrationsStore()
+  const { toolIntegrations, isLoading, loadError } =
+    storeToRefs(integrationsStore)
+
   const agentConfigStore = useAgentConfigStore()
   const { config: teamAgentConfig } = storeToRefs(agentConfigStore)
-
-  // Team-wide gate — sibling of `customAgentsEnabled`. When false:
-  //   - `selectableTools` returns [] so pickers and tool-row displays
-  //     show "feature disabled" hints rather than the catalog.
-  //   - The server's dispatcher skips the Firestore read entirely.
-  //
-  // Admins still see disabled + archived buckets in settings so they
-  // can edit existing tools while the gate is flipped off.
   const customToolsEnabled = computed<boolean>(
     () => teamAgentConfig.value.tools.customTools !== false
   )
 
   const isSaving = ref(false)
 
-  /**
-   * Firestore converter that funnels every read through `snapshotToTool`, so
-   * cached docs are normalized exactly as the old manual mapping did. `teamId`
-   * is recovered from the doc path (`teams/{teamId}/tools/{id}`). `toFirestore`
-   * is never exercised — writes go through the Cloud Functions above.
-   */
-  const toolConverter: FirestoreDataConverter<ITeamCustomTool> = {
-    toFirestore: () => ({}),
-    fromFirestore: (snapshot) =>
-      snapshotToTool(snapshot.ref.parent.parent?.id ?? "", snapshot),
-  }
-
-  /**
-   * Every custom tool for the active team — read through the shared TanStack
-   * cache (one live `onSnapshot` per `teams/{teamId}/tools`, ref-counted and
-   * gc-torn-down by `useCollectionQuery`). The query key embeds the teamId, so
-   * switching teams releases the old listener and renders the new team's cached
-   * data immediately while its listener reconnects — the per-team race guard
-   * the old manual subscription needed is now structural. Writes still flow
-   * through the Cloud Functions above; the listener reflects them within ms.
-   */
-  const toolsQuery = useCollectionQuery<ITeamCustomTool>(
-    (): CollectionQuerySource | null => {
-      const teamId = currentTeamId.value
-      if (!teamId) return null
-      const path = `teams/${teamId}/tools`
-      return {
-        query: collection(firestore, path).withConverter(toolConverter),
-        path,
-      }
-    }
+  /** Every custom tool (all lifecycle states). */
+  const tools = computed<ITeamCustomTool[]>(() =>
+    toolIntegrations.value
+      .filter((i) => i.source === "custom")
+      .map(toCustomTool)
   )
 
-  const tools = computed<ITeamCustomTool[]>(() => toolsQuery.data.value ?? [])
-  const isLoading = computed<boolean>(() => toolsQuery.isLoading.value)
-  const loadError = computed<string | null>(
-    () => toolsQuery.error.value?.message ?? null
-  )
-
-  /**
-   * The teamId whose `tools` are currently loaded, or `null` while pending /
-   * teamless. Retained for API compatibility; with per-team query keys it is a
-   * thin derivation of the active team once the first snapshot has landed.
-   */
   const loadedTeamId = computed<string | null>(() =>
-    toolsQuery.data.value !== undefined ? currentTeamId.value : null
+    isLoading.value ? null : currentTeamId.value
   )
 
   // ── Derived views ──────────────────────────────────────────────────────
 
-  /** Enabled + non-archived + team-gate on. Empty when the gate is off. */
   const selectableTools = computed<ITeamCustomTool[]>(() => {
     if (!customToolsEnabled.value) return []
     return tools.value
@@ -281,100 +294,87 @@ export const useTeamCustomToolsStore = defineStore("teamCustomTools", () => {
   const getById = (toolId: string): ITeamCustomTool | null =>
     tools.value.find((t) => t.id === toolId) ?? null
 
-  // ── Mutations (admin only — server enforces) ──────────────────────────
+  // ── Mutations (admin only — server enforces; routed to unified callables) ─
 
-  const create = async (
-    draft: CreateTeamCustomToolDraft
-  ): Promise<ITeamCustomTool> => {
+  const withSave = async <T>(
+    fn: (teamId: string) => Promise<T>
+  ): Promise<T> => {
     const teamId = currentTeamId.value
-    if (!teamId) {
-      throw new Error("Cannot create a tool without an active team.")
-    }
+    if (!teamId) throw new Error("No active team.")
     if (isSaving.value) throw new Error("Tool save already in progress.")
     isSaving.value = true
     try {
-      const { data } = await createTeamCustomToolFn({ teamId, draft })
-      return data.tool
+      return await fn(teamId)
     } finally {
       isSaving.value = false
     }
   }
 
-  const update = async (
+  const create = (draft: CreateTeamCustomToolDraft): Promise<ITeamCustomTool> =>
+    withSave(async (teamId) => {
+      const { data } = await createIntegrationFn({
+        teamId,
+        type: "tool",
+        draft: toToolDraft(draft),
+      })
+      return integrationToTool(data.integration)
+    })
+
+  const update = (
     toolId: string,
     patch: UpdateTeamCustomToolPatch
-  ): Promise<ITeamCustomTool> => {
-    const teamId = currentTeamId.value
-    if (!teamId) throw new Error("Cannot update a tool without an active team.")
-    if (isSaving.value) throw new Error("Tool save already in progress.")
-    isSaving.value = true
-    try {
-      const { data } = await updateTeamCustomToolFn({ teamId, toolId, patch })
-      return data.tool
-    } finally {
-      isSaving.value = false
-    }
-  }
+  ): Promise<ITeamCustomTool> =>
+    withSave(async (teamId) => {
+      if (patch.enabled !== undefined) {
+        await setIntegrationEnabledFn({
+          teamId,
+          integrationId: toolId,
+          enabled: patch.enabled,
+        })
+      }
+      const { data } = await updateIntegrationFn({
+        teamId,
+        integrationId: toolId,
+        patch: toToolPatch(patch),
+      })
+      return integrationToTool(data.integration)
+    })
 
-  const archive = async (toolId: string): Promise<ITeamCustomTool> => {
-    const teamId = currentTeamId.value
-    if (!teamId)
-      throw new Error("Cannot archive a tool without an active team.")
-    if (isSaving.value) throw new Error("Tool save already in progress.")
-    isSaving.value = true
-    try {
-      const { data } = await archiveTeamCustomToolFn({ teamId, toolId })
-      return data.tool
-    } finally {
-      isSaving.value = false
-    }
-  }
+  const archive = (toolId: string): Promise<ITeamCustomTool> =>
+    withSave(async (teamId) => {
+      const { data } = await uninstallIntegrationFn({
+        teamId,
+        integrationId: toolId,
+      })
+      return integrationToTool(data.integration)
+    })
 
-  const restore = async (toolId: string): Promise<ITeamCustomTool> => {
-    const teamId = currentTeamId.value
-    if (!teamId)
-      throw new Error("Cannot restore a tool without an active team.")
-    if (isSaving.value) throw new Error("Tool save already in progress.")
-    isSaving.value = true
-    try {
-      const { data } = await restoreTeamCustomToolFn({ teamId, toolId })
-      return data.tool
-    } finally {
-      isSaving.value = false
-    }
-  }
+  const restore = (toolId: string): Promise<ITeamCustomTool> =>
+    withSave(async (teamId) => {
+      const { data } = await installIntegrationFn({
+        teamId,
+        integrationId: toolId,
+      })
+      return integrationToTool(data.integration)
+    })
 
-  const setEnabled = async (
+  const setEnabled = (
     toolId: string,
     enabled: boolean
-  ): Promise<ITeamCustomTool> => {
-    const teamId = currentTeamId.value
-    if (!teamId) throw new Error("Cannot toggle a tool without an active team.")
-    if (isSaving.value) throw new Error("Tool save already in progress.")
-    isSaving.value = true
-    try {
-      const { data } = await setTeamCustomToolEnabledFn({
+  ): Promise<ITeamCustomTool> =>
+    withSave(async (teamId) => {
+      const { data } = await setIntegrationEnabledFn({
         teamId,
-        toolId,
+        integrationId: toolId,
         enabled,
       })
-      return data.tool
-    } finally {
-      isSaving.value = false
-    }
-  }
+      return integrationToTool(data.integration)
+    })
 
-  const remove = async (toolId: string): Promise<void> => {
-    const teamId = currentTeamId.value
-    if (!teamId) throw new Error("Cannot delete a tool without an active team.")
-    if (isSaving.value) throw new Error("Tool save already in progress.")
-    isSaving.value = true
-    try {
-      await deleteTeamCustomToolFn({ teamId, toolId })
-    } finally {
-      isSaving.value = false
-    }
-  }
+  const remove = (toolId: string): Promise<void> =>
+    withSave(async (teamId) => {
+      await deleteIntegrationFn({ teamId, integrationId: toolId })
+    })
 
   return {
     tools,

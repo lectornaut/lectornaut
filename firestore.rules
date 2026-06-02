@@ -296,31 +296,21 @@ service cloud.firestore {
         allow write: if false;
       }
 
-      // Team-scoped custom agents (multi-agent network). Read is open to
-      // any team member because every member needs the catalog to render
-      // pickers and sidebar avatars; writes are callable-only and gated
-      // server-side by `isAdminRole` so non-admins can't create, edit, or
-      // archive agents directly even if they bypass the UI.
-      match /agents/{agentId} {
+      // Agent + tool integrations. The single collection that replaces the
+      // agents/tools install maps + custom collections. Member read because
+      // chat pickers/sidebar need the agent + tool catalog to render. Writes
+      // are callable-only and admin-gated server-side (integrations.ts).
+      match /integrations/{integrationId} {
         allow read: if isTeamMember(teamId);
         allow write: if false;
       }
 
-      // Team-scoped custom tools (admin-authored Genkit tools). Same
-      // gating model as agents: any member can READ so the future tool
-      // picker / activity log can render the catalog; writes are
-      // callable-only and admin-gated server-side by
-      // `assertAdminRole` inside `teamCustomTools.ts`.
-      match /tools/{toolId} {
-        allow read: if isTeamMember(teamId);
-        allow write: if false;
-      }
-
-      // Team automations ("Workflows"). Admin-only read (management is an
-      // admin surface); all writes go through admin-gated callables + the
-      // dispatcher / event triggers, never directly from clients.
+      // Workflows (team automations) — their own collection: materialized,
+      // opt-in, with a trigger/run/schedule runtime (workflows.ts). Member read
+      // so the picker/automations UI can render; management is admin-gated
+      // server-side. Writes are callable-only (admin SDK).
       match /workflows/{workflowId} {
-        allow read: if isTeamAdmin(teamId);
+        allow read: if isTeamMember(teamId);
         allow write: if false;
       }
 

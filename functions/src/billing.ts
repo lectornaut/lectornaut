@@ -2280,31 +2280,8 @@ export const getBillingStatus = onCall(CALLABLE_OPTS, async (request) => {
   return { billing }
 })
 
-export const getBillingCatalog = onCall(
-  {
-    ...CALLABLE_OPTS,
-    invoker: "public",
-    secrets: [stripeSecretKey],
-  },
-  async () => {
-    const stripe = getStripeClient()
-
-    try {
-      const prices = await resolveBillingCatalogFromStripe(stripe)
-      return { prices }
-    } catch (error) {
-      throw new HttpsError(
-        "failed-precondition",
-        error instanceof Error
-          ? error.message
-          : "Unable to resolve Stripe billing catalog."
-      )
-    }
-  }
-)
-
 /**
- * HTTP fallback for billing catalog.
+ * HTTP endpoint for the billing catalog.
  * Returns callable-compatible JSON so `httpsCallable` can consume it.
  *
  * Cache-Control headers are set on success: the catalog is identical

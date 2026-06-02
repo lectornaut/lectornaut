@@ -239,3 +239,15 @@ export function hasExactRole(
 ): boolean {
   return userRole === exactRole
 }
+
+/**
+ * Owner ∨ admin predicate — the single source of truth for the "team admin"
+ * role gate shared by the client (settings affordances) and Cloud Functions
+ * (mutation guards). Derived from `RoleGroups.ADMINS` so the role set is
+ * defined exactly once.
+ */
+export function isAdminRole(role: IMembershipRole | null | undefined): boolean {
+  return (
+    !!role && (RoleGroups.ADMINS as readonly IMembershipRole[]).includes(role)
+  )
+}

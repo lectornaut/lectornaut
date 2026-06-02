@@ -2,10 +2,16 @@
  * Team Workflows store — the team's automations (server-run agents).
  *
  * Storage model:
- *   - Workflows:  teams/{teamId}/workflows/{workflowId}
+ *   - Workflows:   teams/{teamId}/workflows/{id} — their own collection
+ *     (materialized, opt-in, with a trigger/run/schedule runtime). Provenance is
+ *     `presetKey` (null = custom).
  *   - Run history: teams/{teamId}/workflowRuns/{runId}
- *   - Read:  live Firestore subscription (admin-only per the rules). Writes
- *            are callable-only (admin-gated server-side).
+ *   - Read:  live Firestore subscription. Writes are callable-only
+ *            (admin-gated server-side).
+ *
+ * Workflows are one of the three integration building blocks, but they are NOT
+ * integration docs — they're unified with agents + tools only at the catalog +
+ * the client registry facade (`useIntegrationsRegistry`), never in storage.
  *
  * Mirrors `teamAgentsStore`: reads flow through the shared TanStack-backed
  * `useCollectionQuery` cache (one live listener per team, torn down + rekeyed
@@ -60,6 +66,8 @@ const workflowConverter: FirestoreDataConverter<IWorkflow> = {
       id: snapshot.id,
       teamId: snapshot.ref.parent.parent?.id ?? "",
       ...data,
+      // `presetKey` (null = custom) is the workflow's provenance field.
+      presetKey: typeof data.presetKey === "string" ? data.presetKey : null,
       avatarSeed: typeof data.avatarSeed === "string" ? data.avatarSeed : "",
     } as IWorkflow
   },
@@ -238,6 +246,39 @@ export const useTeamWorkflowsStore = defineStore("teamWorkflows", () => {
     }
   }
 
+  /**
+   * Install a preset from the Integrations page. Restores a previously
+   * soft-removed (archived) instance in place — preserving run history and
+   * avoiding a duplicate doc sharing one `presetKey` — otherwise
+   * materializes a fresh instance. Idempotent when already active.
+   */
+  const addPreset = async (
+    presetKey: string,
+    binding: { workspaceId: string; agentId: string }
+  ): Promise<void> => {
+    if (activeWorkflows.value.some((w) => w.presetKey === presetKey)) return
+    const archived = archivedWorkflows.value.find(
+      (w) => w.presetKey === presetKey
+    )
+    if (archived) {
+      await archive(archived.id, false)
+      if (!archived.enabled) await setEnabled(archived.id, true)
+      return
+    }
+    await enablePreset(presetKey, binding)
+  }
+
+  /**
+   * Soft-remove a preset from the Integrations page — archive its
+   * materialized doc so it leaves the active catalog but keeps run history
+   * (re-adding restores it). Idempotent when not installed.
+   */
+  const removePreset = async (presetKey: string): Promise<void> => {
+    const target = activeWorkflows.value.find((w) => w.presetKey === presetKey)
+    if (!target) return
+    await archive(target.id, true)
+  }
+
   return {
     workflows,
     activeWorkflows,
@@ -258,5 +299,7 @@ export const useTeamWorkflowsStore = defineStore("teamWorkflows", () => {
     runNow,
     reviewRun,
     enablePreset,
+    addPreset,
+    removePreset,
   }
 })

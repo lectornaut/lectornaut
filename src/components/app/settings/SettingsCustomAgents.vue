@@ -197,7 +197,6 @@ const DEFAULT_DRAFT: AgentDraft = {
     customAgents: true,
     customWorkflows: true,
     customTools: true,
-    summarizeNodeInspector: true,
   },
   customTools: {},
 }
@@ -312,13 +311,18 @@ const toolRows = computed<ToolRow[]>(() => [
     name: "manageContent" as const,
     label: t("settings.agents.tools.manageContent.label"),
     description: t("settings.agents.tools.manageContent.description"),
-    enabledAtTeam: teamTools.value.manageContent !== false,
+    // No team-wide switch for write (membership is the team gate); this
+    // per-agent toggle is the only feature flag, so it's never "disabled at
+    // team".
+    enabledAtTeam: true,
   },
   {
     name: "readContent" as const,
     label: t("settings.agents.tools.readContent.label"),
     description: t("settings.agents.tools.readContent.description"),
-    enabledAtTeam: teamTools.value.readContent !== false,
+    // Read has no team-wide switch (low-risk); this per-agent toggle is the
+    // only gate, so the row is never shown as "disabled at team".
+    enabledAtTeam: true,
   },
 ])
 

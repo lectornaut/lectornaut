@@ -12,12 +12,15 @@ export * from "./callables.js"
 export * from "./collab.js"
 export * from "./configGenerators.js"
 export * from "./email.js"
+export * from "./integrations.js"
 export * from "./notifier.js"
 export * from "./sessions.js"
 export * from "./sso.js"
 export * from "./sync.js"
-export * from "./teamAgents.js"
-export * from "./teamCustomTools.js"
+// `teamAgents.js` (TeamAgentDoc type) and `teamCustomTools.js`
+// (buildCustomToolForChat + types) export no Firebase callables — they are
+// consumed via direct named imports (bot.ts / agents.ts / builtInAgents.ts),
+// so they are intentionally NOT re-exported from the functions entry.
 export * from "./triggers.js"
 export * from "./types.js"
 export * from "./userProfile.js"

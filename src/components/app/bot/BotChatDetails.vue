@@ -19,8 +19,8 @@ import {
   IconWrench,
 } from "@/data/icons"
 import { getInitials } from "@/helpers/utilities"
-import { useAgentConfigStore } from "@/stores/agentConfigStore"
 import { useAuthStore } from "@/stores/authStore"
+import { useIntegrationsStore } from "@/stores/integrationsStore"
 import { useMembershipStore } from "@/stores/membershipStore"
 import { useTeamCustomToolsStore } from "@/stores/teamCustomToolsStore"
 import { isUserMembership } from "@/types/membership"
@@ -153,8 +153,23 @@ const activeAgent = computed<ITeamAgent | null>(
   () => botChat?.activeAgent.value ?? null
 )
 
-const agentConfigStore = useAgentConfigStore()
-const { config: teamAgentConfig } = storeToRefs(agentConfigStore)
+// Built-in tool availability comes from the unified integrations store: a
+// built-in tool is active for the turn when its integration is installed AND
+// enabled (the install + team-enable axes the old `installedBuiltInTools` map
+// and `tools.<name>` toggle used to cover separately). Per-agent overrides
+// (`activeAgent.tools[name]`) still intersect on top, below.
+const integrationsStore = useIntegrationsStore()
+const builtInToolActive = computed<Map<string, boolean>>(() => {
+  const map = new Map<string, boolean>()
+  for (const i of integrationsStore.toolIntegrations) {
+    if (i.source !== "custom" && i.sourceKey) {
+      map.set(i.sourceKey, i.installed && i.enabled)
+    }
+  }
+  return map
+})
+const isBuiltInToolActive = (name: string): boolean =>
+  builtInToolActive.value.get(name) ?? true
 
 const teamCustomToolsStore = useTeamCustomToolsStore()
 const { selectableTools: teamSelectableCustomTools } =
@@ -227,14 +242,13 @@ const customEntry = (tool: ITeamCustomTool): AvailableToolEntry => {
  * the next turn will have access to, in any mode.
  */
 const availableActionTools = computed<AvailableToolEntry[]>(() => {
-  const teamTools = teamAgentConfig.value.tools
   const agentTools = activeAgent.value?.tools
   const agentCustomToolOverrides = activeAgent.value?.customTools
   const entries: AvailableToolEntry[] = []
 
   for (const tool of BOT_TOOL_CATALOG) {
     if (INTERRUPT_TOOL_NAMES.has(tool.name)) continue
-    if (teamTools[tool.name] === false) continue
+    if (!isBuiltInToolActive(tool.name)) continue
     if (agentTools && agentTools[tool.name] === false) continue
     entries.push(builtInEntry(tool))
   }
@@ -260,12 +274,11 @@ const availableActionTools = computed<AvailableToolEntry[]>(() => {
  * interrupt a one-line schema change.
  */
 const availableInterruptTools = computed<AvailableToolEntry[]>(() => {
-  const teamTools = teamAgentConfig.value.tools
   const agentTools = activeAgent.value?.tools
   const entries: AvailableToolEntry[] = []
   for (const tool of BOT_TOOL_CATALOG) {
     if (!INTERRUPT_TOOL_NAMES.has(tool.name)) continue
-    if (teamTools[tool.name] === false) continue
+    if (!isBuiltInToolActive(tool.name)) continue
     if (agentTools && agentTools[tool.name] === false) continue
     entries.push(builtInEntry(tool))
   }

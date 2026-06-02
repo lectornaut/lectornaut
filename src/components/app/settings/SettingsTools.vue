@@ -2,22 +2,34 @@
 import SettingsRestricted from "@/components/app/settings/SettingsRestricted.vue"
 import { useCanViewTeamSettings } from "@/composables/useCanViewTeamSettings"
 import { cloneAgentConfig, useAgentConfig } from "@/composables/useAgentConfig"
+import { useIntegrations } from "@/composables/useIntegrations"
 import { useTeamCustomTools } from "@/composables/useTeamCustomTools"
 import { IconChevronDown, IconCirclePlus, IconWrench } from "@/data/icons"
 import { emitter } from "@/modules/mitt"
+import { useIntegrationsStore } from "@/stores/integrationsStore"
 import type { IBotAgentConfig, ITeamCustomTool } from "@/types/domain"
 
 /**
  * SettingsTools — two sibling sections, top-to-bottom:
  *
- *   1. **Built-in tools** — feature flags for the bot's first-party
- *      tool surface (rollDice, browseInternet, askQuestion,
- *      searchWorkspaceNodes, summarizeNode).
+ *   1. **Built-in tools** — enable/disable the bot's installed
+ *      first-party model-callable tools (rollDice, browseInternet,
+ *      askQuestion, searchWorkspaceNodes, summarizeNode). Each is a
+ *      catalog integration: toggling enable is an immediate
+ *      per-integration write, and an uninstalled tool drops out of the
+ *      list entirely (install/remove lives on the Integrations page).
  *
  *   2. **Custom tools** — admin-authored Genkit tools. Inline list
  *      with active / disabled / archived collapsibles, row actions,
  *      and dialog editor. The team-wide `customTools` gate sits at
  *      the top of this section.
+ *
+ * Node read/write (`readContent` / `manageContent`) have NO team-wide
+ * switch — agents are real team members, so their READ_WORKSPACE /
+ * MANAGE_WORKSPACE_CONTENT role IS the team-level authorization; a parallel
+ * team toggle would only duplicate (and could conflict with) membership.
+ * Both are per-agent toggles only (in the agent editor), and the inspector's
+ * summary button is always-on — so none of them appears on this page.
  *
  * Built-in agents + custom agents (and the team-wide `customAgents`
  * gate) live on the sibling `SettingsAgents` page. AI config
@@ -25,33 +37,25 @@ import type { IBotAgentConfig, ITeamCustomTool } from "@/types/domain"
  * `SettingsAi`. All three pages back the same Pinia-backed
  * `useAgentConfig` store.
  *
- * Field ownership within `tools.*`: this page owns the five built-in
- * tool toggles AND the `customTools` gate. `customAgents` stays on
- * `SettingsAgents`. To avoid clobbering the sibling page's
- * `tools.customAgents` edit on save, the save handler bases its
- * payload on `config.value.tools` (latest server state) and overlays
- * only this page's owned keys — Firestore's `{merge:true}` is a
- * shallow top-level merge so sending the full `tools` object always
- * replaces it.
+ * Field ownership within `tools.*`: this page's dirty-bar form owns only the
+ * `customTools` gate (see `TOOLS_PAGE_FIELDS`); built-in tool enable/disable
+ * is an immediate per-integration write, not part of the form. `customAgents`
+ * stays on `SettingsAgents`. To avoid clobbering the sibling page's
+ * `tools.customAgents` edit on save, the save handler bases its payload on
+ * `config.value.tools` (latest server state) and overlays only this page's
+ * owned keys — Firestore's `{merge:true}` is a shallow top-level merge so
+ * sending the full `tools` object always replaces it.
  */
 
 const { t } = useI18n()
 
 const { canViewTeamSettings } = useCanViewTeamSettings()
 
-// Keys within `agentConfig.tools` owned by this page. Listed
-// explicitly so the dirty-comparison subset and the save overlay can
-// share one source of truth — adding a new built-in tool is a
-// one-line edit here.
+// `tools.*` keys owned by this page's dirty-bar form. Only the `customTools`
+// feature gate now: built-in tool enable/disable is an immediate
+// per-integration write (see below), and node read/write are per-agent +
+// membership-gated (no team switch), so neither lives on this form.
 const TOOLS_PAGE_FIELDS = [
-  "rollDice",
-  "browseInternet",
-  "askQuestion",
-  "searchWorkspaceNodes",
-  "summarizeNode",
-  "summarizeNodeInspector",
-  "manageContent",
-  "readContent",
   "customTools",
 ] as const satisfies readonly (keyof IBotAgentConfig["tools"])[]
 
@@ -112,6 +116,37 @@ const handleSave = async () => {
 
 const handleDiscard = () => {
   draft.value = cloneAgentConfig(config.value)
+}
+
+/**
+ * Built-in tool install + enable state, resolved from the unified integrations
+ * store (catalog overlay). Uninstalled tools (removed on the Integrations page)
+ * drop out of this enable/disable list — install is a separate axis from on/off.
+ * Toggling enable is an IMMEDIATE per-integration write (materializes a thin doc
+ * carrying the flag), so it's no longer part of the dirty-bar form. The feature
+ * gates below (summary button, node read/write) always show + stay on the form.
+ */
+const integrationsStore = useIntegrationsStore()
+const { setEnabled: setIntegrationEnabled } = useIntegrations()
+
+const builtInToolState = computed(() => {
+  const map = new Map<string, { installed: boolean; enabled: boolean }>()
+  for (const i of integrationsStore.toolIntegrations) {
+    if (i.source !== "custom" && i.sourceKey) {
+      map.set(i.sourceKey, { installed: i.installed, enabled: i.enabled })
+    }
+  }
+  return map
+})
+const isToolInstalled = (name: string): boolean =>
+  builtInToolState.value.get(name)?.installed ?? true
+const isBuiltInToolEnabled = (name: string): boolean =>
+  builtInToolState.value.get(name)?.enabled ?? true
+const handleToggleBuiltInTool = async (
+  name: string,
+  value: boolean
+): Promise<void> => {
+  await setIntegrationEnabled({ type: "tool", sourceKey: name }, value)
 }
 
 // ── Custom tools (inline list) ─────────────────────────────────────────────
@@ -199,7 +234,7 @@ const handleRemoveTool = async (tool: ITeamCustomTool): Promise<void> => {
             </FieldContent>
           </Field>
 
-          <Field orientation="horizontal">
+          <Field v-if="isToolInstalled('rollDice')" orientation="horizontal">
             <FieldContent>
               <FieldLabel for="agent-tool-dice">
                 {{ t("settings.agents.tools.rollDice.label") }}
@@ -210,12 +245,18 @@ const handleRemoveTool = async (tool: ITeamCustomTool): Promise<void> => {
             </FieldContent>
             <Switch
               id="agent-tool-dice"
-              v-model="draft.tools.rollDice"
+              :model-value="isBuiltInToolEnabled('rollDice')"
               :disabled="!canEdit"
+              @update:model-value="
+                (v) => handleToggleBuiltInTool('rollDice', Boolean(v))
+              "
             />
           </Field>
 
-          <Field orientation="horizontal">
+          <Field
+            v-if="isToolInstalled('browseInternet')"
+            orientation="horizontal"
+          >
             <FieldContent>
               <FieldLabel for="agent-tool-browse-internet">
                 {{ t("settings.agents.tools.browseInternet.label") }}
@@ -226,12 +267,15 @@ const handleRemoveTool = async (tool: ITeamCustomTool): Promise<void> => {
             </FieldContent>
             <Switch
               id="agent-tool-browse-internet"
-              v-model="draft.tools.browseInternet"
+              :model-value="isBuiltInToolEnabled('browseInternet')"
               :disabled="!canEdit"
+              @update:model-value="
+                (v) => handleToggleBuiltInTool('browseInternet', Boolean(v))
+              "
             />
           </Field>
 
-          <Field orientation="horizontal">
+          <Field v-if="isToolInstalled('askQuestion')" orientation="horizontal">
             <FieldContent>
               <FieldLabel for="agent-tool-ask">
                 {{ t("settings.agents.tools.askQuestion.label") }}
@@ -242,12 +286,18 @@ const handleRemoveTool = async (tool: ITeamCustomTool): Promise<void> => {
             </FieldContent>
             <Switch
               id="agent-tool-ask"
-              v-model="draft.tools.askQuestion"
+              :model-value="isBuiltInToolEnabled('askQuestion')"
               :disabled="!canEdit"
+              @update:model-value="
+                (v) => handleToggleBuiltInTool('askQuestion', Boolean(v))
+              "
             />
           </Field>
 
-          <Field orientation="horizontal">
+          <Field
+            v-if="isToolInstalled('searchWorkspaceNodes')"
+            orientation="horizontal"
+          >
             <FieldContent>
               <FieldLabel for="agent-tool-search-nodes">
                 {{ t("settings.agents.tools.searchWorkspaceNodes.label") }}
@@ -260,12 +310,19 @@ const handleRemoveTool = async (tool: ITeamCustomTool): Promise<void> => {
             </FieldContent>
             <Switch
               id="agent-tool-search-nodes"
-              v-model="draft.tools.searchWorkspaceNodes"
+              :model-value="isBuiltInToolEnabled('searchWorkspaceNodes')"
               :disabled="!canEdit"
+              @update:model-value="
+                (v) =>
+                  handleToggleBuiltInTool('searchWorkspaceNodes', Boolean(v))
+              "
             />
           </Field>
 
-          <Field orientation="horizontal">
+          <Field
+            v-if="isToolInstalled('summarizeNode')"
+            orientation="horizontal"
+          >
             <FieldContent>
               <FieldLabel for="agent-tool-summarize-node">
                 {{ t("settings.agents.tools.summarizeNode.label") }}
@@ -276,72 +333,11 @@ const handleRemoveTool = async (tool: ITeamCustomTool): Promise<void> => {
             </FieldContent>
             <Switch
               id="agent-tool-summarize-node"
-              v-model="draft.tools.summarizeNode"
+              :model-value="isBuiltInToolEnabled('summarizeNode')"
               :disabled="!canEdit"
-            />
-          </Field>
-
-          <Field orientation="horizontal">
-            <FieldContent>
-              <FieldLabel for="agent-tool-summarize-node-inspector">
-                {{ t("settings.agents.tools.summarizeNodeInspector.label") }}
-              </FieldLabel>
-              <FieldDescription>
-                {{
-                  t("settings.agents.tools.summarizeNodeInspector.description")
-                }}
-              </FieldDescription>
-            </FieldContent>
-            <Switch
-              id="agent-tool-summarize-node-inspector"
-              v-model="draft.tools.summarizeNodeInspector"
-              :disabled="!canEdit"
-            />
-          </Field>
-
-          <!--
-            Node-CRUD tools (create / edit / rename / move / archive
-            workspace files & folders). Team-wide gate; intersects with
-            each agent's own `manageContent` toggle AND the membership
-            check (only content-capable member-agents ever get these),
-            so off here removes them for every agent regardless.
-          -->
-          <Field orientation="horizontal">
-            <FieldContent>
-              <FieldLabel for="agent-tool-manage-content">
-                {{ t("settings.agents.tools.manageContent.label") }}
-              </FieldLabel>
-              <FieldDescription>
-                {{ t("settings.agents.tools.manageContent.description") }}
-              </FieldDescription>
-            </FieldContent>
-            <Switch
-              id="agent-tool-manage-content"
-              v-model="draft.tools.manageContent"
-              :disabled="!canEdit"
-            />
-          </Field>
-
-          <!--
-            Read-only counterpart to Manage content: the `readNode` tool
-            returns a file's FULL content (not just search snippets).
-            Gated on `READ_WORKSPACE` (every role, incl. guests) rather
-            than edit rights, so an agent can read without being able to
-            write. Independent of the Manage content switch.
-          -->
-          <Field orientation="horizontal">
-            <FieldContent>
-              <FieldLabel for="agent-tool-read-content">
-                {{ t("settings.agents.tools.readContent.label") }}
-              </FieldLabel>
-              <FieldDescription>
-                {{ t("settings.agents.tools.readContent.description") }}
-              </FieldDescription>
-            </FieldContent>
-            <Switch
-              id="agent-tool-read-content"
-              v-model="draft.tools.readContent"
-              :disabled="!canEdit"
+              @update:model-value="
+                (v) => handleToggleBuiltInTool('summarizeNode', Boolean(v))
+              "
             />
           </Field>
         </FieldSet>
