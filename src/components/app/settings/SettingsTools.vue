@@ -199,149 +199,142 @@ const handleRemoveTool = async (tool: ITeamCustomTool): Promise<void> => {
 </script>
 
 <template>
-  <div v-if="canViewTeamSettings" class="flex grow flex-col justify-between">
-    <div class="p-6">
-      <div v-if="isLoading" class="flex justify-center py-8">
-        <Spinner />
-      </div>
-      <FieldGroup v-else>
-        <!-- ── Built-in tools ─────────────────────────────────────────── -->
-        <FieldSet>
-          <Field orientation="horizontal">
-            <FieldContent>
-              <FieldLabel>
-                {{ t("settings.agents.tools.label") }}
-              </FieldLabel>
-              <FieldDescription>
-                {{ t("settings.agents.tools.description") }}
-              </FieldDescription>
-            </FieldContent>
-          </Field>
+  <div v-if="canViewTeamSettings" class="p-6">
+    <div v-if="isLoading" class="flex justify-center py-8">
+      <Spinner />
+    </div>
+    <FieldGroup v-else>
+      <!-- ── Built-in tools ─────────────────────────────────────────── -->
+      <FieldSet>
+        <Field orientation="horizontal">
+          <FieldContent>
+            <FieldLabel>
+              {{ t("settings.agents.tools.label") }}
+            </FieldLabel>
+            <FieldDescription>
+              {{ t("settings.agents.tools.description") }}
+            </FieldDescription>
+          </FieldContent>
+        </Field>
 
-          <Field v-if="isToolInstalled('rollDice')" orientation="horizontal">
-            <FieldContent>
-              <FieldLabel for="agent-tool-dice">
-                {{ t("settings.agents.tools.rollDice.label") }}
-              </FieldLabel>
-              <FieldDescription>
-                {{ t("settings.agents.tools.rollDice.description") }}
-              </FieldDescription>
-            </FieldContent>
-            <Switch
-              id="agent-tool-dice"
-              :model-value="isBuiltInToolEnabled('rollDice')"
-              :disabled="!canEdit"
-              @update:model-value="
-                (v) => handleToggleBuiltInTool('rollDice', Boolean(v))
-              "
-            />
-          </Field>
+        <Field v-if="isToolInstalled('rollDice')" orientation="horizontal">
+          <FieldContent>
+            <FieldLabel for="agent-tool-dice">
+              {{ t("settings.agents.tools.rollDice.label") }}
+            </FieldLabel>
+            <FieldDescription>
+              {{ t("settings.agents.tools.rollDice.description") }}
+            </FieldDescription>
+          </FieldContent>
+          <Switch
+            id="agent-tool-dice"
+            :model-value="isBuiltInToolEnabled('rollDice')"
+            :disabled="!canEdit"
+            @update:model-value="
+              (v) => handleToggleBuiltInTool('rollDice', Boolean(v))
+            "
+          />
+        </Field>
 
-          <Field
-            v-if="isToolInstalled('browseInternet')"
-            orientation="horizontal"
-          >
-            <FieldContent>
-              <FieldLabel for="agent-tool-browse-internet">
-                {{ t("settings.agents.tools.browseInternet.label") }}
-              </FieldLabel>
-              <FieldDescription>
-                {{ t("settings.agents.tools.browseInternet.description") }}
-              </FieldDescription>
-            </FieldContent>
-            <Switch
-              id="agent-tool-browse-internet"
-              :model-value="isBuiltInToolEnabled('browseInternet')"
-              :disabled="!canEdit"
-              @update:model-value="
-                (v) => handleToggleBuiltInTool('browseInternet', Boolean(v))
-              "
-            />
-          </Field>
+        <Field
+          v-if="isToolInstalled('browseInternet')"
+          orientation="horizontal"
+        >
+          <FieldContent>
+            <FieldLabel for="agent-tool-browse-internet">
+              {{ t("settings.agents.tools.browseInternet.label") }}
+            </FieldLabel>
+            <FieldDescription>
+              {{ t("settings.agents.tools.browseInternet.description") }}
+            </FieldDescription>
+          </FieldContent>
+          <Switch
+            id="agent-tool-browse-internet"
+            :model-value="isBuiltInToolEnabled('browseInternet')"
+            :disabled="!canEdit"
+            @update:model-value="
+              (v) => handleToggleBuiltInTool('browseInternet', Boolean(v))
+            "
+          />
+        </Field>
 
-          <Field v-if="isToolInstalled('askQuestion')" orientation="horizontal">
-            <FieldContent>
-              <FieldLabel for="agent-tool-ask">
-                {{ t("settings.agents.tools.askQuestion.label") }}
-              </FieldLabel>
-              <FieldDescription>
-                {{ t("settings.agents.tools.askQuestion.description") }}
-              </FieldDescription>
-            </FieldContent>
-            <Switch
-              id="agent-tool-ask"
-              :model-value="isBuiltInToolEnabled('askQuestion')"
-              :disabled="!canEdit"
-              @update:model-value="
-                (v) => handleToggleBuiltInTool('askQuestion', Boolean(v))
-              "
-            />
-          </Field>
+        <Field v-if="isToolInstalled('askQuestion')" orientation="horizontal">
+          <FieldContent>
+            <FieldLabel for="agent-tool-ask">
+              {{ t("settings.agents.tools.askQuestion.label") }}
+            </FieldLabel>
+            <FieldDescription>
+              {{ t("settings.agents.tools.askQuestion.description") }}
+            </FieldDescription>
+          </FieldContent>
+          <Switch
+            id="agent-tool-ask"
+            :model-value="isBuiltInToolEnabled('askQuestion')"
+            :disabled="!canEdit"
+            @update:model-value="
+              (v) => handleToggleBuiltInTool('askQuestion', Boolean(v))
+            "
+          />
+        </Field>
 
-          <Field
-            v-if="isToolInstalled('searchWorkspaceNodes')"
-            orientation="horizontal"
-          >
-            <FieldContent>
-              <FieldLabel for="agent-tool-search-nodes">
-                {{ t("settings.agents.tools.searchWorkspaceNodes.label") }}
-              </FieldLabel>
-              <FieldDescription>
-                {{
-                  t("settings.agents.tools.searchWorkspaceNodes.description")
-                }}
-              </FieldDescription>
-            </FieldContent>
-            <Switch
-              id="agent-tool-search-nodes"
-              :model-value="isBuiltInToolEnabled('searchWorkspaceNodes')"
-              :disabled="!canEdit"
-              @update:model-value="
-                (v) =>
-                  handleToggleBuiltInTool('searchWorkspaceNodes', Boolean(v))
-              "
-            />
-          </Field>
+        <Field
+          v-if="isToolInstalled('searchWorkspaceNodes')"
+          orientation="horizontal"
+        >
+          <FieldContent>
+            <FieldLabel for="agent-tool-search-nodes">
+              {{ t("settings.agents.tools.searchWorkspaceNodes.label") }}
+            </FieldLabel>
+            <FieldDescription>
+              {{ t("settings.agents.tools.searchWorkspaceNodes.description") }}
+            </FieldDescription>
+          </FieldContent>
+          <Switch
+            id="agent-tool-search-nodes"
+            :model-value="isBuiltInToolEnabled('searchWorkspaceNodes')"
+            :disabled="!canEdit"
+            @update:model-value="
+              (v) => handleToggleBuiltInTool('searchWorkspaceNodes', Boolean(v))
+            "
+          />
+        </Field>
 
-          <Field
-            v-if="isToolInstalled('summarizeNode')"
-            orientation="horizontal"
-          >
-            <FieldContent>
-              <FieldLabel for="agent-tool-summarize-node">
-                {{ t("settings.agents.tools.summarizeNode.label") }}
-              </FieldLabel>
-              <FieldDescription>
-                {{ t("settings.agents.tools.summarizeNode.description") }}
-              </FieldDescription>
-            </FieldContent>
-            <Switch
-              id="agent-tool-summarize-node"
-              :model-value="isBuiltInToolEnabled('summarizeNode')"
-              :disabled="!canEdit"
-              @update:model-value="
-                (v) => handleToggleBuiltInTool('summarizeNode', Boolean(v))
-              "
-            />
-          </Field>
+        <Field v-if="isToolInstalled('summarizeNode')" orientation="horizontal">
+          <FieldContent>
+            <FieldLabel for="agent-tool-summarize-node">
+              {{ t("settings.agents.tools.summarizeNode.label") }}
+            </FieldLabel>
+            <FieldDescription>
+              {{ t("settings.agents.tools.summarizeNode.description") }}
+            </FieldDescription>
+          </FieldContent>
+          <Switch
+            id="agent-tool-summarize-node"
+            :model-value="isBuiltInToolEnabled('summarizeNode')"
+            :disabled="!canEdit"
+            @update:model-value="
+              (v) => handleToggleBuiltInTool('summarizeNode', Boolean(v))
+            "
+          />
+        </Field>
 
-          <!-- Every built-in tool uninstalled via Integrations — nothing left
+        <!-- Every built-in tool uninstalled via Integrations — nothing left
                to enable here. -->
-          <Empty v-if="!hasBuiltInTools" class="border border-dashed">
-            <EmptyHeader>
-              <EmptyMedia variant="icon">
-                <IconWrench />
-              </EmptyMedia>
-              <EmptyTitle>{{ t("settings.agents.tools.empty") }}</EmptyTitle>
-            </EmptyHeader>
-          </Empty>
-        </FieldSet>
+        <Empty v-if="!hasBuiltInTools" class="border border-dashed">
+          <EmptyHeader>
+            <EmptyMedia variant="icon">
+              <IconWrench />
+            </EmptyMedia>
+            <EmptyTitle>{{ t("settings.agents.tools.empty") }}</EmptyTitle>
+          </EmptyHeader>
+        </Empty>
+      </FieldSet>
 
-        <FieldSeparator />
+      <FieldSeparator />
 
-        <!-- ── Custom tools ────────────────────────────────────────── -->
-        <FieldSet>
-          <!--
+      <!-- ── Custom tools ────────────────────────────────────────── -->
+      <FieldSet>
+        <!--
             Team-wide feature gate doubles as the section header.
             Sibling of `tools.customAgents` — same on/off semantics.
             When false, the server's dispatcher skips the Firestore
@@ -350,229 +343,226 @@ const handleRemoveTool = async (tool: ITeamCustomTool): Promise<void> => {
             visible to admins so they can manage tools even while the
             feature is gated.
           -->
-          <Field orientation="horizontal">
-            <FieldContent>
-              <FieldLabel for="agent-tool-custom-tools">
-                {{ t("settings.agents.tools.customTools.label") }}
-              </FieldLabel>
-              <FieldDescription>
-                {{ t("settings.agents.tools.customTools.description") }}
-              </FieldDescription>
-            </FieldContent>
-            <Switch
-              id="agent-tool-custom-tools"
-              :model-value="customToolsEnabled"
-              :disabled="!canEdit || isSaving"
-              @update:model-value="(v) => handleToggleCustomTools(Boolean(v))"
-            />
-          </Field>
+        <Field orientation="horizontal">
+          <FieldContent>
+            <FieldLabel for="agent-tool-custom-tools">
+              {{ t("settings.agents.tools.customTools.label") }}
+            </FieldLabel>
+            <FieldDescription>
+              {{ t("settings.agents.tools.customTools.description") }}
+            </FieldDescription>
+          </FieldContent>
+          <Switch
+            id="agent-tool-custom-tools"
+            :model-value="customToolsEnabled"
+            :disabled="!canEdit || isSaving"
+            @update:model-value="(v) => handleToggleCustomTools(Boolean(v))"
+          />
+        </Field>
 
-          <!--
+        <!--
             "New tool" CTA row. Gated on admin rights AND the
             team-wide feature toggle — admins can't create a tool that
             wouldn't be reachable.
           -->
-          <Field orientation="horizontal">
-            <FieldContent>
-              <FieldLabel>
-                {{ t("settings.agents.customTools.available") }}
-              </FieldLabel>
-              <FieldDescription>
-                {{ t("settings.agents.customTools.availableDescription") }}
-              </FieldDescription>
-            </FieldContent>
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger as-child>
-                  <span class="inline-block">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      :disabled="!canManageTools || !customToolsEnabled"
-                      @click="openNewToolDialog"
-                    >
-                      <IconCirclePlus />
-                      {{ t("settings.agents.customTools.newTool") }}
-                    </Button>
-                  </span>
-                </TooltipTrigger>
-                <TooltipContent
-                  v-if="!canManageTools && cannotManageToolsReason"
-                >
-                  {{ cannotManageToolsReason }}
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-          </Field>
+        <Field orientation="horizontal">
+          <FieldContent>
+            <FieldLabel>
+              {{ t("settings.agents.customTools.available") }}
+            </FieldLabel>
+            <FieldDescription>
+              {{ t("settings.agents.customTools.availableDescription") }}
+            </FieldDescription>
+          </FieldContent>
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger as-child>
+                <span class="inline-block">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    :disabled="!canManageTools || !customToolsEnabled"
+                    @click="openNewToolDialog"
+                  >
+                    <IconCirclePlus />
+                    {{ t("settings.agents.customTools.newTool") }}
+                  </Button>
+                </span>
+              </TooltipTrigger>
+              <TooltipContent v-if="!canManageTools && cannotManageToolsReason">
+                {{ cannotManageToolsReason }}
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        </Field>
 
-          <!--
+        <!--
             Inline list — same active / disabled / archived collapsible
             layout as Custom agents. Empty state surfaces only when
             EVERY bucket is empty.
           -->
-          <div class="flex flex-col gap-2">
-            <div v-if="isLoadingTools" class="flex justify-center py-8">
-              <Spinner />
-            </div>
-
-            <template v-else>
-              <Empty
-                v-if="
-                  selectableTools.length === 0 &&
-                  disabledTools.length === 0 &&
-                  archivedTools.length === 0
-                "
-                class="border border-dashed"
-              >
-                <EmptyHeader>
-                  <EmptyMedia variant="icon">
-                    <IconWrench />
-                  </EmptyMedia>
-                  <EmptyTitle>
-                    {{ t("settings.agents.customTools.empty") }}
-                  </EmptyTitle>
-                  <EmptyDescription v-if="canManageTools">
-                    {{ t("settings.agents.customTools.emptyHint") }}
-                  </EmptyDescription>
-                </EmptyHeader>
-              </Empty>
-
-              <!-- Active (selectable) tools -->
-              <Collapsible
-                v-if="selectableTools.length > 0"
-                v-model:open="customToolsActiveOpen"
-              >
-                <CollapsibleTrigger as-child>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    class="w-full justify-between"
-                  >
-                    <span class="flex items-center gap-2">
-                      {{
-                        t("settings.agents.customTools.activeSection", {
-                          count: selectableTools.length,
-                        })
-                      }}
-                    </span>
-                    <IconChevronDown
-                      class="size-4 transition-transform"
-                      :class="{ 'rotate-180': customToolsActiveOpen }"
-                    />
-                  </Button>
-                </CollapsibleTrigger>
-                <CollapsibleContent>
-                  <ItemGroup class="gap-2 pt-2">
-                    <SettingsCustomToolRow
-                      v-for="tool in selectableTools"
-                      :key="tool.id"
-                      :tool="tool"
-                      :can-manage="canManageTools"
-                      :is-saving="isSavingTools"
-                      @edit="openEditToolDialog(tool)"
-                      @toggle-enabled="
-                        (value) => handleToggleToolEnabled(tool, value)
-                      "
-                      @archive="handleArchiveTool(tool)"
-                      @restore="handleRestoreTool(tool)"
-                      @remove="handleRemoveTool(tool)"
-                    />
-                  </ItemGroup>
-                </CollapsibleContent>
-              </Collapsible>
-
-              <!-- Disabled tools -->
-              <Collapsible
-                v-if="disabledTools.length > 0"
-                v-model:open="customToolsDisabledOpen"
-              >
-                <CollapsibleTrigger as-child>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    class="w-full justify-between"
-                  >
-                    <span class="flex items-center gap-2">
-                      {{
-                        t("settings.agents.customTools.disabledSection", {
-                          count: disabledTools.length,
-                        })
-                      }}
-                    </span>
-                    <IconChevronDown
-                      class="size-4 transition-transform"
-                      :class="{ 'rotate-180': customToolsDisabledOpen }"
-                    />
-                  </Button>
-                </CollapsibleTrigger>
-                <CollapsibleContent>
-                  <ItemGroup class="gap-2 pt-2">
-                    <SettingsCustomToolRow
-                      v-for="tool in disabledTools"
-                      :key="tool.id"
-                      :tool="tool"
-                      :can-manage="canManageTools"
-                      :is-saving="isSavingTools"
-                      @edit="openEditToolDialog(tool)"
-                      @toggle-enabled="
-                        (value) => handleToggleToolEnabled(tool, value)
-                      "
-                      @archive="handleArchiveTool(tool)"
-                      @restore="handleRestoreTool(tool)"
-                      @remove="handleRemoveTool(tool)"
-                    />
-                  </ItemGroup>
-                </CollapsibleContent>
-              </Collapsible>
-
-              <!-- Archived tools -->
-              <Collapsible
-                v-if="archivedTools.length > 0"
-                v-model:open="customToolsArchivedOpen"
-              >
-                <CollapsibleTrigger as-child>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    class="w-full justify-between"
-                  >
-                    <span class="flex items-center gap-2">
-                      {{
-                        t("settings.agents.customTools.archivedSection", {
-                          count: archivedTools.length,
-                        })
-                      }}
-                    </span>
-                    <IconChevronDown
-                      class="size-4 transition-transform"
-                      :class="{ 'rotate-180': customToolsArchivedOpen }"
-                    />
-                  </Button>
-                </CollapsibleTrigger>
-                <CollapsibleContent>
-                  <ItemGroup class="gap-2 pt-2">
-                    <SettingsCustomToolRow
-                      v-for="tool in archivedTools"
-                      :key="tool.id"
-                      :tool="tool"
-                      :can-manage="canManageTools"
-                      :is-saving="isSavingTools"
-                      @edit="openEditToolDialog(tool)"
-                      @toggle-enabled="
-                        (value) => handleToggleToolEnabled(tool, value)
-                      "
-                      @archive="handleArchiveTool(tool)"
-                      @restore="handleRestoreTool(tool)"
-                      @remove="handleRemoveTool(tool)"
-                    />
-                  </ItemGroup>
-                </CollapsibleContent>
-              </Collapsible>
-            </template>
+        <div class="flex flex-col gap-2">
+          <div v-if="isLoadingTools" class="flex justify-center py-8">
+            <Spinner />
           </div>
-        </FieldSet>
-      </FieldGroup>
-    </div>
+
+          <template v-else>
+            <Empty
+              v-if="
+                selectableTools.length === 0 &&
+                disabledTools.length === 0 &&
+                archivedTools.length === 0
+              "
+              class="border border-dashed"
+            >
+              <EmptyHeader>
+                <EmptyMedia variant="icon">
+                  <IconWrench />
+                </EmptyMedia>
+                <EmptyTitle>
+                  {{ t("settings.agents.customTools.empty") }}
+                </EmptyTitle>
+                <EmptyDescription v-if="canManageTools">
+                  {{ t("settings.agents.customTools.emptyHint") }}
+                </EmptyDescription>
+              </EmptyHeader>
+            </Empty>
+
+            <!-- Active (selectable) tools -->
+            <Collapsible
+              v-if="selectableTools.length > 0"
+              v-model:open="customToolsActiveOpen"
+            >
+              <CollapsibleTrigger as-child>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  class="w-full justify-between"
+                >
+                  <span class="flex items-center gap-2">
+                    {{
+                      t("settings.agents.customTools.activeSection", {
+                        count: selectableTools.length,
+                      })
+                    }}
+                  </span>
+                  <IconChevronDown
+                    class="size-4 transition-transform"
+                    :class="{ 'rotate-180': customToolsActiveOpen }"
+                  />
+                </Button>
+              </CollapsibleTrigger>
+              <CollapsibleContent>
+                <ItemGroup class="gap-2 pt-2">
+                  <SettingsCustomToolRow
+                    v-for="tool in selectableTools"
+                    :key="tool.id"
+                    :tool="tool"
+                    :can-manage="canManageTools"
+                    :is-saving="isSavingTools"
+                    @edit="openEditToolDialog(tool)"
+                    @toggle-enabled="
+                      (value) => handleToggleToolEnabled(tool, value)
+                    "
+                    @archive="handleArchiveTool(tool)"
+                    @restore="handleRestoreTool(tool)"
+                    @remove="handleRemoveTool(tool)"
+                  />
+                </ItemGroup>
+              </CollapsibleContent>
+            </Collapsible>
+
+            <!-- Disabled tools -->
+            <Collapsible
+              v-if="disabledTools.length > 0"
+              v-model:open="customToolsDisabledOpen"
+            >
+              <CollapsibleTrigger as-child>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  class="w-full justify-between"
+                >
+                  <span class="flex items-center gap-2">
+                    {{
+                      t("settings.agents.customTools.disabledSection", {
+                        count: disabledTools.length,
+                      })
+                    }}
+                  </span>
+                  <IconChevronDown
+                    class="size-4 transition-transform"
+                    :class="{ 'rotate-180': customToolsDisabledOpen }"
+                  />
+                </Button>
+              </CollapsibleTrigger>
+              <CollapsibleContent>
+                <ItemGroup class="gap-2 pt-2">
+                  <SettingsCustomToolRow
+                    v-for="tool in disabledTools"
+                    :key="tool.id"
+                    :tool="tool"
+                    :can-manage="canManageTools"
+                    :is-saving="isSavingTools"
+                    @edit="openEditToolDialog(tool)"
+                    @toggle-enabled="
+                      (value) => handleToggleToolEnabled(tool, value)
+                    "
+                    @archive="handleArchiveTool(tool)"
+                    @restore="handleRestoreTool(tool)"
+                    @remove="handleRemoveTool(tool)"
+                  />
+                </ItemGroup>
+              </CollapsibleContent>
+            </Collapsible>
+
+            <!-- Archived tools -->
+            <Collapsible
+              v-if="archivedTools.length > 0"
+              v-model:open="customToolsArchivedOpen"
+            >
+              <CollapsibleTrigger as-child>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  class="w-full justify-between"
+                >
+                  <span class="flex items-center gap-2">
+                    {{
+                      t("settings.agents.customTools.archivedSection", {
+                        count: archivedTools.length,
+                      })
+                    }}
+                  </span>
+                  <IconChevronDown
+                    class="size-4 transition-transform"
+                    :class="{ 'rotate-180': customToolsArchivedOpen }"
+                  />
+                </Button>
+              </CollapsibleTrigger>
+              <CollapsibleContent>
+                <ItemGroup class="gap-2 pt-2">
+                  <SettingsCustomToolRow
+                    v-for="tool in archivedTools"
+                    :key="tool.id"
+                    :tool="tool"
+                    :can-manage="canManageTools"
+                    :is-saving="isSavingTools"
+                    @edit="openEditToolDialog(tool)"
+                    @toggle-enabled="
+                      (value) => handleToggleToolEnabled(tool, value)
+                    "
+                    @archive="handleArchiveTool(tool)"
+                    @restore="handleRestoreTool(tool)"
+                    @remove="handleRemoveTool(tool)"
+                  />
+                </ItemGroup>
+              </CollapsibleContent>
+            </Collapsible>
+          </template>
+        </div>
+      </FieldSet>
+    </FieldGroup>
   </div>
   <SettingsRestricted v-else />
 </template>

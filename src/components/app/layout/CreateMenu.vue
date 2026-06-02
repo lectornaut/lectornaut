@@ -1,8 +1,9 @@
 <script setup lang="ts">
+import { useCreateActions } from "@/composables/useCreateActions"
 import { IconChevronUp, IconPlus } from "@/data/icons"
-import { defaultCreateMenu } from "@/helpers/defaults"
 
 const { t } = useI18n()
+const { groups } = useCreateActions()
 </script>
 
 <template>
@@ -29,14 +30,37 @@ const { t } = useI18n()
           <DropdownMenuLabel>
             {{ t("mainSidebar.createNew") }}
           </DropdownMenuLabel>
-          <DropdownMenuItem
-            v-for="item in defaultCreateMenu"
-            :key="item.id"
-            @click="item.action"
-          >
-            <Component :is="item.icon" :class="item.style.text" />
-            {{ item.title }}
-          </DropdownMenuItem>
+          <TooltipProvider>
+            <template v-for="(group, index) in groups" :key="group.id">
+              <DropdownMenuSeparator v-if="index > 0" />
+              <DropdownMenuGroup>
+                <template v-for="action in group.actions" :key="action.id">
+                  <!-- Gated intent: disabled item + a tooltip explaining why.
+                       The wrapper div keeps hover working while disabled. -->
+                  <Tooltip v-if="action.disabled">
+                    <TooltipTrigger as-child>
+                      <div>
+                        <DropdownMenuItem disabled>
+                          <Component
+                            :is="action.icon"
+                            :class="action.iconClass"
+                          />
+                          {{ action.label }}
+                        </DropdownMenuItem>
+                      </div>
+                    </TooltipTrigger>
+                    <TooltipContent v-if="action.disabledReason" side="right">
+                      {{ action.disabledReason }}
+                    </TooltipContent>
+                  </Tooltip>
+                  <DropdownMenuItem v-else @click="action.run()">
+                    <Component :is="action.icon" :class="action.iconClass" />
+                    {{ action.label }}
+                  </DropdownMenuItem>
+                </template>
+              </DropdownMenuGroup>
+            </template>
+          </TooltipProvider>
         </DropdownMenuContent>
       </DropdownMenu>
     </SidebarMenuItem>

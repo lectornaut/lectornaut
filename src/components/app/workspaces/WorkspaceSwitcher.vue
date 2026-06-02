@@ -31,10 +31,18 @@ const openWorkspaceSwitcher = () => {
   isWorkspaceSwitcherOpen.value = true
 }
 
+// Let any surface (e.g. the sidebar "Create New" menu) open the
+// create-workspace dialog without re-mounting it.
+const openCreateWorkspace = () => {
+  isCreatingWorkspaceDialogOpen.value = true
+}
+
 emitter.on("Workspace.Switch", openWorkspaceSwitcher)
+emitter.on("Dialog.CreateWorkspace.Open", openCreateWorkspace)
 
 onUnmounted(() => {
   emitter.off("Workspace.Switch", openWorkspaceSwitcher)
+  emitter.off("Dialog.CreateWorkspace.Open", openCreateWorkspace)
 })
 </script>
 

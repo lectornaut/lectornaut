@@ -15,20 +15,6 @@
       ]
     },
     {
-      "collectionGroup": "workflowRuns",
-      "queryScope": "COLLECTION_GROUP",
-      "fields": [
-        {
-          "fieldPath": "teamId",
-          "order": "ASCENDING"
-        },
-        {
-          "fieldPath": "queuedAt",
-          "order": "DESCENDING"
-        }
-      ]
-    },
-    {
       "collectionGroup": "botSessions",
       "queryScope": "COLLECTION",
       "fields": [
@@ -332,6 +318,20 @@
       "indexes": [
         {
           "order": "ASCENDING",
+          "queryScope": "COLLECTION_GROUP"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "workflows",
+      "fieldPath": "teamId",
+      "indexes": [
+        {
+          "order": "ASCENDING",
+          "queryScope": "COLLECTION_GROUP"
+        },
+        {
+          "order": "DESCENDING",
           "queryScope": "COLLECTION_GROUP"
         }
       ]

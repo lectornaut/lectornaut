@@ -11,7 +11,7 @@ import {
   IconUserRound,
   IconZap,
 } from "@/data/icons"
-import { defaultCreateMenu, defaultMenu } from "@/helpers/defaults"
+import { defaultMenu } from "@/helpers/defaults"
 import type { Component } from "vue"
 
 export interface TabIconRule {
@@ -60,16 +60,11 @@ function prefixPathRule(
   }
 }
 
-const createRouteRules = defaultCreateMenu.map((item) =>
-  exactPathRule(`create:${item.id}`, item.action, item.icon)
-)
-
 const primaryRouteRules = defaultMenu.map((item) =>
   prefixPathRule(`menu:${item.id}`, item.url, item.icon)
 )
 
 export const tabIconRules: readonly TabIconRule[] = [
-  ...createRouteRules,
   exactPathRule("new", "/new", IconZap),
   exactPathRule("start", "/start", IconRocket),
   exactPathRule("welcome", "/welcome", IconAiFill),

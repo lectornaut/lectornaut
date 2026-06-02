@@ -243,102 +243,171 @@ const rowDescription = (wf: IWorkflow): string =>
 </script>
 
 <template>
-  <div v-if="canViewTeamSettings" class="flex grow flex-col justify-between">
-    <div class="p-6">
-      <div v-if="isLoading" class="flex justify-center py-8">
-        <Spinner />
-      </div>
-      <!-- Surfaces a failed/denied live read (e.g. the workflows Firestore
+  <div v-if="canViewTeamSettings" class="p-6">
+    <div v-if="isLoading" class="flex justify-center py-8">
+      <Spinner />
+    </div>
+    <!-- Surfaces a failed/denied live read (e.g. the workflows Firestore
            rules aren't deployed) instead of silently rendering an empty list —
            an empty `activeWorkflows` otherwise hides custom workflows AND makes
            every preset toggle read OFF, with no clue why. -->
-      <div
-        v-else-if="loadError"
-        class="text-destructive border-destructive/30 rounded-md border p-4 text-sm"
-      >
-        {{ t("settings.workflows.loadError") }}
-        <span class="text-muted-foreground mt-1 block text-xs">
-          {{ loadError }}
-        </span>
-      </div>
-      <FieldGroup v-else>
-        <!-- ── Predefined workflows (per-preset toggles) ─────────────────
+    <div
+      v-else-if="loadError"
+      class="text-destructive border-destructive/30 rounded-md border p-4 text-sm"
+    >
+      {{ t("settings.workflows.loadError") }}
+      <span class="text-muted-foreground mt-1 block text-xs">
+        {{ loadError }}
+      </span>
+    </div>
+    <FieldGroup v-else>
+      <!-- ── Predefined workflows (per-preset toggles) ─────────────────
              One Switch per shipped preset, mirroring SettingsAgents'
              built-in agents. Toggling materializes / re-enables / disables
              the preset's workflow doc. -->
-        <FieldSet>
-          <Field orientation="horizontal">
+      <FieldSet>
+        <Field orientation="horizontal">
+          <FieldContent>
+            <FieldLabel>
+              {{ t("settings.workflows.catalogTitle") }}
+            </FieldLabel>
+            <FieldDescription>
+              {{ t("settings.workflows.predefinedDescription") }}
+            </FieldDescription>
+          </FieldContent>
+        </Field>
+
+        <TooltipProvider>
+          <Field
+            v-for="preset in availablePresets"
+            :key="preset.key"
+            orientation="horizontal"
+          >
             <FieldContent>
-              <FieldLabel>
-                {{ t("settings.workflows.catalogTitle") }}
+              <FieldLabel :for="`wf-preset-${preset.key}`">
+                {{ preset.name }}
               </FieldLabel>
               <FieldDescription>
-                {{ t("settings.workflows.predefinedDescription") }}
+                {{ preset.description }}
               </FieldDescription>
             </FieldContent>
-          </Field>
-
-          <TooltipProvider>
-            <Field
-              v-for="preset in availablePresets"
-              :key="preset.key"
-              orientation="horizontal"
-            >
-              <FieldContent>
-                <FieldLabel :for="`wf-preset-${preset.key}`">
-                  {{ preset.name }}
-                </FieldLabel>
-                <FieldDescription>
-                  {{ preset.description }}
-                </FieldDescription>
-              </FieldContent>
-              <div class="flex items-center gap-1">
-                <!-- Configure cog — always visible (like the other settings
+            <div class="flex items-center gap-1">
+              <!-- Configure cog — always visible (like the other settings
                      rows), but only actionable once the preset is materialized
                      as a real workflow doc; nothing to edit before it's
                      enabled. -->
-                <Tooltip>
-                  <DropdownMenu>
-                    <TooltipTrigger as-child>
-                      <DropdownMenuTrigger as-child>
-                        <InputGroupButton
-                          variant="ghost"
-                          size="icon-xs"
-                          :disabled="isPresetEditDisabled(preset)"
-                        >
-                          <IconSettings />
-                        </InputGroupButton>
-                      </DropdownMenuTrigger>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      {{ t("settings.workflows.configure") }}
-                    </TooltipContent>
-                    <DropdownMenuContent align="end" class="w-44">
-                      <DropdownMenuItem @select="editPreset(preset)">
-                        <IconPencil />
-                        {{ t("settings.workflows.edit") }}
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </Tooltip>
+              <Tooltip>
+                <DropdownMenu>
+                  <TooltipTrigger as-child>
+                    <DropdownMenuTrigger as-child>
+                      <InputGroupButton
+                        variant="ghost"
+                        size="icon-xs"
+                        :disabled="isPresetEditDisabled(preset)"
+                      >
+                        <IconSettings />
+                      </InputGroupButton>
+                    </DropdownMenuTrigger>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    {{ t("settings.workflows.configure") }}
+                  </TooltipContent>
+                  <DropdownMenuContent align="end" class="w-44">
+                    <DropdownMenuItem @select="editPreset(preset)">
+                      <IconPencil />
+                      {{ t("settings.workflows.edit") }}
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </Tooltip>
 
-                <!-- Enable/disable Switch. -->
-                <Switch
-                  :id="`wf-preset-${preset.key}`"
-                  :model-value="isPresetEnabled(preset)"
-                  :disabled="isPresetSwitchDisabled(preset)"
-                  @update:model-value="
-                    (value) => togglePreset(preset, Boolean(value))
-                  "
-                />
-              </div>
-            </Field>
-          </TooltipProvider>
+              <!-- Enable/disable Switch. -->
+              <Switch
+                :id="`wf-preset-${preset.key}`"
+                :model-value="isPresetEnabled(preset)"
+                :disabled="isPresetSwitchDisabled(preset)"
+                @update:model-value="
+                  (value) => togglePreset(preset, Boolean(value))
+                "
+              />
+            </div>
+          </Field>
+        </TooltipProvider>
 
-          <!-- Nothing the team has made available yet — point admins to the
+        <!-- Nothing the team has made available yet — point admins to the
                Integrations page (the availability tier). -->
+        <Empty
+          v-if="availablePresets.length === 0"
+          class="border border-dashed"
+        >
+          <EmptyHeader>
+            <EmptyMedia variant="icon">
+              <IconWorkflow />
+            </EmptyMedia>
+            <EmptyTitle>
+              {{ t("settings.workflows.noAvailablePresets") }}
+            </EmptyTitle>
+          </EmptyHeader>
+        </Empty>
+      </FieldSet>
+
+      <FieldSeparator />
+
+      <!-- ── Custom workflows (team-wide gate + inline list) ───────────── -->
+      <FieldSet>
+        <!-- Team-wide feature gate — mirrors SettingsAgents' customAgents. -->
+        <Field orientation="horizontal">
+          <FieldContent>
+            <FieldLabel for="wf-custom-gate">
+              {{ t("settings.workflows.customWorkflows.label") }}
+            </FieldLabel>
+            <FieldDescription>
+              {{ t("settings.workflows.customWorkflows.description") }}
+            </FieldDescription>
+          </FieldContent>
+          <Switch
+            id="wf-custom-gate"
+            :model-value="customWorkflowsValue"
+            :disabled="!canEdit || isLoadingConfig || isSavingConfig"
+            @update:model-value="(v) => handleToggleCustomWorkflows(Boolean(v))"
+          />
+        </Field>
+
+        <!-- "New workflow" CTA — gated on admin rights + the team toggle. -->
+        <Field orientation="horizontal">
+          <FieldContent>
+            <FieldLabel>{{ t("settings.workflows.available") }}</FieldLabel>
+            <FieldDescription>
+              {{ t("settings.workflows.availableDescription") }}
+            </FieldDescription>
+          </FieldContent>
+          <Button
+            variant="outline"
+            size="sm"
+            :disabled="!canCreateCustom"
+            @click="openCreate"
+          >
+            <IconCirclePlus />
+            {{ t("settings.workflows.new") }}
+          </Button>
+        </Field>
+
+        <!--
+            Inline list — active / disabled / archived collapsibles, mirroring
+            SettingsAgents and SettingsTools. Active custom workflows open by
+            default; Disabled + Archived start collapsed. The empty / gate-off
+            hint shows only when every bucket is empty. Each row keeps the same
+            Field + cog + Switch layout as the predefined toggles above.
+          -->
+        <div class="flex flex-col gap-2">
+          <!-- Empty / gate-off state — only when no custom workflows exist in
+                 any bucket (active, disabled, or archived). -->
           <Empty
-            v-if="availablePresets.length === 0"
+            v-if="
+              activeCustomWorkflows.length === 0 &&
+              disabledCustomWorkflows.length === 0 &&
+              wsArchivedWorkflows.length === 0
+            "
             class="border border-dashed"
           >
             <EmptyHeader>
@@ -346,237 +415,152 @@ const rowDescription = (wf: IWorkflow): string =>
                 <IconWorkflow />
               </EmptyMedia>
               <EmptyTitle>
-                {{ t("settings.workflows.noAvailablePresets") }}
+                {{
+                  customWorkflowsOn
+                    ? t("settings.workflows.emptyCustom")
+                    : t("settings.workflows.customWorkflowsOff")
+                }}
               </EmptyTitle>
             </EmptyHeader>
           </Empty>
-        </FieldSet>
 
-        <FieldSeparator />
-
-        <!-- ── Custom workflows (team-wide gate + inline list) ───────────── -->
-        <FieldSet>
-          <!-- Team-wide feature gate — mirrors SettingsAgents' customAgents. -->
-          <Field orientation="horizontal">
-            <FieldContent>
-              <FieldLabel for="wf-custom-gate">
-                {{ t("settings.workflows.customWorkflows.label") }}
-              </FieldLabel>
-              <FieldDescription>
-                {{ t("settings.workflows.customWorkflows.description") }}
-              </FieldDescription>
-            </FieldContent>
-            <Switch
-              id="wf-custom-gate"
-              :model-value="customWorkflowsValue"
-              :disabled="!canEdit || isLoadingConfig || isSavingConfig"
-              @update:model-value="
-                (v) => handleToggleCustomWorkflows(Boolean(v))
-              "
-            />
-          </Field>
-
-          <!-- "New workflow" CTA — gated on admin rights + the team toggle. -->
-          <Field orientation="horizontal">
-            <FieldContent>
-              <FieldLabel>{{ t("settings.workflows.available") }}</FieldLabel>
-              <FieldDescription>
-                {{ t("settings.workflows.availableDescription") }}
-              </FieldDescription>
-            </FieldContent>
-            <Button
-              variant="outline"
-              size="sm"
-              :disabled="!canCreateCustom"
-              @click="openCreate"
-            >
-              <IconCirclePlus />
-              {{ t("settings.workflows.new") }}
-            </Button>
-          </Field>
-
-          <!--
-            Inline list — active / disabled / archived collapsibles, mirroring
-            SettingsAgents and SettingsTools. Active custom workflows open by
-            default; Disabled + Archived start collapsed. The empty / gate-off
-            hint shows only when every bucket is empty. Each row keeps the same
-            Field + cog + Switch layout as the predefined toggles above.
-          -->
-          <div class="flex flex-col gap-2">
-            <!-- Empty / gate-off state — only when no custom workflows exist in
-                 any bucket (active, disabled, or archived). -->
-            <Empty
-              v-if="
-                activeCustomWorkflows.length === 0 &&
-                disabledCustomWorkflows.length === 0 &&
-                wsArchivedWorkflows.length === 0
-              "
-              class="border border-dashed"
-            >
-              <EmptyHeader>
-                <EmptyMedia variant="icon">
-                  <IconWorkflow />
-                </EmptyMedia>
-                <EmptyTitle>
+          <!-- Active (enabled) custom workflows -->
+          <Collapsible
+            v-if="activeCustomWorkflows.length > 0"
+            v-model:open="activeSectionOpen"
+          >
+            <CollapsibleTrigger as-child>
+              <Button variant="ghost" size="sm" class="w-full justify-between">
+                <span class="flex items-center gap-2">
                   {{
-                    customWorkflowsOn
-                      ? t("settings.workflows.emptyCustom")
-                      : t("settings.workflows.customWorkflowsOff")
+                    t("settings.workflows.activeCount", {
+                      n: activeCustomWorkflows.length,
+                    })
                   }}
-                </EmptyTitle>
-              </EmptyHeader>
-            </Empty>
+                </span>
+                <IconChevronDown
+                  class="size-4 transition-transform"
+                  :class="{ 'rotate-180': activeSectionOpen }"
+                />
+              </Button>
+            </CollapsibleTrigger>
+            <CollapsibleContent>
+              <ItemGroup class="gap-2 pt-2">
+                <SettingsWorkflowRow
+                  v-for="wf in activeCustomWorkflows"
+                  :id="wf.id"
+                  :key="wf.id"
+                  :name="wf.name"
+                  :avatar-seed="wf.avatarSeed"
+                  :description="rowDescription(wf)"
+                  :enabled="wf.enabled"
+                  :is-predefined="false"
+                  :is-archived="false"
+                  :can-manage="canManage"
+                  :is-saving="isSaving"
+                  :can-archive="true"
+                  :can-delete="true"
+                  @edit="openEdit(wf)"
+                  @toggle-enabled="(v) => setEnabled(wf.id, v)"
+                  @archive="archive(wf.id, true)"
+                  @remove="remove(wf.id)"
+                />
+              </ItemGroup>
+            </CollapsibleContent>
+          </Collapsible>
 
-            <!-- Active (enabled) custom workflows -->
-            <Collapsible
-              v-if="activeCustomWorkflows.length > 0"
-              v-model:open="activeSectionOpen"
-            >
-              <CollapsibleTrigger as-child>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  class="w-full justify-between"
-                >
-                  <span class="flex items-center gap-2">
-                    {{
-                      t("settings.workflows.activeCount", {
-                        n: activeCustomWorkflows.length,
-                      })
-                    }}
-                  </span>
-                  <IconChevronDown
-                    class="size-4 transition-transform"
-                    :class="{ 'rotate-180': activeSectionOpen }"
-                  />
-                </Button>
-              </CollapsibleTrigger>
-              <CollapsibleContent>
-                <ItemGroup class="gap-2 pt-2">
-                  <SettingsWorkflowRow
-                    v-for="wf in activeCustomWorkflows"
-                    :id="wf.id"
-                    :key="wf.id"
-                    :name="wf.name"
-                    :avatar-seed="wf.avatarSeed"
-                    :description="rowDescription(wf)"
-                    :enabled="wf.enabled"
-                    :is-predefined="false"
-                    :is-archived="false"
-                    :can-manage="canManage"
-                    :is-saving="isSaving"
-                    :can-archive="true"
-                    :can-delete="true"
-                    @edit="openEdit(wf)"
-                    @toggle-enabled="(v) => setEnabled(wf.id, v)"
-                    @archive="archive(wf.id, true)"
-                    @remove="remove(wf.id)"
-                  />
-                </ItemGroup>
-              </CollapsibleContent>
-            </Collapsible>
+          <!-- Disabled custom workflows -->
+          <Collapsible
+            v-if="disabledCustomWorkflows.length > 0"
+            v-model:open="disabledSectionOpen"
+          >
+            <CollapsibleTrigger as-child>
+              <Button variant="ghost" size="sm" class="w-full justify-between">
+                <span class="flex items-center gap-2">
+                  {{
+                    t("settings.workflows.disabledCount", {
+                      n: disabledCustomWorkflows.length,
+                    })
+                  }}
+                </span>
+                <IconChevronDown
+                  class="size-4 transition-transform"
+                  :class="{ 'rotate-180': disabledSectionOpen }"
+                />
+              </Button>
+            </CollapsibleTrigger>
+            <CollapsibleContent>
+              <ItemGroup class="gap-2 pt-2">
+                <SettingsWorkflowRow
+                  v-for="wf in disabledCustomWorkflows"
+                  :id="wf.id"
+                  :key="wf.id"
+                  :name="wf.name"
+                  :avatar-seed="wf.avatarSeed"
+                  :description="rowDescription(wf)"
+                  :enabled="wf.enabled"
+                  :is-predefined="false"
+                  :is-archived="false"
+                  :can-manage="canManage"
+                  :is-saving="isSaving"
+                  :can-archive="true"
+                  :can-delete="true"
+                  @edit="openEdit(wf)"
+                  @toggle-enabled="(v) => setEnabled(wf.id, v)"
+                  @archive="archive(wf.id, true)"
+                  @remove="remove(wf.id)"
+                />
+              </ItemGroup>
+            </CollapsibleContent>
+          </Collapsible>
 
-            <!-- Disabled custom workflows -->
-            <Collapsible
-              v-if="disabledCustomWorkflows.length > 0"
-              v-model:open="disabledSectionOpen"
-            >
-              <CollapsibleTrigger as-child>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  class="w-full justify-between"
-                >
-                  <span class="flex items-center gap-2">
-                    {{
-                      t("settings.workflows.disabledCount", {
-                        n: disabledCustomWorkflows.length,
-                      })
-                    }}
-                  </span>
-                  <IconChevronDown
-                    class="size-4 transition-transform"
-                    :class="{ 'rotate-180': disabledSectionOpen }"
-                  />
-                </Button>
-              </CollapsibleTrigger>
-              <CollapsibleContent>
-                <ItemGroup class="gap-2 pt-2">
-                  <SettingsWorkflowRow
-                    v-for="wf in disabledCustomWorkflows"
-                    :id="wf.id"
-                    :key="wf.id"
-                    :name="wf.name"
-                    :avatar-seed="wf.avatarSeed"
-                    :description="rowDescription(wf)"
-                    :enabled="wf.enabled"
-                    :is-predefined="false"
-                    :is-archived="false"
-                    :can-manage="canManage"
-                    :is-saving="isSaving"
-                    :can-archive="true"
-                    :can-delete="true"
-                    @edit="openEdit(wf)"
-                    @toggle-enabled="(v) => setEnabled(wf.id, v)"
-                    @archive="archive(wf.id, true)"
-                    @remove="remove(wf.id)"
-                  />
-                </ItemGroup>
-              </CollapsibleContent>
-            </Collapsible>
-
-            <!-- Archived (custom + predefined) -->
-            <Collapsible
-              v-if="wsArchivedWorkflows.length > 0"
-              v-model:open="archivedSectionOpen"
-            >
-              <CollapsibleTrigger as-child>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  class="w-full justify-between"
-                >
-                  <span class="flex items-center gap-2">
-                    {{
-                      t("settings.workflows.archivedCount", {
-                        n: wsArchivedWorkflows.length,
-                      })
-                    }}
-                  </span>
-                  <IconChevronDown
-                    class="size-4 transition-transform"
-                    :class="{ 'rotate-180': archivedSectionOpen }"
-                  />
-                </Button>
-              </CollapsibleTrigger>
-              <CollapsibleContent>
-                <ItemGroup class="gap-2 pt-2">
-                  <SettingsWorkflowRow
-                    v-for="wf in wsArchivedWorkflows"
-                    :id="wf.id"
-                    :key="wf.id"
-                    :name="wf.name"
-                    :avatar-seed="wf.avatarSeed"
-                    :description="rowDescription(wf)"
-                    :enabled="wf.enabled"
-                    :is-predefined="!!wf.presetKey"
-                    is-archived
-                    :can-manage="canManage"
-                    :is-saving="isSaving"
-                    :can-archive="false"
-                    :can-delete="true"
-                    @edit="openEdit(wf)"
-                    @toggle-enabled="(v) => setEnabled(wf.id, v)"
-                    @restore="archive(wf.id, false)"
-                    @remove="remove(wf.id)"
-                  />
-                </ItemGroup>
-              </CollapsibleContent>
-            </Collapsible>
-          </div>
-        </FieldSet>
-      </FieldGroup>
-    </div>
+          <!-- Archived (custom + predefined) -->
+          <Collapsible
+            v-if="wsArchivedWorkflows.length > 0"
+            v-model:open="archivedSectionOpen"
+          >
+            <CollapsibleTrigger as-child>
+              <Button variant="ghost" size="sm" class="w-full justify-between">
+                <span class="flex items-center gap-2">
+                  {{
+                    t("settings.workflows.archivedCount", {
+                      n: wsArchivedWorkflows.length,
+                    })
+                  }}
+                </span>
+                <IconChevronDown
+                  class="size-4 transition-transform"
+                  :class="{ 'rotate-180': archivedSectionOpen }"
+                />
+              </Button>
+            </CollapsibleTrigger>
+            <CollapsibleContent>
+              <ItemGroup class="gap-2 pt-2">
+                <SettingsWorkflowRow
+                  v-for="wf in wsArchivedWorkflows"
+                  :id="wf.id"
+                  :key="wf.id"
+                  :name="wf.name"
+                  :avatar-seed="wf.avatarSeed"
+                  :description="rowDescription(wf)"
+                  :enabled="wf.enabled"
+                  :is-predefined="!!wf.presetKey"
+                  is-archived
+                  :can-manage="canManage"
+                  :is-saving="isSaving"
+                  :can-archive="false"
+                  :can-delete="true"
+                  @edit="openEdit(wf)"
+                  @toggle-enabled="(v) => setEnabled(wf.id, v)"
+                  @restore="archive(wf.id, false)"
+                  @remove="remove(wf.id)"
+                />
+              </ItemGroup>
+            </CollapsibleContent>
+          </Collapsible>
+        </div>
+      </FieldSet>
+    </FieldGroup>
 
     <SettingsCustomWorkflow
       v-model:open="editorOpen"

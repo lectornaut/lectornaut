@@ -90,6 +90,7 @@ export const settingsThemeDocSchema = z.object({
   editorTheme: editorThemeIdSchema.optional(),
   editorFontSize: editorFontSizeIdSchema.optional(),
   translucentSidebar: z.boolean().optional(),
+  reducedMotion: z.boolean().optional(),
 })
 
 /**

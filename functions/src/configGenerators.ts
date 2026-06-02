@@ -165,81 +165,105 @@ async function resolveGenerationContext(teamId: string) {
 // Agent generation
 // ===========================================================================
 
-const generatedAgentZod = z.object({
-  name: z
-    .string()
-    .describe(
-      "Short, human-friendly agent name (max 40 chars), e.g. 'Researcher' " +
-        "or 'Release Notes Writer'. Title Case, no quotes."
-    ),
-  description: z
-    .string()
-    .describe(
-      "One sentence (max 200 chars) describing what this agent specializes " +
-        "in, so teammates know when to pick it."
-    ),
-  avatarSeed: z
-    .string()
-    .describe(
-      "A single short word used to seed a generative avatar. Usually the " +
-        "agent's name or a closely related word. May be empty."
-    ),
-  systemPromptBase: z
-    .string()
-    .describe(
-      "The agent's full system prompt (max 4000 chars). Write in the second " +
-        "person ('You are ...'). Define the persona, tone, scope, and any " +
-        "constraints. Be specific and directly actionable for the model."
-    ),
-  promptSuffixes: z
-    .object({
-      auto: z
-        .string()
-        .describe(
-          "Extra guidance appended in 'auto' mode (model decides when to " +
-            "use tools). Empty unless mode-specific guidance genuinely helps."
-        ),
-      agent: z
-        .string()
-        .describe(
-          "Extra guidance for 'agent' mode (autonomous multi-step work). " +
-            "Empty unless useful."
-        ),
-      manual: z
-        .string()
-        .describe(
-          "Extra guidance for 'manual' mode (user drives each step). Empty " +
-            "unless useful."
-        ),
-    })
-    .describe("Per-chat-mode suffixes appended after the system prompt."),
-  tools: z
-    .object({
-      rollDice: z.boolean().describe("Random dice rolls (demo)."),
-      browseInternet: z
-        .boolean()
-        .describe(
-          "Live web search via Google Search for current/external facts."
-        ),
-      askQuestion: z
-        .boolean()
-        .describe("Ask the user a clarifying question mid-turn."),
-      searchWorkspaceNodes: z
-        .boolean()
-        .describe("Search the team's workspace notes and files."),
-      summarizeNode: z
-        .boolean()
-        .describe("Summarize a workspace file or folder."),
-    })
-    .describe(
-      "Which built-in tools this agent should be able to call. Enable only " +
-        "the ones relevant to its purpose. For most knowledge-work agents, " +
-        "enable searchWorkspaceNodes and summarizeNode; enable browseInternet " +
-        "for agents that need current or external information; enable " +
-        "rollDice only when clearly relevant to the described " +
-        "purpose."
-    ),
-})
+/**
+ * IMPORTANT: every field below is `.partial()` (optional) on purpose —
+ * including the nested `promptSuffixes` / `tools` objects, and the same
+ * applies to the tool + workflow schemas further down.
+ *
+ * Genkit validates the model's response against this schema *after*
+ * generation. With required fields, any single property the model omits
+ * (it intermittently drops e.g. a nested object, or `outputFields` on the
+ * tool schema) makes `ai.generate()` throw `INVALID_ARGUMENT`. That is not
+ * an HttpsError, so it surfaces to the browser as an opaque `INTERNAL` —
+ * precisely the crash the normalizers in this file exist to prevent.
+ *
+ * Keeping the schema permissive lets that defensive layer run: `clampText`,
+ * `normalizeFields`, `normalizeAction` (and `normalizeWorkflowTrigger`
+ * below) default every field, so a partial response still produces a
+ * complete, saveable draft. The `.describe()` hints + system prompt still
+ * push the model to populate everything; `.partial()` only removes the hard
+ * failure for the times it doesn't. (Same rule as the chat tool-arg
+ * schemas — keep the model-facing schema loose, normalize in the handler.)
+ */
+const generatedAgentZod = z
+  .object({
+    name: z
+      .string()
+      .describe(
+        "Short, human-friendly agent name (max 40 chars), e.g. 'Researcher' " +
+          "or 'Release Notes Writer'. Title Case, no quotes."
+      ),
+    description: z
+      .string()
+      .describe(
+        "One sentence (max 200 chars) describing what this agent specializes " +
+          "in, so teammates know when to pick it."
+      ),
+    avatarSeed: z
+      .string()
+      .describe(
+        "A single short word used to seed a generative avatar. Usually the " +
+          "agent's name or a closely related word. May be empty."
+      ),
+    systemPromptBase: z
+      .string()
+      .describe(
+        "The agent's full system prompt (max 4000 chars). Write in the second " +
+          "person ('You are ...'). Define the persona, tone, scope, and any " +
+          "constraints. Be specific and directly actionable for the model."
+      ),
+    promptSuffixes: z
+      .object({
+        auto: z
+          .string()
+          .describe(
+            "Extra guidance appended in 'auto' mode (model decides when to " +
+              "use tools). Empty unless mode-specific guidance genuinely helps."
+          ),
+        agent: z
+          .string()
+          .describe(
+            "Extra guidance for 'agent' mode (autonomous multi-step work). " +
+              "Empty unless useful."
+          ),
+        manual: z
+          .string()
+          .describe(
+            "Extra guidance for 'manual' mode (user drives each step). Empty " +
+              "unless useful."
+          ),
+      })
+      .partial()
+      .describe("Per-chat-mode suffixes appended after the system prompt."),
+    tools: z
+      .object({
+        rollDice: z.boolean().describe("Random dice rolls (demo)."),
+        browseInternet: z
+          .boolean()
+          .describe(
+            "Live web search via Google Search for current/external facts."
+          ),
+        askQuestion: z
+          .boolean()
+          .describe("Ask the user a clarifying question mid-turn."),
+        searchWorkspaceNodes: z
+          .boolean()
+          .describe("Search the team's workspace notes and files."),
+        summarizeNode: z
+          .boolean()
+          .describe("Summarize a workspace file or folder."),
+      })
+      .partial()
+      .describe(
+        "Which built-in tools this agent should be able to call. Enable only " +
+          "the ones relevant to its purpose. For most knowledge-work agents, " +
+          "enable searchWorkspaceNodes and summarizeNode; enable browseInternet " +
+          "for agents that need current or external information; enable " +
+          "rollDice only when clearly relevant to the described " +
+          "purpose."
+      ),
+  })
+  .partial()
 
 const AGENT_SYSTEM_INSTRUCTIONS =
   "You configure custom AI agents for Lectornaut, a team workspace whose " +
@@ -345,23 +369,28 @@ export const generateTeamAgentConfig = onCall<GenerateConfigRequest>(
 // Custom-tool generation
 // ===========================================================================
 
-const generatedFieldZod = z.object({
-  name: z
-    .string()
-    .describe(
-      "Field name as a lowercase camelCase identifier (letters, digits, " +
-        "underscores; starts with a lowercase letter), e.g. 'customerId'."
-    ),
-  type: z
-    .enum(["string", "number", "boolean"])
-    .describe("The field's primitive type."),
-  description: z
-    .string()
-    .describe("What this field means — shown to the model (max 200 chars)."),
-  required: z
-    .boolean()
-    .describe("Whether the model must always provide this field."),
-})
+// Permissive for the same reason as `generatedAgentZod` above: `normalizeFields`
+// / `normalizeAction` default any field the model omits, so a strict schema
+// would only turn those omissions into opaque INTERNAL crashes on the client.
+const generatedFieldZod = z
+  .object({
+    name: z
+      .string()
+      .describe(
+        "Field name as a lowercase camelCase identifier (letters, digits, " +
+          "underscores; starts with a lowercase letter), e.g. 'customerId'."
+      ),
+    type: z
+      .enum(["string", "number", "boolean"])
+      .describe("The field's primitive type."),
+    description: z
+      .string()
+      .describe("What this field means — shown to the model (max 200 chars)."),
+    required: z
+      .boolean()
+      .describe("Whether the model must always provide this field."),
+  })
+  .partial()
 
 /**
  * Flat action shape the model fills. Deliberately NOT a discriminated
@@ -371,82 +400,86 @@ const generatedFieldZod = z.object({
  * on `kind`, discarding the irrelevant fields and applying numeric
  * defaults the model never sees.
  */
-const generatedActionZod = z.object({
-  kind: z
-    .enum(["httpWebhook", "constant", "promptTemplate", "workspaceSearch"])
-    .describe(
-      "How the tool runs. Prefer 'constant', 'promptTemplate', or " +
-        "'workspaceSearch'. Choose 'httpWebhook' ONLY when the admin " +
-        "explicitly references an external HTTP API endpoint."
-    ),
-  url: z
-    .string()
-    .describe("httpWebhook only: the endpoint URL. Empty for other kinds."),
-  method: z
-    .enum(["GET", "POST", "PUT", "PATCH", "DELETE"])
-    .describe("httpWebhook only: HTTP method. Default POST."),
-  headers: z
-    .array(z.object({ name: z.string(), value: z.string() }))
-    .describe("httpWebhook only: request headers. Empty array if none."),
-  bodyTemplate: z
-    .string()
-    .describe(
-      "httpWebhook only: request body. May reference inputs with " +
-        "{{fieldName}}. Empty for GET or other kinds."
-    ),
-  constantValue: z
-    .string()
-    .describe(
-      "constant only: a JSON string the tool always returns, e.g. " +
-        '\'{ "status": "ok" }\'. Empty for other kinds.'
-    ),
-  prompt: z
-    .string()
-    .describe(
-      "promptTemplate only: the sub-prompt to run. Reference inputs with " +
-        "{{fieldName}}. Empty for other kinds."
-    ),
-  scope: z
-    .enum(["code", "write", "any"])
-    .describe(
-      "workspaceSearch only: restrict to 'code' nodes, 'write' nodes, or " +
-        "'any'. Use 'any' when unsure."
-    ),
-  filterHint: z
-    .string()
-    .describe(
-      "workspaceSearch only: a short topic hint baked into the search, e.g. " +
-        "'onboarding docs'. Empty for other kinds."
-    ),
-})
+const generatedActionZod = z
+  .object({
+    kind: z
+      .enum(["httpWebhook", "constant", "promptTemplate", "workspaceSearch"])
+      .describe(
+        "How the tool runs. Prefer 'constant', 'promptTemplate', or " +
+          "'workspaceSearch'. Choose 'httpWebhook' ONLY when the admin " +
+          "explicitly references an external HTTP API endpoint."
+      ),
+    url: z
+      .string()
+      .describe("httpWebhook only: the endpoint URL. Empty for other kinds."),
+    method: z
+      .enum(["GET", "POST", "PUT", "PATCH", "DELETE"])
+      .describe("httpWebhook only: HTTP method. Default POST."),
+    headers: z
+      .array(z.object({ name: z.string(), value: z.string() }))
+      .describe("httpWebhook only: request headers. Empty array if none."),
+    bodyTemplate: z
+      .string()
+      .describe(
+        "httpWebhook only: request body. May reference inputs with " +
+          "{{fieldName}}. Empty for GET or other kinds."
+      ),
+    constantValue: z
+      .string()
+      .describe(
+        "constant only: a JSON string the tool always returns, e.g. " +
+          '\'{ "status": "ok" }\'. Empty for other kinds.'
+      ),
+    prompt: z
+      .string()
+      .describe(
+        "promptTemplate only: the sub-prompt to run. Reference inputs with " +
+          "{{fieldName}}. Empty for other kinds."
+      ),
+    scope: z
+      .enum(["code", "write", "any"])
+      .describe(
+        "workspaceSearch only: restrict to 'code' nodes, 'write' nodes, or " +
+          "'any'. Use 'any' when unsure."
+      ),
+    filterHint: z
+      .string()
+      .describe(
+        "workspaceSearch only: a short topic hint baked into the search, e.g. " +
+          "'onboarding docs'. Empty for other kinds."
+      ),
+  })
+  .partial()
 
-const generatedToolZod = z.object({
-  name: z
-    .string()
-    .describe(
-      "Wire name the model calls — lowercase camelCase identifier (letters, " +
-        "digits, underscores; starts lowercase), e.g. 'lookupCustomer'."
-    ),
-  displayName: z
-    .string()
-    .describe("Human-friendly label shown in lists (max 60 chars)."),
-  description: z
-    .string()
-    .describe(
-      "Written FOR THE MODEL (max 500 chars): when to call this tool and " +
-        "what it returns. Clear descriptions improve tool selection."
-    ),
-  avatarSeed: z
-    .string()
-    .describe("A short word to seed the avatar. Usually the display name."),
-  inputFields: z
-    .array(generatedFieldZod)
-    .describe("Parameters the model passes when calling (up to 10)."),
-  outputFields: z
-    .array(generatedFieldZod)
-    .describe("Documents what the tool returns to the model (up to 10)."),
-  action: generatedActionZod.describe("How the tool executes."),
-})
+const generatedToolZod = z
+  .object({
+    name: z
+      .string()
+      .describe(
+        "Wire name the model calls — lowercase camelCase identifier (letters, " +
+          "digits, underscores; starts lowercase), e.g. 'lookupCustomer'."
+      ),
+    displayName: z
+      .string()
+      .describe("Human-friendly label shown in lists (max 60 chars)."),
+    description: z
+      .string()
+      .describe(
+        "Written FOR THE MODEL (max 500 chars): when to call this tool and " +
+          "what it returns. Clear descriptions improve tool selection."
+      ),
+    avatarSeed: z
+      .string()
+      .describe("A short word to seed the avatar. Usually the display name."),
+    inputFields: z
+      .array(generatedFieldZod)
+      .describe("Parameters the model passes when calling (up to 10)."),
+    outputFields: z
+      .array(generatedFieldZod)
+      .describe("Documents what the tool returns to the model (up to 10)."),
+    action: generatedActionZod.describe("How the tool executes."),
+  })
+  .partial()
 
 const TOOL_SYSTEM_INSTRUCTIONS =
   "You configure custom tools for Lectornaut, a team workspace whose AI " +
@@ -640,98 +673,105 @@ const WORKFLOW_BOUNDS = {
  * strict `WorkflowTrigger` based on `type`, discarding the irrelevant fields
  * and clamping every number to its domain bound.
  */
-const generatedWorkflowTriggerZod = z.object({
-  type: z
-    .enum(["schedule", "event", "manual"])
-    .describe(
-      "How the workflow fires. 'schedule' = repeats (interval/daily/weekly); " +
-        "'event' = runs when 'code' or 'write' content changes; 'manual' = " +
-        "only when an admin runs it on demand."
-    ),
-  scheduleType: z
-    .enum(["interval", "daily", "weekly"])
-    .describe(
-      "schedule only: 'interval' (every N hours), 'daily' (once a day), or " +
-        "'weekly' (once a week)."
-    ),
-  everyHours: z
-    .number()
-    .describe("schedule+interval only: repeat every N hours (1–720)."),
-  dayOfWeek: z
-    .number()
-    .describe("schedule+weekly only: weekday, 0=Sunday … 6=Saturday."),
-  atMinuteUTC: z
-    .number()
-    .describe(
-      "schedule+daily/weekly only: minute-of-day in UTC, 0–1439 (e.g. 540 = " +
-        "09:00 UTC)."
-    ),
-  scope: z
-    .enum(["code", "write"])
-    .describe(
-      "event only: run when 'code' files change or 'write' documents change."
-    ),
-  debounceMinutes: z
-    .number()
-    .describe(
-      "event only: coalesce a burst of edits into at most one run per N " +
-        "minutes (0–1440). Use 30 unless the admin asks otherwise."
-    ),
-})
+// Permissive like the agent/tool schemas above — `normalizeWorkflowTrigger`
+// and `clampText` default every field, so model omissions normalize rather
+// than throwing INVALID_ARGUMENT (→ opaque INTERNAL) out of `ai.generate()`.
+const generatedWorkflowTriggerZod = z
+  .object({
+    type: z
+      .enum(["schedule", "event", "manual"])
+      .describe(
+        "How the workflow fires. 'schedule' = repeats (interval/daily/weekly); " +
+          "'event' = runs when 'code' or 'write' content changes; 'manual' = " +
+          "only when an admin runs it on demand."
+      ),
+    scheduleType: z
+      .enum(["interval", "daily", "weekly"])
+      .describe(
+        "schedule only: 'interval' (every N hours), 'daily' (once a day), or " +
+          "'weekly' (once a week)."
+      ),
+    everyHours: z
+      .number()
+      .describe("schedule+interval only: repeat every N hours (1–720)."),
+    dayOfWeek: z
+      .number()
+      .describe("schedule+weekly only: weekday, 0=Sunday … 6=Saturday."),
+    atMinuteUTC: z
+      .number()
+      .describe(
+        "schedule+daily/weekly only: minute-of-day in UTC, 0–1439 (e.g. 540 = " +
+          "09:00 UTC)."
+      ),
+    scope: z
+      .enum(["code", "write"])
+      .describe(
+        "event only: run when 'code' files change or 'write' documents change."
+      ),
+    debounceMinutes: z
+      .number()
+      .describe(
+        "event only: coalesce a burst of edits into at most one run per N " +
+          "minutes (0–1440). Use 30 unless the admin asks otherwise."
+      ),
+  })
+  .partial()
 
-const generatedWorkflowZod = z.object({
-  name: z
-    .string()
-    .describe(
-      "Short, human-friendly workflow name (max 120 chars), e.g. 'Weekly " +
-        "Docs Digest' or 'Keep README in sync'. Title Case, no quotes."
-    ),
-  description: z
-    .string()
-    .describe(
-      "One sentence (max 500 chars) describing what this workflow does and " +
-        "when it runs, so teammates understand it at a glance."
-    ),
-  avatarSeed: z
-    .string()
-    .describe(
-      "A single short word used to seed a generative avatar for the " +
-        "workflow. Usually a keyword from its name (e.g. 'changelog', " +
-        "'sync-docs'). May be empty."
-    ),
-  instructions: z
-    .string()
-    .describe(
-      "The procedure the agent follows on EVERY run (max 8000 chars). This " +
-        "is the most important field. The agent runs headless with NO user " +
-        "to ask, so write a complete, self-contained, step-by-step procedure " +
-        "in the imperative ('Read …', 'Find …', 'Propose edits to …'). State " +
-        "explicitly when it should make no changes, and tell it to cite the " +
-        "source node id for any edit it proposes."
-    ),
-  additionalPrompt: z
-    .string()
-    .describe(
-      "Optional extra guidance appended after the instructions (max 2000 " +
-        "chars) — tone, output format, or edge cases. Empty unless it " +
-        "genuinely helps."
-    ),
-  targetScope: z
-    .enum(["code", "write", "default"])
-    .describe(
-      "Which tree the agent may edit: 'code' (source files), 'write' " +
-        "(documents), or 'default' for the workspace's write tree. Most " +
-        "workflows edit 'write'."
-    ),
-  trigger: generatedWorkflowTriggerZod.describe("When the workflow runs."),
-  updateMode: z
-    .enum(["require_review", "automatic"])
-    .describe(
-      "'require_review' (strongly preferred) stages the agent's edits for an " +
-        "admin to approve; 'automatic' applies them unattended. Only choose " +
-        "'automatic' when the admin explicitly wants hands-off automation."
-    ),
-})
+const generatedWorkflowZod = z
+  .object({
+    name: z
+      .string()
+      .describe(
+        "Short, human-friendly workflow name (max 120 chars), e.g. 'Weekly " +
+          "Docs Digest' or 'Keep README in sync'. Title Case, no quotes."
+      ),
+    description: z
+      .string()
+      .describe(
+        "One sentence (max 500 chars) describing what this workflow does and " +
+          "when it runs, so teammates understand it at a glance."
+      ),
+    avatarSeed: z
+      .string()
+      .describe(
+        "A single short word used to seed a generative avatar for the " +
+          "workflow. Usually a keyword from its name (e.g. 'changelog', " +
+          "'sync-docs'). May be empty."
+      ),
+    instructions: z
+      .string()
+      .describe(
+        "The procedure the agent follows on EVERY run (max 8000 chars). This " +
+          "is the most important field. The agent runs headless with NO user " +
+          "to ask, so write a complete, self-contained, step-by-step procedure " +
+          "in the imperative ('Read …', 'Find …', 'Propose edits to …'). State " +
+          "explicitly when it should make no changes, and tell it to cite the " +
+          "source node id for any edit it proposes."
+      ),
+    additionalPrompt: z
+      .string()
+      .describe(
+        "Optional extra guidance appended after the instructions (max 2000 " +
+          "chars) — tone, output format, or edge cases. Empty unless it " +
+          "genuinely helps."
+      ),
+    targetScope: z
+      .enum(["code", "write", "default"])
+      .describe(
+        "Which tree the agent may edit: 'code' (source files), 'write' " +
+          "(documents), or 'default' for the workspace's write tree. Most " +
+          "workflows edit 'write'."
+      ),
+    trigger: generatedWorkflowTriggerZod.describe("When the workflow runs."),
+    updateMode: z
+      .enum(["require_review", "automatic"])
+      .describe(
+        "'require_review' (strongly preferred) stages the agent's edits for an " +
+          "admin to approve; 'automatic' applies them unattended. Only choose " +
+          "'automatic' when the admin explicitly wants hands-off automation."
+      ),
+  })
+  .partial()
 
 const WORKFLOW_SYSTEM_INSTRUCTIONS =
   "You configure autonomous workflows for Lectornaut, a team workspace whose " +

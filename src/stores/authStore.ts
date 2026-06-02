@@ -210,8 +210,12 @@ export const useAuthStore = defineStore("auth", () => {
   //   - Same failure shape on any cold start where the persisted query cache
   //     rehydrates the doc but the per-team localStorage overlay seed is
   //     missing/stale.
-  // Reading Firestore-first makes the workspace selection survive exactly as
-  // the team selection already does.
+  // Reading Firestore-first is HALF of making the workspace selection survive
+  // like the team selection — the other half lives in the reconciliation watch
+  // below, which must NOT overwrite the hydrated overlay when Firestore
+  // confirms the doc is MISSING (`null`). Without that guard, a missing/not-yet
+  // -written doc clobbered the overlay (and its cache) with `null` on every
+  // reload, which is the bug this pair of comments exists to prevent.
   const membershipPreferences = computed({
     get: () => {
       if (
@@ -385,21 +389,37 @@ export const useAuthStore = defineStore("auth", () => {
       if (!currentUser.value || !teamId || loading) {
         return
       }
-      // The query's `data` is `undefined` until the first snapshot lands;
-      // it only becomes `null` when the document genuinely doesn't exist.
-      // Without this guard, the immediate fire here would (a) wipe the
-      // hydrated cache by writing defaults to localStorage and (b) mark
-      // the selection as Firestore-resolved before Firestore has spoken —
-      // briefly flashing WorkspaceSelector before MainLayout renders.
-      // The race exists because the immediate fire can run before the query
+      // `undefined` = the query has not delivered its first snapshot yet
+      // (still loading) — wait. The immediate fire can run before the query
       // has delivered its first snapshot for the docRef that the just-applied
-      // `currentTeamId` hydration produced.
+      // `currentTeamId` hydration produced, so without this guard we'd act on
+      // a phantom "loading" state.
       if (preferences === undefined) return
 
-      const nextPreferences = preferences ?? defaultMembershipPreferences()
-      optimisticMembershipPreferences.value = nextPreferences
+      // Mirror the userPreferences reconciliation (the team-selection path that
+      // ALREADY survives reload): let Firestore overwrite the cold-start
+      // hydrated overlay ONLY when it actually has a stored value. A `null`
+      // here is the listener CONFIRMING the membership-preferences doc does not
+      // exist (see useDocumentQuery's null-vs-undefined contract) — it does NOT
+      // mean the user has no selection.
+      //
+      // The previous `preferences ?? defaultMembershipPreferences()` treated
+      // that `null` as authoritative: it clobbered the hydrated
+      // `currentWorkspaceId` with `null` AND wrote that `null` back to the
+      // per-team cache, so the selected workspace was wiped on every reload
+      // whenever the doc was missing or the write had not yet landed. The
+      // selected TEAM never broke this way precisely because its reconciliation
+      // guards on `if (preferences)` and leaves the hydrated overlay untouched
+      // when Firestore is empty. This is that same guard.
+      //
+      // Resolution is marked regardless (even on a confirmed-missing doc): an
+      // absent doc is a definitive answer, so release the bootstrap gate and
+      // fall back to the hydrated/empty overlay instead of spinning forever.
+      if (preferences) {
+        optimisticMembershipPreferences.value = preferences
+        persistMembershipPreferencesForTeam(teamId, preferences)
+      }
       resolvedMembershipPreferencesTeamId.value = teamId
-      persistMembershipPreferencesForTeam(teamId, nextPreferences)
     },
     { immediate: true }
   )

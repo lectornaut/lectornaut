@@ -1,10 +1,10 @@
 /**
- * Shared state + derivations for the runs surfaces (Runs page, Settings →
- * Runs). Owns the two sidebar filters — a calendar date-range and a workflow
- * multi-select — and derives the flattened {@link RunRow}s, the per-day
- * calendar markers (past-run status + scheduled indicators), and the grouped
- * workflow filter list. Call once per surface; pass its refs to the calendar /
- * filter / table children.
+ * Shared derivations for the runs surfaces (Runs page, Settings → Runs): the
+ * flattened {@link RunRow}s, the per-day calendar markers (past-run status +
+ * scheduled indicators), and the grouped workflow filter list. Filtering lives
+ * in the DataTable's own column filters now (date-range + faceted workflow), so
+ * each surface binds its calendar / workflow tree to the table; this composable
+ * only supplies the data those controls render.
  */
 
 import { toRunRow, type RunRow } from "@/components/app/runs/runColumns"
@@ -12,7 +12,7 @@ import { getWorkflowPreset, WORKFLOW_PRESETS } from "@/data/workflowPresets"
 import { runStatusDotClass, runStatusRank } from "@/data/workflowRunConstants"
 import { useTeamWorkflowsStore } from "@/stores/teamWorkflowsStore"
 import { storeToRefs } from "pinia"
-import { computed, ref } from "vue"
+import { computed } from "vue"
 
 /**
  * Structural calendar-date + range types. We deliberately DON'T use reka-ui's
@@ -32,10 +32,6 @@ export interface RunsDateRange {
   start?: CalDate
   end?: CalDate
 }
-
-/** Local-midnight epoch ms for a calendar date — matches `dateKeyFromMs`. */
-const dvToLocalMs = (d: CalDate): number =>
-  new Date(d.year, d.month - 1, d.day).getTime()
 
 const dateKeyFromMs = (ms: number): string => {
   const d = new Date(ms)
@@ -82,33 +78,13 @@ const PRESET_ORDER = new Map<string, number>(
 
 export function useRunsExplorer() {
   const store = useTeamWorkflowsStore()
-  const { recentRuns, activeWorkflows } = storeToRefs(store)
-
-  /** Calendar range filter (undefined = all dates). */
-  const range = ref<RunsDateRange | undefined>(undefined)
-  /** Selected workflow ids (empty = all workflows). */
-  const selectedWorkflowIds = ref<Set<string>>(new Set())
+  const { recentRuns, wsActiveWorkflows } = storeToRefs(store)
 
   const allRows = computed<RunRow[]>(() =>
     recentRuns.value.map((r) =>
       toRunRow(r, store.getById(r.workflowId)?.name ?? r.workflowId)
     )
   )
-
-  const filteredRows = computed<RunRow[]>(() => {
-    let rows = allRows.value
-    if (selectedWorkflowIds.value.size > 0) {
-      rows = rows.filter((r) => selectedWorkflowIds.value.has(r.workflowId))
-    }
-    const startMs = range.value?.start ? dvToLocalMs(range.value.start) : null
-    const endMs = range.value?.end
-      ? dvToLocalMs(range.value.end) + 86_400_000
-      : null
-    if (startMs != null)
-      rows = rows.filter((r) => (r.queuedAtMs ?? 0) >= startMs)
-    if (endMs != null) rows = rows.filter((r) => (r.queuedAtMs ?? 0) < endMs)
-    return rows
-  })
 
   const dayMarkers = computed<Map<string, DayMarker>>(() => {
     const markers = new Map<string, DayMarker>()
@@ -126,7 +102,7 @@ export function useRunsExplorer() {
       markers.set(key, marker)
     }
     // Scheduled — each enabled schedule workflow's next fire.
-    for (const w of activeWorkflows.value) {
+    for (const w of wsActiveWorkflows.value) {
       const nextMs = tsMs(w.nextRunAt)
       if (!nextMs) continue
       const key = dateKeyFromMs(nextMs)
@@ -145,7 +121,7 @@ export function useRunsExplorer() {
   // that's since been retired from the catalog.
   const predefinedItems = (): WorkflowFilterItem[] => {
     const byKey = new Map<string, WorkflowFilterItem>()
-    for (const w of activeWorkflows.value) {
+    for (const w of wsActiveWorkflows.value) {
       if (!w.presetKey) continue
       const item = byKey.get(w.presetKey)
       if (item) {
@@ -167,7 +143,7 @@ export function useRunsExplorer() {
 
   // Custom workflows are already one-doc-per-row; key + select by the doc id.
   const customItems = (): WorkflowFilterItem[] =>
-    activeWorkflows.value
+    wsActiveWorkflows.value
       .filter((w) => !w.presetKey)
       .map((w) => ({ key: w.id, name: w.name, workflowIds: [w.id] }))
 
@@ -178,44 +154,9 @@ export function useRunsExplorer() {
     ].filter((g) => g.items.length > 0)
   )
 
-  /** A filter row reads as selected only when every doc it represents is. */
-  const isWorkflowSelected = (workflowIds: string[]): boolean =>
-    workflowIds.length > 0 &&
-    workflowIds.every((id) => selectedWorkflowIds.value.has(id))
-
-  // Toggle every doc the row stands for as a unit — clear them if all are
-  // already selected, otherwise select them all. `selectedWorkflowIds` stays a
-  // flat set of real doc ids, so `filteredRows` matching is unchanged.
-  const toggleWorkflow = (workflowIds: string[]): void => {
-    const next = new Set(selectedWorkflowIds.value)
-    if (workflowIds.every((id) => next.has(id)))
-      workflowIds.forEach((id) => next.delete(id))
-    else workflowIds.forEach((id) => next.add(id))
-    selectedWorkflowIds.value = next
-  }
-  const clearWorkflows = (): void => {
-    selectedWorkflowIds.value = new Set()
-  }
-  const clearAll = (): void => {
-    selectedWorkflowIds.value = new Set()
-    range.value = undefined
-  }
-
-  const hasFilters = computed(
-    () => selectedWorkflowIds.value.size > 0 || !!range.value?.start
-  )
-
   return {
-    range,
-    selectedWorkflowIds,
     allRows,
-    filteredRows,
     dayMarkers,
     workflowGroups,
-    hasFilters,
-    toggleWorkflow,
-    isWorkflowSelected,
-    clearWorkflows,
-    clearAll,
   }
 }

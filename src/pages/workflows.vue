@@ -45,6 +45,10 @@ const {
 const store = useTeamWorkflowsStore()
 const { recentRuns } = storeToRefs(store)
 const { selectableAgents } = useTeamAgents()
+
+// Per-workflow runs table — no in-table workflow/date filters (every row is the
+// same workflow); the shared Status/Trigger/Mode faceted filters still apply.
+const runTableColumns = runColumns()
 // Saved team-wide gate for custom workflows (creation only; predefined unaffected).
 const { customWorkflowsEnabled } = storeToRefs(useTeamAgentsStore())
 
@@ -334,7 +338,7 @@ const formatWhen = (ts: unknown): string =>
       </div>
       <DataTable
         :data="selectedRuns"
-        :columns="runColumns"
+        :columns="runTableColumns"
         sticky-header
         :column-pinning="{ left: [], right: ['actions'] }"
       />

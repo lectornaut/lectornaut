@@ -319,10 +319,9 @@ service cloud.firestore {
         allow write: if false;
       }
 
-      // Workflow run history now lives UNDER each workspace
-      // (teams/{teamId}/workspaces/{workspaceId}/workflowRuns) and is read
-      // team-wide via a collectionGroup — see the `/{path=**}/workflowRuns`
-      // rule below. Writes stay callable-only (admin SDK).
+      // Workflow run history now lives UNDER each workspace — see the
+      // workflowRuns match in the workspaces block below. Writes stay
+      // callable-only (admin SDK).
 
       // Monthly LLM token-usage counters. Admin-only read (usage/billing
       // views); written only by the server-side metering middleware.
@@ -400,6 +399,14 @@ service cloud.firestore {
             );
           allow write: if false;
         }
+
+        // Workflow run history for this workspace — admin-only read (the Runs
+        // page + Settings → Runs). Written only by the dispatcher, event
+        // triggers, and worker via the admin SDK.
+        match /workflowRuns/{runId} {
+          allow read: if isTeamAdmin(teamId);
+          allow write: if false;
+        }
       }
     }
 
@@ -434,14 +441,6 @@ service cloud.firestore {
     // denormalized teamId. Member read; writes are callable-only (admin SDK).
     match /{path=**}/workflows/{workflowId} {
       allow read: if isTeamMember(resource.data.teamId);
-      allow write: if false;
-    }
-
-    // Global rule for collectionGroup("workflowRuns"). Runs live under each
-    // workspace; admins read the team's run history team-wide via the
-    // denormalized teamId. Writes are server-only (admin SDK).
-    match /{path=**}/workflowRuns/{runId} {
-      allow read: if isTeamAdmin(resource.data.teamId);
       allow write: if false;
     }
 

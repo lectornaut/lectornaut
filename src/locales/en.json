@@ -1317,6 +1317,10 @@
       "translucentSidebar": {
         "label": "Translucent sidebar",
         "description": "Let the window background show through the sidebar instead of a solid surface."
+      },
+      "reducedMotion": {
+        "label": "Reduced motion",
+        "description": "Minimize animations and transitions across the app."
       }
     },
     "workflows": {
@@ -1398,10 +1402,10 @@
       "deleteError": "Failed to delete workflow.",
       "runQueued": "Run queued.",
       "runError": "Failed to start the run.",
-      "catalogTitle": "Predefined workflows",
-      "predefinedDescription": "Ready-made automations you can switch on for this workspace. Each runs as the Default agent and proposes edits to your docs for review.",
-      "noAvailablePresets": "No predefined workflows are available yet. An admin can add some from Settings → Integrations.",
-      "predefinedBadge": "Predefined",
+      "catalogTitle": "Built-in workflows",
+      "predefinedDescription": "Ready-made automations you can switch on for this workspace.",
+      "noAvailablePresets": "No built-in workflows are available yet. Add them from the Features tab.",
+      "predefinedBadge": "Built-in",
       "modeAutomatic": "Auto-applies",
       "modeReview": "Needs review",
       "instructions": "Instructions",
@@ -1447,7 +1451,7 @@
       "emptyCustom": "No custom workflows yet. Create one to automate a task.",
       "customWorkflows": {
         "label": "Custom workflows",
-        "description": "Lets admins create team-authored workflows. Off keeps only predefined workflows; existing custom ones stay but can't be added to."
+        "description": "Lets admins create team-authored workflows. Off keeps only built-in workflows."
       },
       "customWorkflowsOff": "Custom workflows are turned off for this team. Enable them above to create one.",
       "gateSaveSuccess": "Workflow settings saved.",
@@ -1455,7 +1459,11 @@
       "gateLoadError": "Failed to load workflow settings."
     },
     "runs": {
-      "dateRange": "Date range"
+      "dateRange": "Date range",
+      "runsLabel": "Workflow runs",
+      "runsDescription": "Every scheduled, event, and manual run across this team's workflows. Filter by date or workflow, then inspect status, token usage, and cost.",
+      "noPermissionTitle": "Admin access required",
+      "noPermissionDescription": "Only team owners and admins can view workflow run history."
     },
     "agents": {
       "permissionRequired": "Only team owners and admins can change agent settings.",
@@ -1567,7 +1575,7 @@
           "label": "Custom tools",
           "description": "Lets admins ship custom model-callable tools (webhooks, prompt templates, canned searches)."
         },
-        "empty": "No built-in tools installed. Add them from the Integrations tab."
+        "empty": "No built-in tools installed. Add them from the Features tab."
       },
       "limits": {
         "label": "Display limits",
@@ -1674,7 +1682,7 @@
       "builtInAgents": {
         "label": "Built-in agents",
         "sectionDescription": "Pre-built personas with curated tool access and system prompts for common use cases.",
-        "empty": "No built-in agents installed. Add them from the Integrations tab.",
+        "empty": "No built-in agents installed. Add them from the Features tab.",
         "_researcher": {
           "label": "Researcher",
           "description": "Grounded, cited workspace answers."
@@ -3874,7 +3882,21 @@
     }
   },
   "mainSidebar": {
-    "createNew": "Create"
+    "createNew": "Create",
+    "create": {
+      "write": "Document",
+      "code": "Code file",
+      "agent": "Agent",
+      "tool": "Tool",
+      "workflow": "Workflow",
+      "workspace": "Workspace",
+      "team": "Team",
+      "newDocumentName": "Untitled document",
+      "newCodeName": "Untitled file",
+      "createError": "Couldn't create that. Please try again.",
+      "disabledAdminOnly": "Only team owners and admins can create this",
+      "disabledFeatureOff": "This feature is turned off for your team"
+    }
   },
   "open_in_app": {
     "title": "Lectornaut desktop app",

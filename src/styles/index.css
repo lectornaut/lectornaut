@@ -321,6 +321,25 @@
       transition: none;
     }
   }
+
+  /*
+    User-controlled reduced motion. The Appearance setting toggles
+    `data-reduced-motion` on <html> (see `src/modules/theme.ts`); this is the
+    explicit-opt-out twin of the OS `prefers-reduced-motion` media query above.
+    A blanket kill-switch is the established pattern for honoring reduced
+    motion — near-zero (not 0) durations keep transition/animation `end`
+    events firing so JS that waits on them doesn't stall. Lives in `@layer
+    base` so its `!important` reliably wins over later-layer and scoped
+    component transitions.
+  */
+  :root[data-reduced-motion] *,
+  :root[data-reduced-motion] *::before,
+  :root[data-reduced-motion] *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }
 
 /*

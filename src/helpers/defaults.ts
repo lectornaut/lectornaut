@@ -350,6 +350,12 @@ export const defaultEditorFontSize: EditorFontSizeId = "base"
 // translucent look the sidebar always had before this became a toggle.
 export const defaultTranslucentSidebar = true
 
+// Suppresses non-essential motion (layout/panel transitions, animation
+// utilities, smooth scroll) when on, mirroring the OS-level
+// `prefers-reduced-motion` but under explicit user control. Off by default:
+// motion is part of the default experience, so this is an opt-out.
+export const defaultReducedMotion = false
+
 // ────────────────────────────────────────────────────────────────────────────
 // Bot agent (workspace AI client) — model catalog + per-workspace defaults.
 // ────────────────────────────────────────────────────────────────────────────
@@ -750,11 +756,16 @@ export const defaultRoutes = [
   ...defaultMenu.map((item) => item.url),
 ] as const
 
+// "Create New" sidebar dropdown — presentation metadata only. Each entry's
+// behaviour (what clicking it does + when it's disabled) lives in
+// `useCreateActions`, keyed by `id`; `group` drives the dropdown separators.
+// Keep `id`s in sync with the `Record<CreateMenuId, …>` in that composable —
+// TypeScript enforces exhaustiveness there.
 export const defaultCreateMenu = [
   {
-    title: "New Document",
-    action: "/new/document",
-    id: "new-document",
+    id: "write",
+    group: "content",
+    titleKey: "mainSidebar.create.write",
     icon: IconFileText,
     style: {
       text: "text-teal-700/90 dark:text-teal-300/90",
@@ -762,9 +773,19 @@ export const defaultCreateMenu = [
     },
   },
   {
-    title: "New Agent",
-    action: "/new/agent",
-    id: "new-agent",
+    id: "code",
+    group: "content",
+    titleKey: "mainSidebar.create.code",
+    icon: IconCode,
+    style: {
+      text: "text-sky-700/90 dark:text-sky-300/90",
+      bg: "bg-sky-50 dark:bg-sky-950/40",
+    },
+  },
+  {
+    id: "agent",
+    group: "ai",
+    titleKey: "mainSidebar.create.agent",
     icon: IconBot,
     style: {
       text: "text-orange-700/90 dark:text-orange-300/90",
@@ -772,29 +793,39 @@ export const defaultCreateMenu = [
     },
   },
   {
-    title: "New Task",
-    action: "/new/task",
-    id: "new-task",
-    icon: IconBadgeCheck,
+    id: "tool",
+    group: "ai",
+    titleKey: "mainSidebar.create.tool",
+    icon: IconWrench,
     style: {
-      text: "text-green-700/90 dark:text-green-300/90",
-      bg: "bg-green-50 dark:bg-green-950/40",
+      text: "text-amber-700/90 dark:text-amber-300/90",
+      bg: "bg-amber-50 dark:bg-amber-950/40",
     },
   },
   {
-    title: "New Run",
-    action: "/new/run",
-    id: "new-run",
-    icon: IconActivity,
+    id: "workflow",
+    group: "ai",
+    titleKey: "mainSidebar.create.workflow",
+    icon: IconWorkflow,
+    style: {
+      text: "text-violet-700/90 dark:text-violet-300/90",
+      bg: "bg-violet-50 dark:bg-violet-950/40",
+    },
+  },
+  {
+    id: "workspace",
+    group: "org",
+    titleKey: "mainSidebar.create.workspace",
+    icon: IconBlocks,
     style: {
       text: "text-blue-700/90 dark:text-blue-300/90",
       bg: "bg-blue-50 dark:bg-blue-950/40",
     },
   },
   {
-    title: "New Team",
-    action: "/new/team",
-    id: "new-team",
+    id: "team",
+    group: "org",
+    titleKey: "mainSidebar.create.team",
     icon: IconUsersRound,
     style: {
       text: "text-indigo-700/90 dark:text-indigo-300/90",
@@ -802,6 +833,9 @@ export const defaultCreateMenu = [
     },
   },
 ] as const
+
+export type CreateMenuId = (typeof defaultCreateMenu)[number]["id"]
+export type CreateMenuGroup = (typeof defaultCreateMenu)[number]["group"]
 
 export const productsMenu = [
   {
@@ -1416,6 +1450,12 @@ export const defaultSettingsTabs = [
         id: "storage",
         description: "settings.descriptions.storage",
       },
+      {
+        name: "settings.titles.runs",
+        icon: IconActivity,
+        id: "runs",
+        description: "settings.descriptions.runs",
+      },
     ],
   },
   {
@@ -1451,12 +1491,6 @@ export const defaultSettingsTabs = [
         icon: IconWorkflow,
         id: "workflows",
         description: "settings.descriptions.workflows",
-      },
-      {
-        name: "settings.titles.runs",
-        icon: IconActivity,
-        id: "runs",
-        description: "settings.descriptions.runs",
       },
     ],
   },

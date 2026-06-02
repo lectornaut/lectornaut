@@ -194,14 +194,13 @@ const handleRemoveAgent = async (agent: ITeamAgent): Promise<void> => {
 </script>
 
 <template>
-  <div v-if="canViewTeamSettings" class="flex grow flex-col justify-between">
-    <div class="p-6">
-      <div v-if="isLoading" class="flex justify-center py-8">
-        <Spinner />
-      </div>
-      <FieldGroup v-else>
-        <!-- ── Built-in agents (per-preset toggles) ──────────────────── -->
-        <!--
+  <div v-if="canViewTeamSettings" class="p-6">
+    <div v-if="isLoading" class="flex justify-center py-8">
+      <Spinner />
+    </div>
+    <FieldGroup v-else>
+      <!-- ── Built-in agents (per-preset toggles) ──────────────────── -->
+      <!--
           One Switch per shipped preset. The team-wide `customAgents`
           gate still applies on top: when that's off, the pickers
           collapse entirely regardless of these per-preset toggles
@@ -210,72 +209,72 @@ const handleRemoveAgent = async (agent: ITeamAgent): Promise<void> => {
           they don't want their team to see WITHOUT disabling the
           whole feature.
         -->
-        <FieldSet>
-          <Field orientation="horizontal">
-            <FieldContent>
-              <FieldLabel>
-                {{ t("settings.agents.builtInAgents.label") }}
-              </FieldLabel>
-              <FieldDescription>
-                {{ t("settings.agents.builtInAgents.sectionDescription") }}
-              </FieldDescription>
-            </FieldContent>
-          </Field>
+      <FieldSet>
+        <Field orientation="horizontal">
+          <FieldContent>
+            <FieldLabel>
+              {{ t("settings.agents.builtInAgents.label") }}
+            </FieldLabel>
+            <FieldDescription>
+              {{ t("settings.agents.builtInAgents.sectionDescription") }}
+            </FieldDescription>
+          </FieldContent>
+        </Field>
 
-          <Field
-            v-for="row in builtInAgentRows"
-            :key="row.id"
-            orientation="horizontal"
-          >
-            <FieldContent>
-              <FieldLabel :for="`builtin-agent-${row.id}`">
-                {{
-                  t(
-                    `settings.agents.builtInAgents.${row.id}.label`,
-                    row.fallbackName
-                  )
-                }}
-              </FieldLabel>
-              <FieldDescription>
-                {{
-                  t(
-                    `settings.agents.builtInAgents.${row.id}.description`,
-                    row.fallbackDescription
-                  )
-                }}
-              </FieldDescription>
-            </FieldContent>
-            <Switch
-              :id="`builtin-agent-${row.id}`"
-              :model-value="row.enabled"
-              :disabled="!canEdit"
-              @update:model-value="
-                (value) => handleToggleBuiltInAgent(row.id, Boolean(value))
-              "
-            />
-          </Field>
+        <Field
+          v-for="row in builtInAgentRows"
+          :key="row.id"
+          orientation="horizontal"
+        >
+          <FieldContent>
+            <FieldLabel :for="`builtin-agent-${row.id}`">
+              {{
+                t(
+                  `settings.agents.builtInAgents.${row.id}.label`,
+                  row.fallbackName
+                )
+              }}
+            </FieldLabel>
+            <FieldDescription>
+              {{
+                t(
+                  `settings.agents.builtInAgents.${row.id}.description`,
+                  row.fallbackDescription
+                )
+              }}
+            </FieldDescription>
+          </FieldContent>
+          <Switch
+            :id="`builtin-agent-${row.id}`"
+            :model-value="row.enabled"
+            :disabled="!canEdit"
+            @update:model-value="
+              (value) => handleToggleBuiltInAgent(row.id, Boolean(value))
+            "
+          />
+        </Field>
 
-          <!-- Every preset removed via Integrations — nothing left to toggle. -->
-          <Empty
-            v-if="builtInAgentRows.length === 0"
-            class="border border-dashed"
-          >
-            <EmptyHeader>
-              <EmptyMedia variant="icon">
-                <IconBot />
-              </EmptyMedia>
-              <EmptyTitle>
-                {{ t("settings.agents.builtInAgents.empty") }}
-              </EmptyTitle>
-            </EmptyHeader>
-          </Empty>
-        </FieldSet>
+        <!-- Every preset removed via Integrations — nothing left to toggle. -->
+        <Empty
+          v-if="builtInAgentRows.length === 0"
+          class="border border-dashed"
+        >
+          <EmptyHeader>
+            <EmptyMedia variant="icon">
+              <IconBot />
+            </EmptyMedia>
+            <EmptyTitle>
+              {{ t("settings.agents.builtInAgents.empty") }}
+            </EmptyTitle>
+          </EmptyHeader>
+        </Empty>
+      </FieldSet>
 
-        <FieldSeparator />
+      <FieldSeparator />
 
-        <!-- ── Custom agents ──────────────────────────────────────────── -->
-        <FieldSet>
-          <!--
+      <!-- ── Custom agents ──────────────────────────────────────────── -->
+      <FieldSet>
+        <!--
             Team-wide feature gate doubles as the section header. When
             off, the sidebar's Agents section collapses to a single
             "feature disabled" hint and the per-agent sheets stop
@@ -284,235 +283,232 @@ const handleRemoveAgent = async (agent: ITeamAgent): Promise<void> => {
             wide — turning it back on then instantly surfaces them in
             the sidebar.
           -->
-          <Field orientation="horizontal">
-            <FieldContent>
-              <FieldLabel for="agent-tool-custom-agents">
-                {{ t("settings.agents.tools.customAgents.label") }}
-              </FieldLabel>
-              <FieldDescription>
-                {{ t("settings.agents.tools.customAgents.description") }}
-              </FieldDescription>
-            </FieldContent>
-            <Switch
-              id="agent-tool-custom-agents"
-              :model-value="customAgentsEnabled"
-              :disabled="!canEdit || isSaving"
-              @update:model-value="(v) => handleToggleCustomAgents(Boolean(v))"
-            />
-          </Field>
+        <Field orientation="horizontal">
+          <FieldContent>
+            <FieldLabel for="agent-tool-custom-agents">
+              {{ t("settings.agents.tools.customAgents.label") }}
+            </FieldLabel>
+            <FieldDescription>
+              {{ t("settings.agents.tools.customAgents.description") }}
+            </FieldDescription>
+          </FieldContent>
+          <Switch
+            id="agent-tool-custom-agents"
+            :model-value="customAgentsEnabled"
+            :disabled="!canEdit || isSaving"
+            @update:model-value="(v) => handleToggleCustomAgents(Boolean(v))"
+          />
+        </Field>
 
-          <!--
+        <!--
             "New agent" CTA row. Gated on admin rights AND on the
             team-wide feature toggle being on — matches the sidebar
             "New agent" entry's gating so an admin can't create an
             agent that wouldn't appear anywhere yet.
           -->
-          <Field orientation="horizontal">
-            <FieldContent>
-              <FieldLabel>
-                {{ t("settings.agents.custom.available") }}
-              </FieldLabel>
-              <FieldDescription>
-                {{ t("settings.agents.custom.availableDescription") }}
-              </FieldDescription>
-            </FieldContent>
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger as-child>
-                  <span class="inline-block">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      :disabled="!canManage || !customAgentsEnabled"
-                      @click="openNewAgentDialog"
-                    >
-                      <IconCirclePlus />
-                      {{ t("settings.agents.custom.newAgent") }}
-                    </Button>
-                  </span>
-                </TooltipTrigger>
-                <TooltipContent v-if="!canManage && cannotManageReason">
-                  {{ cannotManageReason }}
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-          </Field>
+        <Field orientation="horizontal">
+          <FieldContent>
+            <FieldLabel>
+              {{ t("settings.agents.custom.available") }}
+            </FieldLabel>
+            <FieldDescription>
+              {{ t("settings.agents.custom.availableDescription") }}
+            </FieldDescription>
+          </FieldContent>
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger as-child>
+                <span class="inline-block">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    :disabled="!canManage || !customAgentsEnabled"
+                    @click="openNewAgentDialog"
+                  >
+                    <IconCirclePlus />
+                    {{ t("settings.agents.custom.newAgent") }}
+                  </Button>
+                </span>
+              </TooltipTrigger>
+              <TooltipContent v-if="!canManage && cannotManageReason">
+                {{ cannotManageReason }}
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        </Field>
 
-          <!--
+        <!--
             Inline list (loading / empty state / active / Disabled +
             Archived collapsibles). Kept in its own gap-2 column so
             row spacing stays tight regardless of FieldSet's default
             child spacing.
           -->
-          <div class="flex flex-col gap-2">
-            <div v-if="isLoadingAgents" class="flex justify-center py-8">
-              <Spinner />
-            </div>
+        <div class="flex flex-col gap-2">
+          <div v-if="isLoadingAgents" class="flex justify-center py-8">
+            <Spinner />
+          </div>
 
-            <template v-else>
-              <!--
+          <template v-else>
+            <!--
                 Empty-state — only when no agents exist in any bucket.
                 If only the active bucket is empty we still want the
                 collapsible Disabled/Archived sections to surface the
                 stored entries, so this hint stays out of the way.
               -->
-              <Empty
-                v-if="
-                  selectableAgents.length === 0 &&
-                  disabledAgents.length === 0 &&
-                  archivedAgents.length === 0
-                "
-                class="border border-dashed"
-              >
-                <EmptyHeader>
-                  <EmptyMedia variant="icon">
-                    <IconBot />
-                  </EmptyMedia>
-                  <EmptyTitle>{{
-                    t("settings.agents.custom.empty")
-                  }}</EmptyTitle>
-                  <EmptyDescription v-if="canManage">
-                    {{ t("settings.agents.custom.emptyHint") }}
-                  </EmptyDescription>
-                </EmptyHeader>
-              </Empty>
+            <Empty
+              v-if="
+                selectableAgents.length === 0 &&
+                disabledAgents.length === 0 &&
+                archivedAgents.length === 0
+              "
+              class="border border-dashed"
+            >
+              <EmptyHeader>
+                <EmptyMedia variant="icon">
+                  <IconBot />
+                </EmptyMedia>
+                <EmptyTitle>{{ t("settings.agents.custom.empty") }}</EmptyTitle>
+                <EmptyDescription v-if="canManage">
+                  {{ t("settings.agents.custom.emptyHint") }}
+                </EmptyDescription>
+              </EmptyHeader>
+            </Empty>
 
-              <!-- Active (selectable) agents -->
-              <Collapsible
-                v-if="selectableAgents.length > 0"
-                v-model:open="activeSectionOpen"
-              >
-                <CollapsibleTrigger as-child>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    class="w-full justify-between"
-                  >
-                    <span class="flex items-center gap-2">
-                      {{
-                        t("settings.agents.custom.activeSection", {
-                          count: selectableAgents.length,
-                        })
-                      }}
-                    </span>
-                    <IconChevronDown
-                      class="size-4 transition-transform"
-                      :class="{ 'rotate-180': activeSectionOpen }"
-                    />
-                  </Button>
-                </CollapsibleTrigger>
-                <CollapsibleContent>
-                  <ItemGroup class="gap-2 pt-2">
-                    <SettingsCustomAgentRow
-                      v-for="agent in selectableAgents"
-                      :key="agent.id"
-                      :agent="agent"
-                      :can-manage="canManage"
-                      :is-saving="isSavingAgents"
-                      @edit="openEditAgentDialog(agent)"
-                      @toggle-enabled="
-                        (value) => handleToggleAgentEnabled(agent, value)
-                      "
-                      @archive="handleArchiveAgent(agent)"
-                      @restore="handleRestoreAgent(agent)"
-                      @remove="handleRemoveAgent(agent)"
-                    />
-                  </ItemGroup>
-                </CollapsibleContent>
-              </Collapsible>
+            <!-- Active (selectable) agents -->
+            <Collapsible
+              v-if="selectableAgents.length > 0"
+              v-model:open="activeSectionOpen"
+            >
+              <CollapsibleTrigger as-child>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  class="w-full justify-between"
+                >
+                  <span class="flex items-center gap-2">
+                    {{
+                      t("settings.agents.custom.activeSection", {
+                        count: selectableAgents.length,
+                      })
+                    }}
+                  </span>
+                  <IconChevronDown
+                    class="size-4 transition-transform"
+                    :class="{ 'rotate-180': activeSectionOpen }"
+                  />
+                </Button>
+              </CollapsibleTrigger>
+              <CollapsibleContent>
+                <ItemGroup class="gap-2 pt-2">
+                  <SettingsCustomAgentRow
+                    v-for="agent in selectableAgents"
+                    :key="agent.id"
+                    :agent="agent"
+                    :can-manage="canManage"
+                    :is-saving="isSavingAgents"
+                    @edit="openEditAgentDialog(agent)"
+                    @toggle-enabled="
+                      (value) => handleToggleAgentEnabled(agent, value)
+                    "
+                    @archive="handleArchiveAgent(agent)"
+                    @restore="handleRestoreAgent(agent)"
+                    @remove="handleRemoveAgent(agent)"
+                  />
+                </ItemGroup>
+              </CollapsibleContent>
+            </Collapsible>
 
-              <!-- Disabled agents -->
-              <Collapsible
-                v-if="disabledAgents.length > 0"
-                v-model:open="disabledSectionOpen"
-              >
-                <CollapsibleTrigger as-child>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    class="w-full justify-between"
-                  >
-                    <span class="flex items-center gap-2">
-                      {{
-                        t("settings.agents.custom.disabledSection", {
-                          count: disabledAgents.length,
-                        })
-                      }}
-                    </span>
-                    <IconChevronDown
-                      class="size-4 transition-transform"
-                      :class="{ 'rotate-180': disabledSectionOpen }"
-                    />
-                  </Button>
-                </CollapsibleTrigger>
-                <CollapsibleContent>
-                  <ItemGroup class="gap-2 pt-2">
-                    <SettingsCustomAgentRow
-                      v-for="agent in disabledAgents"
-                      :key="agent.id"
-                      :agent="agent"
-                      :can-manage="canManage"
-                      :is-saving="isSavingAgents"
-                      @edit="openEditAgentDialog(agent)"
-                      @toggle-enabled="
-                        (value) => handleToggleAgentEnabled(agent, value)
-                      "
-                      @archive="handleArchiveAgent(agent)"
-                      @restore="handleRestoreAgent(agent)"
-                      @remove="handleRemoveAgent(agent)"
-                    />
-                  </ItemGroup>
-                </CollapsibleContent>
-              </Collapsible>
+            <!-- Disabled agents -->
+            <Collapsible
+              v-if="disabledAgents.length > 0"
+              v-model:open="disabledSectionOpen"
+            >
+              <CollapsibleTrigger as-child>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  class="w-full justify-between"
+                >
+                  <span class="flex items-center gap-2">
+                    {{
+                      t("settings.agents.custom.disabledSection", {
+                        count: disabledAgents.length,
+                      })
+                    }}
+                  </span>
+                  <IconChevronDown
+                    class="size-4 transition-transform"
+                    :class="{ 'rotate-180': disabledSectionOpen }"
+                  />
+                </Button>
+              </CollapsibleTrigger>
+              <CollapsibleContent>
+                <ItemGroup class="gap-2 pt-2">
+                  <SettingsCustomAgentRow
+                    v-for="agent in disabledAgents"
+                    :key="agent.id"
+                    :agent="agent"
+                    :can-manage="canManage"
+                    :is-saving="isSavingAgents"
+                    @edit="openEditAgentDialog(agent)"
+                    @toggle-enabled="
+                      (value) => handleToggleAgentEnabled(agent, value)
+                    "
+                    @archive="handleArchiveAgent(agent)"
+                    @restore="handleRestoreAgent(agent)"
+                    @remove="handleRemoveAgent(agent)"
+                  />
+                </ItemGroup>
+              </CollapsibleContent>
+            </Collapsible>
 
-              <!-- Archived agents -->
-              <Collapsible
-                v-if="archivedAgents.length > 0"
-                v-model:open="archivedSectionOpen"
-              >
-                <CollapsibleTrigger as-child>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    class="w-full justify-between"
-                  >
-                    <span class="flex items-center gap-2">
-                      {{
-                        t("settings.agents.custom.archivedSection", {
-                          count: archivedAgents.length,
-                        })
-                      }}
-                    </span>
-                    <IconChevronDown
-                      class="size-4 transition-transform"
-                      :class="{ 'rotate-180': archivedSectionOpen }"
-                    />
-                  </Button>
-                </CollapsibleTrigger>
-                <CollapsibleContent>
-                  <ItemGroup class="gap-2 pt-2">
-                    <SettingsCustomAgentRow
-                      v-for="agent in archivedAgents"
-                      :key="agent.id"
-                      :agent="agent"
-                      :can-manage="canManage"
-                      :is-saving="isSavingAgents"
-                      @edit="openEditAgentDialog(agent)"
-                      @toggle-enabled="
-                        (value) => handleToggleAgentEnabled(agent, value)
-                      "
-                      @archive="handleArchiveAgent(agent)"
-                      @restore="handleRestoreAgent(agent)"
-                      @remove="handleRemoveAgent(agent)"
-                    />
-                  </ItemGroup>
-                </CollapsibleContent>
-              </Collapsible>
-            </template>
-          </div>
-        </FieldSet>
-      </FieldGroup>
-    </div>
+            <!-- Archived agents -->
+            <Collapsible
+              v-if="archivedAgents.length > 0"
+              v-model:open="archivedSectionOpen"
+            >
+              <CollapsibleTrigger as-child>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  class="w-full justify-between"
+                >
+                  <span class="flex items-center gap-2">
+                    {{
+                      t("settings.agents.custom.archivedSection", {
+                        count: archivedAgents.length,
+                      })
+                    }}
+                  </span>
+                  <IconChevronDown
+                    class="size-4 transition-transform"
+                    :class="{ 'rotate-180': archivedSectionOpen }"
+                  />
+                </Button>
+              </CollapsibleTrigger>
+              <CollapsibleContent>
+                <ItemGroup class="gap-2 pt-2">
+                  <SettingsCustomAgentRow
+                    v-for="agent in archivedAgents"
+                    :key="agent.id"
+                    :agent="agent"
+                    :can-manage="canManage"
+                    :is-saving="isSavingAgents"
+                    @edit="openEditAgentDialog(agent)"
+                    @toggle-enabled="
+                      (value) => handleToggleAgentEnabled(agent, value)
+                    "
+                    @archive="handleArchiveAgent(agent)"
+                    @restore="handleRestoreAgent(agent)"
+                    @remove="handleRemoveAgent(agent)"
+                  />
+                </ItemGroup>
+              </CollapsibleContent>
+            </Collapsible>
+          </template>
+        </div>
+      </FieldSet>
+    </FieldGroup>
   </div>
   <SettingsRestricted v-else />
 </template>

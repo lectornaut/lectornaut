@@ -19,6 +19,7 @@ import {
   defaultFileDropOverlayShortcutKeys,
   defaultFont,
   defaultLanguage,
+  defaultReducedMotion,
   defaultShortcutOverrides,
   defaultSize,
   defaultTheme,
@@ -113,6 +114,10 @@ export const useSettingsStore = defineStore("settings", () => {
     "translucentSidebar",
     defaultTranslucentSidebar
   )
+  const reducedMotion = useStorage<boolean>(
+    "reducedMotion",
+    defaultReducedMotion
+  )
 
   const themeSettings = reactive({
     mode,
@@ -126,6 +131,7 @@ export const useSettingsStore = defineStore("settings", () => {
     editorTheme,
     editorFontSize,
     translucentSidebar,
+    reducedMotion,
   })
 
   const themeDocRef = computed(() => {
@@ -157,6 +163,7 @@ export const useSettingsStore = defineStore("settings", () => {
         editorTheme: editorTheme.value,
         editorFontSize: editorFontSize.value,
         translucentSidebar: translucentSidebar.value,
+        reducedMotion: reducedMotion.value,
       },
       "settings.themes.persist"
     )
@@ -251,6 +258,13 @@ export const useSettingsStore = defineStore("settings", () => {
       ) {
         translucentSidebar.value = themeDoc.translucentSidebar
       }
+      if (
+        "reducedMotion" in themeDoc &&
+        typeof themeDoc.reducedMotion === "boolean" &&
+        themeDoc.reducedMotion !== reducedMotion.value
+      ) {
+        reducedMotion.value = themeDoc.reducedMotion
+      }
     },
     { immediate: true }
   )
@@ -314,6 +328,7 @@ export const useSettingsStore = defineStore("settings", () => {
       editorTheme,
       editorFontSize,
       translucentSidebar,
+      reducedMotion,
     ],
     () => {
       void persistThemeWithSync()

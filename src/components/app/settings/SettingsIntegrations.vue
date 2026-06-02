@@ -66,172 +66,166 @@ const toggle = async (item: RegistryItem): Promise<void> => {
 </script>
 
 <template>
-  <div v-if="canViewTeamSettings" class="flex grow flex-col justify-between">
-    <div class="p-6">
-      <!-- Admin wall: viewable by members, manageable only by owner/admin. -->
-      <Empty v-if="!canManage" class="border border-dashed">
-        <EmptyHeader>
-          <EmptyMedia variant="icon">
-            <IconAlertTriangle />
-          </EmptyMedia>
-          <EmptyTitle>
-            {{ t("settings.integrations.noPermissionTitle") }}
-          </EmptyTitle>
-          <EmptyDescription>
-            {{ t("settings.integrations.noPermissionDescription") }}
-          </EmptyDescription>
-        </EmptyHeader>
-      </Empty>
+  <div v-if="canViewTeamSettings" class="p-6">
+    <!-- Admin wall: viewable by members, manageable only by owner/admin. -->
+    <Empty v-if="!canManage" class="border border-dashed">
+      <EmptyHeader>
+        <EmptyMedia variant="icon">
+          <IconAlertTriangle />
+        </EmptyMedia>
+        <EmptyTitle>
+          {{ t("settings.integrations.noPermissionTitle") }}
+        </EmptyTitle>
+        <EmptyDescription>
+          {{ t("settings.integrations.noPermissionDescription") }}
+        </EmptyDescription>
+      </EmptyHeader>
+    </Empty>
 
-      <FieldGroup v-else>
-        <!-- ── Agents ──────────────────────────────────────────────────── -->
-        <FieldSet>
-          <Field orientation="horizontal">
-            <FieldContent>
-              <FieldLabel>{{
-                t("settings.integrations.agents.label")
-              }}</FieldLabel>
-              <FieldDescription>
-                {{ t("settings.integrations.agents.description") }}
-              </FieldDescription>
-            </FieldContent>
-          </Field>
+    <FieldGroup v-else>
+      <!-- ── Agents ──────────────────────────────────────────────────── -->
+      <FieldSet>
+        <Field orientation="horizontal">
+          <FieldContent>
+            <FieldLabel>{{
+              t("settings.integrations.agents.label")
+            }}</FieldLabel>
+            <FieldDescription>
+              {{ t("settings.integrations.agents.description") }}
+            </FieldDescription>
+          </FieldContent>
+        </Field>
 
-          <Field
-            v-for="item in agents"
-            :key="item.key"
-            orientation="horizontal"
+        <Field v-for="item in agents" :key="item.key" orientation="horizontal">
+          <FieldContent>
+            <FieldLabel>{{ item.name }}</FieldLabel>
+            <FieldDescription>{{ item.description }}</FieldDescription>
+          </FieldContent>
+          <Button
+            :variant="item.installed ? 'outline' : 'default'"
+            size="sm"
+            :disabled="isPending(item)"
+            @click="toggle(item)"
           >
-            <FieldContent>
-              <FieldLabel>{{ item.name }}</FieldLabel>
-              <FieldDescription>{{ item.description }}</FieldDescription>
-            </FieldContent>
-            <Button
-              :variant="item.installed ? 'outline' : 'default'"
-              size="sm"
-              :disabled="isPending(item)"
-              @click="toggle(item)"
-            >
-              <component :is="item.installed ? IconTrash : IconCirclePlus" />
-              {{
-                item.installed
-                  ? t("settings.integrations.remove")
-                  : t("settings.integrations.add")
-              }}
-            </Button>
-          </Field>
+            <component :is="item.installed ? IconTrash : IconCirclePlus" />
+            {{
+              item.installed
+                ? t("settings.integrations.remove")
+                : t("settings.integrations.add")
+            }}
+          </Button>
+        </Field>
 
-          <Empty v-if="agents.length === 0" class="border border-dashed">
-            <EmptyHeader>
-              <EmptyMedia variant="icon">
-                <IconBot />
-              </EmptyMedia>
-              <EmptyTitle>
-                {{ t("settings.integrations.agents.empty") }}
-              </EmptyTitle>
-            </EmptyHeader>
-          </Empty>
-        </FieldSet>
+        <Empty v-if="agents.length === 0" class="border border-dashed">
+          <EmptyHeader>
+            <EmptyMedia variant="icon">
+              <IconBot />
+            </EmptyMedia>
+            <EmptyTitle>
+              {{ t("settings.integrations.agents.empty") }}
+            </EmptyTitle>
+          </EmptyHeader>
+        </Empty>
+      </FieldSet>
 
-        <FieldSeparator />
+      <FieldSeparator />
 
-        <!-- ── Tools ───────────────────────────────────────────────────── -->
-        <FieldSet>
-          <Field orientation="horizontal">
-            <FieldContent>
-              <FieldLabel>{{
-                t("settings.integrations.tools.label")
-              }}</FieldLabel>
-              <FieldDescription>
-                {{ t("settings.integrations.tools.description") }}
-              </FieldDescription>
-            </FieldContent>
-          </Field>
+      <!-- ── Tools ───────────────────────────────────────────────────── -->
+      <FieldSet>
+        <Field orientation="horizontal">
+          <FieldContent>
+            <FieldLabel>{{
+              t("settings.integrations.tools.label")
+            }}</FieldLabel>
+            <FieldDescription>
+              {{ t("settings.integrations.tools.description") }}
+            </FieldDescription>
+          </FieldContent>
+        </Field>
 
-          <Field v-for="item in tools" :key="item.key" orientation="horizontal">
-            <FieldContent>
-              <FieldLabel>{{ item.name }}</FieldLabel>
-              <FieldDescription>{{ item.description }}</FieldDescription>
-            </FieldContent>
-            <Button
-              :variant="item.installed ? 'outline' : 'default'"
-              size="sm"
-              :disabled="isPending(item)"
-              @click="toggle(item)"
-            >
-              <component :is="item.installed ? IconTrash : IconCirclePlus" />
-              {{
-                item.installed
-                  ? t("settings.integrations.remove")
-                  : t("settings.integrations.add")
-              }}
-            </Button>
-          </Field>
-
-          <Empty v-if="tools.length === 0" class="border border-dashed">
-            <EmptyHeader>
-              <EmptyMedia variant="icon">
-                <IconWrench />
-              </EmptyMedia>
-              <EmptyTitle>
-                {{ t("settings.integrations.tools.empty") }}
-              </EmptyTitle>
-            </EmptyHeader>
-          </Empty>
-        </FieldSet>
-
-        <FieldSeparator />
-
-        <!-- ── Workflows (team availability; per-workspace enable is separate) -->
-        <FieldSet>
-          <Field orientation="horizontal">
-            <FieldContent>
-              <FieldLabel>
-                {{ t("settings.integrations.workflows.label") }}
-              </FieldLabel>
-              <FieldDescription>
-                {{ t("settings.integrations.workflows.description") }}
-              </FieldDescription>
-            </FieldContent>
-          </Field>
-
-          <Field
-            v-for="item in workflows"
-            :key="item.key"
-            orientation="horizontal"
+        <Field v-for="item in tools" :key="item.key" orientation="horizontal">
+          <FieldContent>
+            <FieldLabel>{{ item.name }}</FieldLabel>
+            <FieldDescription>{{ item.description }}</FieldDescription>
+          </FieldContent>
+          <Button
+            :variant="item.installed ? 'outline' : 'default'"
+            size="sm"
+            :disabled="isPending(item)"
+            @click="toggle(item)"
           >
-            <FieldContent>
-              <FieldLabel>{{ item.name }}</FieldLabel>
-              <FieldDescription>{{ item.description }}</FieldDescription>
-            </FieldContent>
-            <Button
-              :variant="item.installed ? 'outline' : 'default'"
-              size="sm"
-              :disabled="isPending(item)"
-              @click="toggle(item)"
-            >
-              <component :is="item.installed ? IconTrash : IconCirclePlus" />
-              {{
-                item.installed
-                  ? t("settings.integrations.remove")
-                  : t("settings.integrations.add")
-              }}
-            </Button>
-          </Field>
+            <component :is="item.installed ? IconTrash : IconCirclePlus" />
+            {{
+              item.installed
+                ? t("settings.integrations.remove")
+                : t("settings.integrations.add")
+            }}
+          </Button>
+        </Field>
 
-          <Empty v-if="workflows.length === 0" class="border border-dashed">
-            <EmptyHeader>
-              <EmptyMedia variant="icon">
-                <IconWorkflow />
-              </EmptyMedia>
-              <EmptyTitle>
-                {{ t("settings.integrations.workflows.empty") }}
-              </EmptyTitle>
-            </EmptyHeader>
-          </Empty>
-        </FieldSet>
-      </FieldGroup>
-    </div>
+        <Empty v-if="tools.length === 0" class="border border-dashed">
+          <EmptyHeader>
+            <EmptyMedia variant="icon">
+              <IconWrench />
+            </EmptyMedia>
+            <EmptyTitle>
+              {{ t("settings.integrations.tools.empty") }}
+            </EmptyTitle>
+          </EmptyHeader>
+        </Empty>
+      </FieldSet>
+
+      <FieldSeparator />
+
+      <!-- ── Workflows (team availability; per-workspace enable is separate) -->
+      <FieldSet>
+        <Field orientation="horizontal">
+          <FieldContent>
+            <FieldLabel>
+              {{ t("settings.integrations.workflows.label") }}
+            </FieldLabel>
+            <FieldDescription>
+              {{ t("settings.integrations.workflows.description") }}
+            </FieldDescription>
+          </FieldContent>
+        </Field>
+
+        <Field
+          v-for="item in workflows"
+          :key="item.key"
+          orientation="horizontal"
+        >
+          <FieldContent>
+            <FieldLabel>{{ item.name }}</FieldLabel>
+            <FieldDescription>{{ item.description }}</FieldDescription>
+          </FieldContent>
+          <Button
+            :variant="item.installed ? 'outline' : 'default'"
+            size="sm"
+            :disabled="isPending(item)"
+            @click="toggle(item)"
+          >
+            <component :is="item.installed ? IconTrash : IconCirclePlus" />
+            {{
+              item.installed
+                ? t("settings.integrations.remove")
+                : t("settings.integrations.add")
+            }}
+          </Button>
+        </Field>
+
+        <Empty v-if="workflows.length === 0" class="border border-dashed">
+          <EmptyHeader>
+            <EmptyMedia variant="icon">
+              <IconWorkflow />
+            </EmptyMedia>
+            <EmptyTitle>
+              {{ t("settings.integrations.workflows.empty") }}
+            </EmptyTitle>
+          </EmptyHeader>
+        </Empty>
+      </FieldSet>
+    </FieldGroup>
   </div>
   <SettingsRestricted v-else />
 </template>

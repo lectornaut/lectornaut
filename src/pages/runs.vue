@@ -1,10 +1,12 @@
 <script lang="ts" setup>
-import { runColumns } from "@/components/app/runs/runColumns"
+import { runColumns, type RunRow } from "@/components/app/runs/runColumns"
 import { useRunsExplorer } from "@/composables/useRunsExplorer"
+import { useRunsTableFilters } from "@/composables/useRunsTableFilters"
 import { useTeamWorkflows } from "@/composables/useTeamWorkflows"
 import { IconChevronRight } from "@/data/icons"
 import { runStatusDotClass, runStatusLabel } from "@/data/workflowRunConstants"
-import { computed } from "vue"
+import type { Table as VueTable } from "@tanstack/vue-table"
+import { computed, ref } from "vue"
 
 definePage({
   meta: {
@@ -19,20 +21,36 @@ const { t } = useI18n()
 useHead({ title: "Runs" })
 
 const { canManage } = useTeamWorkflows()
-const {
-  range,
-  filteredRows,
-  dayMarkers,
-  workflowGroups,
-  hasFilters,
-  toggleWorkflow,
-  isWorkflowSelected,
-  clearAll,
-} = useRunsExplorer()
+const { allRows, dayMarkers, workflowGroups } = useRunsExplorer()
 
-// Right-sidebar summary over the currently-filtered runs.
+// Faceted "Workflow" filter options — one per distinct workflow present in the
+// runs, keyed by doc id (label = display name).
+const workflowOptions = computed(() => {
+  const byId = new Map<string, string>()
+  for (const row of allRows.value)
+    if (!byId.has(row.workflowId)) byId.set(row.workflowId, row.workflowName)
+  return [...byId]
+    .map(([value, label]) => ({ value, label }))
+    .sort((a, b) => a.label.localeCompare(b.label))
+})
+const columns = computed(() =>
+  runColumns({ workflowOptions: workflowOptions.value, dateRangeFilter: true })
+)
+
+// One shared filter state, owned by the table's columnFilters — the sidebar
+// calendar + workflow tree and the built-in toolbar both drive it through the
+// exposed table ref, kept in sync by useRunsTableFilters (shared with
+// Settings → Runs so the two surfaces behave identically).
+const tableRef = ref<{ table: VueTable<RunRow> } | null>(null)
+const { dateRange, isWorkflowSelected, toggleWorkflow, hasFilters, clearAll } =
+  useRunsTableFilters(() => tableRef.value?.table)
+
+// Right-sidebar summary over the currently-filtered runs (falls back to the full
+// set until the table mounts and its filtered model is available).
 const stats = computed(() => {
-  const rows = filteredRows.value
+  const rows: RunRow[] = tableRef.value
+    ? tableRef.value.table.getFilteredRowModel().rows.map((r) => r.original)
+    : allRows.value
   const byStatus = new Map<string, number>()
   let cost = 0
   let tokens = 0
@@ -58,7 +76,7 @@ const stats = computed(() => {
         <SidebarGroup>
           <SidebarGroupContent>
             <RunsCalendar
-              v-model="range"
+              v-model="dateRange"
               :markers="dayMarkers"
               class="**:[[role=gridcell]]:w-full"
             />
@@ -146,8 +164,9 @@ const stats = computed(() => {
 
   <DataTable
     v-if="canManage"
-    :data="filteredRows"
-    :columns="runColumns"
+    ref="tableRef"
+    :data="allRows"
+    :columns="columns"
     sticky-header
     :column-pinning="{ left: [], right: ['actions'] }"
   />

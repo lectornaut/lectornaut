@@ -43,6 +43,7 @@ import {
   runHeadlessAgentTurn,
 } from "./bot.js"
 import { loadTeamAgentConfig } from "./botAgentConfig.js"
+import { CONTEXT_NODE_MAX } from "./botContext.js"
 import {
   applyProposedChange,
   type CapturedNodeChange,
@@ -365,6 +366,12 @@ async function enqueueWorkflowRun(params: {
   /** Structured `triggeredBy` (schedule | event | manual) snapshotted on the run. */
   triggeredBy: Record<string, unknown>
   triggerEventId?: string | null
+  /**
+   * The node whose edit fired an `event` trigger. Captured into the run's
+   * `contextNodes` so the agent is grounded in the exact content that changed
+   * (schedule/manual runs pass none — they have no triggering node).
+   */
+  triggerNode?: { scope: "code" | "write"; nodeId: string } | null
 }): Promise<string> {
   const wf = params.workflow
   const runRef = db
@@ -375,16 +382,29 @@ async function enqueueWorkflowRun(params: {
   const prompt = wf.additionalPrompt
     ? `${wf.instructions}\n\n${wf.additionalPrompt}`
     : wf.instructions
+  // Ground the run in the node that triggered it. An event run otherwise
+  // carries NO pointer to the changed node — the agent gets only the static
+  // instructions and can't tell which document to act on (it asks the caller
+  // to "attach the file"). Prepend the trigger node so the cap never drops it,
+  // dedupe it against the workflow's configured context nodes, and clamp to
+  // CONTEXT_NODE_MAX.
+  const configuredNodes = wf.contextNodes ?? []
+  const trig = params.triggerNode
+  const contextNodes = trig
+    ? [
+        trig,
+        ...configuredNodes.filter(
+          (n) => !(n.scope === trig.scope && n.nodeId === trig.nodeId)
+        ),
+      ].slice(0, CONTEXT_NODE_MAX)
+    : configuredNodes
   await runRef.set({
-    // Denormalized for the team-wide collectionGroup runs read (rules + the
-    // runs explorer recover the team from the doc, not the now-nested path).
-    teamId: params.teamId,
     workflowId: params.workflowId,
     agentId: wf.agentId,
     workspaceId: wf.workspaceId,
     presetKey: wf.presetKey ?? null,
     prompt,
-    contextNodes: wf.contextNodes ?? [],
+    contextNodes,
     targetScope: wf.targetScope ?? null,
     updateMode: wf.updateMode ?? "require_review",
     triggeredBy: params.triggeredBy,
@@ -1035,6 +1055,8 @@ function makeWorkflowTrigger(scope: "code" | "write") {
               workflow: wf,
               triggeredBy: { type: "event", scope, nodeId },
               triggerEventId: event.id,
+              // Attach the node that changed so the agent can scan its content.
+              triggerNode: { scope, nodeId },
             })
             if (debounceMs > 0) {
               await doc.ref.update({

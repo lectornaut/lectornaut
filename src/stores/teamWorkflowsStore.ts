@@ -125,23 +125,22 @@ export const useTeamWorkflowsStore = defineStore("teamWorkflows", () => {
     }
   )
 
-  // Runs live under each workspace now; read the team's recent runs team-wide
-  // via a collectionGroup on the denormalized `teamId` (admin-only per rules),
-  // so the runs explorer + history views are unchanged by the relocation.
+  // Runs are pure per-workspace data (like nodes + bot sessions): read only the
+  // CURRENT workspace's run history, directly from its subcollection. No team
+  // rollup — within a workspace you see that workspace's runs, full stop.
   const runsQuery = useCollectionQuery<IWorkflowRun>(
     (): CollectionQuerySource | null => {
       const teamId = currentTeamId.value
-      if (!teamId) return null
+      const workspaceId = currentWorkspaceId.value
+      if (!teamId || !workspaceId) return null
+      const path = `teams/${teamId}/workspaces/${workspaceId}/workflowRuns`
       return {
         query: query(
-          collectionGroup(firestore, "workflowRuns").withConverter(
-            workflowRunConverter
-          ),
-          where("teamId", "==", teamId),
+          collection(firestore, path).withConverter(workflowRunConverter),
           orderBy("queuedAt", "desc"),
           limit(RECENT_RUNS_LIMIT)
         ),
-        path: `collectionGroup:workflowRuns:${teamId}`,
+        path,
       }
     }
   )

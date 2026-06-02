@@ -6,6 +6,7 @@ import { emitter } from "@/modules/mitt"
 import { useBillingStore } from "@/stores/billingStore"
 import { useLayoutStore } from "@/stores/layoutStore"
 import { useSettingsStore } from "@/stores/settingsStore"
+import type { IWorkflow } from "@/types/domain"
 import { listen } from "@tauri-apps/api/event"
 import { storeToRefs } from "pinia"
 
@@ -74,6 +75,30 @@ onMounted(async () => {
     })
   }
 })
+
+// Global custom-workflow editor — the sibling of the agents/tools dialogs
+// below, opened via `Dialog.CustomWorkflow.Open` (no payload = create, an
+// IWorkflow = edit). Mounted lazily on first open so the workflows store isn't
+// instantiated until a surface (e.g. the sidebar "Create New" menu) needs it.
+const workflowEditorMounted = ref(false)
+const workflowEditorOpen = ref(false)
+const editingWorkflow = ref<IWorkflow | null>(null)
+const openWorkflowEditor = async (payload: unknown) => {
+  editingWorkflow.value =
+    payload && typeof payload === "object" ? (payload as IWorkflow) : null
+  // Mount closed first, then open on the next tick: the editor seeds its form
+  // on the dialog's false→true transition, which wouldn't fire if it mounted
+  // already-open.
+  if (!workflowEditorMounted.value) {
+    workflowEditorMounted.value = true
+    await nextTick()
+  }
+  workflowEditorOpen.value = true
+}
+emitter.on("Dialog.CustomWorkflow.Open", openWorkflowEditor)
+onBeforeUnmount(() =>
+  emitter.off("Dialog.CustomWorkflow.Open", openWorkflowEditor)
+)
 </script>
 
 <template>
@@ -115,5 +140,15 @@ onMounted(async () => {
       from anywhere without depending on the Settings shell.
     -->
     <SettingsCustomTools />
+    <!--
+      Custom workflow editor dialog — same global-dialog pattern as the
+      agents/tools dialogs above, but mounted lazily (the workflows store is
+      heavier) once `Dialog.CustomWorkflow.Open` first fires.
+    -->
+    <SettingsCustomWorkflow
+      v-if="workflowEditorMounted"
+      v-model:open="workflowEditorOpen"
+      :workflow="editingWorkflow"
+    />
   </SidebarProvider>
 </template>

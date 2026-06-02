@@ -28,6 +28,15 @@ const {
 
 const isCreatingTeamDialogOpen = ref(false)
 
+// Let any surface (e.g. the sidebar "Create New" menu) open the create-team
+// dialog without re-mounting it, mirroring the `Workspace.Switch` listener in
+// WorkspaceSwitcher.
+const openCreateTeam = () => {
+  isCreatingTeamDialogOpen.value = true
+}
+emitter.on("Dialog.CreateTeam.Open", openCreateTeam)
+onUnmounted(() => emitter.off("Dialog.CreateTeam.Open", openCreateTeam))
+
 const teams = computed(() =>
   memberships.value.map((m) => ({
     label: m.team.name,

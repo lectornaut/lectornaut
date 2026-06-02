@@ -113,6 +113,13 @@ const selectedTranslucentSidebar = computed({
   },
 })
 
+const selectedReducedMotion = computed({
+  get: () => themeSettings.value.reducedMotion,
+  set: (value: boolean) => {
+    themeSettings.value.reducedMotion = value
+  },
+})
+
 const groupedBaseOptions = bases.filter(
   (color) => color.id === "accent" || color.id === "custom"
 )
@@ -157,35 +164,6 @@ const getAccentOptionStyle = (optionId: AccentId) =>
               {{ t("settings.appearance.customization.description") }}
             </FieldDescription>
           </FieldContent>
-        </Field>
-        <Field orientation="horizontal">
-          <FieldContent>
-            <FieldLabel for="language">{{
-              t("settings.preferences.language.label")
-            }}</FieldLabel>
-            <FieldDescription>
-              {{ t("settings.preferences.language.description") }}
-            </FieldDescription>
-          </FieldContent>
-          <Select id="language" v-model="selectedLanguage">
-            <SelectTrigger>
-              <SelectValue
-                :placeholder="t('settings.preferences.language.placeholder')"
-              />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectGroup>
-                <SelectItem
-                  v-for="language in languages"
-                  :key="language.id"
-                  :value="language.id"
-                >
-                  <Component :is="language.icon" />
-                  {{ language.name }}
-                </SelectItem>
-              </SelectGroup>
-            </SelectContent>
-          </Select>
         </Field>
       </FieldSet>
       <FieldSeparator />
@@ -341,20 +319,6 @@ const getAccentOptionStyle = (optionId: AccentId) =>
             </Select>
           </div>
         </Field>
-        <Field orientation="horizontal">
-          <FieldContent>
-            <FieldLabel for="translucent-sidebar">
-              {{ t("settings.appearance.translucentSidebar.label") }}
-            </FieldLabel>
-            <FieldDescription>
-              {{ t("settings.appearance.translucentSidebar.description") }}
-            </FieldDescription>
-          </FieldContent>
-          <Switch
-            id="translucent-sidebar"
-            v-model="selectedTranslucentSidebar"
-          />
-        </Field>
       </FieldSet>
       <FieldSeparator />
       <FieldSet>
@@ -480,6 +444,66 @@ const getAccentOptionStyle = (optionId: AccentId) =>
                   <span :class="fontSize.style">
                     {{ fontSize.name }}
                   </span>
+                </SelectItem>
+              </SelectGroup>
+            </SelectContent>
+          </Select>
+        </Field>
+      </FieldSet>
+      <FieldSeparator />
+      <FieldSet>
+        <Field orientation="horizontal">
+          <FieldContent>
+            <FieldLabel for="translucent-sidebar">
+              {{ t("settings.appearance.translucentSidebar.label") }}
+            </FieldLabel>
+            <FieldDescription>
+              {{ t("settings.appearance.translucentSidebar.description") }}
+            </FieldDescription>
+          </FieldContent>
+          <Switch
+            id="translucent-sidebar"
+            v-model="selectedTranslucentSidebar"
+          />
+        </Field>
+        <Field orientation="horizontal">
+          <FieldContent>
+            <FieldLabel for="reduced-motion">
+              {{ t("settings.appearance.reducedMotion.label") }}
+            </FieldLabel>
+            <FieldDescription>
+              {{ t("settings.appearance.reducedMotion.description") }}
+            </FieldDescription>
+          </FieldContent>
+          <Switch id="reduced-motion" v-model="selectedReducedMotion" />
+        </Field>
+      </FieldSet>
+      <FieldSeparator />
+      <FieldSet>
+        <Field orientation="horizontal">
+          <FieldContent>
+            <FieldLabel for="language">{{
+              t("settings.preferences.language.label")
+            }}</FieldLabel>
+            <FieldDescription>
+              {{ t("settings.preferences.language.description") }}
+            </FieldDescription>
+          </FieldContent>
+          <Select id="language" v-model="selectedLanguage">
+            <SelectTrigger>
+              <SelectValue
+                :placeholder="t('settings.preferences.language.placeholder')"
+              />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectGroup>
+                <SelectItem
+                  v-for="language in languages"
+                  :key="language.id"
+                  :value="language.id"
+                >
+                  <Component :is="language.icon" />
+                  {{ language.name }}
                 </SelectItem>
               </SelectGroup>
             </SelectContent>

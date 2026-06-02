@@ -266,663 +266,635 @@ const handleDeleteSso = () => deleteSsoDialog.confirm(() => deleteSsoConfig())
 </script>
 
 <template>
-  <div class="flex grow flex-col justify-between">
-    <div class="p-6">
-      <FieldGroup v-if="!canManageSecurity">
+  <div class="p-6">
+    <FieldGroup v-if="!canManageSecurity">
+      <FieldSet>
+        <Field orientation="horizontal">
+          <FieldContent>
+            <Empty class="border border-dashed">
+              <EmptyHeader>
+                <EmptyMedia variant="icon">
+                  <IconAlertTriangle />
+                </EmptyMedia>
+                <EmptyTitle>{{
+                  t("settings.security.noPermissionTitle")
+                }}</EmptyTitle>
+                <EmptyDescription>
+                  {{ t("settings.security.noPermissionDescription") }}
+                </EmptyDescription>
+              </EmptyHeader>
+            </Empty>
+          </FieldContent>
+        </Field>
+      </FieldSet>
+    </FieldGroup>
+    <FieldGroup v-else-if="!isEnterprise">
+      <FieldSet>
+        <Field orientation="horizontal">
+          <FieldContent>
+            <Empty class="border border-dashed">
+              <EmptyHeader>
+                <EmptyMedia variant="icon">
+                  <IconShieldCheck />
+                </EmptyMedia>
+                <EmptyTitle>{{
+                  t("settings.security.enterprise.title")
+                }}</EmptyTitle>
+                <EmptyDescription>
+                  {{ t("settings.security.enterprise.description") }}
+                </EmptyDescription>
+              </EmptyHeader>
+              <EmptyContent>
+                <Button variant="outline" @click="emit('navigate', 'plans')">
+                  {{ t("settings.security.enterprise.viewPlans") }}
+                </Button>
+              </EmptyContent>
+            </Empty>
+          </FieldContent>
+        </Field>
+      </FieldSet>
+    </FieldGroup>
+    <template v-else>
+      <div v-if="loading" class="flex justify-center py-8">
+        <Spinner />
+      </div>
+      <FieldGroup v-else>
+        <!-- Section: Approved Domains -->
         <FieldSet>
-          <Field orientation="horizontal">
+          <Field>
             <FieldContent>
-              <Empty class="border border-dashed">
-                <EmptyHeader>
-                  <EmptyMedia variant="icon">
-                    <IconAlertTriangle />
-                  </EmptyMedia>
-                  <EmptyTitle>{{
-                    t("settings.security.noPermissionTitle")
-                  }}</EmptyTitle>
-                  <EmptyDescription>
-                    {{ t("settings.security.noPermissionDescription") }}
-                  </EmptyDescription>
-                </EmptyHeader>
-              </Empty>
+              <FieldLabel for="approved-domains">{{
+                t("settings.security.approvedDomains.label")
+              }}</FieldLabel>
+              <FieldDescription>
+                {{ t("settings.security.approvedDomains.description") }}
+              </FieldDescription>
             </FieldContent>
-          </Field>
-        </FieldSet>
-      </FieldGroup>
-      <FieldGroup v-else-if="!isEnterprise">
-        <FieldSet>
-          <Field orientation="horizontal">
-            <FieldContent>
-              <Empty class="border border-dashed">
-                <EmptyHeader>
-                  <EmptyMedia variant="icon">
-                    <IconShieldCheck />
-                  </EmptyMedia>
-                  <EmptyTitle>{{
-                    t("settings.security.enterprise.title")
-                  }}</EmptyTitle>
-                  <EmptyDescription>
-                    {{ t("settings.security.enterprise.description") }}
-                  </EmptyDescription>
-                </EmptyHeader>
-                <EmptyContent>
-                  <Button variant="outline" @click="emit('navigate', 'plans')">
-                    {{ t("settings.security.enterprise.viewPlans") }}
-                  </Button>
-                </EmptyContent>
-              </Empty>
-            </FieldContent>
-          </Field>
-        </FieldSet>
-      </FieldGroup>
-      <template v-else>
-        <div v-if="loading" class="flex justify-center py-8">
-          <Spinner />
-        </div>
-        <FieldGroup v-else>
-          <!-- Section: Approved Domains -->
-          <FieldSet>
-            <Field>
-              <FieldContent>
-                <FieldLabel for="approved-domains">{{
-                  t("settings.security.approvedDomains.label")
-                }}</FieldLabel>
-                <FieldDescription>
-                  {{ t("settings.security.approvedDomains.description") }}
-                </FieldDescription>
-              </FieldContent>
-              <TagsInput
-                id="approved-domains"
-                :model-value="localApprovedDomains"
-                :disabled="savingApprovedDomains"
-                :add-on-paste="true"
-                :delimiter="','"
-                class="group"
-                @update:model-value="
-                  localApprovedDomains = filterValidDomains($event as string[])
-                "
-              >
-                <InputGroupButton variant="ghost" size="icon-xs" disabled>
-                  <IconGlobe />
-                </InputGroupButton>
-                <TagsInputItem
-                  v-for="domain in localApprovedDomains"
-                  :key="domain"
-                  :value="domain"
-                >
-                  <TagsInputItemText />
-                  <TagsInputItemDelete />
-                </TagsInputItem>
-                <TagsInputInput
-                  :placeholder="
-                    t('settings.security.approvedDomains.placeholder')
-                  "
-                  type="url"
-                  class="placeholder:text-muted-foreground border-none bg-transparent focus:border-inherit focus:ring-0"
-                />
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger as-child>
-                      <InputGroupButton
-                        variant="ghost"
-                        size="icon-xs"
-                        class="invisible group-focus-within:visible"
-                        :disabled="savingApprovedDomains"
-                        @click="saveApprovedDomains(localApprovedDomains)"
-                      >
-                        <Spinner v-if="savingApprovedDomains" />
-                        <IconCheck v-else />
-                      </InputGroupButton>
-                    </TooltipTrigger>
-                    <TooltipContent>{{ t("actions.save") }}</TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
-              </TagsInput>
-            </Field>
-          </FieldSet>
-          <FieldSeparator />
-          <!-- Section: Authentication Methods -->
-          <FieldSet>
-            <Field orientation="horizontal">
-              <FieldContent>
-                <FieldLabel>{{
-                  t("settings.security.authenticationMethods.label")
-                }}</FieldLabel>
-                <FieldDescription>
-                  {{ t("settings.security.authenticationMethods.description") }}
-                </FieldDescription>
-              </FieldContent>
-            </Field>
-
-            <Field orientation="horizontal">
-              <FieldContent>
-                <FieldLabel>{{
-                  t("settings.security.emailPassword.label")
-                }}</FieldLabel>
-                <FieldDescription>
-                  {{ t("settings.security.emailPassword.description") }}
-                </FieldDescription>
-              </FieldContent>
-              <InputGroupButton
-                v-if="updatingMethod === 'emailPassword'"
-                variant="ghost"
-                size="icon-xs"
-                disabled
-              >
-                <Spinner />
+            <TagsInput
+              id="approved-domains"
+              :model-value="localApprovedDomains"
+              :disabled="savingApprovedDomains"
+              :add-on-paste="true"
+              :delimiter="','"
+              class="group"
+              @update:model-value="
+                localApprovedDomains = filterValidDomains($event as string[])
+              "
+            >
+              <InputGroupButton variant="ghost" size="icon-xs" disabled>
+                <IconGlobe />
               </InputGroupButton>
-              <Switch
-                :model-value="loginMethods.emailPassword"
-                :disabled="
-                  isLastNonSsoMethod('emailPassword') || updatingMethod !== null
-                "
-                @update:model-value="
-                  updateMethod('emailPassword', toBoolean($event))
-                "
-              />
-            </Field>
-
-            <Field orientation="horizontal">
-              <FieldContent>
-                <FieldLabel>{{
-                  t("settings.security.magicLink.label")
-                }}</FieldLabel>
-                <FieldDescription>
-                  {{ t("settings.security.magicLink.description") }}
-                </FieldDescription>
-              </FieldContent>
-              <InputGroupButton
-                v-if="updatingMethod === 'magicLink'"
-                variant="ghost"
-                size="icon-xs"
-                disabled
+              <TagsInputItem
+                v-for="domain in localApprovedDomains"
+                :key="domain"
+                :value="domain"
               >
-                <Spinner />
-              </InputGroupButton>
-              <Switch
-                :model-value="loginMethods.magicLink"
-                :disabled="
-                  isLastNonSsoMethod('magicLink') || updatingMethod !== null
+                <TagsInputItemText />
+                <TagsInputItemDelete />
+              </TagsInputItem>
+              <TagsInputInput
+                :placeholder="
+                  t('settings.security.approvedDomains.placeholder')
                 "
-                @update:model-value="
-                  updateMethod('magicLink', toBoolean($event))
-                "
+                type="url"
+                class="placeholder:text-muted-foreground border-none bg-transparent focus:border-inherit focus:ring-0"
               />
-            </Field>
-
-            <Field orientation="horizontal">
-              <FieldContent>
-                <FieldLabel>{{
-                  t("settings.security.google.label")
-                }}</FieldLabel>
-                <FieldDescription>
-                  {{ t("settings.security.google.description") }}
-                </FieldDescription>
-              </FieldContent>
-              <InputGroupButton
-                v-if="updatingMethod === 'google'"
-                variant="ghost"
-                size="icon-xs"
-                disabled
-              >
-                <Spinner />
-              </InputGroupButton>
-              <Switch
-                :model-value="loginMethods.google"
-                :disabled="
-                  isLastNonSsoMethod('google') || updatingMethod !== null
-                "
-                @update:model-value="updateMethod('google', toBoolean($event))"
-              />
-            </Field>
-
-            <Field orientation="horizontal">
-              <FieldContent>
-                <FieldLabel>{{
-                  t("settings.security.microsoft.label")
-                }}</FieldLabel>
-                <FieldDescription>
-                  {{ t("settings.security.microsoft.description") }}
-                </FieldDescription>
-              </FieldContent>
-              <InputGroupButton
-                v-if="updatingMethod === 'microsoft'"
-                variant="ghost"
-                size="icon-xs"
-                disabled
-              >
-                <Spinner />
-              </InputGroupButton>
-              <Switch
-                :model-value="loginMethods.microsoft"
-                :disabled="
-                  isLastNonSsoMethod('microsoft') || updatingMethod !== null
-                "
-                @update:model-value="
-                  updateMethod('microsoft', toBoolean($event))
-                "
-              />
-            </Field>
-
-            <Field orientation="horizontal">
-              <FieldContent>
-                <FieldLabel>{{
-                  t("settings.security.apple.label")
-                }}</FieldLabel>
-                <FieldDescription>
-                  {{ t("settings.security.apple.description") }}
-                </FieldDescription>
-              </FieldContent>
-              <InputGroupButton
-                v-if="updatingMethod === 'apple'"
-                variant="ghost"
-                size="icon-xs"
-                disabled
-              >
-                <Spinner />
-              </InputGroupButton>
-              <Switch
-                :model-value="loginMethods.apple"
-                :disabled="
-                  isLastNonSsoMethod('apple') || updatingMethod !== null
-                "
-                @update:model-value="updateMethod('apple', toBoolean($event))"
-              />
-            </Field>
-
-            <Field orientation="horizontal">
-              <FieldContent>
-                <FieldLabel>{{ t("settings.security.sso.label") }}</FieldLabel>
-                <FieldDescription>
-                  {{ t("settings.security.sso.description") }}
-                </FieldDescription>
-              </FieldContent>
               <TooltipProvider>
                 <Tooltip>
                   <TooltipTrigger as-child>
                     <InputGroupButton
                       variant="ghost"
                       size="icon-xs"
-                      :disabled="!loginMethods.sso || updatingMethod !== null"
-                      @click="ssoConfigDialogOpen = true"
+                      class="invisible group-focus-within:visible"
+                      :disabled="savingApprovedDomains"
+                      @click="saveApprovedDomains(localApprovedDomains)"
                     >
-                      <Spinner
-                        v-if="
-                          updatingMethod === 'sso' ||
-                          saving ||
-                          testing ||
-                          deleting
-                        "
-                      />
-                      <IconSettings v-else />
+                      <Spinner v-if="savingApprovedDomains" />
+                      <IconCheck v-else />
                     </InputGroupButton>
                   </TooltipTrigger>
-                  <TooltipContent>{{
-                    t("settings.security.sso.configure")
-                  }}</TooltipContent>
+                  <TooltipContent>{{ t("actions.save") }}</TooltipContent>
                 </Tooltip>
               </TooltipProvider>
-              <Switch
-                :model-value="loginMethods.sso"
-                :disabled="updatingMethod !== null"
-                @update:model-value="updateMethod('sso', toBoolean($event))"
-              />
-            </Field>
+            </TagsInput>
+          </Field>
+        </FieldSet>
+        <FieldSeparator />
+        <!-- Section: Authentication Methods -->
+        <FieldSet>
+          <Field orientation="horizontal">
+            <FieldContent>
+              <FieldLabel>{{
+                t("settings.security.authenticationMethods.label")
+              }}</FieldLabel>
+              <FieldDescription>
+                {{ t("settings.security.authenticationMethods.description") }}
+              </FieldDescription>
+            </FieldContent>
+          </Field>
 
-            <Alert
-              v-if="onlySsoEnabled"
-              class="bg-[repeating-linear-gradient(45deg,var(--color-muted)_0,var(--color-muted)_1px,transparent_0,transparent_50%)] bg-size-[8px_8px]"
+          <Field orientation="horizontal">
+            <FieldContent>
+              <FieldLabel>{{
+                t("settings.security.emailPassword.label")
+              }}</FieldLabel>
+              <FieldDescription>
+                {{ t("settings.security.emailPassword.description") }}
+              </FieldDescription>
+            </FieldContent>
+            <InputGroupButton
+              v-if="updatingMethod === 'emailPassword'"
+              variant="ghost"
+              size="icon-xs"
+              disabled
             >
-              <IconCircleAlert />
-              <AlertTitle>{{
-                t("settings.security.sso.onlyEnabledTitle")
-              }}</AlertTitle>
-              <AlertDescription>
-                {{ t("settings.security.sso.onlyEnabledDescription") }}
-              </AlertDescription>
-            </Alert>
-          </FieldSet>
-          <!-- SSO Configuration Dialog -->
-          <Dialog v-model:open="ssoConfigDialogOpen">
-            <DialogContent
-              class="h-3/4 max-h-3/4! w-3/4 max-w-3/4! overflow-auto overscroll-none scroll-smooth"
+              <Spinner />
+            </InputGroupButton>
+            <Switch
+              :model-value="loginMethods.emailPassword"
+              :disabled="
+                isLastNonSsoMethod('emailPassword') || updatingMethod !== null
+              "
+              @update:model-value="
+                updateMethod('emailPassword', toBoolean($event))
+              "
+            />
+          </Field>
+
+          <Field orientation="horizontal">
+            <FieldContent>
+              <FieldLabel>{{
+                t("settings.security.magicLink.label")
+              }}</FieldLabel>
+              <FieldDescription>
+                {{ t("settings.security.magicLink.description") }}
+              </FieldDescription>
+            </FieldContent>
+            <InputGroupButton
+              v-if="updatingMethod === 'magicLink'"
+              variant="ghost"
+              size="icon-xs"
+              disabled
             >
-              <DialogHeader>
-                <DialogTitle class="flex items-center gap-2">
-                  {{ t("settings.security.sso.configuration") }}
-                  <Badge v-if="hasSso" variant="secondary">
-                    <IconShieldCheck />
-                    {{ t("settings.security.sso.active") }}
-                  </Badge>
-                </DialogTitle>
-                <DialogDescription>
-                  {{ t("settings.security.sso.configurationDescription") }}
-                </DialogDescription>
-              </DialogHeader>
-              <OverlayScrollbarsWrapper
-                class="-mx-6 w-[-webkit-fill-available]"
-              >
-                <FieldGroup class="p-6">
-                  <FieldSet>
-                    <!-- Shared SSO Settings -->
+              <Spinner />
+            </InputGroupButton>
+            <Switch
+              :model-value="loginMethods.magicLink"
+              :disabled="
+                isLastNonSsoMethod('magicLink') || updatingMethod !== null
+              "
+              @update:model-value="updateMethod('magicLink', toBoolean($event))"
+            />
+          </Field>
+
+          <Field orientation="horizontal">
+            <FieldContent>
+              <FieldLabel>{{ t("settings.security.google.label") }}</FieldLabel>
+              <FieldDescription>
+                {{ t("settings.security.google.description") }}
+              </FieldDescription>
+            </FieldContent>
+            <InputGroupButton
+              v-if="updatingMethod === 'google'"
+              variant="ghost"
+              size="icon-xs"
+              disabled
+            >
+              <Spinner />
+            </InputGroupButton>
+            <Switch
+              :model-value="loginMethods.google"
+              :disabled="
+                isLastNonSsoMethod('google') || updatingMethod !== null
+              "
+              @update:model-value="updateMethod('google', toBoolean($event))"
+            />
+          </Field>
+
+          <Field orientation="horizontal">
+            <FieldContent>
+              <FieldLabel>{{
+                t("settings.security.microsoft.label")
+              }}</FieldLabel>
+              <FieldDescription>
+                {{ t("settings.security.microsoft.description") }}
+              </FieldDescription>
+            </FieldContent>
+            <InputGroupButton
+              v-if="updatingMethod === 'microsoft'"
+              variant="ghost"
+              size="icon-xs"
+              disabled
+            >
+              <Spinner />
+            </InputGroupButton>
+            <Switch
+              :model-value="loginMethods.microsoft"
+              :disabled="
+                isLastNonSsoMethod('microsoft') || updatingMethod !== null
+              "
+              @update:model-value="updateMethod('microsoft', toBoolean($event))"
+            />
+          </Field>
+
+          <Field orientation="horizontal">
+            <FieldContent>
+              <FieldLabel>{{ t("settings.security.apple.label") }}</FieldLabel>
+              <FieldDescription>
+                {{ t("settings.security.apple.description") }}
+              </FieldDescription>
+            </FieldContent>
+            <InputGroupButton
+              v-if="updatingMethod === 'apple'"
+              variant="ghost"
+              size="icon-xs"
+              disabled
+            >
+              <Spinner />
+            </InputGroupButton>
+            <Switch
+              :model-value="loginMethods.apple"
+              :disabled="isLastNonSsoMethod('apple') || updatingMethod !== null"
+              @update:model-value="updateMethod('apple', toBoolean($event))"
+            />
+          </Field>
+
+          <Field orientation="horizontal">
+            <FieldContent>
+              <FieldLabel>{{ t("settings.security.sso.label") }}</FieldLabel>
+              <FieldDescription>
+                {{ t("settings.security.sso.description") }}
+              </FieldDescription>
+            </FieldContent>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger as-child>
+                  <InputGroupButton
+                    variant="ghost"
+                    size="icon-xs"
+                    :disabled="!loginMethods.sso || updatingMethod !== null"
+                    @click="ssoConfigDialogOpen = true"
+                  >
+                    <Spinner
+                      v-if="
+                        updatingMethod === 'sso' ||
+                        saving ||
+                        testing ||
+                        deleting
+                      "
+                    />
+                    <IconSettings v-else />
+                  </InputGroupButton>
+                </TooltipTrigger>
+                <TooltipContent>{{
+                  t("settings.security.sso.configure")
+                }}</TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+            <Switch
+              :model-value="loginMethods.sso"
+              :disabled="updatingMethod !== null"
+              @update:model-value="updateMethod('sso', toBoolean($event))"
+            />
+          </Field>
+
+          <Alert
+            v-if="onlySsoEnabled"
+            class="bg-[repeating-linear-gradient(45deg,var(--color-muted)_0,var(--color-muted)_1px,transparent_0,transparent_50%)] bg-size-[8px_8px]"
+          >
+            <IconCircleAlert />
+            <AlertTitle>{{
+              t("settings.security.sso.onlyEnabledTitle")
+            }}</AlertTitle>
+            <AlertDescription>
+              {{ t("settings.security.sso.onlyEnabledDescription") }}
+            </AlertDescription>
+          </Alert>
+        </FieldSet>
+        <!-- SSO Configuration Dialog -->
+        <Dialog v-model:open="ssoConfigDialogOpen">
+          <DialogContent
+            class="h-3/4 max-h-3/4! w-3/4 max-w-3/4! overflow-auto overscroll-none scroll-smooth"
+          >
+            <DialogHeader>
+              <DialogTitle class="flex items-center gap-2">
+                {{ t("settings.security.sso.configuration") }}
+                <Badge v-if="hasSso" variant="secondary">
+                  <IconShieldCheck />
+                  {{ t("settings.security.sso.active") }}
+                </Badge>
+              </DialogTitle>
+              <DialogDescription>
+                {{ t("settings.security.sso.configurationDescription") }}
+              </DialogDescription>
+            </DialogHeader>
+            <OverlayScrollbarsWrapper class="-mx-6 w-[-webkit-fill-available]">
+              <FieldGroup class="p-6">
+                <FieldSet>
+                  <!-- Shared SSO Settings -->
+                  <Field>
+                    <FieldContent>
+                      <FieldLabel>{{
+                        t("settings.security.sso.emailDomainsLabel")
+                      }}</FieldLabel>
+                      <FieldDescription>
+                        {{ t("settings.security.sso.emailDomainsDescription") }}
+                      </FieldDescription>
+                    </FieldContent>
+                    <TagsInput
+                      :model-value="ssoDomains"
+                      :add-on-paste="true"
+                      :delimiter="','"
+                      class="group"
+                      @update:model-value="
+                        ssoDomains = filterValidDomains($event as string[])
+                      "
+                    >
+                      <InputGroupButton variant="ghost" size="icon-xs" disabled>
+                        <IconGlobe />
+                      </InputGroupButton>
+                      <TagsInputItem
+                        v-for="domain in ssoDomains"
+                        :key="domain"
+                        :value="domain"
+                      >
+                        <TagsInputItemText />
+                        <TagsInputItemDelete />
+                      </TagsInputItem>
+                      <TagsInputInput
+                        :placeholder="
+                          t('settings.security.approvedDomains.placeholder')
+                        "
+                        type="url"
+                        class="placeholder:text-muted-foreground border-none bg-transparent focus:border-inherit focus:ring-0"
+                      />
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger as-child>
+                            <InputGroupButton
+                              variant="ghost"
+                              size="icon-xs"
+                              class="invisible group-focus-within:visible"
+                              disabled
+                            >
+                              <IconCheck />
+                            </InputGroupButton>
+                          </TooltipTrigger>
+                          <TooltipContent>{{
+                            t("actions.save")
+                          }}</TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    </TagsInput>
+                  </Field>
+                  <Field orientation="horizontal">
+                    <FieldContent>
+                      <FieldLabel>{{
+                        t("settings.security.sso.enforceLabel")
+                      }}</FieldLabel>
+                      <FieldDescription>
+                        {{ t("settings.security.sso.enforceDescription") }}
+                      </FieldDescription>
+                    </FieldContent>
+                    <Switch v-model="ssoEnforced" />
+                  </Field>
+                  <Field orientation="horizontal">
+                    <FieldContent>
+                      <FieldLabel>{{
+                        t("settings.security.sso.autoProvisionLabel")
+                      }}</FieldLabel>
+                      <FieldDescription>
+                        {{
+                          t("settings.security.sso.autoProvisionDescription")
+                        }}
+                      </FieldDescription>
+                    </FieldContent>
+                    <Switch v-model="ssoAutoProvision" />
+                  </Field>
+                  <Field v-if="ssoAutoProvision" orientation="horizontal">
+                    <FieldContent>
+                      <FieldLabel>{{
+                        t("settings.security.sso.defaultRoleLabel")
+                      }}</FieldLabel>
+                      <FieldDescription>
+                        {{ t("settings.security.sso.defaultRoleDescription") }}
+                      </FieldDescription>
+                    </FieldContent>
+                    <Select v-model="ssoDefaultRole">
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectGroup>
+                          <SelectItem value="member">{{
+                            t("labels.member")
+                          }}</SelectItem>
+                          <SelectItem value="guest">{{
+                            t("labels.guest")
+                          }}</SelectItem>
+                        </SelectGroup>
+                      </SelectContent>
+                    </Select>
+                  </Field>
+                  <!-- Delete SSO -->
+                  <Field v-if="hasSso" orientation="horizontal">
+                    <FieldContent>
+                      <FieldLabel class="text-destructive text-sm">
+                        {{ t("settings.security.sso.removeLabel") }}
+                      </FieldLabel>
+                      <FieldDescription>
+                        {{ t("settings.security.sso.removeDescription") }}
+                      </FieldDescription>
+                    </FieldContent>
+                    <Button
+                      variant="destructive"
+                      :disabled="deleting"
+                      @click="deleteSsoDialog.open(null)"
+                    >
+                      <Spinner v-if="deleting" />
+                      <template v-else>
+                        <IconTrash />
+                        {{ t("settings.security.sso.removeLabel") }}
+                      </template>
+                    </Button>
+                  </Field>
+                </FieldSet>
+                <FieldSeparator />
+                <FieldSet>
+                  <!-- Protocol Selector -->
+                  <Field orientation="horizontal">
+                    <FieldContent>
+                      <FieldLabel>{{
+                        t("settings.security.sso.protocolLabel")
+                      }}</FieldLabel>
+                      <FieldDescription>
+                        {{ t("settings.security.sso.protocolDescription") }}
+                      </FieldDescription>
+                    </FieldContent>
+                    <Select v-model="ssoProtocol">
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectGroup>
+                          <SelectItem value="saml">SAML</SelectItem>
+                          <SelectItem value="oidc">OIDC</SelectItem>
+                        </SelectGroup>
+                      </SelectContent>
+                    </Select>
+                  </Field>
+                </FieldSet>
+                <FieldSeparator />
+                <FieldSet>
+                  <!-- SAML Fields -->
+                  <template v-if="ssoProtocol === 'saml'">
                     <Field>
                       <FieldContent>
                         <FieldLabel>{{
-                          t("settings.security.sso.emailDomainsLabel")
+                          t("settings.security.sso.samlIdpEntityIdLabel")
                         }}</FieldLabel>
                         <FieldDescription>
                           {{
-                            t("settings.security.sso.emailDomainsDescription")
-                          }}
-                        </FieldDescription>
-                      </FieldContent>
-                      <TagsInput
-                        :model-value="ssoDomains"
-                        :add-on-paste="true"
-                        :delimiter="','"
-                        class="group"
-                        @update:model-value="
-                          ssoDomains = filterValidDomains($event as string[])
-                        "
-                      >
-                        <InputGroupButton
-                          variant="ghost"
-                          size="icon-xs"
-                          disabled
-                        >
-                          <IconGlobe />
-                        </InputGroupButton>
-                        <TagsInputItem
-                          v-for="domain in ssoDomains"
-                          :key="domain"
-                          :value="domain"
-                        >
-                          <TagsInputItemText />
-                          <TagsInputItemDelete />
-                        </TagsInputItem>
-                        <TagsInputInput
-                          :placeholder="
-                            t('settings.security.approvedDomains.placeholder')
-                          "
-                          type="url"
-                          class="placeholder:text-muted-foreground border-none bg-transparent focus:border-inherit focus:ring-0"
-                        />
-                        <TooltipProvider>
-                          <Tooltip>
-                            <TooltipTrigger as-child>
-                              <InputGroupButton
-                                variant="ghost"
-                                size="icon-xs"
-                                class="invisible group-focus-within:visible"
-                                disabled
-                              >
-                                <IconCheck />
-                              </InputGroupButton>
-                            </TooltipTrigger>
-                            <TooltipContent>{{
-                              t("actions.save")
-                            }}</TooltipContent>
-                          </Tooltip>
-                        </TooltipProvider>
-                      </TagsInput>
-                    </Field>
-                    <Field orientation="horizontal">
-                      <FieldContent>
-                        <FieldLabel>{{
-                          t("settings.security.sso.enforceLabel")
-                        }}</FieldLabel>
-                        <FieldDescription>
-                          {{ t("settings.security.sso.enforceDescription") }}
-                        </FieldDescription>
-                      </FieldContent>
-                      <Switch v-model="ssoEnforced" />
-                    </Field>
-                    <Field orientation="horizontal">
-                      <FieldContent>
-                        <FieldLabel>{{
-                          t("settings.security.sso.autoProvisionLabel")
-                        }}</FieldLabel>
-                        <FieldDescription>
-                          {{
-                            t("settings.security.sso.autoProvisionDescription")
-                          }}
-                        </FieldDescription>
-                      </FieldContent>
-                      <Switch v-model="ssoAutoProvision" />
-                    </Field>
-                    <Field v-if="ssoAutoProvision" orientation="horizontal">
-                      <FieldContent>
-                        <FieldLabel>{{
-                          t("settings.security.sso.defaultRoleLabel")
-                        }}</FieldLabel>
-                        <FieldDescription>
-                          {{
-                            t("settings.security.sso.defaultRoleDescription")
-                          }}
-                        </FieldDescription>
-                      </FieldContent>
-                      <Select v-model="ssoDefaultRole">
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectGroup>
-                            <SelectItem value="member">{{
-                              t("labels.member")
-                            }}</SelectItem>
-                            <SelectItem value="guest">{{
-                              t("labels.guest")
-                            }}</SelectItem>
-                          </SelectGroup>
-                        </SelectContent>
-                      </Select>
-                    </Field>
-                    <!-- Delete SSO -->
-                    <Field v-if="hasSso" orientation="horizontal">
-                      <FieldContent>
-                        <FieldLabel class="text-destructive text-sm">
-                          {{ t("settings.security.sso.removeLabel") }}
-                        </FieldLabel>
-                        <FieldDescription>
-                          {{ t("settings.security.sso.removeDescription") }}
-                        </FieldDescription>
-                      </FieldContent>
-                      <Button
-                        variant="destructive"
-                        :disabled="deleting"
-                        @click="deleteSsoDialog.open(null)"
-                      >
-                        <Spinner v-if="deleting" />
-                        <template v-else>
-                          <IconTrash />
-                          {{ t("settings.security.sso.removeLabel") }}
-                        </template>
-                      </Button>
-                    </Field>
-                  </FieldSet>
-                  <FieldSeparator />
-                  <FieldSet>
-                    <!-- Protocol Selector -->
-                    <Field orientation="horizontal">
-                      <FieldContent>
-                        <FieldLabel>{{
-                          t("settings.security.sso.protocolLabel")
-                        }}</FieldLabel>
-                        <FieldDescription>
-                          {{ t("settings.security.sso.protocolDescription") }}
-                        </FieldDescription>
-                      </FieldContent>
-                      <Select v-model="ssoProtocol">
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectGroup>
-                            <SelectItem value="saml">SAML</SelectItem>
-                            <SelectItem value="oidc">OIDC</SelectItem>
-                          </SelectGroup>
-                        </SelectContent>
-                      </Select>
-                    </Field>
-                  </FieldSet>
-                  <FieldSeparator />
-                  <FieldSet>
-                    <!-- SAML Fields -->
-                    <template v-if="ssoProtocol === 'saml'">
-                      <Field>
-                        <FieldContent>
-                          <FieldLabel>{{
-                            t("settings.security.sso.samlIdpEntityIdLabel")
-                          }}</FieldLabel>
-                          <FieldDescription>
-                            {{
-                              t(
-                                "settings.security.sso.samlIdpEntityIdDescription"
-                              )
-                            }}
-                          </FieldDescription>
-                        </FieldContent>
-                        <Input
-                          v-model="samlIdpEntityId"
-                          placeholder="https://idp.example.com/entity"
-                        />
-                      </Field>
-
-                      <Field>
-                        <FieldContent>
-                          <FieldLabel>{{
-                            t("settings.security.sso.samlSsoUrlLabel")
-                          }}</FieldLabel>
-                          <FieldDescription>
-                            {{
-                              t("settings.security.sso.samlSsoUrlDescription")
-                            }}
-                          </FieldDescription>
-                        </FieldContent>
-                        <Input
-                          v-model="samlSsoUrl"
-                          placeholder="https://idp.example.com/sso"
-                        />
-                      </Field>
-
-                      <Field>
-                        <FieldContent>
-                          <FieldLabel>{{
-                            t("settings.security.sso.samlCertificateLabel")
-                          }}</FieldLabel>
-                          <FieldDescription>
-                            {{
-                              t(
-                                "settings.security.sso.samlCertificateDescription"
-                              )
-                            }}
-                          </FieldDescription>
-                        </FieldContent>
-                        <Textarea
-                          v-model="samlCertificate"
-                          placeholder="-----BEGIN CERTIFICATE-----&#10;...&#10;-----END CERTIFICATE-----"
-                          class="font-mono text-xs"
-                          rows="8"
-                        />
-                      </Field>
-                    </template>
-
-                    <!-- OIDC Fields -->
-                    <template v-if="ssoProtocol === 'oidc'">
-                      <Field>
-                        <FieldContent>
-                          <FieldLabel>{{
-                            t("settings.security.sso.oidcIssuerLabel")
-                          }}</FieldLabel>
-                          <FieldDescription>
-                            {{
-                              t("settings.security.sso.oidcIssuerDescription")
-                            }}
-                          </FieldDescription>
-                        </FieldContent>
-                        <Input
-                          v-model="oidcIssuer"
-                          placeholder="https://accounts.example.com"
-                        />
-                      </Field>
-
-                      <Field>
-                        <FieldContent>
-                          <FieldLabel>{{
-                            t("settings.security.sso.oidcClientIdLabel")
-                          }}</FieldLabel>
-                          <FieldDescription>
-                            {{
-                              t("settings.security.sso.oidcClientIdDescription")
-                            }}
-                          </FieldDescription>
-                        </FieldContent>
-                        <Input
-                          v-model="oidcClientId"
-                          :placeholder="
-                            t('settings.security.sso.oidcClientIdPlaceholder')
-                          "
-                        />
-                      </Field>
-
-                      <Field>
-                        <FieldContent>
-                          <FieldLabel>{{
-                            t("settings.security.sso.oidcClientSecretLabel")
-                          }}</FieldLabel>
-                          <FieldDescription>
-                            {{
-                              t(
-                                "settings.security.sso.oidcClientSecretDescription"
-                              )
-                            }}
-                          </FieldDescription>
-                        </FieldContent>
-                        <Input
-                          v-model="oidcClientSecret"
-                          type="password"
-                          :placeholder="
                             t(
-                              'settings.security.sso.oidcClientSecretPlaceholder'
+                              "settings.security.sso.samlIdpEntityIdDescription"
                             )
-                          "
-                        />
-                      </Field>
-                    </template>
-                  </FieldSet>
-                </FieldGroup>
-              </OverlayScrollbarsWrapper>
-              <DialogFooter class="flex-row justify-between sm:justify-between">
+                          }}
+                        </FieldDescription>
+                      </FieldContent>
+                      <Input
+                        v-model="samlIdpEntityId"
+                        placeholder="https://idp.example.com/entity"
+                      />
+                    </Field>
+
+                    <Field>
+                      <FieldContent>
+                        <FieldLabel>{{
+                          t("settings.security.sso.samlSsoUrlLabel")
+                        }}</FieldLabel>
+                        <FieldDescription>
+                          {{ t("settings.security.sso.samlSsoUrlDescription") }}
+                        </FieldDescription>
+                      </FieldContent>
+                      <Input
+                        v-model="samlSsoUrl"
+                        placeholder="https://idp.example.com/sso"
+                      />
+                    </Field>
+
+                    <Field>
+                      <FieldContent>
+                        <FieldLabel>{{
+                          t("settings.security.sso.samlCertificateLabel")
+                        }}</FieldLabel>
+                        <FieldDescription>
+                          {{
+                            t(
+                              "settings.security.sso.samlCertificateDescription"
+                            )
+                          }}
+                        </FieldDescription>
+                      </FieldContent>
+                      <Textarea
+                        v-model="samlCertificate"
+                        placeholder="-----BEGIN CERTIFICATE-----&#10;...&#10;-----END CERTIFICATE-----"
+                        class="font-mono text-xs"
+                        rows="8"
+                      />
+                    </Field>
+                  </template>
+
+                  <!-- OIDC Fields -->
+                  <template v-if="ssoProtocol === 'oidc'">
+                    <Field>
+                      <FieldContent>
+                        <FieldLabel>{{
+                          t("settings.security.sso.oidcIssuerLabel")
+                        }}</FieldLabel>
+                        <FieldDescription>
+                          {{ t("settings.security.sso.oidcIssuerDescription") }}
+                        </FieldDescription>
+                      </FieldContent>
+                      <Input
+                        v-model="oidcIssuer"
+                        placeholder="https://accounts.example.com"
+                      />
+                    </Field>
+
+                    <Field>
+                      <FieldContent>
+                        <FieldLabel>{{
+                          t("settings.security.sso.oidcClientIdLabel")
+                        }}</FieldLabel>
+                        <FieldDescription>
+                          {{
+                            t("settings.security.sso.oidcClientIdDescription")
+                          }}
+                        </FieldDescription>
+                      </FieldContent>
+                      <Input
+                        v-model="oidcClientId"
+                        :placeholder="
+                          t('settings.security.sso.oidcClientIdPlaceholder')
+                        "
+                      />
+                    </Field>
+
+                    <Field>
+                      <FieldContent>
+                        <FieldLabel>{{
+                          t("settings.security.sso.oidcClientSecretLabel")
+                        }}</FieldLabel>
+                        <FieldDescription>
+                          {{
+                            t(
+                              "settings.security.sso.oidcClientSecretDescription"
+                            )
+                          }}
+                        </FieldDescription>
+                      </FieldContent>
+                      <Input
+                        v-model="oidcClientSecret"
+                        type="password"
+                        :placeholder="
+                          t('settings.security.sso.oidcClientSecretPlaceholder')
+                        "
+                      />
+                    </Field>
+                  </template>
+                </FieldSet>
+              </FieldGroup>
+            </OverlayScrollbarsWrapper>
+            <DialogFooter class="flex-row justify-between sm:justify-between">
+              <Button
+                variant="outline"
+                :disabled="testing || !canSaveSso"
+                @click="handleTestConnection"
+              >
+                <Spinner v-if="testing" />
+                {{ t("settings.security.sso.testConnection") }}
+              </Button>
+              <div class="flex gap-2">
+                <DialogClose as-child>
+                  <Button variant="outline">{{ t("actions.cancel") }}</Button>
+                </DialogClose>
                 <Button
-                  variant="outline"
-                  :disabled="testing || !canSaveSso"
-                  @click="handleTestConnection"
+                  :disabled="saving || !canSaveSso"
+                  @click="handleSaveSso"
                 >
-                  <Spinner v-if="testing" />
-                  {{ t("settings.security.sso.testConnection") }}
+                  <Spinner v-if="saving" />
+                  {{
+                    hasSso
+                      ? t("settings.security.sso.updateSso")
+                      : t("settings.security.sso.enableSso")
+                  }}
                 </Button>
-                <div class="flex gap-2">
-                  <DialogClose as-child>
-                    <Button variant="outline">{{ t("actions.cancel") }}</Button>
-                  </DialogClose>
-                  <Button
-                    :disabled="saving || !canSaveSso"
-                    @click="handleSaveSso"
-                  >
-                    <Spinner v-if="saving" />
-                    {{
-                      hasSso
-                        ? t("settings.security.sso.updateSso")
-                        : t("settings.security.sso.enableSso")
-                    }}
-                  </Button>
-                </div>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
-        </FieldGroup>
-      </template>
-    </div>
+              </div>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      </FieldGroup>
+    </template>
     <!-- Delete SSO Confirmation Dialog -->
     <AlertDialog v-model:open="deleteSsoDialog.isOpen.value">
       <AlertDialogContent>

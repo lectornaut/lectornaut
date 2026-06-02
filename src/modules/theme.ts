@@ -114,6 +114,14 @@ export const initTheme = () => {
     { immediate: true, flush: "sync" }
   )
 
+  watch(
+    () => themeSettings.value.reducedMotion,
+    (enabled) => {
+      applyReducedMotion(enabled)
+    },
+    { immediate: true, flush: "sync" }
+  )
+
   if (isTauri.value) {
     watch(
       store,
@@ -122,6 +130,22 @@ export const initTheme = () => {
       },
       { immediate: true, flush: "sync" }
     )
+  }
+}
+
+// Mirrors the `prefers-reduced-motion` opt-out as a user-controlled toggle.
+// `data-reduced-motion` on <html> is matched by a global kill-switch in
+// `src/styles/index.css`. We add/remove the attribute (rather than set
+// "false") so the CSS can use a bare `[data-reduced-motion]` presence
+// selector. `flush: "sync"` above sets it before first paint to avoid a
+// flash of motion on load.
+function applyReducedMotion(enabled: boolean) {
+  const root = document.documentElement
+
+  if (enabled) {
+    root.setAttribute("data-reduced-motion", "")
+  } else {
+    root.removeAttribute("data-reduced-motion")
   }
 }
 
