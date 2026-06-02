@@ -144,7 +144,7 @@ const handleDecline = async () => {
     await invitationStore.declineInvitation(invitation.value.id)
     toast.info(t("pages.join.info.declined"))
     // Update local state by reloading or re-fetching?
-    // userInvitations is reactive via VueFire, so list updates auto.
+    // userInvitations is reactive via the TanStack Query listener, so the list updates automatically.
     // Update current view:
     if (invitation.value) invitation.value.status = "declined"
   } catch (e) {

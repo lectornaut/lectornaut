@@ -176,7 +176,8 @@ export function useBotSessionFilter() {
 
   /**
    * Returns a fresh array — never mutate the caller's input, which is
-   * usually a `computed` reading from a vuefire reactive collection.
+   * usually a `computed` reading from a TanStack Query–backed reactive
+   * collection.
    */
   const sortSessions = (sessions: IBotSession[]): IBotSession[] => {
     const arr = sessions.slice()

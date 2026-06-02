@@ -13,8 +13,9 @@
  *
  * (Workflows are the third building block conceptually, but NOT a member of this
  * collection: they have a materialized/opt-in lifecycle + a runtime, so they
- * live in `teams/{teamId}/workflows` with their own storage + run/schedule
- * engine in `workflows.ts`. The three are unified only at the catalog
+ * live in `teams/{teamId}/workspaces/{workspaceId}/workflows` with their own
+ * storage + run/schedule engine in `workflows.ts`. The three are unified only
+ * at the catalog
  * (`integrationCatalog.ts`) and the client registry facade
  * (`useIntegrationsRegistry`). See the file-top note in `useIntegrations.ts`.)
  *

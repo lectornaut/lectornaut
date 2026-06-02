@@ -1,7 +1,7 @@
 <script lang="ts" setup>
 import SettingsRestricted from "@/components/app/settings/SettingsRestricted.vue"
 import { useCanViewTeamSettings } from "@/composables/useCanViewTeamSettings"
-import { cloneAgentConfig, useAgentConfig } from "@/composables/useAgentConfig"
+import { useAgentConfig } from "@/composables/useAgentConfig"
 import { useTeamWorkflows } from "@/composables/useTeamWorkflows"
 import { DEFAULT_AGENT_ID } from "@/data/builtInAgents"
 import { WORKFLOW_PRESETS, type WorkflowPreset } from "@/data/workflowPresets"
@@ -10,20 +10,21 @@ import {
   IconCirclePlus,
   IconPencil,
   IconSettings,
+  IconWorkflow,
 } from "@/data/icons"
 import { useAuthStore } from "@/stores/authStore"
-import type { IBotAgentConfig, IWorkflow } from "@/types/domain"
+import type { IWorkflow } from "@/types/domain"
 import { storeToRefs } from "pinia"
-import { computed, ref, watch } from "vue"
+import { computed, ref } from "vue"
 
 const { t } = useI18n()
 
 const { canViewTeamSettings } = useCanViewTeamSettings()
 
 const {
-  workflows,
-  activeWorkflows,
-  archivedWorkflows,
+  wsActiveWorkflows,
+  wsArchivedWorkflows,
+  availablePresetKeys,
   isLoading,
   isSaving,
   canManage,
@@ -38,9 +39,9 @@ const authStore = useAuthStore()
 const { currentWorkspaceId } = storeToRefs(authStore)
 
 // ── Team-wide "custom workflows" gate (agent-config tools toggle) ────────────
-// Mirrors SettingsAgents' `tools.customAgents`: owned here, saved via the
-// shared agent-config with a dirty/unsaved bar, overlay-merged so a save from
-// another settings tab isn't clobbered.
+// Mirrors SettingsAgents' `tools.customAgents`: owned here, toggling it is an
+// immediate write to the shared agent-config (no unsaved bar), overlay-merged
+// so an in-flight save from another settings tab isn't clobbered.
 const configMessages = () => ({
   permissionRequired: t("settings.workflows.permissionRequired"),
   saveSuccess: t("settings.workflows.gateSaveSuccess"),
@@ -55,30 +56,26 @@ const {
   save,
 } = useAgentConfig(configMessages)
 
-const draft = ref<IBotAgentConfig>(cloneAgentConfig(config.value))
-const isDirty = computed(
-  () => draft.value.tools.customWorkflows !== config.value.tools.customWorkflows
+// The team-wide customWorkflows gate applies immediately on toggle (no
+// unsaved bar). `save()` isn't optimistic — `config` only updates once the
+// callable returns — so hold the intended value locally for instant Switch
+// feedback and revert if the save fails; mirrors SettingsOverview's immediate
+// public-team toggle. The payload overlays `customWorkflows` onto the latest
+// `config.value.tools` so a sibling tab's in-flight edit to another tool key
+// isn't clobbered (Firestore's `{merge:true}` is a shallow top-level merge).
+const pendingCustomWorkflows = ref<boolean | null>(null)
+const customWorkflowsValue = computed(
+  () => pendingCustomWorkflows.value ?? config.value.tools.customWorkflows
 )
-watch(
-  config,
-  (next) => {
-    if (!isDirty.value) draft.value = cloneAgentConfig(next)
-  },
-  { deep: true }
-)
-const customWorkflowsOn = computed(
-  () => draft.value.tools.customWorkflows !== false
-)
-const handleSave = async (): Promise<void> => {
-  await save({
-    tools: {
-      ...config.value.tools,
-      customWorkflows: draft.value.tools.customWorkflows,
-    },
-  })
-}
-const handleDiscard = (): void => {
-  draft.value = cloneAgentConfig(config.value)
+const customWorkflowsOn = computed(() => customWorkflowsValue.value !== false)
+const handleToggleCustomWorkflows = async (value: boolean): Promise<void> => {
+  if (!canEdit.value) return
+  pendingCustomWorkflows.value = value
+  try {
+    await save({ tools: { ...config.value.tools, customWorkflows: value } })
+  } finally {
+    pendingCustomWorkflows.value = null
+  }
 }
 
 // Custom creation is gated on admin rights and the team-wide toggle. There's
@@ -89,17 +86,23 @@ const canCreateCustom = computed(
 )
 
 // ── Predefined workflows (one Field + Switch per preset) ─────────────────────
-// Modelled on SettingsAgents' built-in agents: a single toggle per shipped
-// preset, NOT a per-preset "Enable" button. Predefined workflows always run as
-// the Default agent (`DEFAULT_AGENT_ID`). The catalog (`WORKFLOW_PRESETS`) is
-// the canonical list; whether a preset reads as "on" depends on whether it's
-// been materialized into a runnable workflow doc and left enabled.
+// Two-tier: a preset shows here only if the team made it AVAILABLE (the
+// Integrations tier, `availablePresetKeys`); the Switch then deploys/enables it
+// in the CURRENT workspace, so enabling "Grammar" in one workspace is
+// independent of every other. Predefined workflows always run as the Default
+// agent (`DEFAULT_AGENT_ID`).
+const availablePresets = computed(() =>
+  WORKFLOW_PRESETS.filter((p) => availablePresetKeys.value.has(p.key))
+)
+// Scoped to the current workspace: this preset's active deployment here.
 const presetActiveWorkflow = (key: string): IWorkflow | undefined =>
-  activeWorkflows.value.find((w) => w.presetKey === key)
-// Includes archived docs — the toggle restores rather than re-materializes so
-// a preset can't end up with two docs sharing one `presetKey`.
+  wsActiveWorkflows.value.find((w) => w.presetKey === key)
+// Active OR archived in THIS workspace — the toggle restores an archived
+// deployment rather than re-materializing, so one workspace never ends up with
+// two docs sharing a `presetKey`.
 const presetAnyWorkflow = (key: string): IWorkflow | undefined =>
-  workflows.value.find((w) => w.presetKey === key)
+  wsActiveWorkflows.value.find((w) => w.presetKey === key) ??
+  wsArchivedWorkflows.value.find((w) => w.presetKey === key)
 
 // Per-preset in-flight lockout. The store's `isSaving` only covers the
 // materialize (`enablePreset`) path — `setEnabled`/`archive` don't set it — so
@@ -177,7 +180,7 @@ const togglePreset = async (
 // with archived (custom + predefined) below. Predefined presets keep their own
 // per-toggle section above and are excluded here via the `presetKey` filter.
 const customWorkflows = computed(() =>
-  activeWorkflows.value.filter((w) => !w.presetKey)
+  wsActiveWorkflows.value.filter((w) => !w.presetKey)
 )
 const activeCustomWorkflows = computed(() =>
   customWorkflows.value.filter((w) => w.enabled)
@@ -277,7 +280,7 @@ const rowDescription = (wf: IWorkflow): string =>
 
           <TooltipProvider>
             <Field
-              v-for="preset in WORKFLOW_PRESETS"
+              v-for="preset in availablePresets"
               :key="preset.key"
               orientation="horizontal"
             >
@@ -331,6 +334,22 @@ const rowDescription = (wf: IWorkflow): string =>
               </div>
             </Field>
           </TooltipProvider>
+
+          <!-- Nothing the team has made available yet — point admins to the
+               Integrations page (the availability tier). -->
+          <Empty
+            v-if="availablePresets.length === 0"
+            class="border border-dashed"
+          >
+            <EmptyHeader>
+              <EmptyMedia variant="icon">
+                <IconWorkflow />
+              </EmptyMedia>
+              <EmptyTitle>
+                {{ t("settings.workflows.noAvailablePresets") }}
+              </EmptyTitle>
+            </EmptyHeader>
+          </Empty>
         </FieldSet>
 
         <FieldSeparator />
@@ -349,8 +368,11 @@ const rowDescription = (wf: IWorkflow): string =>
             </FieldContent>
             <Switch
               id="wf-custom-gate"
-              v-model="draft.tools.customWorkflows"
-              :disabled="!canEdit || isLoadingConfig"
+              :model-value="customWorkflowsValue"
+              :disabled="!canEdit || isLoadingConfig || isSavingConfig"
+              @update:model-value="
+                (v) => handleToggleCustomWorkflows(Boolean(v))
+              "
             />
           </Field>
 
@@ -383,20 +405,27 @@ const rowDescription = (wf: IWorkflow): string =>
           <div class="flex flex-col gap-2">
             <!-- Empty / gate-off state — only when no custom workflows exist in
                  any bucket (active, disabled, or archived). -->
-            <p
+            <Empty
               v-if="
                 activeCustomWorkflows.length === 0 &&
                 disabledCustomWorkflows.length === 0 &&
-                archivedWorkflows.length === 0
+                wsArchivedWorkflows.length === 0
               "
-              class="text-muted-foreground rounded-md border border-dashed p-4 text-sm"
+              class="border border-dashed"
             >
-              {{
-                customWorkflowsOn
-                  ? t("settings.workflows.emptyCustom")
-                  : t("settings.workflows.customWorkflowsOff")
-              }}
-            </p>
+              <EmptyHeader>
+                <EmptyMedia variant="icon">
+                  <IconWorkflow />
+                </EmptyMedia>
+                <EmptyTitle>
+                  {{
+                    customWorkflowsOn
+                      ? t("settings.workflows.emptyCustom")
+                      : t("settings.workflows.customWorkflowsOff")
+                  }}
+                </EmptyTitle>
+              </EmptyHeader>
+            </Empty>
 
             <!-- Active (enabled) custom workflows -->
             <Collapsible
@@ -498,7 +527,7 @@ const rowDescription = (wf: IWorkflow): string =>
 
             <!-- Archived (custom + predefined) -->
             <Collapsible
-              v-if="archivedWorkflows.length > 0"
+              v-if="wsArchivedWorkflows.length > 0"
               v-model:open="archivedSectionOpen"
             >
               <CollapsibleTrigger as-child>
@@ -510,7 +539,7 @@ const rowDescription = (wf: IWorkflow): string =>
                   <span class="flex items-center gap-2">
                     {{
                       t("settings.workflows.archivedCount", {
-                        n: archivedWorkflows.length,
+                        n: wsArchivedWorkflows.length,
                       })
                     }}
                   </span>
@@ -523,7 +552,7 @@ const rowDescription = (wf: IWorkflow): string =>
               <CollapsibleContent>
                 <ItemGroup class="gap-2 pt-2">
                   <SettingsWorkflowRow
-                    v-for="wf in archivedWorkflows"
+                    v-for="wf in wsArchivedWorkflows"
                     :id="wf.id"
                     :key="wf.id"
                     :name="wf.name"
@@ -548,13 +577,6 @@ const rowDescription = (wf: IWorkflow): string =>
         </FieldSet>
       </FieldGroup>
     </div>
-
-    <SettingsUnsavedBar
-      v-if="!isLoadingConfig && isDirty && canEdit"
-      :saving="isSavingConfig"
-      @discard="handleDiscard"
-      @save="handleSave"
-    />
 
     <SettingsCustomWorkflow
       v-model:open="editorOpen"

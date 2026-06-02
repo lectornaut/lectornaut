@@ -1434,6 +1434,7 @@ export const deleteWorkspace = onCall(
     //   /code/{nodeId}        — code content nodes
     //   /write/{nodeId}       — write content nodes
     //   /memberships/{userId} — workspace-level memberships
+    //   /workflows, /workflowRuns — automations + run history (nested here now)
     //
     // db.recursiveDelete() handles deep traversal automatically,
     // deleting all nested documents and subcollections.

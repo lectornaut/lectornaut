@@ -7,7 +7,7 @@
  * Topology (no Cloud Tasks — a Firestore collection is the durable queue):
  *
  *   trigger (schedule tick │ node onWrite │ manual callable)
- *        └─ creates teams/{teamId}/workflowRuns/{runId}  (status: "queued")
+ *        └─ creates …/workspaces/{w}/workflowRuns/{runId}  (status: "queued")
  *              └─ onDocumentCreated → executeWorkflowRun  (the worker)
  *                    └─ runHeadlessAgentTurn(...)  → edits content, persists
  *
@@ -18,10 +18,11 @@
  * plus the monthly token budget gate inside `runAgentTurn` — an over-budget
  * run lands as `blocked`, never an unbounded spend.
  *
- * Workflows persist in `teams/{teamId}/workflows`; run history in the sibling
- * `teams/{teamId}/workflowRuns` queue. Both are written server-only (admin SDK);
- * the Firestore rules expose member reads for workflows (the picker/automations
- * UI) and admin-only reads for runs.
+ * Workflows and their run history both persist per-workspace under
+ * `teams/{teamId}/workspaces/{workspaceId}/{workflows,workflowRuns}` and are
+ * read team-wide via a collectionGroup on the denormalized `teamId`. Both are
+ * written server-only (admin SDK); the rules expose member reads for workflows
+ * (the picker/automations UI) and admin-only reads for runs.
  */
 
 import * as logger from "firebase-functions/logger"
@@ -145,6 +146,10 @@ const workflowUpdateSchema = workflowDraftSchema
   .partial()
 
 interface WorkflowDoc {
+  // Denormalized so collection-group reads/queries (the team-wide client list,
+  // the slot count, the scheduler) recover the team without path-walking the
+  // now-nested `teams/{t}/workspaces/{w}/workflows` location.
+  teamId: string
   name: string
   description: string
   avatarSeed: string
@@ -179,12 +184,22 @@ type RunStatus =
 
 // ─── Paths + auth helpers ─────────────────────────────────────────────────────
 
-// Workflows persist in their own collection; run history is a sibling queue.
+// Workflows + run history persist under each workspace (sibling collections).
 // `integrationsPath` is retained for AGENT lookups only — a workflow runs AS a
 // team agent, and agents live in the agent+tool integrations collection.
-const workflowsPath = (teamId: string) => `teams/${teamId}/workflows`
-const workflowRunsPath = (teamId: string) => `teams/${teamId}/workflowRuns`
+const workflowsPath = (teamId: string, workspaceId: string) =>
+  `teams/${teamId}/workspaces/${workspaceId}/workflows`
+const workflowRunsPath = (teamId: string, workspaceId: string) =>
+  `teams/${teamId}/workspaces/${workspaceId}/workflowRuns`
 const integrationsPath = (teamId: string) => `teams/${teamId}/integrations`
+/**
+ * Team-level "availability" gate for predefined presets (the Integrations
+ * surface). Workspace-agnostic: records WHICH presets the team offers,
+ * separately from per-workspace deployment (a `presetKey != null` workflow
+ * doc). The doc id is the presetKey. See `setTeamWorkflowAvailability`.
+ */
+const availableWorkflowsPath = (teamId: string) =>
+  `teams/${teamId}/availableWorkflows`
 
 /** Owner/admin gate (shared role logic — see authGuards.ts + shared/permissions). */
 const assertAdminRole = (teamId: string, uid: string): Promise<void> =>
@@ -200,8 +215,12 @@ const assertAdminRole = (teamId: string, uid: string): Promise<void> =>
  * caps in integrations.ts.
  */
 async function assertWorkflowSlotAvailable(teamId: string): Promise<void> {
+  // Workflows now live under each workspace; count them team-wide via a
+  // collection group on the denormalized `teamId` (COLLECTION_GROUP index:
+  // teamId,archivedAt).
   const snap = await db
-    .collection(workflowsPath(teamId))
+    .collectionGroup("workflows")
+    .where("teamId", "==", teamId)
     .where("archivedAt", "==", null)
     .count()
     .get()
@@ -347,14 +366,19 @@ async function enqueueWorkflowRun(params: {
   triggeredBy: Record<string, unknown>
   triggerEventId?: string | null
 }): Promise<string> {
-  const runRef = db.collection(workflowRunsPath(params.teamId)).doc()
   const wf = params.workflow
+  const runRef = db
+    .collection(workflowRunsPath(params.teamId, wf.workspaceId))
+    .doc()
   // Compose the single instruction the agent runs from instructions + the
   // optional supplementary prompt. Snapshotted so the run is self-contained.
   const prompt = wf.additionalPrompt
     ? `${wf.instructions}\n\n${wf.additionalPrompt}`
     : wf.instructions
   await runRef.set({
+    // Denormalized for the team-wide collectionGroup runs read (rules + the
+    // runs explorer recover the team from the doc, not the now-nested path).
+    teamId: params.teamId,
     workflowId: params.workflowId,
     agentId: wf.agentId,
     workspaceId: wf.workspaceId,
@@ -376,6 +400,7 @@ async function enqueueWorkflowRun(params: {
 // ─── CRUD callables (admin-gated) ─────────────────────────────────────────────
 
 function buildWorkflowDocData(
+  teamId: string,
   draft: WorkflowDraft,
   uid: string,
   nowMs: number,
@@ -383,6 +408,8 @@ function buildWorkflowDocData(
 ) {
   const enabled = draft.enabled ?? true
   return {
+    // Denormalized for collection-group reads (see WorkflowDoc.teamId).
+    teamId,
     // Provenance: a non-null presetKey marks a materialized catalog preset;
     // null is a hand-authored custom workflow.
     presetKey,
@@ -435,21 +462,29 @@ export const createTeamWorkflow = onCall<{ teamId: string; draft: unknown }>(
     await assertAgentRunnable(teamId, parsed.data.agentId)
     await assertWorkflowSlotAvailable(teamId)
 
-    const ref = db.collection(workflowsPath(teamId)).doc()
-    await ref.set(buildWorkflowDocData(parsed.data, auth.uid, Date.now()))
+    const ref = db
+      .collection(workflowsPath(teamId, parsed.data.workspaceId))
+      .doc()
+    await ref.set(
+      buildWorkflowDocData(teamId, parsed.data, auth.uid, Date.now())
+    )
     return { workflowId: ref.id }
   }
 )
 
 export const updateTeamWorkflow = onCall<{
   teamId: string
+  workspaceId: string
   workflowId: string
   patch: unknown
 }>({ ...CALLABLE_OPTS, enforceAppCheck: true }, async (request) => {
   const auth = requireVerifiedAuth(request.auth)
-  const { teamId, workflowId, patch } = request.data ?? {}
+  const { teamId, workspaceId, workflowId, patch } = request.data ?? {}
   if (typeof teamId !== "string" || !teamId) {
     throw new HttpsError("invalid-argument", "teamId is required.")
+  }
+  if (typeof workspaceId !== "string" || !workspaceId) {
+    throw new HttpsError("invalid-argument", "workspaceId is required.")
   }
   if (typeof workflowId !== "string" || !workflowId) {
     throw new HttpsError("invalid-argument", "workflowId is required.")
@@ -464,7 +499,7 @@ export const updateTeamWorkflow = onCall<{
     )
   }
 
-  const ref = db.doc(`${workflowsPath(teamId)}/${workflowId}`)
+  const ref = db.doc(`${workflowsPath(teamId, workspaceId)}/${workflowId}`)
   const snap = await ref.get()
   if (!snap.exists) {
     throw new HttpsError("not-found", "Workflow not found.")
@@ -485,13 +520,17 @@ export const updateTeamWorkflow = onCall<{
 
 export const setTeamWorkflowEnabled = onCall<{
   teamId: string
+  workspaceId: string
   workflowId: string
   enabled: boolean
 }>({ ...CALLABLE_OPTS, enforceAppCheck: true }, async (request) => {
   const auth = requireVerifiedAuth(request.auth)
-  const { teamId, workflowId, enabled } = request.data ?? {}
+  const { teamId, workspaceId, workflowId, enabled } = request.data ?? {}
   if (typeof teamId !== "string" || !teamId) {
     throw new HttpsError("invalid-argument", "teamId is required.")
+  }
+  if (typeof workspaceId !== "string" || !workspaceId) {
+    throw new HttpsError("invalid-argument", "workspaceId is required.")
   }
   if (typeof workflowId !== "string" || !workflowId) {
     throw new HttpsError("invalid-argument", "workflowId is required.")
@@ -501,7 +540,7 @@ export const setTeamWorkflowEnabled = onCall<{
   }
   await assertAdminRole(teamId, auth.uid)
 
-  const ref = db.doc(`${workflowsPath(teamId)}/${workflowId}`)
+  const ref = db.doc(`${workflowsPath(teamId, workspaceId)}/${workflowId}`)
   const snap = await ref.get()
   if (!snap.exists) {
     throw new HttpsError("not-found", "Workflow not found.")
@@ -517,20 +556,24 @@ export const setTeamWorkflowEnabled = onCall<{
 
 export const archiveTeamWorkflow = onCall<{
   teamId: string
+  workspaceId: string
   workflowId: string
   archived: boolean
 }>({ ...CALLABLE_OPTS, enforceAppCheck: true }, async (request) => {
   const auth = requireVerifiedAuth(request.auth)
-  const { teamId, workflowId, archived } = request.data ?? {}
+  const { teamId, workspaceId, workflowId, archived } = request.data ?? {}
   if (typeof teamId !== "string" || !teamId) {
     throw new HttpsError("invalid-argument", "teamId is required.")
+  }
+  if (typeof workspaceId !== "string" || !workspaceId) {
+    throw new HttpsError("invalid-argument", "workspaceId is required.")
   }
   if (typeof workflowId !== "string" || !workflowId) {
     throw new HttpsError("invalid-argument", "workflowId is required.")
   }
   await assertAdminRole(teamId, auth.uid)
 
-  const ref = db.doc(`${workflowsPath(teamId)}/${workflowId}`)
+  const ref = db.doc(`${workflowsPath(teamId, workspaceId)}/${workflowId}`)
   // Archiving also disables (and drops nextRunAt) so an archived workflow
   // never fires.
   await ref.update({
@@ -544,37 +587,47 @@ export const archiveTeamWorkflow = onCall<{
 
 export const deleteTeamWorkflow = onCall<{
   teamId: string
+  workspaceId: string
   workflowId: string
 }>({ ...CALLABLE_OPTS, enforceAppCheck: true }, async (request) => {
   const auth = requireVerifiedAuth(request.auth)
-  const { teamId, workflowId } = request.data ?? {}
+  const { teamId, workspaceId, workflowId } = request.data ?? {}
   if (typeof teamId !== "string" || !teamId) {
     throw new HttpsError("invalid-argument", "teamId is required.")
+  }
+  if (typeof workspaceId !== "string" || !workspaceId) {
+    throw new HttpsError("invalid-argument", "workspaceId is required.")
   }
   if (typeof workflowId !== "string" || !workflowId) {
     throw new HttpsError("invalid-argument", "workflowId is required.")
   }
   await assertAdminRole(teamId, auth.uid)
-  await db.doc(`${workflowsPath(teamId)}/${workflowId}`).delete()
+  await db.doc(`${workflowsPath(teamId, workspaceId)}/${workflowId}`).delete()
   return { ok: true }
 })
 
 /** Fire a workflow by hand (also the easiest way to test the engine). */
 export const runTeamWorkflowNow = onCall<{
   teamId: string
+  workspaceId: string
   workflowId: string
 }>({ ...CALLABLE_OPTS, enforceAppCheck: true }, async (request) => {
   const auth = requireVerifiedAuth(request.auth)
-  const { teamId, workflowId } = request.data ?? {}
+  const { teamId, workspaceId, workflowId } = request.data ?? {}
   if (typeof teamId !== "string" || !teamId) {
     throw new HttpsError("invalid-argument", "teamId is required.")
+  }
+  if (typeof workspaceId !== "string" || !workspaceId) {
+    throw new HttpsError("invalid-argument", "workspaceId is required.")
   }
   if (typeof workflowId !== "string" || !workflowId) {
     throw new HttpsError("invalid-argument", "workflowId is required.")
   }
   await assertAdminRole(teamId, auth.uid)
 
-  const snap = await db.doc(`${workflowsPath(teamId)}/${workflowId}`).get()
+  const snap = await db
+    .doc(`${workflowsPath(teamId, workspaceId)}/${workflowId}`)
+    .get()
   if (!snap.exists) {
     throw new HttpsError("not-found", "Workflow not found.")
   }
@@ -603,13 +656,17 @@ export const runTeamWorkflowNow = onCall<{
  */
 export const reviewTeamWorkflowRun = onCall<{
   teamId: string
+  workspaceId: string
   runId: string
   decision: "approve" | "reject"
 }>({ ...CALLABLE_OPTS, enforceAppCheck: true }, async (request) => {
   const auth = requireVerifiedAuth(request.auth)
-  const { teamId, runId, decision } = request.data ?? {}
+  const { teamId, workspaceId, runId, decision } = request.data ?? {}
   if (typeof teamId !== "string" || !teamId) {
     throw new HttpsError("invalid-argument", "teamId is required.")
+  }
+  if (typeof workspaceId !== "string" || !workspaceId) {
+    throw new HttpsError("invalid-argument", "workspaceId is required.")
   }
   if (typeof runId !== "string" || !runId) {
     throw new HttpsError("invalid-argument", "runId is required.")
@@ -622,7 +679,7 @@ export const reviewTeamWorkflowRun = onCall<{
   }
   await assertAdminRole(teamId, auth.uid)
 
-  const runRef = db.doc(`${workflowRunsPath(teamId)}/${runId}`)
+  const runRef = db.doc(`${workflowRunsPath(teamId, workspaceId)}/${runId}`)
   const runSnap = await runRef.get()
   if (!runSnap.exists) throw new HttpsError("not-found", "Run not found.")
   const run = runSnap.data() as {
@@ -650,7 +707,6 @@ export const reviewTeamWorkflowRun = onCall<{
   // Approve — replay each staged proposal through the SAME commit core the
   // live tools use, so an approved edit is identical to an immediate one.
   const agentId = run.agentId ?? ""
-  const workspaceId = run.workspaceId ?? ""
   // Built-ins have no `agents/{id}` doc — resolve their display name from the
   // static registry; custom agents read it from their Firestore doc.
   let agentName = "Agent"
@@ -745,11 +801,85 @@ export const enableTeamWorkflowPreset = onCall<{
   }
   await assertWorkflowSlotAvailable(teamId)
 
-  const ref = db.collection(workflowsPath(teamId)).doc()
+  const ref = db.collection(workflowsPath(teamId, workspaceId)).doc()
   await ref.set(
-    buildWorkflowDocData(parsed.data, auth.uid, Date.now(), preset.key)
+    buildWorkflowDocData(teamId, parsed.data, auth.uid, Date.now(), preset.key)
   )
   return { workflowId: ref.id }
+})
+
+/**
+ * Make a predefined preset available to the team (the Integrations toggle), or
+ * remove it. Availability is the team tier of the two-tier model; per-workspace
+ * deployment (enableTeamWorkflowPreset) is the workspace tier.
+ *
+ *   available=true  → upsert teams/{teamId}/availableWorkflows/{presetKey}
+ *   available=false → delete it AND archive every live deployment of that
+ *                     preset across the team, so an unavailable preset can't
+ *                     keep firing in any workspace.
+ *
+ * NOTE: deployment is NOT gated on availability server-side — the client only
+ * surfaces available presets to deploy, and treats a preset with any live
+ * deployment as implicitly available (the grandfather union in
+ * teamWorkflowsStore), so no backfill of this collection is needed.
+ */
+export const setTeamWorkflowAvailability = onCall<{
+  teamId: string
+  presetKey: string
+  available: boolean
+}>({ ...CALLABLE_OPTS, enforceAppCheck: true }, async (request) => {
+  const auth = requireVerifiedAuth(request.auth)
+  const { teamId, presetKey, available } = request.data ?? {}
+  if (typeof teamId !== "string" || !teamId) {
+    throw new HttpsError("invalid-argument", "teamId is required.")
+  }
+  if (typeof presetKey !== "string" || !presetKey) {
+    throw new HttpsError("invalid-argument", "presetKey is required.")
+  }
+  if (typeof available !== "boolean") {
+    throw new HttpsError("invalid-argument", "available must be a boolean.")
+  }
+  if (!getWorkflowPreset(presetKey)) {
+    throw new HttpsError("invalid-argument", "Unknown preset.")
+  }
+  await assertAdminRole(teamId, auth.uid)
+
+  const ref = db.doc(`${availableWorkflowsPath(teamId)}/${presetKey}`)
+  if (available) {
+    await ref.set({
+      presetKey,
+      addedByUid: auth.uid,
+      addedAt: FieldValue.serverTimestamp(),
+    })
+    return { ok: true, archived: 0 }
+  }
+
+  // Removing availability also archives every live deployment of this preset
+  // across the team (all workspaces) so the scheduler + event triggers stop
+  // firing it. Workflows live under each workspace now, so query team-wide via
+  // the collection group on the denormalized `teamId`; presetKey + archivedAt
+  // are filtered in code to avoid extra composite indexes (deployments per team
+  // are bounded by the slot cap). Mirrors archiveTeamWorkflow's write.
+  const deployments = await db
+    .collectionGroup("workflows")
+    .where("teamId", "==", teamId)
+    .get()
+  const batch = db.batch()
+  batch.delete(ref)
+  let archived = 0
+  for (const doc of deployments.docs) {
+    const data = doc.data()
+    if (data.presetKey !== presetKey || data.archivedAt) continue
+    batch.update(doc.ref, {
+      archivedAt: FieldValue.serverTimestamp(),
+      enabled: false,
+      updatedAt: FieldValue.serverTimestamp(),
+      nextRunAt: FieldValue.delete(),
+    })
+    archived += 1
+  }
+  await batch.commit()
+  return { ok: true, archived }
 })
 
 // ─── Scheduled dispatcher (tick) ──────────────────────────────────────────────
@@ -783,8 +913,8 @@ export const dispatchScheduledWorkflows = onSchedule(
     // touching many workflows from one team reads the config at most once.
     const gateByTeam = new Map<string, boolean>()
     for (const doc of due.docs) {
-      const teamId = doc.ref.parent.parent?.id
       const wf = doc.data() as WorkflowDoc
+      const teamId = wf.teamId
       if (!teamId) continue
       if (wf.enabled === false || wf.archivedAt) continue
       if (wf.trigger?.type !== "schedule") continue
@@ -862,10 +992,9 @@ function makeWorkflowTrigger(scope: "code" | "write") {
         if (member.exists && member.data()?.kind === "agent") return
       }
 
-      // Single-equality query (auto-indexed); filter the rest in code.
+      // Workflows for this workspace live in its own subcollection now.
       const candidates = await db
-        .collection(workflowsPath(teamId))
-        .where("workspaceId", "==", workspaceId)
+        .collection(workflowsPath(teamId, workspaceId))
         .get()
       // Resolved lazily once per event (only if a custom candidate appears).
       let customGate: boolean | null = null
@@ -933,7 +1062,7 @@ export const runWorkflowsOnWriteWrite = makeWorkflowTrigger("write")
  */
 export const executeWorkflowRun = onDocumentCreated(
   {
-    document: "teams/{teamId}/workflowRuns/{runId}",
+    document: "teams/{teamId}/workspaces/{workspaceId}/workflowRuns/{runId}",
     ...GENKIT_OPTS,
     secrets: [geminiApiKey, anthropicApiKey, openaiApiKey],
   },
@@ -944,11 +1073,14 @@ export const executeWorkflowRun = onDocumentCreated(
     if (run.status !== "queued") return // only fresh runs
 
     const teamId = event.params.teamId as string
+    const workspaceId = event.params.workspaceId as string
 
     await runIdempotentEvent(
       { key: makeEventIdempotencyKey("executeWorkflowRun", event.id) },
       async () => {
-        const workflowRef = db.doc(`${workflowsPath(teamId)}/${run.workflowId}`)
+        const workflowRef = db.doc(
+          `${workflowsPath(teamId, workspaceId)}/${run.workflowId}`
+        )
         await snap.ref.update({
           status: "running" satisfies RunStatus,
           startedAt: FieldValue.serverTimestamp(),

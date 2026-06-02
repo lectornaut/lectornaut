@@ -305,21 +305,24 @@ service cloud.firestore {
         allow write: if false;
       }
 
-      // Workflows (team automations) — their own collection: materialized,
-      // opt-in, with a trigger/run/schedule runtime (workflows.ts). Member read
-      // so the picker/automations UI can render; management is admin-gated
-      // server-side. Writes are callable-only (admin SDK).
-      match /workflows/{workflowId} {
+      // Workflows (team automations) now live UNDER each workspace
+      // (teams/{teamId}/workspaces/{workspaceId}/workflows) and are read
+      // team-wide via a collectionGroup on the denormalized teamId — see the
+      // `/{path=**}/workflows` rule below. Writes stay callable-only (admin SDK).
+
+      // Which predefined presets the team has made available (the Integrations
+      // tier of the two-tier model). Doc id is the presetKey. Member read so
+      // every workspace's predefined section can render; writes are
+      // callable-only (admin-gated — setTeamWorkflowAvailability).
+      match /availableWorkflows/{presetKey} {
         allow read: if isTeamMember(teamId);
         allow write: if false;
       }
 
-      // Workflow run history + queue. Admin-only read; written only by the
-      // dispatcher, event triggers, and worker via the admin SDK.
-      match /workflowRuns/{runId} {
-        allow read: if isTeamAdmin(teamId);
-        allow write: if false;
-      }
+      // Workflow run history now lives UNDER each workspace
+      // (teams/{teamId}/workspaces/{workspaceId}/workflowRuns) and is read
+      // team-wide via a collectionGroup — see the `/{path=**}/workflowRuns`
+      // rule below. Writes stay callable-only (admin SDK).
 
       // Monthly LLM token-usage counters. Admin-only read (usage/billing
       // views); written only by the server-side metering middleware.
@@ -423,6 +426,22 @@ service cloud.firestore {
     // allow read even when the document lives under another memberships path.
     match /{path=**}/memberships/{membershipId} {
       allow read: if isOwnMembershipDoc();
+      allow write: if false;
+    }
+
+    // Global rule for collectionGroup("workflows"). Workflows live under each
+    // workspace; the client reads a team's workflows team-wide via the
+    // denormalized teamId. Member read; writes are callable-only (admin SDK).
+    match /{path=**}/workflows/{workflowId} {
+      allow read: if isTeamMember(resource.data.teamId);
+      allow write: if false;
+    }
+
+    // Global rule for collectionGroup("workflowRuns"). Runs live under each
+    // workspace; admins read the team's run history team-wide via the
+    // denormalized teamId. Writes are server-only (admin SDK).
+    match /{path=**}/workflowRuns/{runId} {
+      allow read: if isTeamAdmin(resource.data.teamId);
       allow write: if false;
     }
 

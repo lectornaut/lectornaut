@@ -544,7 +544,8 @@
         "addSuccess": "Agent added.",
         "addError": "Couldn't add the agent.",
         "removeSuccess": "Agent removed.",
-        "removeError": "Couldn't remove the agent."
+        "removeError": "Couldn't remove the agent.",
+        "empty": "No pre-built agents available."
       },
       "tools": {
         "label": "Tools",
@@ -552,16 +553,17 @@
         "addSuccess": "Tool added.",
         "addError": "Couldn't add the tool.",
         "removeSuccess": "Tool removed.",
-        "removeError": "Couldn't remove the tool."
+        "removeError": "Couldn't remove the tool.",
+        "empty": "No pre-built tools available."
       },
       "workflows": {
         "label": "Workflows",
-        "description": "Add or remove pre-built workflows. Added workflows appear under Workflows, where you can configure and enable them.",
-        "noWorkspace": "Select a workspace before adding a workflow.",
+        "description": "Add or remove pre-built workflows. Added workflows appear under Workflows in every workspace, where you can configure and enable them.",
         "addSuccess": "Workflow added.",
         "addError": "Couldn't add the workflow.",
         "removeSuccess": "Workflow removed.",
-        "removeError": "Couldn't remove the workflow."
+        "removeError": "Couldn't remove the workflow.",
+        "empty": "No pre-built workflows available."
       }
     },
     "titles": {
@@ -587,7 +589,7 @@
       "sessions": "Sessions",
       "data": "Data",
       "storage": "Storage",
-      "integrations": "Integrations",
+      "integrations": "Features",
       "logs": "Logs",
       "administration": "Administration",
       "billing": "Billing",
@@ -612,7 +614,7 @@
       "sessions": "Admin view of every bot chat session in the team's selected workspace. Filter, audit, and bulk-manage across all members.",
       "data": "Team-wide chat data controls — archive or permanently delete every member's bot chats in this workspace.",
       "storage": "Bulk-wipe workspace files — delete every code or write document at once.",
-      "integrations": "Connect tools and services.",
+      "integrations": "Add or remove pre-built agents, tools, and workflows for your team.",
       "logs": "Activity and system history.",
       "billing": "Plans, invoices, and billing status.",
       "plans": "Compare plans and update subscription."
@@ -1397,7 +1399,8 @@
       "runQueued": "Run queued.",
       "runError": "Failed to start the run.",
       "catalogTitle": "Predefined workflows",
-      "predefinedDescription": "Ready-made automations you can switch on. Each runs as the Default agent and proposes edits to your docs for review.",
+      "predefinedDescription": "Ready-made automations you can switch on for this workspace. Each runs as the Default agent and proposes edits to your docs for review.",
+      "noAvailablePresets": "No predefined workflows are available yet. An admin can add some from Settings → Integrations.",
       "predefinedBadge": "Predefined",
       "modeAutomatic": "Auto-applies",
       "modeReview": "Needs review",
@@ -1563,7 +1566,8 @@
         "customTools": {
           "label": "Custom tools",
           "description": "Lets admins ship custom model-callable tools (webhooks, prompt templates, canned searches)."
-        }
+        },
+        "empty": "No built-in tools installed. Add them from the Integrations tab."
       },
       "limits": {
         "label": "Display limits",

@@ -1,4 +1,6 @@
 <script lang="ts" setup>
+import SettingsRestricted from "@/components/app/settings/SettingsRestricted.vue"
+import { useCanViewTeamSettings } from "@/composables/useCanViewTeamSettings"
 import {
   cancelSubscription as cancelSubscriptionFn,
   createBillingPortalSession as createBillingPortalSessionFn,
@@ -22,6 +24,7 @@ import { storeToRefs } from "pinia"
 import { toast } from "vue-sonner"
 
 const { t } = useI18n()
+const { canViewTeamSettings } = useCanViewTeamSettings()
 const { canManageBilling, currentTeam, teamMembers } = useTeamActions()
 const billingStore = useBillingStore()
 void billingStore.ensureCatalogLoaded()
@@ -396,7 +399,11 @@ const handleSubscriptionAction = async (): Promise<void> => {
 }
 </script>
 <template>
-  <div class="p-6">
+  <!-- Two-tier gate, matching the other admin pages: guests fail
+       `canViewTeamSettings` and get the shared restriction wall; members who
+       can view team settings but can't manage billing fall through to the
+       inline admin Empty below. -->
+  <div v-if="canViewTeamSettings" class="p-6">
     <FieldGroup>
       <FieldSet>
         <Field v-if="!canManageBilling" orientation="horizontal">
@@ -575,6 +582,7 @@ const handleSubscriptionAction = async (): Promise<void> => {
       </FieldSet>
     </FieldGroup>
   </div>
+  <SettingsRestricted v-else />
 
   <AlertDialog v-model:open="isCancelSubscriptionDialogOpen">
     <AlertDialogContent>

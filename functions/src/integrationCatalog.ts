@@ -12,7 +12,7 @@
  * treat it identically. Nothing here is per-team — it's the static, shippable
  * "what can be installed" list. Per-team install/enable STATE lives in the
  * per-nature stores: agent + tool docs in `teams/{teamId}/integrations`,
- * workflow instances in `teams/{teamId}/workflows`.
+ * workflow instances in `teams/{teamId}/workspaces/{workspaceId}/workflows`.
  *
  * `spec` semantics by type (mirrors `integrationSchema` in the client):
  *   - agent  → carries the full persona (`agentSpec`); built-in agent docs are

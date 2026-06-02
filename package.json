@@ -129,7 +129,7 @@
     "katex": "^0.17.0",
     "lib0": "^0.2.117",
     "lucide-vue-next": "^1.0.0",
-    "markstream-vue": "1.0.1-beta.2",
+    "markstream-vue": "1.0.1-beta.3",
     "mermaid": "^11.15.0",
     "mime": "^4.1.0",
     "mitt": "^3.0.1",
@@ -211,7 +211,7 @@
     "vite-plugin-sitemap": "^0.8.2",
     "vite-plugin-vue-layouts": "^0.11.0",
     "vitest": "^4.1.8",
-    "vue-eslint-parser": "^10.4.0",
+    "vue-eslint-parser": "^10.4.1",
     "vue-tsc": "3.3.3",
     "workbox-build": "^7.4.1"
   },

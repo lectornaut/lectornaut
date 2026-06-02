@@ -5,10 +5,11 @@
  * Provides consistent patterns for refs, batch processing, and common operations.
  *
  * As of PR 4, all single-doc ref getters and their corresponding collection
- * getters are wired through Zod converters. Every snapshot read via VueFire
- * flows through `parseOrWarn(schema, data, …)` automatically — store and
- * composable code needs no changes because the returned `DocumentReference<T>`
- * generic is identical to the previous hand-cast version.
+ * getters are wired through Zod converters. Every snapshot read via the
+ * TanStack read composables (`useDocumentQuery` / `useCollectionQuery`) flows
+ * through `parseOrWarn(schema, data, …)` automatically — store and composable
+ * code needs no changes because the returned `DocumentReference<T>` generic is
+ * identical to the previous hand-cast version.
  */
 
 import { firestore, storage } from "@/modules/firebase"

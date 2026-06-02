@@ -1,12 +1,15 @@
 /**
  * Team Workflows store — the team's automations (server-run agents).
  *
- * Storage model:
- *   - Workflows:   teams/{teamId}/workflows/{id} — their own collection
- *     (materialized, opt-in, with a trigger/run/schedule runtime). Provenance is
- *     `presetKey` (null = custom).
- *   - Run history: teams/{teamId}/workflowRuns/{runId}
- *   - Read:  live Firestore subscription. Writes are callable-only
+ * Storage model (two-tier — team availability → per-workspace deployment):
+ *   - Availability: teams/{teamId}/availableWorkflows/{presetKey} — which
+ *     predefined presets the team offers (the Integrations tier).
+ *   - Workflows:   teams/{teamId}/workspaces/{workspaceId}/workflows/{id} — the
+ *     per-workspace deployments (materialized, opt-in; trigger/run/schedule
+ *     runtime). Provenance is `presetKey` (null = custom).
+ *   - Run history: teams/{teamId}/workspaces/{workspaceId}/workflowRuns/{runId}
+ *   - Read:  workflows + runs are read team-wide via a collectionGroup on the
+ *     denormalized `teamId` (live subscription). Writes are callable-only
  *            (admin-gated server-side).
  *
  * Workflows are one of the three integration building blocks, but they are NOT
@@ -25,6 +28,7 @@ import {
   enableTeamWorkflowPreset as enableTeamWorkflowPresetFn,
   reviewTeamWorkflowRun as reviewTeamWorkflowRunFn,
   runTeamWorkflowNow as runTeamWorkflowNowFn,
+  setTeamWorkflowAvailability as setTeamWorkflowAvailabilityFn,
   setTeamWorkflowEnabled as setTeamWorkflowEnabledFn,
   updateTeamWorkflow as updateTeamWorkflowFn,
   type CreateWorkflowDraft,
@@ -40,9 +44,11 @@ import {
 } from "@/utils/firebase/firebase-query"
 import {
   collection,
+  collectionGroup,
   limit,
   orderBy,
   query,
+  where,
   type FirestoreDataConverter,
 } from "firebase/firestore"
 import { defineStore, storeToRefs } from "pinia"
@@ -53,7 +59,8 @@ const RECENT_RUNS_LIMIT = 50
 
 // Workflow/run docs are written only server-side (admin SDK) and validated
 // there, so the client converter trusts the shape and just injects the id +
-// teamId recovered from the doc path. `avatarSeed` is the one field that needs
+// teamId read from the doc (denormalized — workflows are nested under a
+// workspace now, so the path no longer yields the team). `avatarSeed` needs
 // a runtime fallback: it shipped after the first workflows, so docs written
 // before it exists have no value, and the row/editor call `.trim()` on it.
 // Normalize here (mirroring teamAgentsStore) so `IWorkflow.avatarSeed` is
@@ -64,8 +71,8 @@ const workflowConverter: FirestoreDataConverter<IWorkflow> = {
     const data = snapshot.data()
     return {
       id: snapshot.id,
-      teamId: snapshot.ref.parent.parent?.id ?? "",
       ...data,
+      teamId: typeof data.teamId === "string" ? data.teamId : "",
       // `presetKey` (null = custom) is the workflow's provenance field.
       presetKey: typeof data.presetKey === "string" ? data.presetKey : null,
       avatarSeed: typeof data.avatarSeed === "string" ? data.avatarSeed : "",
@@ -79,34 +86,76 @@ const workflowRunConverter: FirestoreDataConverter<IWorkflowRun> = {
     ({ id: snapshot.id, ...snapshot.data() }) as IWorkflowRun,
 }
 
+/**
+ * Team availability docs (`teams/{teamId}/availableWorkflows/{presetKey}`) —
+ * the team tier of the two-tier model. The doc id IS the presetKey; the body
+ * (addedByUid/addedAt) is provenance we don't need on the client.
+ */
+interface AvailableWorkflow {
+  presetKey: string
+}
+const availableWorkflowConverter: FirestoreDataConverter<AvailableWorkflow> = {
+  toFirestore: () => ({}),
+  fromFirestore: (snapshot) => ({ presetKey: snapshot.id }),
+}
+
 export const useTeamWorkflowsStore = defineStore("teamWorkflows", () => {
   const authStore = useAuthStore()
-  const { currentTeamId } = storeToRefs(authStore)
+  const { currentTeamId, currentWorkspaceId } = storeToRefs(authStore)
 
   const isSaving = ref(false)
 
+  // Workflows live under each workspace now; read the team's whole set via a
+  // collectionGroup on the denormalized `teamId`, so the team-wide list,
+  // grandfather union, and runs explorer keep working unchanged. The
+  // per-workspace surfaces filter this via the `ws*` computeds below.
   const workflowsQuery = useCollectionQuery<IWorkflow>(
     (): CollectionQuerySource | null => {
       const teamId = currentTeamId.value
       if (!teamId) return null
-      const path = `teams/${teamId}/workflows`
       return {
-        query: collection(firestore, path).withConverter(workflowConverter),
-        path,
+        query: query(
+          collectionGroup(firestore, "workflows").withConverter(
+            workflowConverter
+          ),
+          where("teamId", "==", teamId)
+        ),
+        path: `collectionGroup:workflows:${teamId}`,
       }
     }
   )
 
+  // Runs live under each workspace now; read the team's recent runs team-wide
+  // via a collectionGroup on the denormalized `teamId` (admin-only per rules),
+  // so the runs explorer + history views are unchanged by the relocation.
   const runsQuery = useCollectionQuery<IWorkflowRun>(
     (): CollectionQuerySource | null => {
       const teamId = currentTeamId.value
       if (!teamId) return null
-      const path = `teams/${teamId}/workflowRuns`
       return {
         query: query(
-          collection(firestore, path).withConverter(workflowRunConverter),
+          collectionGroup(firestore, "workflowRuns").withConverter(
+            workflowRunConverter
+          ),
+          where("teamId", "==", teamId),
           orderBy("queuedAt", "desc"),
           limit(RECENT_RUNS_LIMIT)
+        ),
+        path: `collectionGroup:workflowRuns:${teamId}`,
+      }
+    }
+  )
+
+  // Team availability (Integrations tier): which presets the team offers,
+  // independent of any per-workspace deployment.
+  const availableQuery = useCollectionQuery<AvailableWorkflow>(
+    (): CollectionQuerySource | null => {
+      const teamId = currentTeamId.value
+      if (!teamId) return null
+      const path = `teams/${teamId}/availableWorkflows`
+      return {
+        query: collection(firestore, path).withConverter(
+          availableWorkflowConverter
         ),
         path,
       }
@@ -130,15 +179,45 @@ export const useTeamWorkflowsStore = defineStore("teamWorkflows", () => {
     recentRuns.value.filter((r) => r.status === "awaiting_review")
   )
 
-  /** presetKeys already materialized as (active) workflows — drives catalog toggles. */
-  const enabledPresetKeys = computed<Set<string>>(
+  // ── Workspace-scoped views (the per-workspace surfaces) ──────────────────
+  // A workflow is pinned to one workspace by its immutable `workspaceId`. The
+  // Settings/Workflows surfaces show only the CURRENT workspace's deployments;
+  // the team-wide `activeWorkflows`/`recentRuns` above still back the (Phase 1)
+  // team-wide Runs explorer until runs relocate under the workspace.
+  const inCurrentWorkspace = (w: IWorkflow): boolean =>
+    w.workspaceId === currentWorkspaceId.value
+  const wsActiveWorkflows = computed<IWorkflow[]>(() =>
+    activeWorkflows.value.filter(inCurrentWorkspace)
+  )
+  const wsArchivedWorkflows = computed<IWorkflow[]>(() =>
+    archivedWorkflows.value.filter(inCurrentWorkspace)
+  )
+  /** presetKeys deployed (active) in the CURRENT workspace — drives per-workspace toggles. */
+  const wsDeployedPresetKeys = computed<Set<string>>(
     () =>
       new Set(
-        activeWorkflows.value
+        wsActiveWorkflows.value
           .map((w) => w.presetKey)
           .filter((k): k is string => !!k)
       )
   )
+
+  /**
+   * presetKeys the team has made available (Integrations tier): the union of
+   * the explicit availability docs and any preset with a live deployment in ANY
+   * workspace. The second term means a deployed preset always counts as
+   * available — covering presets enabled before the availability collection
+   * existed — so no availability backfill is ever required.
+   */
+  const availablePresetKeys = computed<Set<string>>(() => {
+    const keys = new Set<string>(
+      (availableQuery.data.value ?? []).map((d) => d.presetKey)
+    )
+    for (const w of activeWorkflows.value) {
+      if (w.presetKey) keys.add(w.presetKey)
+    }
+    return keys
+  })
 
   const isLoading = computed<boolean>(() => workflowsQuery.isLoading.value)
   const loadError = computed<string | null>(
@@ -160,6 +239,14 @@ export const useTeamWorkflowsStore = defineStore("teamWorkflows", () => {
     return teamId
   }
 
+  // Workflows are nested under their workspace, so the mutation callables need
+  // the workspaceId — recover it from the (team-wide) loaded doc by id.
+  const requireWorkflowWorkspaceId = (workflowId: string): string => {
+    const workspaceId = getById(workflowId)?.workspaceId
+    if (!workspaceId) throw new Error("Workflow not found.")
+    return workspaceId
+  }
+
   const create = async (draft: CreateWorkflowDraft): Promise<string> => {
     const teamId = requireTeam()
     if (isSaving.value)
@@ -178,11 +265,12 @@ export const useTeamWorkflowsStore = defineStore("teamWorkflows", () => {
     patch: UpdateWorkflowPatch
   ): Promise<void> => {
     const teamId = requireTeam()
+    const workspaceId = requireWorkflowWorkspaceId(workflowId)
     if (isSaving.value)
       throw new Error("A workflow save is already in progress.")
     isSaving.value = true
     try {
-      await updateTeamWorkflowFn({ teamId, workflowId, patch })
+      await updateTeamWorkflowFn({ teamId, workspaceId, workflowId, patch })
     } finally {
       isSaving.value = false
     }
@@ -193,7 +281,8 @@ export const useTeamWorkflowsStore = defineStore("teamWorkflows", () => {
     enabled: boolean
   ): Promise<void> => {
     const teamId = requireTeam()
-    await setTeamWorkflowEnabledFn({ teamId, workflowId, enabled })
+    const workspaceId = requireWorkflowWorkspaceId(workflowId)
+    await setTeamWorkflowEnabledFn({ teamId, workspaceId, workflowId, enabled })
   }
 
   const archive = async (
@@ -201,17 +290,24 @@ export const useTeamWorkflowsStore = defineStore("teamWorkflows", () => {
     archived: boolean
   ): Promise<void> => {
     const teamId = requireTeam()
-    await archiveTeamWorkflowFn({ teamId, workflowId, archived })
+    const workspaceId = requireWorkflowWorkspaceId(workflowId)
+    await archiveTeamWorkflowFn({ teamId, workspaceId, workflowId, archived })
   }
 
   const remove = async (workflowId: string): Promise<void> => {
     const teamId = requireTeam()
-    await deleteTeamWorkflowFn({ teamId, workflowId })
+    const workspaceId = requireWorkflowWorkspaceId(workflowId)
+    await deleteTeamWorkflowFn({ teamId, workspaceId, workflowId })
   }
 
   const runNow = async (workflowId: string): Promise<string> => {
     const teamId = requireTeam()
-    const { data } = await runTeamWorkflowNowFn({ teamId, workflowId })
+    const workspaceId = requireWorkflowWorkspaceId(workflowId)
+    const { data } = await runTeamWorkflowNowFn({
+      teamId,
+      workspaceId,
+      workflowId,
+    })
     return data.runId
   }
 
@@ -221,7 +317,16 @@ export const useTeamWorkflowsStore = defineStore("teamWorkflows", () => {
     decision: WorkflowReviewDecision
   ): Promise<string> => {
     const teamId = requireTeam()
-    const { data } = await reviewTeamWorkflowRunFn({ teamId, runId, decision })
+    const workspaceId = recentRuns.value.find(
+      (r) => r.id === runId
+    )?.workspaceId
+    if (!workspaceId) throw new Error("Run not found.")
+    const { data } = await reviewTeamWorkflowRunFn({
+      teamId,
+      workspaceId,
+      runId,
+      decision,
+    })
     return data.status
   }
 
@@ -247,45 +352,30 @@ export const useTeamWorkflowsStore = defineStore("teamWorkflows", () => {
   }
 
   /**
-   * Install a preset from the Integrations page. Restores a previously
-   * soft-removed (archived) instance in place — preserving run history and
-   * avoiding a duplicate doc sharing one `presetKey` — otherwise
-   * materializes a fresh instance. Idempotent when already active.
+   * Make a preset available to the team, or remove it (the Integrations
+   * toggle). Team-tier availability — workspace-agnostic. Removing also
+   * archives every live deployment of the preset across the team (handled
+   * server-side). Per-workspace deployment is `enablePreset` (above), called
+   * from a workspace's Workflows settings.
    */
-  const addPreset = async (
+  const setAvailability = async (
     presetKey: string,
-    binding: { workspaceId: string; agentId: string }
+    available: boolean
   ): Promise<void> => {
-    if (activeWorkflows.value.some((w) => w.presetKey === presetKey)) return
-    const archived = archivedWorkflows.value.find(
-      (w) => w.presetKey === presetKey
-    )
-    if (archived) {
-      await archive(archived.id, false)
-      if (!archived.enabled) await setEnabled(archived.id, true)
-      return
-    }
-    await enablePreset(presetKey, binding)
-  }
-
-  /**
-   * Soft-remove a preset from the Integrations page — archive its
-   * materialized doc so it leaves the active catalog but keeps run history
-   * (re-adding restores it). Idempotent when not installed.
-   */
-  const removePreset = async (presetKey: string): Promise<void> => {
-    const target = activeWorkflows.value.find((w) => w.presetKey === presetKey)
-    if (!target) return
-    await archive(target.id, true)
+    const teamId = requireTeam()
+    await setTeamWorkflowAvailabilityFn({ teamId, presetKey, available })
   }
 
   return {
     workflows,
     activeWorkflows,
     archivedWorkflows,
+    wsActiveWorkflows,
+    wsArchivedWorkflows,
+    wsDeployedPresetKeys,
+    availablePresetKeys,
     recentRuns,
     awaitingReviewRuns,
-    enabledPresetKeys,
     isLoading,
     isSaving,
     loadError,
@@ -299,7 +389,6 @@ export const useTeamWorkflowsStore = defineStore("teamWorkflows", () => {
     runNow,
     reviewRun,
     enablePreset,
-    addPreset,
-    removePreset,
+    setAvailability,
   }
 })

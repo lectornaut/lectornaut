@@ -14,7 +14,8 @@
  *     `sourceKey` (`_researcher`, `rollDice`); custom = Firestore auto-id.
  *
  * Workflows are the third building block but are NOT in this collection — they
- * live in `teams/{teamId}/workflows` with their own store (`teamWorkflowsStore`).
+ * live per-workspace in `teams/{teamId}/workspaces/{workspaceId}/workflows` with
+ * their own store (`teamWorkflowsStore`).
  * The unified Integrations page composes both via `useIntegrationsRegistry`.
  * This store covers agents + tools only.
  */

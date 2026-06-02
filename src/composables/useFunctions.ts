@@ -1661,25 +1661,30 @@ export interface CreateTeamWorkflowResponse {
 }
 export interface UpdateTeamWorkflowRequest {
   teamId: string
+  workspaceId: string
   workflowId: string
   patch: UpdateWorkflowPatch
 }
 export interface SetTeamWorkflowEnabledRequest {
   teamId: string
+  workspaceId: string
   workflowId: string
   enabled: boolean
 }
 export interface ArchiveTeamWorkflowRequest {
   teamId: string
+  workspaceId: string
   workflowId: string
   archived: boolean
 }
 export interface DeleteTeamWorkflowRequest {
   teamId: string
+  workspaceId: string
   workflowId: string
 }
 export interface RunTeamWorkflowNowRequest {
   teamId: string
+  workspaceId: string
   workflowId: string
 }
 export interface RunTeamWorkflowNowResponse {
@@ -1720,6 +1725,7 @@ export const runTeamWorkflowNow = createTypedCallable<
 export type WorkflowReviewDecision = "approve" | "reject"
 export interface ReviewTeamWorkflowRunRequest {
   teamId: string
+  workspaceId: string
   runId: string
   decision: WorkflowReviewDecision
 }
@@ -1849,6 +1855,26 @@ export const enableTeamWorkflowPreset = createTypedCallable<
   EnableTeamWorkflowPresetRequest,
   EnableTeamWorkflowPresetResponse
 >("enableTeamWorkflowPreset")
+
+/**
+ * Make a predefined preset available to the team (Integrations toggle), or
+ * remove it. Availability is workspace-agnostic — the team tier of the
+ * two-tier model. Removing also archives every live deployment of that preset
+ * across the team (the `archived` count is how many were archived).
+ */
+export interface SetTeamWorkflowAvailabilityRequest {
+  teamId: string
+  presetKey: string
+  available: boolean
+}
+export interface SetTeamWorkflowAvailabilityResponse {
+  ok: boolean
+  archived: number
+}
+export const setTeamWorkflowAvailability = createTypedCallable<
+  SetTeamWorkflowAvailabilityRequest,
+  SetTeamWorkflowAvailabilityResponse
+>("setTeamWorkflowAvailability")
 
 // =============================================================================
 // Node Summarize Request/Response Types — structured output demo.

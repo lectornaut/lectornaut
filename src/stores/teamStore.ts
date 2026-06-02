@@ -397,6 +397,12 @@ export const useTeamStore = defineStore("teams", () => {
     }
 
     const teamKey = teamDocKey(teamId)
+    // `patchTeam` also rewrites the denormalized `team` snapshot on the
+    // memberships LIST cache (via updateTeamInMemberships). Hold that key too,
+    // otherwise the memberships onSnapshot listener can deliver a
+    // pre-server-apply snapshot that clobbers the optimistic patch mid-update
+    // (the team name/photo would flicker back in the switcher/sidebar).
+    const membershipsKey = membershipStore.membershipsCacheKey()
     const previousTeamDoc = queryClient.getQueryData<ITeam>(teamKey)
     const previousMemberships = cloneState(memberships.value)
     let resolvedPhotoURL: string | null | undefined =
@@ -414,7 +420,7 @@ export const useTeamStore = defineStore("teams", () => {
     addPending(pendingTeamIds, teamId)
     try {
       await runTeamMutation(
-        [teamKey],
+        membershipsKey ? [teamKey, membershipsKey] : [teamKey],
         () => patchTeam(teamUpdates),
         () => {
           queryClient.setQueryData(teamKey, previousTeamDoc)
@@ -468,6 +474,10 @@ export const useTeamStore = defineStore("teams", () => {
     }
 
     const teamKey = teamDocKey(teamId)
+    // delete's optimistic apply removes this team's rows from the memberships
+    // LIST cache (removeMembershipsForTeam); hold that key alongside the team
+    // doc so the listener can't re-add them before the server delete lands.
+    const membershipsKey = membershipStore.membershipsCacheKey()
     const previousMemberships = cloneState(memberships.value)
     const previousTeamDoc = queryClient.getQueryData<ITeam>(teamKey)
     const previousCurrentTeamId = currentTeamId.value
@@ -476,7 +486,7 @@ export const useTeamStore = defineStore("teams", () => {
     addPending(pendingTeamIds, teamId)
     try {
       await runTeamMutation(
-        [teamKey],
+        membershipsKey ? [teamKey, membershipsKey] : [teamKey],
         () => {
           membershipStore.removeMembershipsForTeam(teamId)
           if (isCurrent) {

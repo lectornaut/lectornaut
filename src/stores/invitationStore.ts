@@ -617,8 +617,8 @@ export function useTeamInvitations(
 
   return computed(() => {
     if (isCurrentTeam.value) {
-      return store.teamInvitations || []
+      return store.teamInvitations ?? []
     }
-    return localInvitations.value || []
+    return localInvitations.value ?? []
   })
 }

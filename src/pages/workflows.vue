@@ -34,8 +34,8 @@ const { t } = useI18n()
 useHead({ title: "Workflows" })
 
 const {
-  activeWorkflows,
-  archivedWorkflows,
+  wsActiveWorkflows,
+  wsArchivedWorkflows,
   canManage,
   setEnabled,
   archive,
@@ -52,14 +52,15 @@ const { customWorkflowsEnabled } = storeToRefs(useTeamAgentsStore())
 const filter = useWorkflowFilter()
 
 const activeGroups = computed(() =>
-  filter.groupWorkflows(filter.filter(activeWorkflows.value))
+  filter.groupWorkflows(filter.filter(wsActiveWorkflows.value))
 )
 const archivedFiltered = computed(() =>
-  filter.sortWorkflows(filter.filter(archivedWorkflows.value))
+  filter.sortWorkflows(filter.filter(wsArchivedWorkflows.value))
 )
 
 const hasAnyRaw = computed(
-  () => activeWorkflows.value.length > 0 || archivedWorkflows.value.length > 0
+  () =>
+    wsActiveWorkflows.value.length > 0 || wsArchivedWorkflows.value.length > 0
 )
 const hasAnyFiltered = computed(
   () => activeGroups.value.length > 0 || archivedFiltered.value.length > 0
@@ -88,7 +89,7 @@ const onSearchBlur = (): void => {
 // ── Selection drives the main runs table + right sidebar ────────────────────
 const selectedId = ref<string | null>(null)
 const selectedWorkflow = computed<IWorkflow | null>(() => {
-  const list = activeWorkflows.value
+  const list = wsActiveWorkflows.value
   if (selectedId.value) {
     const found = list.find((w) => w.id === selectedId.value)
     if (found) return found

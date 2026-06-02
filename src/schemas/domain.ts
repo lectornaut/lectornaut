@@ -1034,7 +1034,8 @@ export const workflowRunWriteSchema = workflowRunSchema.extend({
  * Workflows are the third building block conceptually (automations that drive
  * personas), but they are NOT integration docs. They have a different lifecycle
  * (materialized / opt-in) and a runtime (triggers, runs, scheduler), so they
- * live in their own collection `teams/{teamId}/workflows` under `workflowSchema`
+ * live in their own per-workspace collection
+ * `teams/{teamId}/workspaces/{workspaceId}/workflows` under `workflowSchema`
  * (above). The three are unified ONLY where it's cheap and lossless — the code
  * catalog (`integrationCatalog.ts`) and the client registry facade
  * (`useIntegrationsRegistry`) — never in storage. See the layering note in

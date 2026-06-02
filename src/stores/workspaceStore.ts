@@ -101,6 +101,16 @@ export const useWorkspaceStore = defineStore("workspaces", () => {
   const isFirestoreLoading: ComputedRef<boolean> = computed(
     () => workspacesQuery.isLoading.value
   )
+  // True only once the LIVE onSnapshot listener has delivered a snapshot for
+  // the current team's workspaces list this session. A query restored from the
+  // persisted read-cache is marked stale (refetchType:"none") until its first
+  // live snapshot lands (see restoreQueryCache), so `isStale`/`isFetching`
+  // separate "the cached list says the selection is gone" (NOT trustworthy)
+  // from "the live listener says it's gone" (trustworthy). The stale-selection
+  // cleanup below must only act on the trustworthy signal.
+  const isFirestoreSettled: ComputedRef<boolean> = computed(
+    () => !workspacesQuery.isStale.value && !workspacesQuery.isFetching.value
+  )
 
   // ============================================================================
   // State (for optimistic updates)
@@ -217,6 +227,7 @@ export const useWorkspaceStore = defineStore("workspaces", () => {
       currentTeamId,
       isMembershipLoading,
       isFirestoreLoading,
+      isFirestoreSettled,
     ],
     async ([
       workspaceId,
@@ -225,6 +236,7 @@ export const useWorkspaceStore = defineStore("workspaces", () => {
       teamId,
       membershipLoading,
       firestoreLoading,
+      firestoreSettled,
     ]) => {
       // If we are loading, or no workspace ID selected, ignore.
       // `firestoreLoading` is checked separately from `loading` because the
@@ -232,12 +244,24 @@ export const useWorkspaceStore = defineStore("workspaces", () => {
       // (including cache-restored entries). Without this guard, a cold start
       // with a cached selection could fire before the workspaces query
       // resolved, see an empty list, and wipe the user's selection.
+      //
+      // `firestoreSettled` closes the complementary window: a list restored
+      // from the persisted cache can be non-empty yet STALE — present but not
+      // yet confirmed by the live listener, and possibly missing a valid
+      // selection (a workspace created/selected on another device, or the
+      // membershipPreferences and workspaces caches persisted a beat apart).
+      // `firestoreLoading` is false in that window (there IS cached data), so
+      // without this the cleanup would persist `currentWorkspaceId: null` —
+      // which, being Firestore-first authoritative, re-surfaces the
+      // WorkspaceSelector on every subsequent reload. Only act on the list
+      // once the live snapshot has confirmed it.
       if (
         !workspaceId ||
         loading ||
         !teamId ||
         (membershipLoading && !hasCurrentTeamMembership.value) ||
-        firestoreLoading
+        firestoreLoading ||
+        !firestoreSettled
       ) {
         return
       }

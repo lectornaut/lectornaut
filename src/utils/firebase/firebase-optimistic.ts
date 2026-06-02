@@ -8,7 +8,9 @@
  * - Type-safe optimistic updates with automatic rollback
  * - Pending operation tracking with reactive triggers
  * - Retry logic with exponential backoff
- * - Snapshot protection to prevent VueFire overwrites
+ * - Snapshot protection: keeps optimistic cache writes from being clobbered by
+ *   the live `onSnapshot` listener (the hold/stash machinery in
+ *   `firebase-query.ts`; this file's merge/receipt helpers back that path).
  */
 
 import { generateId } from "@/helpers/utilities"

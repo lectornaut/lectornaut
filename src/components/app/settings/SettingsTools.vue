@@ -1,13 +1,13 @@
 <script lang="ts" setup>
 import SettingsRestricted from "@/components/app/settings/SettingsRestricted.vue"
 import { useCanViewTeamSettings } from "@/composables/useCanViewTeamSettings"
-import { cloneAgentConfig, useAgentConfig } from "@/composables/useAgentConfig"
+import { useAgentConfig } from "@/composables/useAgentConfig"
 import { useIntegrations } from "@/composables/useIntegrations"
 import { useTeamCustomTools } from "@/composables/useTeamCustomTools"
 import { IconChevronDown, IconCirclePlus, IconWrench } from "@/data/icons"
 import { emitter } from "@/modules/mitt"
 import { useIntegrationsStore } from "@/stores/integrationsStore"
-import type { IBotAgentConfig, ITeamCustomTool } from "@/types/domain"
+import type { ITeamCustomTool } from "@/types/domain"
 
 /**
  * SettingsTools — two sibling sections, top-to-bottom:
@@ -37,27 +37,19 @@ import type { IBotAgentConfig, ITeamCustomTool } from "@/types/domain"
  * `SettingsAi`. All three pages back the same Pinia-backed
  * `useAgentConfig` store.
  *
- * Field ownership within `tools.*`: this page's dirty-bar form owns only the
- * `customTools` gate (see `TOOLS_PAGE_FIELDS`); built-in tool enable/disable
- * is an immediate per-integration write, not part of the form. `customAgents`
+ * Field ownership within `tools.*`: this page owns only the `customTools`
+ * gate, and toggling it is now an immediate write (no unsaved bar) — same
+ * apply-on-change model as the built-in tool toggles above it. `customAgents`
  * stays on `SettingsAgents`. To avoid clobbering the sibling page's
- * `tools.customAgents` edit on save, the save handler bases its payload on
- * `config.value.tools` (latest server state) and overlays only this page's
- * owned keys — Firestore's `{merge:true}` is a shallow top-level merge so
- * sending the full `tools` object always replaces it.
+ * `tools.customAgents` edit, the toggle's save payload overlays `customTools`
+ * onto `config.value.tools` (latest server state) — Firestore's `{merge:true}`
+ * is a shallow top-level merge so sending the full `tools` object always
+ * replaces it.
  */
 
 const { t } = useI18n()
 
 const { canViewTeamSettings } = useCanViewTeamSettings()
-
-// `tools.*` keys owned by this page's dirty-bar form. Only the `customTools`
-// feature gate now: built-in tool enable/disable is an immediate
-// per-integration write (see below), and node read/write are per-agent +
-// membership-gated (no team switch), so neither lives on this form.
-const TOOLS_PAGE_FIELDS = [
-  "customTools",
-] as const satisfies readonly (keyof IBotAgentConfig["tools"])[]
 
 // ── Tool toggles (built-in tools + custom tools gate) ──────────────────────
 
@@ -71,51 +63,28 @@ const configMessagesGetter = () => ({
 const { config, isLoading, isSaving, canEdit, save } =
   useAgentConfig(configMessagesGetter)
 
-const draft = ref<IBotAgentConfig>(cloneAgentConfig(config.value))
-
 /**
- * Dirty check is scoped to the `tools.*` keys this page owns. The
- * sibling Agents page's `tools.customAgents` change must NOT show up
- * as dirty here, so we compare only the page's own slice.
+ * The team-wide `customTools` gate applies immediately on toggle — no
+ * unsaved bar. `save()` isn't optimistic (`config` only updates once the
+ * callable returns), so hold the intended value locally for instant Switch
+ * feedback and revert if the save fails; mirrors SettingsOverview's
+ * immediate public-team toggle. The payload overlays `customTools` onto the
+ * latest `config.value.tools` so a sibling tab's in-flight edit to another
+ * tool key (notably `tools.customAgents`) isn't clobbered.
  */
-const isDirty = computed(() => {
-  const draftSlice: Record<string, unknown> = {}
-  const configSlice: Record<string, unknown> = {}
-  for (const key of TOOLS_PAGE_FIELDS) {
-    draftSlice[key] = draft.value.tools[key]
-    configSlice[key] = config.value.tools[key]
-  }
-  return JSON.stringify(draftSlice) !== JSON.stringify(configSlice)
-})
-
-// Dirty-aware re-clone: snap to the canonical config only when this
-// page has no unsaved changes. Lets a sibling-tab save (AI or Agents)
-// propagate here without clobbering an in-flight toggle change.
-watch(
-  config,
-  (next) => {
-    if (!isDirty.value) draft.value = cloneAgentConfig(next)
-  },
-  { deep: true }
+const pendingCustomTools = ref<boolean | null>(null)
+const customToolsEnabled = computed(
+  () => pendingCustomTools.value ?? config.value.tools.customTools
 )
 
-/**
- * Build the save payload by overlaying this page's owned keys onto
- * the latest `config.value.tools`. Necessary because Firestore's
- * `{merge:true}` is a top-level shallow merge — sending a partial
- * `tools` object would replace any sibling-page edits to keys this
- * page doesn't own (notably `tools.customAgents`).
- */
-const handleSave = async () => {
-  const nextTools = { ...config.value.tools }
-  for (const key of TOOLS_PAGE_FIELDS) {
-    nextTools[key] = draft.value.tools[key]
+const handleToggleCustomTools = async (value: boolean): Promise<void> => {
+  if (!canEdit.value) return
+  pendingCustomTools.value = value
+  try {
+    await save({ tools: { ...config.value.tools, customTools: value } })
+  } finally {
+    pendingCustomTools.value = null
   }
-  await save({ tools: nextTools })
-}
-
-const handleDiscard = () => {
-  draft.value = cloneAgentConfig(config.value)
 }
 
 /**
@@ -148,6 +117,21 @@ const handleToggleBuiltInTool = async (
 ): Promise<void> => {
   await setIntegrationEnabled({ type: "tool", sourceKey: name }, value)
 }
+
+// Every shipped built-in tool, used to detect the all-uninstalled empty
+// state. A tool reads as installed unless an explicit divergence doc opts it
+// out (see `isToolInstalled`), so this stays true until the last one is
+// removed on the Integrations page.
+const BUILT_IN_TOOL_NAMES = [
+  "rollDice",
+  "browseInternet",
+  "askQuestion",
+  "searchWorkspaceNodes",
+  "summarizeNode",
+] as const
+const hasBuiltInTools = computed(() =>
+  BUILT_IN_TOOL_NAMES.some((name) => isToolInstalled(name))
+)
 
 // ── Custom tools (inline list) ─────────────────────────────────────────────
 
@@ -340,6 +324,17 @@ const handleRemoveTool = async (tool: ITeamCustomTool): Promise<void> => {
               "
             />
           </Field>
+
+          <!-- Every built-in tool uninstalled via Integrations — nothing left
+               to enable here. -->
+          <Empty v-if="!hasBuiltInTools" class="border border-dashed">
+            <EmptyHeader>
+              <EmptyMedia variant="icon">
+                <IconWrench />
+              </EmptyMedia>
+              <EmptyTitle>{{ t("settings.agents.tools.empty") }}</EmptyTitle>
+            </EmptyHeader>
+          </Empty>
         </FieldSet>
 
         <FieldSeparator />
@@ -366,8 +361,9 @@ const handleRemoveTool = async (tool: ITeamCustomTool): Promise<void> => {
             </FieldContent>
             <Switch
               id="agent-tool-custom-tools"
-              v-model="draft.tools.customTools"
-              :disabled="!canEdit"
+              :model-value="customToolsEnabled"
+              :disabled="!canEdit || isSaving"
+              @update:model-value="(v) => handleToggleCustomTools(Boolean(v))"
             />
           </Field>
 
@@ -392,7 +388,7 @@ const handleRemoveTool = async (tool: ITeamCustomTool): Promise<void> => {
                     <Button
                       variant="outline"
                       size="sm"
-                      :disabled="!canManageTools || !draft.tools.customTools"
+                      :disabled="!canManageTools || !customToolsEnabled"
                       @click="openNewToolDialog"
                     >
                       <IconCirclePlus />
@@ -577,12 +573,6 @@ const handleRemoveTool = async (tool: ITeamCustomTool): Promise<void> => {
         </FieldSet>
       </FieldGroup>
     </div>
-    <SettingsUnsavedBar
-      v-if="!isLoading && isDirty && canEdit"
-      :saving="isSaving"
-      @discard="handleDiscard"
-      @save="handleSave"
-    />
   </div>
   <SettingsRestricted v-else />
 </template>

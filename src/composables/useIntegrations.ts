@@ -28,7 +28,6 @@ import {
   uninstallIntegration as uninstallIntegrationFn,
   updateIntegration as updateIntegrationFn,
 } from "@/composables/useFunctions"
-import { DEFAULT_AGENT_ID } from "@/data/builtInAgents"
 import { useAuthStore } from "@/stores/authStore"
 import { useMembershipStore } from "@/stores/membershipStore"
 import { useTeamWorkflowsStore } from "@/stores/teamWorkflowsStore"
@@ -57,7 +56,7 @@ export function useIntegrations() {
   const workflowsStore = useTeamWorkflowsStore()
 
   const authStore = useAuthStore()
-  const { currentTeamId, currentWorkspaceId } = storeToRefs(authStore)
+  const { currentTeamId } = storeToRefs(authStore)
 
   const guardManage = (): boolean => {
     if (canManage.value) return true
@@ -125,19 +124,14 @@ export function useIntegrations() {
       }
     )
 
-  // ── Workflows (materialized presets — kept on their own store) ───────────
+  // ── Workflows (team availability — the Integrations tier) ─────────────────
+  // Toggling here records WHICH presets the team offers (workspace-agnostic).
+  // Per-workspace deployment (enable + configure) lives on each workspace's
+  // Workflows settings page, not here.
   const addWorkflowPreset = async (sourceKey: string): Promise<void> => {
     if (!guardManage()) return
-    const workspaceId = currentWorkspaceId.value
-    if (!workspaceId) {
-      toast.error(t("settings.integrations.workflows.noWorkspace"))
-      return
-    }
     try {
-      await workflowsStore.addPreset(sourceKey, {
-        workspaceId,
-        agentId: DEFAULT_AGENT_ID,
-      })
+      await workflowsStore.setAvailability(sourceKey, true)
       toast.success(t("settings.integrations.workflows.addSuccess"))
     } catch (error) {
       console.error("[useIntegrations] addWorkflowPreset failed:", error)
@@ -150,7 +144,7 @@ export function useIntegrations() {
   const removeWorkflowPreset = async (sourceKey: string): Promise<void> => {
     if (!guardManage()) return
     try {
-      await workflowsStore.removePreset(sourceKey)
+      await workflowsStore.setAvailability(sourceKey, false)
       toast.success(t("settings.integrations.workflows.removeSuccess"))
     } catch (error) {
       console.error("[useIntegrations] removeWorkflowPreset failed:", error)

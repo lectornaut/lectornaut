@@ -40,7 +40,7 @@ const openArchiveDialog = () => {
 
 const submitArchiveAll = async () => {
   if (bulkBusy.value) return
-  // Snapshot ids before the loop — the underlying vuefire collection
+  // Snapshot ids before the loop — the underlying reactive collection
   // mutates as each archive lands (the row moves from `mySessions`
   // into `archivedMySessions`), which would otherwise shift the
   // iteration target out from under us.

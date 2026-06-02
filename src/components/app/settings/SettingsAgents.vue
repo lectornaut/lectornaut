@@ -1,13 +1,13 @@
 <script lang="ts" setup>
 import SettingsRestricted from "@/components/app/settings/SettingsRestricted.vue"
 import { useCanViewTeamSettings } from "@/composables/useCanViewTeamSettings"
-import { cloneAgentConfig, useAgentConfig } from "@/composables/useAgentConfig"
+import { useAgentConfig } from "@/composables/useAgentConfig"
 import { useIntegrations } from "@/composables/useIntegrations"
 import { useTeamAgents } from "@/composables/useTeamAgents"
 import { IconBot, IconChevronDown, IconCirclePlus } from "@/data/icons"
 import { emitter } from "@/modules/mitt"
 import { useIntegrationsStore } from "@/stores/integrationsStore"
-import type { IBotAgentConfig, ITeamAgent } from "@/types/domain"
+import type { ITeamAgent } from "@/types/domain"
 
 /**
  * SettingsAgents — three sibling sections, top-to-bottom:
@@ -38,12 +38,12 @@ import type { IBotAgentConfig, ITeamAgent } from "@/types/domain"
  * three pages back the same Pinia-backed `useAgentConfig` store.
  *
  * Field ownership within `tools.*`: this page owns ONLY
- * `tools.customAgents`. SettingsTools owns the other six. To avoid
- * clobbering SettingsTools' edits on save, the handler bases its
- * `tools` payload on `config.value.tools` (latest server state) and
- * overlays only `customAgents` — Firestore's `{merge:true}` is a
- * shallow top-level merge so sending the full `tools` object always
- * replaces it.
+ * `tools.customAgents`, and toggling it is now an immediate write (no
+ * unsaved bar) — same apply-on-change model as the built-in agent toggles.
+ * SettingsTools owns the other six. To avoid clobbering its edits, the
+ * toggle's payload overlays only `customAgents` onto `config.value.tools`
+ * (latest server state) — Firestore's `{merge:true}` is a shallow top-level
+ * merge so sending the full `tools` object always replaces it.
  */
 
 const { t } = useI18n()
@@ -62,48 +62,28 @@ const configMessagesGetter = () => ({
 const { config, isLoading, isSaving, canEdit, save } =
   useAgentConfig(configMessagesGetter)
 
-const draft = ref<IBotAgentConfig>(cloneAgentConfig(config.value))
-
 /**
- * Dirty check is scoped to the single field this page's save owns:
- * `tools.customAgents` (the team-wide feature gate). Built-in agent
- * enable/disable is now an immediate per-integration write (see below), no
- * longer part of the dirty-bar form. The rest of `tools.*` belongs to
- * SettingsTools, so a `tools` save from there must NOT register as dirty here.
+ * The team-wide `customAgents` gate applies immediately on toggle — no
+ * unsaved bar. `save()` isn't optimistic (`config` only updates once the
+ * callable returns), so hold the intended value locally for instant Switch
+ * feedback and revert if the save fails; mirrors SettingsOverview's
+ * immediate public-team toggle. The payload overlays `customAgents` onto the
+ * latest `config.value.tools` so a sibling tab's in-flight edit to another
+ * tool key isn't clobbered (Firestore's `{merge:true}` is a shallow merge).
  */
-const isDirty = computed(
-  () => draft.value.tools.customAgents !== config.value.tools.customAgents
+const pendingCustomAgents = ref<boolean | null>(null)
+const customAgentsEnabled = computed(
+  () => pendingCustomAgents.value ?? config.value.tools.customAgents
 )
 
-// Dirty-aware re-clone: snap to the canonical config only when this
-// page has no unsaved changes. Lets a sibling-tab save (AI or Tools)
-// propagate here without clobbering an in-flight toggle change.
-watch(
-  config,
-  (next) => {
-    if (!isDirty.value) draft.value = cloneAgentConfig(next)
-  },
-  { deep: true }
-)
-
-/**
- * Save only the fields this page owns. The `tools` payload is built
- * by overlaying `tools.customAgents` onto the latest `config.value
- * .tools` — necessary because Firestore's `{merge:true}` is a
- * top-level shallow merge, so sending the partial `tools` object
- * would clobber SettingsTools' edits to the other tool keys.
- */
-const handleSave = async () => {
-  await save({
-    tools: {
-      ...config.value.tools,
-      customAgents: draft.value.tools.customAgents,
-    },
-  })
-}
-
-const handleDiscard = () => {
-  draft.value = cloneAgentConfig(config.value)
+const handleToggleCustomAgents = async (value: boolean): Promise<void> => {
+  if (!canEdit.value) return
+  pendingCustomAgents.value = value
+  try {
+    await save({ tools: { ...config.value.tools, customAgents: value } })
+  } finally {
+    pendingCustomAgents.value = null
+  }
 }
 
 // ── Built-in agents (per-preset enable toggles) ─────────────────────────────
@@ -276,12 +256,19 @@ const handleRemoveAgent = async (agent: ITeamAgent): Promise<void> => {
           </Field>
 
           <!-- Every preset removed via Integrations — nothing left to toggle. -->
-          <p
+          <Empty
             v-if="builtInAgentRows.length === 0"
-            class="text-muted-foreground rounded-md border border-dashed p-4 text-sm"
+            class="border border-dashed"
           >
-            {{ t("settings.agents.builtInAgents.empty") }}
-          </p>
+            <EmptyHeader>
+              <EmptyMedia variant="icon">
+                <IconBot />
+              </EmptyMedia>
+              <EmptyTitle>
+                {{ t("settings.agents.builtInAgents.empty") }}
+              </EmptyTitle>
+            </EmptyHeader>
+          </Empty>
         </FieldSet>
 
         <FieldSeparator />
@@ -308,8 +295,9 @@ const handleRemoveAgent = async (agent: ITeamAgent): Promise<void> => {
             </FieldContent>
             <Switch
               id="agent-tool-custom-agents"
-              v-model="draft.tools.customAgents"
-              :disabled="!canEdit"
+              :model-value="customAgentsEnabled"
+              :disabled="!canEdit || isSaving"
+              @update:model-value="(v) => handleToggleCustomAgents(Boolean(v))"
             />
           </Field>
 
@@ -335,7 +323,7 @@ const handleRemoveAgent = async (agent: ITeamAgent): Promise<void> => {
                     <Button
                       variant="outline"
                       size="sm"
-                      :disabled="!canManage || !draft.tools.customAgents"
+                      :disabled="!canManage || !customAgentsEnabled"
                       @click="openNewAgentDialog"
                     >
                       <IconCirclePlus />
@@ -525,12 +513,6 @@ const handleRemoveAgent = async (agent: ITeamAgent): Promise<void> => {
         </FieldSet>
       </FieldGroup>
     </div>
-    <SettingsUnsavedBar
-      v-if="!isLoading && isDirty && canEdit"
-      :saving="isSaving"
-      @discard="handleDiscard"
-      @save="handleSave"
-    />
   </div>
   <SettingsRestricted v-else />
 </template>

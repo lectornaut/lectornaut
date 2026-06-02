@@ -20,7 +20,6 @@ import {
   type CatalogEntry,
   type CatalogEntryType,
 } from "@/data/integrationCatalog"
-import { useAuthStore } from "@/stores/authStore"
 import { useIntegrationsStore } from "@/stores/integrationsStore"
 import { useTeamWorkflowsStore } from "@/stores/teamWorkflowsStore"
 import { storeToRefs } from "pinia"
@@ -30,10 +29,6 @@ import { computed, type ComputedRef } from "vue"
 export interface RegistryItem extends CatalogEntry {
   /** An active (non-archived) doc/overlay exists for this team. */
   installed: boolean
-  /** Install needs an active workspace binding (workflows only). */
-  requiresWorkspace: boolean
-  /** Install is currently impossible (e.g. a workflow with no workspace). */
-  installBlocked: boolean
 }
 
 export function useIntegrationsRegistry() {
@@ -45,21 +40,19 @@ export function useIntegrationsRegistry() {
   const { agentIntegrations, toolIntegrations } = storeToRefs(integrationsStore)
 
   const workflowsStore = useTeamWorkflowsStore()
-  const { enabledPresetKeys } = storeToRefs(workflowsStore)
-
-  const authStore = useAuthStore()
-  const { currentWorkspaceId } = storeToRefs(authStore)
+  const { availablePresetKeys } = storeToRefs(workflowsStore)
 
   // ── Per-type installed-state resolution ──────────────────────────────────
   // Agents/tools use the catalog overlay (a built-in with no divergence doc
-  // reads as installed — the opt-out default). Workflows are opt-in: installed
-  // iff an active materialized doc exists for the preset.
+  // reads as installed — the opt-out default). Workflows are opt-in: "installed"
+  // means the team has made the preset AVAILABLE (the team tier); per-workspace
+  // deployment is a separate toggle on the Workflows settings page.
   const agentInstalled = (key: string): boolean =>
     agentIntegrations.value.find((i) => i.sourceKey === key)?.installed ?? true
   const toolInstalled = (key: string): boolean =>
     toolIntegrations.value.find((i) => i.sourceKey === key)?.installed ?? true
   const workflowInstalled = (key: string): boolean =>
-    enabledPresetKeys.value.has(key)
+    availablePresetKeys.value.has(key)
 
   const isInstalled = (entry: CatalogEntry): boolean => {
     if (entry.type === "agent") return agentInstalled(entry.key)
@@ -82,19 +75,12 @@ export function useIntegrationsRegistry() {
         )
       : entry.description
 
-  const toItem = (entry: CatalogEntry): RegistryItem => {
-    const installed = isInstalled(entry)
-    const requiresWorkspace = entry.type === "workflow"
-    return {
-      ...entry,
-      name: displayName(entry),
-      description: displayDescription(entry),
-      installed,
-      requiresWorkspace,
-      installBlocked:
-        requiresWorkspace && !installed && !currentWorkspaceId.value,
-    }
-  }
+  const toItem = (entry: CatalogEntry): RegistryItem => ({
+    ...entry,
+    name: displayName(entry),
+    description: displayDescription(entry),
+    installed: isInstalled(entry),
+  })
 
   const itemsOfType = (type: CatalogEntryType): ComputedRef<RegistryItem[]> =>
     computed(() =>

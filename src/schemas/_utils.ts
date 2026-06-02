@@ -188,7 +188,8 @@ function coerceNumericTimestamps(
  *   export const getUserRef = (uid: string) =>
  *     doc(firestore, "users", uid).withConverter(userConverter)
  *
- * VueFire's `useDocument` / `useCollection` respect the converter transparently.
+ * The TanStack read composables (`useDocumentQuery` / `useCollectionQuery`)
+ * read through the converter, so it validates on every snapshot.
  */
 export function zodConverter<T extends DocumentData>(
   schema: ZodType<T>,

@@ -1148,6 +1148,7 @@ export const useMembershipStore = defineStore("memberships", () => {
     fetchUserMemberships,
 
     // Internal helpers (for teamStore)
+    membershipsCacheKey,
     addMembershipOptimistic,
     updateTeamInMemberships,
     removeMembershipsForTeam,

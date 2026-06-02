@@ -5,7 +5,14 @@ import {
   useIntegrationsRegistry,
   type RegistryItem,
 } from "@/composables/useIntegrationsRegistry"
-import { IconAlertTriangle, IconCirclePlus, IconTrash } from "@/data/icons"
+import {
+  IconAlertTriangle,
+  IconBot,
+  IconCirclePlus,
+  IconTrash,
+  IconWorkflow,
+  IconWrench,
+} from "@/data/icons"
 import { ref } from "vue"
 
 /**
@@ -20,7 +27,9 @@ import { ref } from "vue"
  * agents + tools (catalog overlay, opt-out) and workflows (materialized,
  * opt-in) — and routes the install/uninstall verbs per type. This page is
  * STORAGE-AGNOSTIC: it never learns that workflows live in a different
- * collection. `installBlocked` carries the workflow's "needs a workspace" gate.
+ * collection. For workflows, "installed" means the team has made the preset
+ * AVAILABLE; per-workspace enable/configure lives on the Workflows settings
+ * page — a separate axis, like agents'/tools' enable/disable.
  *
  * Owner/admin only: members who can view settings but can't manage see an
  * admin wall (mirrors SettingsSecurity); guests get `SettingsRestricted`.
@@ -111,6 +120,17 @@ const toggle = async (item: RegistryItem): Promise<void> => {
               }}
             </Button>
           </Field>
+
+          <Empty v-if="agents.length === 0" class="border border-dashed">
+            <EmptyHeader>
+              <EmptyMedia variant="icon">
+                <IconBot />
+              </EmptyMedia>
+              <EmptyTitle>
+                {{ t("settings.integrations.agents.empty") }}
+              </EmptyTitle>
+            </EmptyHeader>
+          </Empty>
         </FieldSet>
 
         <FieldSeparator />
@@ -147,11 +167,22 @@ const toggle = async (item: RegistryItem): Promise<void> => {
               }}
             </Button>
           </Field>
+
+          <Empty v-if="tools.length === 0" class="border border-dashed">
+            <EmptyHeader>
+              <EmptyMedia variant="icon">
+                <IconWrench />
+              </EmptyMedia>
+              <EmptyTitle>
+                {{ t("settings.integrations.tools.empty") }}
+              </EmptyTitle>
+            </EmptyHeader>
+          </Empty>
         </FieldSet>
 
         <FieldSeparator />
 
-        <!-- ── Workflows (opt-in; install needs an active workspace) ─────── -->
+        <!-- ── Workflows (team availability; per-workspace enable is separate) -->
         <FieldSet>
           <Field orientation="horizontal">
             <FieldContent>
@@ -164,45 +195,40 @@ const toggle = async (item: RegistryItem): Promise<void> => {
             </FieldContent>
           </Field>
 
-          <TooltipProvider>
-            <Field
-              v-for="item in workflows"
-              :key="item.key"
-              orientation="horizontal"
+          <Field
+            v-for="item in workflows"
+            :key="item.key"
+            orientation="horizontal"
+          >
+            <FieldContent>
+              <FieldLabel>{{ item.name }}</FieldLabel>
+              <FieldDescription>{{ item.description }}</FieldDescription>
+            </FieldContent>
+            <Button
+              :variant="item.installed ? 'outline' : 'default'"
+              size="sm"
+              :disabled="isPending(item)"
+              @click="toggle(item)"
             >
-              <FieldContent>
-                <FieldLabel>{{ item.name }}</FieldLabel>
-                <FieldDescription>{{ item.description }}</FieldDescription>
-              </FieldContent>
-              <Tooltip>
-                <TooltipTrigger as-child>
-                  <!-- A disabled button swallows hover events, so the tooltip
-                       wraps an inline span to keep the no-workspace hint
-                       reachable. -->
-                  <span class="inline-block">
-                    <Button
-                      :variant="item.installed ? 'outline' : 'default'"
-                      size="sm"
-                      :disabled="isPending(item) || item.installBlocked"
-                      @click="toggle(item)"
-                    >
-                      <component
-                        :is="item.installed ? IconTrash : IconCirclePlus"
-                      />
-                      {{
-                        item.installed
-                          ? t("settings.integrations.remove")
-                          : t("settings.integrations.add")
-                      }}
-                    </Button>
-                  </span>
-                </TooltipTrigger>
-                <TooltipContent v-if="item.installBlocked">
-                  {{ t("settings.integrations.workflows.noWorkspace") }}
-                </TooltipContent>
-              </Tooltip>
-            </Field>
-          </TooltipProvider>
+              <component :is="item.installed ? IconTrash : IconCirclePlus" />
+              {{
+                item.installed
+                  ? t("settings.integrations.remove")
+                  : t("settings.integrations.add")
+              }}
+            </Button>
+          </Field>
+
+          <Empty v-if="workflows.length === 0" class="border border-dashed">
+            <EmptyHeader>
+              <EmptyMedia variant="icon">
+                <IconWorkflow />
+              </EmptyMedia>
+              <EmptyTitle>
+                {{ t("settings.integrations.workflows.empty") }}
+              </EmptyTitle>
+            </EmptyHeader>
+          </Empty>
         </FieldSet>
       </FieldGroup>
     </div>

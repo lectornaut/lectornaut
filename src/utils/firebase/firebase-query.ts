@@ -159,7 +159,12 @@ export const streamIntoCache = <T>(
         if (hydrated) {
           // Post-hydration failure (e.g. permission revoked mid-session). Evict
           // the query so a future observer re-subscribes cleanly rather than
-          // silently serving stale data behind a dead listener.
+          // silently serving stale data behind a dead listener. Also drop any
+          // optimistic hold + stashed snapshot for this key: otherwise a later
+          // `holdOptimistic` release would `setQueryData` the stash back and
+          // resurrect the query we just evicted, behind this now-dead listener.
+          optimisticHolds.delete(queryHash)
+          stashedSnapshots.delete(queryHash)
           queryClient.removeQueries({ queryKey, exact: true })
           return
         }
@@ -293,7 +298,15 @@ export function useCollectionQuery<T>(
           onSnapshot(
             current.query,
             (snapshot) =>
-              onNext(snapshot.docs.map((entry) => entry.data() as T)),
+              // Drop nullish converter rows so a `T[]` never contains `null` —
+              // some converters return `null` for tombstoned/invalid docs.
+              // Callers historically filtered downstream; enforce it here so the
+              // primitive's `T[]` contract holds for every consumer.
+              onNext(
+                snapshot.docs
+                  .map((entry) => entry.data())
+                  .filter((row): row is T => row != null)
+              ),
             onError
           )
       )
