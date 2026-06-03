@@ -488,6 +488,13 @@ export const useFileTreeStore = defineStore("fileTree", () => {
     subs[parentId] = () => {
       isActive = false
       unsubscribeSnapshot()
+      // If we tear the listener down before its first snapshot/error landed,
+      // both callbacks above early-out on `!isActive`, so the loading flag set
+      // when we subscribed would otherwise stay `true` forever — a stranded
+      // spinner on the file tree (e.g. a workspace switch that re-subscribes
+      // while the first load was still in flight). Clear it on teardown so the
+      // next subscribe starts clean. No-op if a result already cleared it.
+      setParentLoading(scope, teamId, workspaceId, parentId, false)
     }
   }
 

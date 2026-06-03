@@ -1,4 +1,4 @@
-import { isRetryableFirebaseError } from "@/utils/firebase/firebase-errors"
+import { isRetryableReadError } from "@/utils/firebase/firebase-errors"
 import { QueryClient } from "@tanstack/vue-query"
 
 /**
@@ -25,9 +25,13 @@ const MAX_QUERY_RETRIES = 3
  *   - `refetchOnWindowFocus` / `refetchOnReconnect: false` — both are redundant
  *     here; the listener re-delivers automatically when the tab refocuses or the
  *     connection is restored.
- *   - `retry` — defer to the existing Firestore error taxonomy: retry only the
- *     transient codes (`unavailable`/`deadline-exceeded`/…), never
- *     `permission-denied` or `not-found`.
+ *   - `retry` — use the READ error taxonomy (`isRetryableReadError`): the
+ *     transient infra codes (`unavailable`/`deadline-exceeded`/…) PLUS
+ *     `permission-denied`/`unauthenticated`, which are transient at cold start
+ *     when a listener opens before the Auth/App-Check token is ready. Without
+ *     retrying those, a single lost token-warm-up race left a bootstrap query's
+ *     `data` undefined forever and hung the app shell on its loading gate (the
+ *     "infinite workspace loading" bug). `not-found` stays non-retryable.
  */
 export const queryClient = new QueryClient({
   defaultOptions: {
@@ -37,7 +41,7 @@ export const queryClient = new QueryClient({
       refetchOnWindowFocus: false,
       refetchOnReconnect: false,
       retry: (failureCount, error) =>
-        failureCount < MAX_QUERY_RETRIES && isRetryableFirebaseError(error),
+        failureCount < MAX_QUERY_RETRIES && isRetryableReadError(error),
     },
     mutations: {
       // The sync engine owns write retries/backoff/dead-lettering. Query-level

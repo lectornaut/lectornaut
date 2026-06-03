@@ -1,9 +1,6 @@
 <script lang="ts" setup>
-import {
-  runColumns,
-  toRunRow,
-  type RunRow,
-} from "@/components/app/runs/runColumns"
+import { runColumns, type RunRow } from "@/components/app/runs/runColumns"
+import { useRunsExplorer } from "@/composables/useRunsExplorer"
 import { useTeamAgents } from "@/composables/useTeamAgents"
 import { useTeamWorkflows } from "@/composables/useTeamWorkflows"
 import { useWorkflowFilter } from "@/composables/useWorkflowFilter"
@@ -16,8 +13,8 @@ import {
 } from "@/data/icons"
 import { runStatusLabel, runStatusTextClass } from "@/data/workflowRunConstants"
 import { useTeamAgentsStore } from "@/stores/teamAgentsStore"
-import { useTeamWorkflowsStore } from "@/stores/teamWorkflowsStore"
 import type { IWorkflow } from "@/types/domain"
+import type { Table as VueTable } from "@tanstack/vue-table"
 import { storeToRefs } from "pinia"
 import { computed, nextTick, ref } from "vue"
 
@@ -42,13 +39,31 @@ const {
   remove,
   runNow,
 } = useTeamWorkflows()
-const store = useTeamWorkflowsStore()
-const { recentRuns } = storeToRefs(store)
 const { selectableAgents } = useTeamAgents()
 
-// Per-workflow runs table — no in-table workflow/date filters (every row is the
-// same workflow); the shared Status/Trigger/Mode faceted filters still apply.
-const runTableColumns = runColumns()
+// Workspace-wide runs explorer (mirrors the Runs page): the table shows every
+// run in the workspace, filterable by Workflow + Date range from its toolbar.
+const { allRows } = useRunsExplorer()
+
+// Faceted "Workflow" filter options — one per distinct workflow present in the
+// runs, keyed by doc id (label = display name). Same derivation as the Runs page.
+const workflowOptions = computed(() => {
+  const byId = new Map<string, string>()
+  for (const row of allRows.value)
+    if (!byId.has(row.workflowId)) byId.set(row.workflowId, row.workflowName)
+  return [...byId]
+    .map(([value, label]) => ({ value, label }))
+    .sort((a, b) => a.label.localeCompare(b.label))
+})
+const columns = computed(() =>
+  runColumns({ workflowOptions: workflowOptions.value, dateRangeFilter: true })
+)
+
+// Exposed table instance — lets the left-sidebar selection drive the table's
+// Workflow column filter (clicking a workflow focuses its runs), mirroring how
+// the Runs page sidebar drives its filters.
+const tableRef = ref<{ table: VueTable<RunRow> } | null>(null)
+
 // Saved team-wide gate for custom workflows (creation only; predefined unaffected).
 const { customWorkflowsEnabled } = storeToRefs(useTeamAgentsStore())
 
@@ -90,7 +105,7 @@ const onSearchBlur = (): void => {
   if (!filter.state.search.trim()) searchExpanded.value = false
 }
 
-// ── Selection drives the main runs table + right sidebar ────────────────────
+// ── Selection drives the right-sidebar detail + focuses the runs table ──────
 const selectedId = ref<string | null>(null)
 const selectedWorkflow = computed<IWorkflow | null>(() => {
   const list = wsActiveWorkflows.value
@@ -100,17 +115,13 @@ const selectedWorkflow = computed<IWorkflow | null>(() => {
   }
   return list[0] ?? null
 })
+// Selecting a workflow shows its details on the right AND filters the table to
+// its runs (preserving the page's "click a workflow → see its runs" flow). The
+// toolbar's Workflow/Date filters layer on top and can broaden or clear it.
 const select = (id: string): void => {
   selectedId.value = id
+  tableRef.value?.table.getColumn("workflowName")?.setFilterValue([id])
 }
-
-const selectedRuns = computed<RunRow[]>(() => {
-  const wf = selectedWorkflow.value
-  if (!wf) return []
-  return recentRuns.value
-    .filter((r) => r.workflowId === wf.id)
-    .map((r) => toRunRow(r, wf.name))
-})
 
 // ── Editor dialog ───────────────────────────────────────────────────────────
 const editorOpen = ref(false)
@@ -328,27 +339,15 @@ const formatWhen = (ts: unknown): string =>
     </Sidebar>
   </Teleport>
 
-  <!-- Main: selected workflow's runs -->
+  <!-- Main: workspace-wide runs, filterable by Workflow + Date range -->
   <div class="flex h-full min-h-0 flex-col">
-    <template v-if="selectedWorkflow">
-      <div class="flex shrink-0 items-center gap-2 border-b px-3 py-2">
-        <h2 class="grow truncate text-sm font-medium">
-          {{ t("pages.workflows.runsOf", { name: selectedWorkflow.name }) }}
-        </h2>
-      </div>
-      <DataTable
-        :data="selectedRuns"
-        :columns="runTableColumns"
-        sticky-header
-        :column-pinning="{ left: [], right: ['actions'] }"
-      />
-    </template>
-    <div
-      v-else
-      class="text-muted-foreground flex h-full items-center justify-center p-8 text-sm"
-    >
-      {{ t("pages.workflows.selectHint") }}
-    </div>
+    <DataTable
+      ref="tableRef"
+      :data="allRows"
+      :columns="columns"
+      sticky-header
+      :column-pinning="{ left: [], right: ['actions'] }"
+    />
   </div>
 
   <!-- Right sidebar: selected workflow actions + details -->

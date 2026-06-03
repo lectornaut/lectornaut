@@ -1187,67 +1187,77 @@ async function runTransferTurnIfRequested(opts: {
   }) => void
   targetScope?: WorkspaceNodeScope | null
   allowInterrupts?: boolean
+  /**
+   * Marks a headless (Workflows) run — no human, throwaway session per run.
+   * Flips the transfer-failure handling from the interactive soft fallback
+   * ("send your message again…", which a workflow can't act on) to:
+   * retry the handoff once when safe, then THROW — so the worker records a
+   * visible `error` instead of a misleading `success`.
+   */
+  headless?: boolean
   archivedSessionMessage: string
   sendChunk: (chunk: SendBotMessageStreamPayload) => void
 }): Promise<Awaited<ChatStreamResult["response"]>> {
   const requested = opts.firstActionContext.transferRequest?.agentId
   if (requested === undefined) return opts.firstFinal
 
-  // Truncate the thread back to "pre-turn + the user message". The
-  // first turn's `firstFinal.messages` is the canonical post-turn
-  // thread (Genkit's `chat.send` returns it after `updateMessages`),
-  // so we slice off everything the first agent appended at indices
-  // `preTurnThreadLength + 1` onward.
+  // The first turn's `firstFinal.messages` is the canonical post-turn
+  // thread (Genkit's `chat.send` returns it after `updateMessages`). A
+  // real turn always carries at least the prior conversation, the user
+  // message, AND the agent's reply, so its length exceeds
+  // `preTurnThreadLength + 1`. When it doesn't, the first turn ended in
+  // one of `streamChatToClient`'s stub fallbacks — deadline timeout,
+  // tool-iteration cap, missing tool, or invalid tool argument — all of
+  // which return `{ messages: [] }`.
   //
-  // Guard: if `firstFinal.messages` is missing (some error/fallback
-  // paths return a stub without messages), skip the truncation and
-  // let the second turn run on whatever the session currently holds.
-  // The new agent may produce empty output in that case but at least
-  // the agent-id commit still lands.
+  // A stub means two things, and BOTH say "don't run a second turn":
+  //   1. There's nothing to hand off — the first turn produced no real
+  //      reply, only the fallback the user/run already saw.
+  //   2. The session may never have been persisted. Genkit saves only
+  //      when `generate` resolves (`Chat.send` → `updateMessages` →
+  //      `store.save`); a stub means it rejected/was abandoned, so a
+  //      FRESH headless session (the Workflows worker always starts one)
+  //      has no `botSessions` doc at all. Proceeding would call
+  //      `prepareChatTurn({ requireExistingSession: true })` on a
+  //      missing session and throw `not-found` ("Session not found.") —
+  //      an `HttpsError` the catch below re-throws, crashing the run.
+  //
+  // So bail out with the first turn's fallback. The agent-id commit still
+  // lands in the caller's `finally` (`commitTransferIfRequested`), so a
+  // resumed chat's next message still routes to the requested agent.
   const fullThread = opts.firstFinal.messages
   if (
-    Array.isArray(fullThread) &&
-    fullThread.length > opts.preTurnThreadLength + 1
+    !Array.isArray(fullThread) ||
+    fullThread.length <= opts.preTurnThreadLength + 1
   ) {
-    const truncated = fullThread.slice(0, opts.preTurnThreadLength + 1)
-    // Cast — `MessageLike` (this codebase's shape) is structurally
-    // a subset of Genkit's `MessageData`. `updateMessages` accepts
-    // both Message instances and raw `MessageData` (it normalizes
-    // via `m.toJSON ? m.toJSON() : m`), so the cast is safe.
-    await opts.firstSession.updateMessages(
-      MAIN_THREAD,
-      truncated as Parameters<typeof opts.firstSession.updateMessages>[1]
-    )
+    return opts.firstFinal
   }
+
+  // Truncate the thread back to "pre-turn + the user message" — slice off
+  // everything the first agent appended at indices `preTurnThreadLength +
+  // 1` onward. This `updateMessages` doubles as the guarantee that the
+  // session is persisted before the second turn's `prepareChatTurn`
+  // reloads it.
+  const truncated = fullThread.slice(0, opts.preTurnThreadLength + 1)
+  // Cast — `MessageLike` (this codebase's shape) is structurally a subset
+  // of Genkit's `MessageData`. `updateMessages` accepts both Message
+  // instances and raw `MessageData` (it normalizes via `m.toJSON ?
+  // m.toJSON() : m`), so the cast is safe.
+  await opts.firstSession.updateMessages(
+    MAIN_THREAD,
+    truncated as Parameters<typeof opts.firstSession.updateMessages>[1]
+  )
 
   const targetAgentId = normalizeActiveAgentIdForStorage(requested)
 
-  // Run the prepared second turn under a fallback shell so that any
-  // failure between here and the post-stream sweep is converted to a
-  // user-visible chunk instead of escaping as `INTERNAL` through
-  // `onCallGenkit`. The first turn already streamed the original
-  // agent's "transferring you to X" reply to the client, AND the
-  // `commitTransferIfRequested` safety net (in the caller's `finally`)
-  // still lands the agent change on the session doc — so a clean exit
-  // here means the user keeps the bubble they saw, the agent badge
-  // stays flipped, and their next message routes to the new agent. The
-  // alternative (rethrow) collapses the optimistic UI on the client
-  // ([useBotChat.sendMessage] splices the in-flight bubble pair out on
-  // any caught error), wiping the visible transfer message and showing
-  // a generic toast — which is the user-reported failure mode.
-  //
-  // `HttpsError` continues to propagate: those carry an actionable
-  // message (permission-denied, archived, etc.) the client's toast
-  // already surfaces faithfully, so swallowing them would just turn a
-  // clear cause into a generic "couldn't reply" string.
-  //
-  // `streamChatToClient` already converts its own two known recoverable
-  // cases (`TurnTimeoutError`, tool-iteration exhaustion) into fallback
-  // chunks before they bubble up. This catch is the net for everything
-  // else — provider rate limits, network blips, the Cloud Functions
-  // 120s budget being squeezed when the first turn already burned most
-  // of it, target agent's model becoming unavailable mid-request, etc.
-  try {
+  // The second turn as ONE retryable attempt: re-prepare the chat as the
+  // target agent (reloading the truncated thread) and stream its reply. A
+  // failed attempt persists nothing — Genkit's `chat.send` saves only once
+  // `generate` resolves — so the thread stays truncated and a retry re-runs
+  // from the same clean base.
+  const attemptSecondTurn = async (): Promise<
+    Awaited<ChatStreamResult["response"]>
+  > => {
     const transferPrep = await prepareChatTurn({
       principal: opts.principal,
       teamId: opts.teamId,
@@ -1300,54 +1310,125 @@ async function runTransferTurnIfRequested(opts: {
         preExistingToolResultCount: priorRefs.resultCount,
       }
     )
-  } catch (err) {
-    if (err instanceof HttpsError) throw err
-    logger.warn(
-      `[runTransferTurnIfRequested] second-turn failed team=${opts.teamId} session=${opts.sessionId} target=${targetAgentId ?? "(default)"}`,
-      { err: String(err) }
-    )
-
-    // Restore the first turn's full thread so the persisted state
-    // matches what the user saw stream by. Without this, the truncation
-    // above leaves disk at `[…prior, user]` — re-opening the chat
-    // would render just the user's bubble with no agent reply, even
-    // though the user watched the original "transferring you to X"
-    // text stream in. Best-effort: a restore failure is logged and
-    // swallowed (the streamed UI still works for this session; only
-    // the persisted-state-on-reload story degrades). We restore even
-    // when `firstFinal.messages` is the raw full thread (the common
-    // case) and skip when it's a stub (the inner turn already
-    // fell back into `TurnTimeoutError` / iteration-exhaustion, whose
-    // stub returns `messages: []` — re-saving empty would clobber the
-    // truncated thread with nothing).
-    if (
-      Array.isArray(opts.firstFinal.messages) &&
-      opts.firstFinal.messages.length > 0
-    ) {
-      try {
-        await opts.firstSession.updateMessages(
-          MAIN_THREAD,
-          opts.firstFinal.messages as Parameters<
-            typeof opts.firstSession.updateMessages
-          >[1]
-        )
-      } catch (restoreErr) {
-        logger.warn(
-          `[runTransferTurnIfRequested] thread restore failed team=${opts.teamId} session=${opts.sessionId}`,
-          { err: String(restoreErr) }
-        )
-      }
-    }
-
-    const fallback =
-      "Handed off to the new agent, but they couldn't reply just now. " +
-      "Try sending your message again — your next message will route to them."
-    opts.sendChunk({ chunk: fallback })
-    return {
-      text: fallback,
-      messages: opts.firstFinal.messages ?? [],
-    } as unknown as Awaited<ChatStreamResult["response"]>
   }
+
+  // A failed attempt may have captured partial changes into a `require_review`
+  // run's changeset; rewind to this baseline before a retry or terminal
+  // failure so they can't double-stage. Length-truncation is enough — the sink
+  // is append-only within a turn.
+  const sinkBaseline = opts.captureChanges?.sink.length ?? 0
+  const resetSink = () => {
+    if (opts.captureChanges) opts.captureChanges.sink.length = sinkBaseline
+  }
+
+  // Retry the handoff once — but ONLY for a headless run whose edits are merely
+  // staged (`captureOnly` ⇒ require_review). In `automatic` mode the second
+  // turn's tools already wrote to Firestore live, so re-running would
+  // double-apply (e.g. append the footer twice); there we take the single
+  // attempt and fail through. Interactive chat never retries — it streams the
+  // soft fallback and the human simply resends.
+  const canRetry =
+    opts.headless === true && opts.captureChanges?.captureOnly === true
+  const maxAttempts = canRetry ? 2 : 1
+
+  // Drive the attempt(s) under a fallback shell so a failure is handled here
+  // rather than escaping as `INTERNAL` through `onCallGenkit`.
+  // `streamChatToClient` already converts its own recoverable cases
+  // (`TurnTimeoutError`, tool-iteration exhaustion) into fallback chunks; this
+  // is the net for everything else — provider rate limits, network blips, the
+  // 120s function budget squeezed by a long first turn, the target model going
+  // unavailable mid-request, etc.
+  let lastErr: unknown
+  for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+    try {
+      return await attemptSecondTurn()
+    } catch (err) {
+      // Actionable HttpsErrors (except `not-found`) carry a precise message
+      // (permission-denied, archived, …) the client's toast surfaces
+      // faithfully — propagate them untouched: no retry, no fallback.
+      //
+      // A `not-found` here is `prepareChatTurn` failing to load the session for
+      // the second turn ("Session not found."). It is NEVER actionable: it can
+      // only arise when the first turn never persisted the session (Genkit's
+      // `createSession` is lazy and `chat.send` saves only once `generate`
+      // resolves, so an aborted/stubbed first turn on a FRESH headless session
+      // leaves no `botSessions` doc; the stub guard at the top of this function
+      // already short-circuits the derivable case). It would fail identically
+      // on a retry, so it's recoverable-but-not-retriable — fall through to the
+      // terminal handling below.
+      if (err instanceof HttpsError && err.code !== "not-found") throw err
+      lastErr = err
+      resetSink()
+      const retriable = !(err instanceof HttpsError)
+      if (attempt < maxAttempts && retriable) {
+        logger.warn(
+          `[runTransferTurnIfRequested] second-turn attempt ${attempt} failed, retrying team=${opts.teamId} session=${opts.sessionId} target=${targetAgentId ?? "(default)"}`,
+          { err: String(err) }
+        )
+        continue
+      }
+      break
+    }
+  }
+
+  // Every attempt failed. Restore the first turn's full thread so the persisted
+  // state matches what streamed by — without this the truncation leaves disk at
+  // `[…prior, user]`, and re-opening renders just the user's bubble with no
+  // agent reply even though they watched the "transferring you to X" text
+  // stream in. Best-effort: a restore failure is logged and swallowed. Skip a
+  // stub (`messages: []` from the inner turn's own timeout/iteration fallback)
+  // — re-saving empty would clobber the truncated thread with nothing.
+  logger.warn(
+    `[runTransferTurnIfRequested] second-turn failed team=${opts.teamId} session=${opts.sessionId} target=${targetAgentId ?? "(default)"}`,
+    { err: String(lastErr) }
+  )
+  if (
+    Array.isArray(opts.firstFinal.messages) &&
+    opts.firstFinal.messages.length > 0
+  ) {
+    try {
+      await opts.firstSession.updateMessages(
+        MAIN_THREAD,
+        opts.firstFinal.messages as Parameters<
+          typeof opts.firstSession.updateMessages
+        >[1]
+      )
+    } catch (restoreErr) {
+      logger.warn(
+        `[runTransferTurnIfRequested] thread restore failed team=${opts.teamId} session=${opts.sessionId}`,
+        { err: String(restoreErr) }
+      )
+    }
+  }
+
+  // Headless (Workflows) run: there is no human to "send again" and each run
+  // uses a throwaway session, so the interactive soft fallback would land the
+  // run as `success` carrying a chat-oriented message while the specialist's
+  // work never happened. Throw instead so the worker records a real, visible
+  // `error` (an admin can re-trigger the workflow). The agent-id commit in the
+  // caller's `finally` is harmless on the throwaway session.
+  if (opts.headless === true) {
+    const cause = lastErr instanceof Error ? lastErr.message : String(lastErr)
+    throw new Error(
+      `Handoff to ${targetAgentId ?? "the requested agent"} failed: ` +
+        `the agent could not reply (${cause}).`
+    )
+  }
+
+  // Interactive chat: keep the soft fallback. The first turn's "transferring
+  // you to X" bubble stays, the agent badge stays flipped (commit in the
+  // caller's `finally`), and the user's next message routes to the new agent —
+  // rethrowing instead would collapse the optimistic UI
+  // ([useBotChat.sendMessage] splices the in-flight bubble pair out on any
+  // caught error).
+  const fallback =
+    "Handed off to the new agent, but they couldn't reply just now. " +
+    "Try sending your message again — your next message will route to them."
+  opts.sendChunk({ chunk: fallback })
+  return {
+    text: fallback,
+    messages: opts.firstFinal.messages ?? [],
+  } as unknown as Awaited<ChatStreamResult["response"]>
 }
 
 // ===========================================================================
@@ -2809,6 +2890,13 @@ interface RunAgentTurnOptions {
   targetScope?: WorkspaceNodeScope | null
   /** Forwarded to prepareChatTurn — headless runs disable agent handoff. */
   disableTransfer?: boolean
+  /**
+   * Marks a headless (Workflows) run with no human in the loop. Forwarded to
+   * `runTransferTurnIfRequested` so a failed handoff fails the run loudly
+   * (retry-once-then-throw) instead of returning the interactive soft
+   * fallback. `sendBotMessageFlow` leaves it unset (interactive).
+   */
+  headless?: boolean
 }
 
 /**
@@ -2941,6 +3029,7 @@ async function runAgentTurn(
         onUsage: opts.onUsage,
         targetScope: opts.targetScope,
         allowInterrupts: opts.allowInterrupts,
+        headless: opts.headless,
         archivedSessionMessage,
         sendChunk,
       })
@@ -3039,6 +3128,11 @@ export async function runHeadlessAgentTurn(opts: {
     // The workflow's agent is both the authorizing principal AND the persona.
     activeAgentId: opts.agentId,
     allowInterrupts: false,
+    // Headless run: a failed handoff should fail the run loudly (so the worker
+    // records a real `error`), not return the interactive "send your message
+    // again" fallback — there's no human, no next message, and the session is
+    // a throwaway. See `runTransferTurnIfRequested`.
+    headless: true,
     // Transfer is opt-in (the worker turns it on only for the Default agent).
     // When on, the handed-off second turn INHERITS this run's capture +
     // metering hooks — `runAgentTurn` forwards `captureChanges`/`onUsage`/

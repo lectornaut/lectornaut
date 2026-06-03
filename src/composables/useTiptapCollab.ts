@@ -4,6 +4,14 @@ import CollaborationCaret from "@tiptap/extension-collaboration-caret"
 import type { Awareness } from "y-protocols/awareness"
 import type { Doc as YDoc } from "yjs"
 
+/**
+ * The Y.Doc XML-fragment field Tiptap's Collaboration extension binds to.
+ * Exported so programmatic Y.Doc writes (e.g. applying an agent edit straight
+ * into the CRDT) target the exact same fragment the editor renders from —
+ * the two must never drift apart.
+ */
+export const TIPTAP_COLLAB_FIELD = "tiptap"
+
 interface CollaborationProvider {
   awareness: Awareness
   on: (event: string, listener: () => void) => void
@@ -105,7 +113,7 @@ export function useTiptapCollab(
   const extensions: AnyExtension[] = [
     Collaboration.configure({
       document: ydoc,
-      field: "tiptap",
+      field: TIPTAP_COLLAB_FIELD,
       provider,
     }),
     CollaborationCaret.configure({

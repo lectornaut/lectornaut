@@ -53,7 +53,10 @@ export type FirestoreErrorCode =
   (typeof FirestoreErrorCodes)[keyof typeof FirestoreErrorCodes]
 
 /**
- * Retryable Firestore error codes
+ * Retryable Firestore error codes (the WRITE/sync-engine taxonomy — purely
+ * transient infrastructure failures). Auth/permission codes are deliberately
+ * excluded here: re-sending a write the server rejected for authorization is
+ * pointless. Reads use the broader {@link RETRYABLE_READ_ERROR_CODES} below.
  */
 const RETRYABLE_ERROR_CODES = new Set<FirestoreErrorCode>([
   FirestoreErrorCodes.UNAVAILABLE,
@@ -61,6 +64,29 @@ const RETRYABLE_ERROR_CODES = new Set<FirestoreErrorCode>([
   FirestoreErrorCodes.RESOURCE_EXHAUSTED,
   FirestoreErrorCodes.ABORTED,
   FirestoreErrorCodes.INTERNAL,
+])
+
+/**
+ * Read-layer (realtime listener) retryable codes. A superset of
+ * {@link RETRYABLE_ERROR_CODES} that ALSO retries the two auth/permission codes
+ * which are transient specifically during the cold-start token warm-up window:
+ * a realtime `onSnapshot` listener can open in the brief gap before the Firebase
+ * Auth ID token (with custom claims) or the App Check token is ready, and
+ * Firestore rules then reject that first connection with `permission-denied` /
+ * `unauthenticated` even though the user is fully authorized. These heal on a
+ * retry a moment later.
+ *
+ * This is bounded by the query layer's retry cap (see `queryClient.ts`), so a
+ * GENUINE denial still surfaces as an error after a few attempts instead of
+ * retrying forever — and, critically, the realtime read primitive only opens a
+ * listener after `enabled` gates pass, so we never retry a query the user has
+ * no business making. `not-found` stays non-retryable: a missing document is a
+ * definitive answer, not a transient one.
+ */
+const RETRYABLE_READ_ERROR_CODES = new Set<FirestoreErrorCode>([
+  ...RETRYABLE_ERROR_CODES,
+  FirestoreErrorCodes.PERMISSION_DENIED,
+  FirestoreErrorCodes.UNAUTHENTICATED,
 ])
 
 const FIREBASE_ERROR_PREFIX_SEPARATOR = "/"
@@ -222,9 +248,23 @@ export const getFirestoreErrorMessage = (error: unknown): string => {
 }
 
 /**
- * Check if a Firebase error is retryable.
+ * Check if a Firebase error is retryable for a WRITE (sync-engine) operation.
  */
 export const isRetryableFirebaseError = (error: unknown): boolean => {
   const code = getFirebaseErrorCode(error)
   return code ? RETRYABLE_ERROR_CODES.has(code as FirestoreErrorCode) : false
+}
+
+/**
+ * Check if a Firebase error is retryable for a READ (realtime listener) query.
+ * Broader than {@link isRetryableFirebaseError}: also retries the cold-start
+ * auth/App-Check token-warm-up codes (`permission-denied` / `unauthenticated`)
+ * that would otherwise leave a bootstrap query's `data` undefined forever and
+ * hang the app shell on its loading gate. See {@link RETRYABLE_READ_ERROR_CODES}.
+ */
+export const isRetryableReadError = (error: unknown): boolean => {
+  const code = getFirebaseErrorCode(error)
+  return code
+    ? RETRYABLE_READ_ERROR_CODES.has(code as FirestoreErrorCode)
+    : false
 }

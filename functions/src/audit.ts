@@ -77,7 +77,14 @@ function buildContext(request: CallableRequest): Context | undefined {
 }
 
 function normalizeActor(actor: Actor): Actor {
-  const normalized: Actor = { userId: actor.userId }
+  // `userId` is optional (a headless Workflows run has no driving human — only
+  // an agent identity). Add it conditionally like every other field: leaking
+  // `userId: undefined` into the Firestore write throws "Cannot use 'undefined'
+  // as a Firestore value" (the SDK has no `ignoreUndefinedProperties`), and
+  // because `logEvent` shares the caller's transaction that abort silently
+  // rolls back the node mutation it was auditing — an agent edit that vanishes.
+  const normalized: Actor = {}
+  if (actor.userId) normalized.userId = actor.userId
   if (actor.email) normalized.email = actor.email
   if (actor.role) normalized.role = actor.role
   if (actor.agentId) normalized.agentId = actor.agentId

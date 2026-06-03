@@ -455,7 +455,6 @@ declare module 'vue' {
     TreeNode: typeof import('./src/components/filetree/TreeNode.vue')['default']
     Users: typeof import('./src/components/landing/Users.vue')['default']
     WallOfLove: typeof import('./src/components/landing/WallOfLove.vue')['default']
-    WorkflowEditorDialog: typeof import('./src/components/app/workflows/WorkflowEditorDialog.vue')['default']
     WorkflowFilterMenu: typeof import('./src/components/app/workflows/WorkflowFilterMenu.vue')['default']
     WorkflowRunFilter: typeof import('./src/components/app/runs/WorkflowRunFilter.vue')['default']
     WorkflowSidebarItem: typeof import('./src/components/app/workflows/WorkflowSidebarItem.vue')['default']

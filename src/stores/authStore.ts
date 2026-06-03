@@ -192,6 +192,14 @@ export const useAuthStore = defineStore("auth", () => {
   const isMembershipPreferencesLoading: ComputedRef<boolean> = computed(
     () => membershipPreferencesQuery.isLoading.value
   )
+  // A terminal read error (after the read-retry budget is spent — e.g. a
+  // permission-denied that never cleared) leaves `data` undefined AND
+  // `isLoading` false. The bootstrap resolver below must treat that as a
+  // definitive (if unhappy) answer and release the gate, or the app shell spins
+  // forever. See `hasResolvedCurrentWorkspaceSelection`.
+  const isMembershipPreferencesError: ComputedRef<boolean> = computed(
+    () => membershipPreferencesQuery.isError.value
+  )
 
   // Mirror `userPreferences`: Firestore (incl. the surviving TanStack read
   // cache) is authoritative when idle; the optimistic overlay only wins while a
@@ -384,8 +392,9 @@ export const useAuthStore = defineStore("auth", () => {
       currentTeamId,
       firestoreMembershipPreferences,
       isMembershipPreferencesLoading,
+      isMembershipPreferencesError,
     ],
-    ([teamId, preferences, loading]) => {
+    ([teamId, preferences, loading, errored]) => {
       if (!currentUser.value || !teamId || loading) {
         return
       }
@@ -394,7 +403,13 @@ export const useAuthStore = defineStore("auth", () => {
       // has delivered its first snapshot for the docRef that the just-applied
       // `currentTeamId` hydration produced, so without this guard we'd act on
       // a phantom "loading" state.
-      if (preferences === undefined) return
+      //
+      // EXCEPTION: a terminal query error also presents as `undefined` data
+      // with `loading` false. That is NOT "still loading" — it's a definitive
+      // failure, and waiting on it spins the app shell forever (the infinite
+      // workspace-loading bug). When `errored`, fall through and release the
+      // gate against the hydrated/empty overlay instead of blocking.
+      if (preferences === undefined && !errored) return
 
       // Mirror the userPreferences reconciliation (the team-selection path that
       // ALREADY survives reload): let Firestore overwrite the cold-start
