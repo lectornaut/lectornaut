@@ -156,6 +156,23 @@ const scheduleModelEmit = (value: string) => {
   }, debounceMs)
 }
 
+/**
+ * Force the model to reflect the LIVE document right now, cancelling any
+ * pending debounced emit. Called before a save so the last keystrokes typed
+ * within the debounce window aren't dropped from the persisted content.
+ */
+const flush = () => {
+  if (modelEmitTimer !== null) {
+    clearTimeout(modelEmitTimer)
+    modelEmitTimer = null
+  }
+  pendingModelValue = null
+  const live = view.value?.state.doc.toString()
+  if (live !== undefined && live !== (props.modelValue ?? "")) {
+    emit("update:modelValue", live)
+  }
+}
+
 /** Effective Shiki language id: explicit `language` prop wins, else detected
  *  from the file extension via the shared registry. */
 const effectiveLanguage = computed<string>(
@@ -922,6 +939,9 @@ defineExpose({
   getView,
   getState,
   isReady,
+
+  // Persistence
+  flush,
 
   // Focus management
   focus,

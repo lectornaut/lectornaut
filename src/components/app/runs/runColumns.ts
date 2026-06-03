@@ -9,6 +9,8 @@
 import RunRowActions from "@/components/app/runs/RunRowActions.vue"
 import DataTableColumnHeader from "@/components/table/DataTableColumnHeader.vue"
 import { Badge } from "@/components/ui/badge"
+import { Checkbox } from "@/components/ui/checkbox"
+import { IconChevronRight } from "@/data/icons"
 import {
   runStatusOptions,
   runStatusTextClass,
@@ -173,14 +175,48 @@ export function runColumns(
   const { workflowOptions, dateRangeFilter = false } = options
   return [
     {
+      id: "select",
+      header: ({ table }) =>
+        h(Checkbox, {
+          modelValue: table.getIsAllPageRowsSelected()
+            ? true
+            : table.getIsSomePageRowsSelected()
+              ? "indeterminate"
+              : false,
+          "onUpdate:modelValue": (value: boolean | "indeterminate") =>
+            table.toggleAllPageRowsSelected(!!value),
+          ariaLabel: "Select all",
+        }),
+      cell: ({ row }) =>
+        h(Checkbox, {
+          modelValue: row.getIsSelected(),
+          "onUpdate:modelValue": (value: boolean | "indeterminate") =>
+            row.toggleSelected(!!value),
+          ariaLabel: "Select row",
+        }),
+      enableSorting: false,
+      enableHiding: false,
+      enableGrouping: false,
+      enablePinning: true,
+    },
+    {
       accessorKey: "workflowName",
       header: ({ column }) =>
         h(DataTableColumnHeader, {
           column: toUnknownColumn(column),
           title: "Workflow",
         }),
+      // Leading chevron doubles as the expand affordance — it rotates with the
+      // row's expanded state (clicking anywhere on the row toggles it; see
+      // DataTable's row-click handler).
       cell: ({ row }) =>
         h("div", { class: "flex items-center gap-2" }, [
+          h(IconChevronRight, {
+            class: [
+              "text-muted-foreground size-4 shrink-0 transition-transform",
+              row.getIsExpanded() ? "rotate-90" : "",
+            ],
+          }),
           h(
             "span",
             { class: "truncate font-medium" },

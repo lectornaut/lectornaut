@@ -7,6 +7,7 @@ import type {
   ColumnPinningState,
   ExpandedState,
   GroupingState,
+  Row,
   SortingState,
   VisibilityState,
 } from "@tanstack/vue-table"
@@ -54,6 +55,19 @@ const props = withDefaults(
     showViewOptions: true,
   }
 )
+
+/**
+ * When a surface provides an `#expanded` slot, rows become click-to-expand and
+ * render a detail row beneath. Opt-in so every other table keeps its current
+ * behaviour untouched (grouped tables still expand via their group toggle).
+ */
+const slots = defineSlots<{
+  expanded?: (props: { row: Row<TData> }) => unknown
+}>()
+const hasExpandedSlot = computed(() => !!slots.expanded)
+
+/** Columns whose own click shouldn't toggle row expansion (their controls own it). */
+const NON_EXPAND_COLUMNS = new Set(["select", "actions"])
 
 const sorting = ref<SortingState>([])
 const columnFilters = ref<ColumnFiltersState>([])
@@ -110,7 +124,25 @@ const table = useVueTable({
   getFacetedUniqueValues: getFacetedUniqueValues(),
   getExpandedRowModel: getExpandedRowModel(),
   getGroupedRowModel: getGroupedRowModel(),
+  // Let leaf rows expand to a detail row when an `#expanded` slot is provided;
+  // otherwise fall back to the default (only rows with subRows, i.e. groups).
+  getRowCanExpand: hasExpandedSlot.value ? () => true : undefined,
 })
+
+/** Click a row body to toggle its detail row (skips group rows + control cells). */
+function onRowToggleExpand(row: {
+  getIsGrouped: () => boolean
+  toggleExpanded: () => void
+}): void {
+  if (!hasExpandedSlot.value || row.getIsGrouped()) return
+  row.toggleExpanded()
+}
+
+/** Stop a control column's click (select / actions) from also toggling the row. */
+function onCellClick(columnId: string, event: MouseEvent): void {
+  if (hasExpandedSlot.value && NON_EXPAND_COLUMNS.has(columnId))
+    event.stopPropagation()
+}
 
 defineExpose({ table })
 </script>
@@ -170,7 +202,9 @@ defineExpose({ table })
                 :class="[
                   row.getIsSelected() && 'bg-accent',
                   row.getIsExpanded() && 'bg-accent/50',
+                  hasExpandedSlot && !row.getIsGrouped() && 'cursor-pointer',
                 ]"
+                @click="onRowToggleExpand(row)"
               >
                 <TableCell
                   v-for="cell in row.getVisibleCells()"
@@ -186,6 +220,7 @@ defineExpose({ table })
                         ? 'right-0 bg-linear-to-l'
                         : '',
                   ]"
+                  @click="onCellClick(cell.column.id, $event)"
                 >
                   <template v-if="cell.getIsGrouped()">
                     <Button
@@ -211,6 +246,22 @@ defineExpose({ table })
                       :props="cell.getContext()"
                     />
                   </template>
+                </TableCell>
+              </TableRow>
+              <!-- Opt-in detail row: rendered only for leaf rows when an
+                   `#expanded` slot is provided and the row is expanded. -->
+              <TableRow
+                v-if="
+                  hasExpandedSlot && row.getIsExpanded() && !row.getIsGrouped()
+                "
+                :data-expanded="'expanded'"
+                class="hover:bg-transparent"
+              >
+                <TableCell
+                  :colspan="row.getVisibleCells().length"
+                  class="bg-muted/30 p-0"
+                >
+                  <slot name="expanded" :row="row" />
                 </TableCell>
               </TableRow>
             </template>

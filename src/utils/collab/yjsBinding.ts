@@ -452,7 +452,15 @@ export async function createYjsCollab(
 
     if (join.role === "editor") {
       mesh.sendYUpdate(update)
-      snapshotManager.scheduleSave()
+      // Every editor must broadcast its edits to the mesh, but only ONE peer
+      // should persist the snapshot — otherwise N editors each write the full
+      // (~1MB) doc every debounce window (N× write amplification). Elect the
+      // same applier used for agent relays; all editors converge to the same Y
+      // state via the mesh, so the applier's snapshot is authoritative. On
+      // handover the leaving applier's destroy() does a final flush.
+      if (isAgentApplier()) {
+        snapshotManager.scheduleSave()
+      }
     }
   }
 

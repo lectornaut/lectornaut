@@ -25,6 +25,7 @@ import {
   archiveTeamWorkflow as archiveTeamWorkflowFn,
   createTeamWorkflow as createTeamWorkflowFn,
   deleteTeamWorkflow as deleteTeamWorkflowFn,
+  deleteTeamWorkflowRun as deleteTeamWorkflowRunFn,
   enableTeamWorkflowPreset as enableTeamWorkflowPresetFn,
   reviewTeamWorkflowRun as reviewTeamWorkflowRunFn,
   runTeamWorkflowNow as runTeamWorkflowNowFn,
@@ -329,6 +330,16 @@ export const useTeamWorkflowsStore = defineStore("teamWorkflows", () => {
     return data.status
   }
 
+  /** Permanently remove a run from history. */
+  const removeRun = async (runId: string): Promise<void> => {
+    const teamId = requireTeam()
+    const workspaceId = recentRuns.value.find(
+      (r) => r.id === runId
+    )?.workspaceId
+    if (!workspaceId) throw new Error("Run not found.")
+    await deleteTeamWorkflowRunFn({ teamId, workspaceId, runId })
+  }
+
   /** Materialize a predefined catalog preset as a runnable workflow. */
   const enablePreset = async (
     presetKey: string,
@@ -387,6 +398,7 @@ export const useTeamWorkflowsStore = defineStore("teamWorkflows", () => {
     remove,
     runNow,
     reviewRun,
+    removeRun,
     enablePreset,
     setAvailability,
   }

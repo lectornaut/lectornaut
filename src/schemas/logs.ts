@@ -53,7 +53,12 @@ export const logActionSchema = z.enum([
 ])
 
 export const logActorSchema = z.object({
-  userId: z.string(),
+  // Optional: an autonomous Workflows run has no driving human, so an agent
+  // edit carries only `agentId`/`agentName` and omits `userId`. The server's
+  // `normalizeActor` writes it omit-or-string, never null (mirrors the
+  // `Actor.userId?: string` write contract). Requiring it here silently
+  // dropped every headless agent log on read — the activity feed went blank.
+  userId: z.string().optional(),
   email: z.string().nullable().optional(),
   role: z.string().nullable().optional(),
   // Present when an agent member performed the action on the user's behalf:

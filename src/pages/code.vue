@@ -28,6 +28,8 @@ const collabExtensions = shallowRef<Extension[]>([])
 // Hold the active CodeMirror collab binding so its UndoManager can be torn
 // down when the session is destroyed (file switch / unmount).
 let activeCmCollab: CodeMirrorCollabResult | null = null
+// Template ref to the editor — used to flush pending edits before a save.
+const editorRef = ref<{ flush?: () => void } | null>(null)
 
 const {
   teamId,
@@ -46,6 +48,7 @@ const {
 } = useCollabPage({
   scope: nodeScope,
   basePath: "/code",
+  flushPendingEdits: () => editorRef.value?.flush?.(),
   onSessionCreated: (session, fileContent) => {
     const cmCollab = useCodeMirrorCollab(session, fileContent)
     activeCmCollab = cmCollab
@@ -96,6 +99,7 @@ useHead(() => ({
   >
     <OverlayScrollbarsWrapper v-if="teamId && workspaceId && selectedFile">
       <CodeEditor
+        ref="editorRef"
         v-model="editorContent"
         :file-name="selectedNode?.name ?? ''"
         :read-only="editorReadOnly"

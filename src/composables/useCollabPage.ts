@@ -45,6 +45,13 @@ export interface UseCollabPageOptions {
    * or unmount). Use to clean up editor-specific state.
    */
   onSessionDestroyed?: () => void
+  /**
+   * Force any pending debounced editor → `editorContent` emit to land NOW.
+   * Wired to the editor component's `flush()`. Called at the top of
+   * `saveContent` so a save started within the debounce window persists the
+   * latest keystrokes instead of the stale debounced value.
+   */
+  flushPendingEdits?: () => void
 }
 
 export interface UseCollabPageReturn {
@@ -154,10 +161,20 @@ export function useCollabPage(
   const applyExternalContent = (rawContent: string): void => {
     const activeSession = collabSession.value
     if (!activeSession) return
-    if (!activeSession.isAgentApplier()) return
 
     const normalized = normalizeContent(rawContent)
     if (normalized === lastSyncedContent.value) return
+
+    // Non-applier peers receive the agent edit through the Yjs mesh (their
+    // editor — and thus `editorContent` — updates on its own). They must still
+    // advance `lastSyncedContent` to the new baseline, or the mesh-driven
+    // change reads as a local edit and flips `isDirty` true: a spurious
+    // "unsaved" indicator plus an enabled Save that would re-write the agent's
+    // content. Only the elected applier mutates Y; everyone else just tracks.
+    if (!activeSession.isAgentApplier()) {
+      lastSyncedContent.value = normalized
+      return
+    }
 
     if (scope === "code") {
       const ytext = activeSession.ydoc.getText("codemirror")
@@ -449,6 +466,10 @@ export function useCollabPage(
       )
       return
     }
+
+    // Land any pending debounced editor emit synchronously so we persist the
+    // freshest content, not a value lagging by one debounce interval.
+    options.flushPendingEdits?.()
 
     isSaving.value = true
     try {

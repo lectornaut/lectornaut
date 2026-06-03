@@ -25,7 +25,15 @@ const formatTimestamp = (entry: ILogEntry) => {
 }
 
 const formatActor = (entry: ILogEntry) =>
-  entry.actor?.email || entry.actor?.userId || t("settings.logs.unknownActor")
+  // Agent-authored entries carry only `agentId`/`agentName` (an autonomous
+  // run has no `userId`/`email`), so surface the agent first — otherwise every
+  // agent action collapses to "Unknown". Human actions fall straight through.
+  entry.actor?.agentName ||
+  entry.actor?.email ||
+  entry.actor?.userId ||
+  (entry.actor?.agentId
+    ? t("settings.logs.agentActor")
+    : t("settings.logs.unknownActor"))
 
 const formatResource = (entry: ILogEntry) =>
   `${entry.resource.type}: ${entry.resource.id}`

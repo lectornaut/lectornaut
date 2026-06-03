@@ -297,15 +297,33 @@ export const createNodeTool = ai.defineTool(
     if ("error" in resolved) return { ok: false, message: resolved.error }
     const blocked = scopeBlocked(context, input.scope)
     if (blocked) return blocked
+    // Pre-generate the node id so a require_review (capture-only) run can hand
+    // it back to the model — letting the agent chain an updateNodeContent onto
+    // the just-created node within the same turn. Replay re-creates under this
+    // same id, so the staged update still resolves to it. (Automatic mode is
+    // unchanged: it simply commits with this id instead of an auto-generated
+    // one — which also makes a create replay idempotent rather than duplicating.)
+    const createInput: CreateNodeInput = {
+      ...input,
+      nodeId: db
+        .collection(
+          nodesCollectionPath(
+            resolved.teamId,
+            resolved.workspaceId,
+            input.scope
+          )
+        )
+        .doc().id,
+    }
     const gated = captureGate(context, {
       op: "create",
       scope: input.scope,
-      nodeId: null,
+      nodeId: createInput.nodeId ?? null,
       summary: `Create ${input.type} "${input.name}"`,
-      input: { ...input },
+      input: { ...createInput },
     })
     if (gated) return gated
-    return applyCreateNode(resolved, input)
+    return applyCreateNode(resolved, createInput)
   }
 )
 
@@ -315,6 +333,35 @@ interface CreateNodeInput {
   name: string
   parentId?: string
   content?: string
+  /**
+   * Pre-generated doc id (set by the live tool). Lets a require_review capture
+   * return the id to the model for chaining, and lets replay re-create the node
+   * under the same id. Absent → `applyCreateNode` auto-generates one.
+   */
+  nodeId?: string
+}
+
+/**
+ * Cap on agent-authored content length (raw markdown / source). Kept in step
+ * with READ_NODE_MAX_CHARS so writes and reads are symmetric, and so neither
+ * the node doc NOR its `agentRelay/state` copy (a second, full copy written in
+ * the same transaction) can approach Firestore's 1MB per-document limit.
+ */
+const WRITE_CONTENT_MAX_CHARS = 100_000
+
+function oversizedContentResult(
+  content: string | undefined
+): MutationResult | null {
+  const len = content?.length ?? 0
+  if (len > WRITE_CONTENT_MAX_CHARS) {
+    return {
+      ok: false,
+      message:
+        `Content is too large (${len} characters; limit ` +
+        `${WRITE_CONTENT_MAX_CHARS}). Split it across files or shorten it.`,
+    }
+  }
+  return null
 }
 
 /** Commit core for `createNode` — shared by the live tool + approval replay. */
@@ -327,6 +374,9 @@ export async function applyCreateNode(
   const named = validateName(input.name)
   if ("error" in named) return { ok: false, message: named.error }
   const { name } = named
+
+  const oversized = oversizedContentResult(input.content)
+  if (oversized) return oversized
 
   const scope = input.scope
   const type = input.type
@@ -350,9 +400,15 @@ export async function applyCreateNode(
         if (parentData.isArchived) throw new Error("Parent folder is archived.")
       }
 
-      const nodeRef = db
-        .collection(nodesCollectionPath(teamId, workspaceId, scope))
-        .doc()
+      const nodesCollection = db.collection(
+        nodesCollectionPath(teamId, workspaceId, scope)
+      )
+      // Use the pre-generated id when present (require_review replay / chaining)
+      // so the node lands under the id the model already referenced; otherwise
+      // auto-generate.
+      const nodeRef = input.nodeId
+        ? nodesCollection.doc(input.nodeId)
+        : nodesCollection.doc()
       const now = admin.firestore.FieldValue.serverTimestamp()
       const nameLower = toNameLower(name)
       const fileContent =
@@ -569,6 +625,8 @@ export async function applyUpdateNodeContent(
 
   const scope = input.scope
   const nodeId = input.nodeId
+  const oversized = oversizedContentResult(input.content)
+  if (oversized) return oversized
   const content = serializeContent(scope, input.content ?? "")
 
   try {

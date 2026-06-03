@@ -72,6 +72,9 @@ const normalizeStoredContent = (raw: string | null | undefined): string => {
   }
 }
 
+// Template ref to the editor — used to flush pending edits before a save.
+const editorRef = ref<{ flush?: () => void } | null>(null)
+
 const {
   teamId,
   workspaceId,
@@ -92,6 +95,7 @@ const {
   scope: nodeScope,
   basePath: "/write",
   normalizeContent: normalizeStoredContent,
+  flushPendingEdits: () => editorRef.value?.flush?.(),
 })
 
 const collabDoc = computed(() => collabSession.value?.ydoc ?? null)
@@ -131,9 +135,21 @@ useHead(() => ({
   <div
     class="m-2 flex grow flex-col overflow-auto overscroll-none scroll-smooth rounded border"
   >
-    <OverlayScrollbarsWrapper v-if="teamId && workspaceId && selectedFile">
+    <!--
+      Mount the editor ONCE, only after the collab session resolves (ready or
+      errored). Tiptap fixes its Collaboration extension at creation, so the old
+      `:key` flipped local→collab and double-mounted the whole editor on every
+      open (and risked dropping keystrokes typed into the throwaway local
+      instance). Keying on the file id alone remounts only on a real file switch.
+    -->
+    <OverlayScrollbarsWrapper
+      v-if="
+        teamId && workspaceId && selectedFile && (collabReady || collabError)
+      "
+    >
       <TextEditor
-        :key="`${selectedFile.id}:${collabDoc ? 'collab' : 'local'}:${collabAwareness ? 'aware' : 'noaware'}`"
+        ref="editorRef"
+        :key="selectedFile.id"
         v-model="editorContent"
         :read-only="editorReadOnly"
         :collaboration-doc="collabDoc"
@@ -141,6 +157,12 @@ useHead(() => ({
         :external-content="externalEditorContent"
       />
     </OverlayScrollbarsWrapper>
+    <div
+      v-else-if="teamId && workspaceId && selectedFile"
+      class="flex grow items-center justify-center"
+    >
+      <Spinner />
+    </div>
     <Empty v-else>
       <EmptyHeader>
         <EmptyMedia variant="icon">

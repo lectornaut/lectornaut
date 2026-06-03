@@ -900,6 +900,7 @@ export const workflowRunStatusSchema = z.enum([
   "success", // automatic run that applied its edits directly
   "awaiting_review", // require_review run: changes captured, pending approval
   "applied", // require_review run: approved + applied
+  "partially_applied", // require_review run: approved, some changes failed
   "cancelled", // require_review run: rejected by an admin
   "error",
   "blocked", // over budget / not entitled — no spend
@@ -966,6 +967,9 @@ export const workflowRunChangeSchema = z.object({
   summary: z.string(),
   /** The source node this edit was derived from, if any (citation). */
   sourceNodeId: z.string().nullable().optional(),
+  /** Apply outcome, stamped when a require_review run is approved. */
+  applied: z.boolean().optional(),
+  applyError: z.string().nullable().optional(),
 })
 
 /** What fired a run (the brief's `triggeredBy`). */

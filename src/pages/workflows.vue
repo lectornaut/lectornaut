@@ -346,8 +346,12 @@ const formatWhen = (ts: unknown): string =>
       :data="allRows"
       :columns="columns"
       sticky-header
-      :column-pinning="{ left: [], right: ['actions'] }"
-    />
+      :column-pinning="{ left: ['select'], right: ['actions'] }"
+    >
+      <template #expanded="{ row }">
+        <RunDetails :run="row.original.run" />
+      </template>
+    </DataTable>
   </div>
 
   <!-- Right sidebar: selected workflow actions + details -->

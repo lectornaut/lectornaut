@@ -1739,6 +1739,17 @@ export const reviewTeamWorkflowRun = createTypedCallable<
   ReviewTeamWorkflowRunResponse
 >("reviewTeamWorkflowRun")
 
+/** Permanently remove a run from history (admin-gated). */
+export interface DeleteTeamWorkflowRunRequest {
+  teamId: string
+  workspaceId: string
+  runId: string
+}
+export const deleteTeamWorkflowRun = createTypedCallable<
+  DeleteTeamWorkflowRunRequest,
+  { ok: boolean }
+>("deleteTeamWorkflowRun")
+
 // =============================================================================
 // Unified Integrations (agent | tool)
 // =============================================================================

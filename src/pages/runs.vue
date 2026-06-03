@@ -168,8 +168,12 @@ const stats = computed(() => {
     :data="allRows"
     :columns="columns"
     sticky-header
-    :column-pinning="{ left: [], right: ['actions'] }"
-  />
+    :column-pinning="{ left: ['select'], right: ['actions'] }"
+  >
+    <template #expanded="{ row }">
+      <RunDetails :run="row.original.run" />
+    </template>
+  </DataTable>
   <div
     v-else
     class="text-muted-foreground flex h-full items-center justify-center p-8 text-sm"

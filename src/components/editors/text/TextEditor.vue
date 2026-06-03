@@ -687,6 +687,20 @@ const syncModelFromEditor = (
   scheduleModelEmit(serialized, options?.immediate ?? false)
 }
 
+// `onUpdate` fires on every keystroke; serializing the whole ProseMirror doc
+// (a full JSON.stringify) + recomputing stats there is O(doc) per keypress.
+// Debounce that work: schedule once, then serialize + emit a single time when
+// the window closes. Reuses `modelEmitTimer` so `clearPendingModelEmit` (the
+// external-write path) and a final `flush()` both cancel/drain it correctly.
+const scheduleModelSync = () => {
+  if (modelEmitTimer !== null) return
+  modelEmitTimer = setTimeout(() => {
+    modelEmitTimer = null
+    const currentEditor = editor.value
+    if (currentEditor) syncModelFromEditor(currentEditor, { immediate: true })
+  }, MODEL_EMIT_DEBOUNCE_MS)
+}
+
 const editor = useEditor({
   editable: !props.readOnly,
   content: props.collaborationDoc ? undefined : initialContent,
@@ -721,8 +735,8 @@ const editor = useEditor({
     syncTableOfContentsScrollParent(currentEditor)
     syncModelFromEditor(currentEditor, { immediate: true })
   },
-  onUpdate: ({ editor: currentEditor }) => {
-    syncModelFromEditor(currentEditor)
+  onUpdate: () => {
+    scheduleModelSync()
   },
 })
 
@@ -823,13 +837,29 @@ watch(
   }
 )
 
+/**
+ * Force the model to reflect the live document now, cancelling any pending
+ * debounced emit. Called before a save so keystrokes typed within the debounce
+ * window aren't dropped from the persisted content.
+ */
+const flush = () => {
+  const currentEditor = editor.value
+  if (!currentEditor) return
+  syncModelFromEditor(currentEditor, { immediate: true })
+}
+
+defineExpose({ flush })
+
 onBeforeUnmount(() => {
   if (modelEmitTimer !== null) {
     clearTimeout(modelEmitTimer)
     modelEmitTimer = null
   }
 
-  flushPendingModelEmit()
+  // Serialize + emit the LIVE doc (not just any already-serialized pending
+  // value) — with the debounced sync above, edits since the last window may
+  // not be serialized yet, so `flushPendingModelEmit` alone would drop them.
+  flush()
   editor.value?.destroy()
 })
 

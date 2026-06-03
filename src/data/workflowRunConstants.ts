@@ -7,6 +7,7 @@
  */
 
 import {
+  IconAlertTriangle,
   IconBan,
   IconBolt,
   IconCheckCircle,
@@ -32,6 +33,11 @@ export const runStatusOptions: RunOption[] = [
   { value: "success", label: "Applied (auto)", icon: IconCheckCircle },
   { value: "awaiting_review", label: "Awaiting review", icon: IconEye },
   { value: "applied", label: "Applied", icon: IconCheckCircle },
+  {
+    value: "partially_applied",
+    label: "Partially applied",
+    icon: IconAlertTriangle,
+  },
   { value: "cancelled", label: "Rejected", icon: IconCircleX },
   { value: "error", label: "Error", icon: IconXCircle },
   { value: "blocked", label: "Blocked", icon: IconBan },
@@ -52,6 +58,7 @@ export const runUpdateModeOptions: RunOption[] = [
 const STATUS_TEXT: Record<string, string> = {
   success: "text-green-600 dark:text-green-400",
   applied: "text-green-600 dark:text-green-400",
+  partially_applied: "text-amber-600 dark:text-amber-400",
   queued: "text-blue-600 dark:text-blue-400",
   running: "text-blue-600 dark:text-blue-400",
   awaiting_review: "text-violet-600 dark:text-violet-400",
@@ -64,6 +71,7 @@ const STATUS_TEXT: Record<string, string> = {
 const STATUS_DOT: Record<string, string> = {
   success: "bg-green-500",
   applied: "bg-green-500",
+  partially_applied: "bg-amber-500",
   queued: "bg-blue-500",
   running: "bg-blue-500",
   awaiting_review: "bg-violet-500",
@@ -80,6 +88,7 @@ const STATUS_DOT: Record<string, string> = {
 const STATUS_RANK: Record<string, number> = {
   awaiting_review: 6,
   error: 5,
+  partially_applied: 5,
   blocked: 4,
   running: 3,
   queued: 3,

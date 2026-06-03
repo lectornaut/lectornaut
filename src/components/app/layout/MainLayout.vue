@@ -49,26 +49,34 @@ const bottomPanel = ref<InstanceType<typeof SplitterPanel>>()
 // Kept off until the persisted layout is applied so first paint doesn't animate.
 const animatePanels = ref(false)
 
-// SplitterPanel sizes are percentages, but pinned mode needs the rail to
-// match shadcn's rendered sidebar width. Convert via live viewport width so
-// the rail keeps the right pixel size after window resizes.
+// reka-ui panel sizes are expressed as percentages, but shadcn's collapsed
+// icon rail is defined in rem units (`--sidebar-width-icon`). To keep the rail
+// aligned with the sidebar at different root font sizes and browser zoom
+// levels, convert the configured rem width into pixels and then into a
+// percentage of the viewport width.
 //
-// `MainSidebar` uses `variant="inset"`, so the `sidebar-gap` (the element
-// that actually reserves layout space — see `Sidebar.vue` line ~82) renders
-// at `calc(var(--sidebar-width-icon) + --spacing(4))`, i.e. 3rem + 1rem =
-// 4rem. The extra 1rem is the inset variant's flush padding around the rail;
-// without it our panel edge sits ~16px short of the sidebar's right border.
-// If `MainSidebar` is ever switched to `variant="sidebar"`, drop the `+ 1`.
-const SIDEBAR_INSET_PADDING_REM = -0.5 // Tailwind v4 default `--spacing(4)`
+// A small fallback is used before the first viewport measurement so the rail
+// doesn't briefly render at 0%.
+const FALLBACK_RAIL_PX = 64
+const SIDEBAR_INSET_PADDING_REM = 0
+
 const { width: viewportWidth } = useWindowSize()
+
 const iconRailPanelSize = computed(() => {
   if (!viewportWidth.value) return 4
-  const rootFontPx = Number.parseFloat(
-    getComputedStyle(document.documentElement).fontSize
+
+  const rootFontSize =
+    Number.parseFloat(getComputedStyle(document.documentElement).fontSize) || 16
+
+  const railPx =
+    rootFontSize *
+    (Number.parseFloat(SIDEBAR_WIDTH_ICON) + SIDEBAR_INSET_PADDING_REM)
+
+  return (
+    ((Number.isFinite(railPx) && railPx > 0 ? railPx : FALLBACK_RAIL_PX) /
+      viewportWidth.value) *
+    100
   )
-  const iconRailRem =
-    Number.parseFloat(SIDEBAR_WIDTH_ICON) + SIDEBAR_INSET_PADDING_REM
-  return ((iconRailRem * rootFontPx) / viewportWidth.value) * 100
 })
 
 // Mobile renders the sidebar as a Sheet portaled out of this panel, so a

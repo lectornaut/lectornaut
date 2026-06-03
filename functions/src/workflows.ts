@@ -177,7 +177,8 @@ type RunStatus =
   | "running"
   | "success" // automatic run that applied its edits
   | "awaiting_review" // require_review run: changeset staged, pending approval
-  | "applied" // require_review run: approved + applied
+  | "applied" // require_review run: approved + applied (all changes)
+  | "partially_applied" // require_review run: approved, some changes failed
   | "cancelled" // require_review run: rejected
   | "error"
   | "blocked" // over budget / not entitled
@@ -715,11 +716,24 @@ export const reviewTeamWorkflowRun = onCall<{
   }
 
   if (decision === "reject") {
-    await runRef.update({
-      status: "cancelled" satisfies RunStatus,
-      reviewedByUid: auth.uid,
-      reviewedAt: FieldValue.serverTimestamp(),
-      finishedAt: FieldValue.serverTimestamp(),
+    // Transactional compare-and-set: only the caller that observes
+    // `awaiting_review` *inside* the transaction wins, so a double-reject (or
+    // an approve racing a reject) can't both fire.
+    await db.runTransaction(async (tx) => {
+      const snap = await tx.get(runRef)
+      if (!snap.exists) throw new HttpsError("not-found", "Run not found.")
+      if ((snap.data() as { status?: string }).status !== "awaiting_review") {
+        throw new HttpsError(
+          "failed-precondition",
+          "This run isn't awaiting review."
+        )
+      }
+      tx.update(runRef, {
+        status: "cancelled" satisfies RunStatus,
+        reviewedByUid: auth.uid,
+        reviewedAt: FieldValue.serverTimestamp(),
+        finishedAt: FieldValue.serverTimestamp(),
+      })
     })
     return { ok: true, status: "cancelled" }
   }
@@ -746,33 +760,153 @@ export const reviewTeamWorkflowRun = onCall<{
     actorUid: auth.uid, // the approving admin's authority backs the write
   }
 
-  const proposed = await runRef
-    .collection("proposedChanges")
-    .orderBy("index")
-    .get()
-  let failures = 0
-  for (const doc of proposed.docs) {
-    const change = doc.data() as CapturedNodeChange
-    try {
-      const res = await applyProposedChange(resolved, change)
-      if (!res.ok) failures++
-    } catch {
-      failures++
-    }
-  }
+  // Replay is NOT idempotent on its own (a create makes a new node, an update
+  // bumps the relay `seq`), so a double-approve — double-click, retried
+  // callable, or two admins — would double-apply. Guard with the same once-only
+  // lock the worker uses: of N concurrent calls only one runs the body; the
+  // rest no-op. Each proposed change is additionally stamped `applied` as it
+  // commits, so a retry after a mid-replay crash skips the already-committed
+  // ones (the lock can expire on its stale-processing TTL; the stamp is the
+  // durable per-change guard).
+  const approveKey = makeEventIdempotencyKey(
+    "reviewTeamWorkflowRun.approve",
+    runId
+  )
+  let finalStatus: RunStatus | null = null
+  const { executed } = await runIdempotentEvent(
+    { key: approveKey },
+    async () => {
+      // Re-read inside the locked section: closes an approve-racing-reject
+      // window where the run was cancelled between the precondition read above
+      // and acquiring the lock.
+      const fresh = await runRef.get()
+      const runData = fresh.exists
+        ? (fresh.data() as { status?: string; changes?: unknown[] })
+        : null
+      if (!runData || runData.status !== "awaiting_review") {
+        return
+      }
 
-  await runRef.update({
-    status: "applied" satisfies RunStatus,
-    reviewedByUid: auth.uid,
-    reviewedAt: FieldValue.serverTimestamp(),
-    finishedAt: FieldValue.serverTimestamp(),
-    ...(failures > 0
-      ? {
-          error: `${failures} change(s) couldn't be applied — the target may have changed since the run.`,
+      const proposed = await runRef
+        .collection("proposedChanges")
+        .orderBy("index")
+        .get()
+
+      // The run doc carries a lightweight `changes` summary array, parallel to
+      // the proposedChanges subcollection (same order + `index`). Stamp each
+      // entry with its apply outcome so the timeline shows which change failed.
+      const summaries: Record<string, unknown>[] = Array.isArray(
+        runData.changes
+      )
+        ? (runData.changes as Record<string, unknown>[]).map((c) => ({ ...c }))
+        : []
+      const stampSummary = (
+        idx: number | null,
+        ok: boolean,
+        applyError: string | null
+      ) => {
+        if (idx !== null && summaries[idx]) {
+          summaries[idx] = { ...summaries[idx], applied: ok, applyError }
         }
-      : {}),
-  })
-  return { ok: true, status: "applied" }
+      }
+
+      let failures = 0
+      let successes = 0
+      for (const changeDoc of proposed.docs) {
+        const change = changeDoc.data() as CapturedNodeChange & {
+          applied?: boolean
+          index?: number
+        }
+        const idx = typeof change.index === "number" ? change.index : null
+        // Crash-retry idempotency: a change already committed by a prior
+        // partial run is skipped, not re-applied.
+        if (change.applied === true) {
+          successes++
+          stampSummary(idx, true, null)
+          continue
+        }
+        const res = await applyProposedChange(resolved, change).catch(
+          (error: unknown) => ({
+            ok: false as const,
+            message: (error as Error).message,
+          })
+        )
+        if (res.ok) successes++
+        else failures++
+        const applyError = res.ok ? null : (res.message ?? "Unknown error")
+        stampSummary(idx, res.ok, applyError)
+        // Persist the outcome on the full-payload doc too (durable record;
+        // also what the next retry reads to skip an already-applied change).
+        await changeDoc.ref.set(
+          {
+            applied: res.ok,
+            applyError,
+            appliedAt: FieldValue.serverTimestamp(),
+          },
+          { merge: true }
+        )
+      }
+
+      const nextStatus: RunStatus =
+        failures === 0
+          ? "applied"
+          : successes > 0
+            ? "partially_applied"
+            : "error"
+      finalStatus = nextStatus
+
+      await runRef.update({
+        status: nextStatus,
+        reviewedByUid: auth.uid,
+        reviewedAt: FieldValue.serverTimestamp(),
+        finishedAt: FieldValue.serverTimestamp(),
+        ...(summaries.length > 0 ? { changes: summaries } : {}),
+        error:
+          failures > 0
+            ? `${failures} of ${proposed.size} change(s) couldn't be applied — see each change for details.`
+            : FieldValue.delete(),
+      })
+    }
+  )
+
+  if (!executed || finalStatus === null) {
+    // Duplicate/concurrent decision — report the run's current status rather
+    // than re-applying or throwing on a harmless double-submit.
+    const current = (await runRef.get()).data() as { status?: RunStatus }
+    return { ok: true, status: current?.status ?? "applied" }
+  }
+  return { ok: true, status: finalStatus }
+})
+
+/**
+ * Permanently remove a run from history. Admin-gated. Uses `recursiveDelete` so
+ * the run's `proposedChanges` subcollection (present on require_review runs) is
+ * cleared alongside the run doc — a plain delete would orphan it. Deleting a run
+ * is history cleanup only; it does not cancel an in-flight execution.
+ */
+export const deleteTeamWorkflowRun = onCall<{
+  teamId: string
+  workspaceId: string
+  runId: string
+}>({ ...CALLABLE_OPTS, enforceAppCheck: true }, async (request) => {
+  const auth = requireVerifiedAuth(request.auth)
+  const { teamId, workspaceId, runId } = request.data ?? {}
+  if (typeof teamId !== "string" || !teamId) {
+    throw new HttpsError("invalid-argument", "teamId is required.")
+  }
+  if (typeof workspaceId !== "string" || !workspaceId) {
+    throw new HttpsError("invalid-argument", "workspaceId is required.")
+  }
+  if (typeof runId !== "string" || !runId) {
+    throw new HttpsError("invalid-argument", "runId is required.")
+  }
+  await assertAdminRole(teamId, auth.uid)
+
+  const runRef = db.doc(`${workflowRunsPath(teamId, workspaceId)}/${runId}`)
+  const snap = await runRef.get()
+  if (!snap.exists) throw new HttpsError("not-found", "Run not found.")
+  await db.recursiveDelete(runRef)
+  return { ok: true }
 })
 
 /**

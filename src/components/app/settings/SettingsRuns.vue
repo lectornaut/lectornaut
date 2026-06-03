@@ -139,9 +139,13 @@ const {
                 ref="tableRef"
                 :data="allRows"
                 :columns="columns"
-                :column-pinning="{ left: [], right: ['actions'] }"
+                :column-pinning="{ left: ['select'], right: ['actions'] }"
                 class="overflow-clip rounded-xl border"
-              />
+              >
+                <template #expanded="{ row }">
+                  <RunDetails :run="row.original.run" />
+                </template>
+              </DataTable>
             </FieldContent>
           </Field>
         </template>

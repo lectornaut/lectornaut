@@ -54,9 +54,17 @@ function togglePinned() {
       <Sidebar
         :collapsible="collapsibleMode"
         variant="inset"
-        class="shadow-muted-foreground/5 relative w-full p-0 transition-none"
+        class="shadow-muted-foreground/5 relative w-full p-1.25 pt-0 transition-none"
         data-tauri-drag-region="deep"
       >
+        <!-- <Separator
+          orientation="vertical"
+          class="absolute left-3 h-full bg-red-400"
+        />
+        <Separator
+          orientation="vertical"
+          class="absolute right-3 h-full bg-red-400"
+        /> -->
         <div
           v-if="open || props.preview"
           v-motion-fade-visible

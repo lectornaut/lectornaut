@@ -157,6 +157,18 @@ export function useTeamWorkflows() {
     }
   }
 
+  const removeRun = async (runId: string): Promise<void> => {
+    if (!guardManage()) return
+    try {
+      await store.removeRun(runId)
+      toast.success(t("settings.workflows.deleteRunSuccess"))
+    } catch (error) {
+      console.error("[useTeamWorkflows] removeRun failed:", error)
+      toast.error(messageOf(error, t("settings.workflows.deleteRunError")))
+      throw error
+    }
+  }
+
   const enablePreset = async (
     presetKey: string,
     binding: { workspaceId: string; agentId: string }
@@ -195,6 +207,7 @@ export function useTeamWorkflows() {
     remove,
     runNow,
     reviewRun,
+    removeRun,
     enablePreset,
   }
 }

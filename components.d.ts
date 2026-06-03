@@ -309,6 +309,7 @@ declare module 'vue' {
     ResizablePanelGroup: typeof import('./src/components/ui/resizable/ResizablePanelGroup.vue')['default']
     RouterLink: typeof import('vue-router')['RouterLink']
     RouterView: typeof import('vue-router')['RouterView']
+    RunDetails: typeof import('./src/components/app/runs/RunDetails.vue')['default']
     RunRowActions: typeof import('./src/components/app/runs/RunRowActions.vue')['default']
     RunsCalendar: typeof import('./src/components/app/runs/RunsCalendar.vue')['default']
     SafeLink: typeof import('./src/components/app/markdown/SafeLink.vue')['default']
