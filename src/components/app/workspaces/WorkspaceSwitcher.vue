@@ -23,25 +23,22 @@ const {
 
 const { currentTeam } = useTeamActions()
 
-const isCreatingWorkspaceDialogOpen = ref(false)
-const isWorkspaceSwitcherOpen = ref(false)
+const isCreateWorkspaceDialogOpen = ref(false)
+const isSwitcherOpen = ref(false)
 
-const openWorkspaceSwitcher = () => {
-  if (!currentTeam.value) return
-  isWorkspaceSwitcherOpen.value = true
+// External surfaces drive these without re-mounting the component.
+const openSwitcher = () => {
+  if (currentTeam.value) isSwitcherOpen.value = true
 }
-
-// Let any surface (e.g. the sidebar "Create New" menu) open the
-// create-workspace dialog without re-mounting it.
 const openCreateWorkspace = () => {
-  isCreatingWorkspaceDialogOpen.value = true
+  isCreateWorkspaceDialogOpen.value = true
 }
 
-emitter.on("Workspace.Switch", openWorkspaceSwitcher)
+emitter.on("Workspace.Switch", openSwitcher)
 emitter.on("Dialog.CreateWorkspace.Open", openCreateWorkspace)
 
 onUnmounted(() => {
-  emitter.off("Workspace.Switch", openWorkspaceSwitcher)
+  emitter.off("Workspace.Switch", openSwitcher)
   emitter.off("Dialog.CreateWorkspace.Open", openCreateWorkspace)
 })
 </script>
@@ -51,7 +48,7 @@ onUnmounted(() => {
     <SidebarMenuItem id="tour-workspace-switcher">
       <ContextMenu>
         <ContextMenuTrigger>
-          <DropdownMenu v-model:open="isWorkspaceSwitcherOpen">
+          <DropdownMenu v-model:open="isSwitcherOpen">
             <DropdownMenuTrigger as-child>
               <SidebarMenuButton
                 class="data-[state=open]:bg-accent"
@@ -132,7 +129,7 @@ onUnmounted(() => {
                       <div>
                         <DropdownMenuItem
                           :disabled="!canCreateWorkspace"
-                          @click="isCreatingWorkspaceDialogOpen = true"
+                          @click="isCreateWorkspaceDialogOpen = true"
                         >
                           <IconCirclePlus />
                           {{
@@ -163,5 +160,5 @@ onUnmounted(() => {
       </ContextMenu>
     </SidebarMenuItem>
   </SidebarMenu>
-  <WorkspaceDialog v-model:open="isCreatingWorkspaceDialogOpen" mode="create" />
+  <WorkspaceDialog v-model:open="isCreateWorkspaceDialogOpen" mode="create" />
 </template>

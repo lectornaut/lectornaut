@@ -16,9 +16,10 @@ const {
   switchTeam,
 } = useTeamActions()
 
-const isCreatingTeamDialogOpen = ref(false)
+const isCreateTeamDialogOpen = ref(false)
 
-const computedTeams = computed(() =>
+// Flatten the user's memberships into select options.
+const teamOptions = computed(() =>
   memberships.value.map((m) => ({
     label: m.team.name,
     value: m.team.id,
@@ -26,9 +27,8 @@ const computedTeams = computed(() =>
   }))
 )
 
-const handleSwitchTeam = async (teamId: AcceptableValue) => {
-  if (typeof teamId !== "string") return
-  await switchTeam(teamId)
+const onSelectTeam = (value: AcceptableValue) => {
+  if (typeof value === "string") void switchTeam(value)
 }
 </script>
 
@@ -52,7 +52,7 @@ const handleSwitchTeam = async (teamId: AcceptableValue) => {
       <Select
         v-else
         :model-value="currentTeam?.id"
-        @update:model-value="handleSwitchTeam"
+        @update:model-value="onSelectTeam"
       >
         <SelectTrigger class="w-full">
           <SelectValue
@@ -61,11 +61,11 @@ const handleSwitchTeam = async (teamId: AcceptableValue) => {
         </SelectTrigger>
         <SelectContent>
           <SelectGroup>
-            <SelectLabel v-if="computedTeams.length === 0">
+            <SelectLabel v-if="teamOptions.length === 0">
               {{ t("components.teamSelector.noTeams") }}
             </SelectLabel>
             <SelectItem
-              v-for="team in computedTeams"
+              v-for="team in teamOptions"
               :key="team.value"
               :value="team.value"
             >
@@ -95,7 +95,7 @@ const handleSwitchTeam = async (teamId: AcceptableValue) => {
                 variant="secondary"
                 class="justify-start"
                 :disabled="!canCreateTeam"
-                @click="isCreatingTeamDialogOpen = true"
+                @click="isCreateTeamDialogOpen = true"
               >
                 <IconCirclePlus />
                 {{ t("components.teamSelector.createTeam") }}
@@ -112,6 +112,6 @@ const handleSwitchTeam = async (teamId: AcceptableValue) => {
       <IconLogOut />
       {{ t("components.teamSelector.logout") }}
     </Button>
-    <TeamDialog v-model:open="isCreatingTeamDialogOpen" mode="create" />
+    <TeamDialog v-model:open="isCreateTeamDialogOpen" mode="create" />
   </Empty>
 </template>

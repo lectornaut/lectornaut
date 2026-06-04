@@ -1,18 +1,17 @@
 /**
- * Workspace Store - Workspace CRUD Operations
+ * Workspace Store — workspaces for the current team + the active selection.
  *
- * Handles:
- * - Workspace creation, update, deletion (owner or admin)
- * - Current workspace selection and switching (all members)
- * - Workspaces for the current team
+ * Responsibilities:
+ * - `workspaces`        — the current team's workspaces (realtime).
+ * - `currentWorkspace`  — resolves the selected id against that list.
+ * - CRUD (owner/admin) via Cloud Functions; switch (any member) via the sync
+ *   engine writing membership-scoped preferences.
+ * - `isBootstrapping`   — app-shell gate that holds the spinner until the
+ *   workspace selection is definitively resolved.
  *
- * Dependencies:
- * - authStore: User authentication and profile
- * - teamStore: Current team information
- * - membershipStore: User's role in team
- *
- * Reactive Firestore reads flow through TanStack Query (onSnapshot-backed).
- * All mutations go through Cloud Functions for automatic audit logging.
+ * Selection itself lives on authStore (membership-preferences, per team); this
+ * store drives the list reads, the durable selection writes, and the cleanup of
+ * a selection that no longer maps to a live workspace.
  */
 
 import {
@@ -67,70 +66,36 @@ export const useWorkspaceStore = defineStore("workspaces", () => {
 
   const hasCurrentTeamMembership = computed(() => {
     const teamId = currentTeamId.value
-    return (
-      !!teamId &&
-      memberships.value.some((membership) => membership.teamId === teamId)
-    )
+    return !!teamId && memberships.value.some((m) => m.teamId === teamId)
   })
 
-  // ============================================================================
-  // Realtime Firestore bindings (TanStack Query)
-  // ============================================================================
-
-  // Query for workspaces in current team - null when no team selected
-  const workspacesQueryRef = computed(() => {
-    const teamId = currentTeamId.value
-    if (!teamId) return null
-
-    // Guard: Ensure user is a member of the team before trying to list its workspaces.
-    if (!hasCurrentTeamMembership.value) return null
-
-    return createTeamWorkspacesQuery(teamId)
-  })
-
-  // Realtime collection binding (TanStack Query + onSnapshot). The source getter
-  // folds `workspacesQueryRef` into a cache identity (collection path); a null
-  // query keeps the read idle until a team + membership resolve.
+  // ── Realtime read ───────────────────────────────────────────────────────────
+  // Idle until a team + confirmed membership resolve (listing workspaces before
+  // membership is known would hit a rules denial).
   const workspacesQuery = useCollectionQuery<IWorkspace>(() => {
-    const query = workspacesQueryRef.value
-    return query ? { query, path: query.path } : null
+    const teamId = currentTeamId.value
+    if (!teamId || !hasCurrentTeamMembership.value) return null
+    const collectionRef = createTeamWorkspacesQuery(teamId)
+    return { query: collectionRef, path: collectionRef.path }
   })
-  const firestoreWorkspaces: ComputedRef<IWorkspace[]> = computed(
-    () => workspacesQuery.data.value ?? []
-  )
-  const isFirestoreLoading: ComputedRef<boolean> = computed(
-    () => workspacesQuery.isLoading.value
-  )
-  // True only once the LIVE onSnapshot listener has delivered a snapshot for
-  // the current team's workspaces list this session. A query restored from the
-  // persisted read-cache is marked stale (refetchType:"none") until its first
-  // live snapshot lands (see restoreQueryCache), so `isStale`/`isFetching`
-  // separate "the cached list says the selection is gone" (NOT trustworthy)
-  // from "the live listener says it's gone" (trustworthy). The stale-selection
-  // cleanup below must only act on the trustworthy signal.
-  const isFirestoreSettled: ComputedRef<boolean> = computed(
+  const firestoreWorkspaces = computed(() => workspacesQuery.data.value ?? [])
+  const isFirestoreLoading = computed(() => workspacesQuery.isLoading.value)
+  // True only once the LIVE listener has delivered a snapshot this session. A
+  // cache-restored query is marked stale (refetchType:"none") until its first
+  // live snapshot, so this separates "the cached list says it's gone" (NOT
+  // trustworthy) from "the live listener says it's gone" (trustworthy). The
+  // stale-selection cleanup below only acts on the trustworthy signal.
+  const isFirestoreSettled = computed(
     () => !workspacesQuery.isStale.value && !workspacesQuery.isFetching.value
   )
 
-  // ============================================================================
-  // State (for optimistic updates)
-  // ============================================================================
-
-  // Pending operation tracking (per-workspace-id; drives `isWorkspacePending`
-  // and the stale-selection cleanup guard). Managed by the action wrappers
-  // around each mutation, mirroring the prior optimistic layer's behavior.
+  // ── State ───────────────────────────────────────────────────────────────────
   const pendingWorkspaceIds = shallowRef(createPendingSet())
-  const isPersistingWorkspaceSelection = ref(false)
+  const isPersistingSelection = ref(false)
 
-  /** Cache key for the current team's workspaces list (matches the read query). */
   const workspacesListKey = (teamId: string): FirestoreQueryKey =>
     queryKeys.list(`teams/${teamId}/workspaces`)
 
-  // One mutation drives every workspace list write. Callers pass the affected
-  // cache key(s) + optimistic apply/rollback + the Cloud Function call; the hold
-  // in `useFirestoreMutation` keeps the optimistic value visible until the
-  // server-applied snapshot reconciles it. Selection + pending side-effects are
-  // handled in the action wrappers below.
   const workspaceMutation = useFirestoreMutation<
     {
       keys: FirestoreQueryKey[]
@@ -153,52 +118,35 @@ export const useWorkspaceStore = defineStore("workspaces", () => {
     workspaceId: string | null
   ): Promise<void> {
     if (!currentUser.value || !currentTeamId.value) return
-
     await mutateSetDocument(
       getMembershipPreferencesRef(currentTeamId.value, currentUser.value.uid),
-      {
-        currentWorkspaceId: workspaceId,
-      },
-      {
-        source: "workspace.persistSelection",
-        merge: true,
-      }
+      { currentWorkspaceId: workspaceId },
+      { source: "workspace.persistSelection", merge: true }
     )
   }
 
-  // ============================================================================
-  // Computed - Merged State
-  // ============================================================================
-
-  /** All workspaces for the current team (straight from the realtime cache). */
+  // ── Merged state ────────────────────────────────────────────────────────────
   const workspaces = computed(() => firestoreWorkspaces.value)
-
   const workspaceById = computed(
-    () =>
-      new Map(workspaces.value.map((workspace) => [workspace.id, workspace]))
+    () => new Map(workspaces.value.map((w) => [w.id, w]))
   )
-
-  /** Current workspace based on user's selection */
   const currentWorkspace = computed(() => {
-    const workspaceId = currentWorkspaceId.value
-    if (!workspaceId) return null
-    return workspaceById.value.get(workspaceId) ?? null
+    const id = currentWorkspaceId.value
+    return id ? (workspaceById.value.get(id) ?? null) : null
   })
 
   const isLoading = computed(() => {
     if (!currentTeamId.value) return false
     if (workspaces.value.length > 0) return false
-    if (workspacesQueryRef.value) return isFirestoreLoading.value
+    if (hasCurrentTeamMembership.value) return isFirestoreLoading.value
     return isMembershipLoading.value && !hasCurrentTeamMembership.value
   })
 
-  // App-shell bootstrap blocks the cascade until we have a definitive
-  // workspace state. A selected ID that doesn't yet map to a workspace keeps
-  // the spinner up — either the workspace will arrive from Firestore, or the
-  // stale-cleanup watcher below will null the selection out. Either way the
-  // shell re-evaluates. Cached hydration is intentionally NOT used to release
-  // the gate, because a stale cached list can claim "resolved" while still
-  // missing the selected workspace and flash the WorkspaceSelector.
+  // Hold the app-shell spinner until the selection is definitively resolved: a
+  // selected id that doesn't yet map to a workspace keeps spinning (either the
+  // workspace arrives, or the cleanup watch nulls the selection out). Cached
+  // hydration deliberately does NOT release the gate — a stale cached list can
+  // claim "resolved" while missing the selected workspace and flash the selector.
   const isBootstrapping = computed(() => {
     if (!currentTeamId.value) return false
     if (!hasResolvedCurrentWorkspaceSelection.value) return true
@@ -209,16 +157,69 @@ export const useWorkspaceStore = defineStore("workspaces", () => {
   const isWorkspacePending = computed(
     () => (id: string) => pendingWorkspaceIds.value.has(id)
   )
-
   const hasAnyPendingOperation = computed(
     () => pendingWorkspaceIds.value.size > 0
   )
 
-  // ============================================================================
-  // Stale selection cleanup
-  // ============================================================================
+  // ── Stale-selection cleanup ─────────────────────────────────────────────────
+  // Clearing the selection writes `currentWorkspaceId: null` to Firestore —
+  // DURABLE and cross-device, so a false positive permanently wipes a valid
+  // selection. Every trigger for "the workspace is gone" is racy and transient:
+  // a momentarily empty / mid-load list during a team switch, a re-subscribe
+  // after a transient listener error (token warm-up `permission-denied`), or a
+  // cache eviction. The per-instant guards below filter most of those out, but a
+  // single observation of racy state is the wrong basis for an irreversible act.
+  // So we never clear on first sight: the SAME selection must STILL be absent
+  // after a short confirmation delay. A transient blip repopulates and
+  // self-cancels; only a genuinely-deleted workspace stays absent and clears.
+  const STALE_SELECTION_CONFIRM_MS = 400
+  let staleConfirmTimer: ReturnType<typeof setTimeout> | null = null
+  let staleConfirmTarget: { teamId: string; workspaceId: string } | null = null
 
-  // Handle stale currentWorkspaceId (e.g. workspace deleted)
+  const cancelStaleConfirm = () => {
+    if (staleConfirmTimer) {
+      clearTimeout(staleConfirmTimer)
+      staleConfirmTimer = null
+    }
+    staleConfirmTarget = null
+  }
+
+  // Evaluate every guard against CURRENT reactive state. Returns the stale
+  // (teamId, workspaceId) pair, or null when the selection is fine or the state
+  // is too indeterminate to judge.
+  const pendingStaleSelection = (): {
+    teamId: string
+    workspaceId: string
+  } | null => {
+    const workspaceId = currentWorkspaceId.value
+    const teamId = currentTeamId.value
+    if (!workspaceId || !teamId) return null
+    // Act only on a definitive, live answer — never interim state. `isLoading`
+    // shortcuts to false on a non-empty (incl. cached) list, so the raw
+    // firestore signals are checked too: `isFirestoreLoading` covers cold start,
+    // `isFirestoreSettled` covers the cache-restored-but-unconfirmed window.
+    if (
+      isLoading.value ||
+      isFirestoreLoading.value ||
+      !isFirestoreSettled.value
+    ) {
+      return null
+    }
+    if (isMembershipLoading.value && !hasCurrentTeamMembership.value)
+      return null
+    if (!memberships.value.some((m) => m.teamId === teamId)) return null
+    // A list that isn't this team's can't testify to the selection's staleness
+    // (the team-switch race — selection flips a tick before the list catches
+    // up). Wait for it. An empty list is vacuously this team's.
+    if (!workspaces.value.every((w) => w.teamId === teamId)) return null
+    // Skip while any mutation is pending (e.g. create's tempId→serverId window).
+    if (pendingWorkspaceIds.value.size > 0 || isPersistingSelection.value) {
+      return null
+    }
+    if (workspaces.value.some((w) => w.id === workspaceId)) return null
+    return { teamId, workspaceId }
+  }
+
   watch(
     [
       currentWorkspaceId,
@@ -229,126 +230,74 @@ export const useWorkspaceStore = defineStore("workspaces", () => {
       isFirestoreLoading,
       isFirestoreSettled,
     ],
-    async ([
-      workspaceId,
-      workspaceList,
-      loading,
-      teamId,
-      membershipLoading,
-      firestoreLoading,
-      firestoreSettled,
-    ]) => {
-      // If we are loading, or no workspace ID selected, ignore.
-      // `firestoreLoading` is checked separately from `loading` because the
-      // latter shortcuts to false whenever the workspaces list is non-empty
-      // (including cache-restored entries). Without this guard, a cold start
-      // with a cached selection could fire before the workspaces query
-      // resolved, see an empty list, and wipe the user's selection.
-      //
-      // `firestoreSettled` closes the complementary window: a list restored
-      // from the persisted cache can be non-empty yet STALE — present but not
-      // yet confirmed by the live listener, and possibly missing a valid
-      // selection (a workspace created/selected on another device, or the
-      // membershipPreferences and workspaces caches persisted a beat apart).
-      // `firestoreLoading` is false in that window (there IS cached data), so
-      // without this the cleanup would persist `currentWorkspaceId: null` —
-      // which, being Firestore-first authoritative, re-surfaces the
-      // WorkspaceSelector on every subsequent reload. Only act on the list
-      // once the live snapshot has confirmed it.
+    () => {
+      const target = pendingStaleSelection()
+      if (!target) {
+        // Conditions no longer hold (e.g. the list repopulated) — abort any
+        // scheduled clear so a transient blip never reaches the durable write.
+        cancelStaleConfirm()
+        return
+      }
+      // Already counting down for this exact selection — let the timer run out.
       if (
-        !workspaceId ||
-        loading ||
-        !teamId ||
-        (membershipLoading && !hasCurrentTeamMembership.value) ||
-        firestoreLoading ||
-        !firestoreSettled
+        staleConfirmTimer &&
+        staleConfirmTarget &&
+        staleConfirmTarget.teamId === target.teamId &&
+        staleConfirmTarget.workspaceId === target.workspaceId
       ) {
         return
       }
-
-      // Don't clear during startup before membership resolution is ready.
-      const isMember = memberships.value.some((m) => m.teamId === teamId)
-      if (!isMember) return
-
-      // `currentWorkspaceId` and `workspaces` update from INDEPENDENT reactive
-      // sources, so a team switch is not atomic across them: the selection
-      // overlay flips to the new team synchronously (setCurrentTeamIdLocal →
-      // hydrateMembershipPreferencesForTeam runs inline), while the workspaces
-      // collection query's `data` ref only catches up to the new team a tick
-      // later. That leaves a window where `workspaceList` still holds the
-      // PREVIOUS team's rows while `workspaceId` already points at the new
-      // team's selection. The new selection is (correctly) absent from the old
-      // list — and clearing on that absence persists `currentWorkspaceId: null`
-      // into the NEW team's prefs doc, silently wiping a valid selection on
-      // nearly every team switch (Firestore-first authoritative → lost for good,
-      // not just this session). Every workspace row carries its `teamId`; a list
-      // that isn't the current team's cannot testify to whether the current
-      // team's selection is stale, so wait for it to catch up. (An empty list is
-      // vacuously the current team's — a genuinely empty team still clears a
-      // dangling id, releasing the bootstrap gate.)
-      const listMatchesCurrentTeam = workspaceList.every(
-        (w) => w.teamId === teamId
-      )
-      if (!listMatchesCurrentTeam) return
-
-      // Check if the current workspace exists in the list
-      const exists = workspaceList.some((w) => w.id === workspaceId)
-
-      // Skip while ANY workspace mutation is still pending. During creation,
-      // currentWorkspaceId flips from tempId to the server-issued id before
-      // Firestore emits the new workspace — guarding on the id alone misses
-      // that window and the cleanup here would wipe the freshly-saved
-      // selection. The 120ms `pendingReleaseDelayMs` in optimistic commits
-      // gives snapshot listeners time to catch up.
-      if (
-        !exists &&
-        pendingWorkspaceIds.value.size === 0 &&
-        !isPersistingWorkspaceSelection.value
-      ) {
-        console.warn(
-          "[workspaceStore] Detected stale workspace ID, clearing...",
-          workspaceId
-        )
-        isPersistingWorkspaceSelection.value = true
-        try {
-          await persistWorkspaceSelection(null)
-        } catch (error) {
-          console.error(
-            "[workspaceStore] Failed to persist stale workspace cleanup:",
-            error
-          )
-        } finally {
-          isPersistingWorkspaceSelection.value = false
+      cancelStaleConfirm()
+      staleConfirmTarget = target
+      staleConfirmTimer = setTimeout(() => {
+        staleConfirmTimer = null
+        staleConfirmTarget = null
+        // Re-confirm against the LATEST state: the same selection must still be
+        // missing. A transient empty/loading list has repopulated by now.
+        const confirmed = pendingStaleSelection()
+        if (
+          !confirmed ||
+          confirmed.teamId !== target.teamId ||
+          confirmed.workspaceId !== target.workspaceId
+        ) {
+          return
         }
-      }
+        console.warn(
+          "[workspaceStore] Confirmed stale workspace ID, clearing selection",
+          {
+            workspaceId: target.workspaceId,
+            teamId: target.teamId,
+            workspaceCount: workspaces.value.length,
+          }
+        )
+        isPersistingSelection.value = true
+        void persistWorkspaceSelection(null)
+          .catch((error) => {
+            console.error(
+              "[workspaceStore] Failed to persist stale workspace cleanup:",
+              error
+            )
+          })
+          .finally(() => {
+            isPersistingSelection.value = false
+          })
+      }, STALE_SELECTION_CONFIRM_MS)
     }
   )
 
-  // ============================================================================
-  // Cleanup
-  // ============================================================================
+  // Read state lives in the query cache (cleared centrally on logout). Drop any
+  // in-flight stale-confirmation timer so it can't fire against a torn-down user.
+  function cleanup() {
+    cancelStaleConfirm()
+  }
 
-  // Kept for API compatibility. Read state now lives in the query cache, which
-  // is cleared centrally on logout (clearPersistedQueryCache), so there is no
-  // per-store optimistic state left to reset here.
-  function cleanup() {}
-
-  // ============================================================================
-  // Actions
-  // ============================================================================
-
-  /**
-   * Create a new workspace with optimistic update (owner or admin).
-   * Uses Cloud Function for automatic audit logging.
-   */
+  // ── Actions ─────────────────────────────────────────────────────────────────
   async function createWorkspace(
     name: string,
     description?: string,
     photoFile?: File
   ): Promise<void> {
     if (!currentUser.value || !currentTeamId.value) return
-
-    // Check if user can manage workspaces (owner or admin)
     if (!canManageWorkspaces.value) {
       throw new Error("Only team owners and admins can create workspaces")
     }
@@ -356,12 +305,10 @@ export const useWorkspaceStore = defineStore("workspaces", () => {
     const teamId = currentTeamId.value
     const uid = currentUser.value.uid
     const key = workspacesListKey(teamId)
-    // Temporary ID for the optimistic row — replaced by the server's id once
-    // the create lands and the live snapshot reconciles.
     const tempId = `temp_${Date.now()}_${Math.random().toString(36).slice(2)}`
     const now = Timestamp.now()
 
-    const newWorkspace: IWorkspace = {
+    const optimisticWorkspace: IWorkspace = {
       id: tempId,
       teamId,
       name,
@@ -382,9 +329,8 @@ export const useWorkspaceStore = defineStore("workspaces", () => {
         apply: () => {
           queryClient.setQueryData<IWorkspace[]>(key, [
             ...(queryClient.getQueryData<IWorkspace[]>(key) ?? []),
-            newWorkspace,
+            optimisticWorkspace,
           ])
-          // Auto-select the new workspace (swapped to the real id on success).
           authStore.setCurrentWorkspaceId(tempId)
         },
         rollback: () => {
@@ -397,22 +343,17 @@ export const useWorkspaceStore = defineStore("workspaces", () => {
             name,
             description: description ?? null,
           })
-          const actualWorkspaceId = result.data.workspaceId
+          const workspaceId = result.data.workspaceId
 
-          // Best-effort photo upload after the workspace exists. Do not fail
-          // workspace creation if the photo upload/update fails.
+          // Best-effort photo upload — never fail creation over a photo.
           if (photoFile) {
             try {
               const photoURL = await uploadWorkspacePhoto(
                 teamId,
-                actualWorkspaceId,
+                workspaceId,
                 photoFile
               )
-              await updateWorkspaceFn({
-                teamId,
-                workspaceId: actualWorkspaceId,
-                photoURL,
-              })
+              await updateWorkspaceFn({ teamId, workspaceId, photoURL })
             } catch (error) {
               console.error(
                 "[workspaceStore] Failed to attach workspace photo after create",
@@ -421,43 +362,32 @@ export const useWorkspaceStore = defineStore("workspaces", () => {
             }
           }
 
-          // Persist + finalize the selection on the server-issued id.
-          await persistWorkspaceSelection(actualWorkspaceId)
-          authStore.setCurrentWorkspaceId(actualWorkspaceId)
+          await persistWorkspaceSelection(workspaceId)
+          authStore.setCurrentWorkspaceId(workspaceId)
         },
       })
     } finally {
       removePending(pendingUserIds, uid)
-      // Hold the per-id pending flag briefly past settle so the stale-selection
-      // watch doesn't fire in the tempId→realId window before the snapshot lands.
+      // Hold the per-id flag briefly past settle so the cleanup watch doesn't
+      // fire in the tempId→realId window before the snapshot lands.
       setTimeout(() => removePending(pendingWorkspaceIds, tempId), 120)
     }
   }
 
-  /**
-   * Switch to a different workspace with optimistic update (all members)
-   */
   async function switchWorkspace(workspaceId: string): Promise<void> {
     if (!currentUser.value || !currentTeamId.value) return
 
-    // Verify workspace exists in current team
-    const workspace = workspaces.value.find((w) => w.id === workspaceId)
-    if (!workspace) {
+    if (!workspaces.value.some((w) => w.id === workspaceId)) {
       throw new Error("Workspace not found")
     }
 
     const previousWorkspaceId = currentWorkspaceId.value
-
     await mutateWithCoordinator({
       id: currentUser.value.uid,
       source: "workspace.switchWorkspace",
       pendingIds: pendingUserIds,
-      applyLocal: () => {
-        authStore.setCurrentWorkspaceId(workspaceId)
-      },
-      rollbackLocal: () => {
-        authStore.setCurrentWorkspaceId(previousWorkspaceId)
-      },
+      applyLocal: () => authStore.setCurrentWorkspaceId(workspaceId),
+      rollbackLocal: () => authStore.setCurrentWorkspaceId(previousWorkspaceId),
       mutation: {
         source: "workspace.switchWorkspace",
         targetPath: getMembershipPreferencesRef(
@@ -466,17 +396,11 @@ export const useWorkspaceStore = defineStore("workspaces", () => {
         ).path,
         type: "set",
         merge: true,
-        data: {
-          currentWorkspaceId: workspaceId,
-        },
+        data: { currentWorkspaceId: workspaceId },
       },
     })
   }
 
-  /**
-   * Update workspace details with optimistic update (owner or admin).
-   * Uses Cloud Function for automatic audit logging.
-   */
   async function updateWorkspace(
     workspaceId: string,
     updates: {
@@ -486,8 +410,6 @@ export const useWorkspaceStore = defineStore("workspaces", () => {
     }
   ): Promise<void> {
     if (!currentUser.value || !currentTeamId.value) return
-
-    // Check if user can manage workspaces (owner or admin)
     if (!canManageWorkspaces.value) {
       throw new Error("Only team owners and admins can update workspaces")
     }
@@ -498,8 +420,7 @@ export const useWorkspaceStore = defineStore("workspaces", () => {
     const optimisticPhotoURL =
       photoFile instanceof File ? URL.createObjectURL(photoFile) : undefined
 
-    // Prepare optimistic updates for workspace data
-    const workspaceUpdates = {
+    const optimisticPatch = {
       ...(name !== undefined ? { name } : {}),
       ...(description !== undefined ? { description } : {}),
       ...(photoFile === null
@@ -513,11 +434,11 @@ export const useWorkspaceStore = defineStore("workspaces", () => {
     let resolvedPhotoURL: string | null | undefined =
       photoFile === null ? null : undefined
 
-    const patchWorkspace = (patch: Partial<IWorkspace>) => {
+    const patch = (changes: Partial<IWorkspace>) => {
       queryClient.setQueryData<IWorkspace[]>(
         key,
         (queryClient.getQueryData<IWorkspace[]>(key) ?? []).map((w) =>
-          w.id === workspaceId ? { ...w, ...patch } : w
+          w.id === workspaceId ? { ...w, ...changes } : w
         )
       )
     }
@@ -526,7 +447,7 @@ export const useWorkspaceStore = defineStore("workspaces", () => {
     try {
       await workspaceMutation.mutateAsync({
         keys: [key],
-        apply: () => patchWorkspace(workspaceUpdates),
+        apply: () => patch(optimisticPatch),
         rollback: () => queryClient.setQueryData(key, previousWorkspaces),
         run: async () => {
           if (photoFile instanceof File) {
@@ -547,33 +468,24 @@ export const useWorkspaceStore = defineStore("workspaces", () => {
               : {}),
           })
 
-          // Replace the optimistic blob URL with the uploaded URL.
+          // Swap the optimistic blob URL for the uploaded one.
           if (photoFile !== undefined && resolvedPhotoURL !== undefined) {
-            patchWorkspace({ photoURL: resolvedPhotoURL })
+            patch({ photoURL: resolvedPhotoURL })
           }
-
-          // Clean up the storage object when the photo is explicitly removed.
+          // Clean up storage when the photo was explicitly removed.
           if (resolvedPhotoURL === null) {
             await deleteWorkspacePhotoFile(teamId, workspaceId)
           }
         },
       })
     } finally {
-      if (optimisticPhotoURL) {
-        URL.revokeObjectURL(optimisticPhotoURL)
-      }
+      if (optimisticPhotoURL) URL.revokeObjectURL(optimisticPhotoURL)
       setTimeout(() => removePending(pendingWorkspaceIds, workspaceId), 120)
     }
   }
 
-  /**
-   * Delete a workspace with optimistic update (owner or admin).
-   * Uses Cloud Function for automatic audit logging.
-   */
   async function deleteWorkspace(workspaceId: string): Promise<void> {
     if (!currentUser.value || !currentTeamId.value) return
-
-    // Check if user can manage workspaces (owner or admin)
     if (!canManageWorkspaces.value) {
       throw new Error("Only team owners and admins can delete workspaces")
     }
@@ -583,10 +495,10 @@ export const useWorkspaceStore = defineStore("workspaces", () => {
     const key = workspacesListKey(teamId)
     const previousWorkspaces = queryClient.getQueryData<IWorkspace[]>(key)
     const previousWorkspaceId = currentWorkspaceId.value
-    const isCurrentWorkspace = currentWorkspaceId.value === workspaceId
+    const isCurrent = currentWorkspaceId.value === workspaceId
 
     addPending(pendingWorkspaceIds, workspaceId)
-    if (isCurrentWorkspace) addPending(pendingUserIds, uid)
+    if (isCurrent) addPending(pendingUserIds, uid)
     try {
       await workspaceMutation.mutateAsync({
         keys: [key],
@@ -597,37 +509,30 @@ export const useWorkspaceStore = defineStore("workspaces", () => {
               (w) => w.id !== workspaceId
             )
           )
-          if (isCurrentWorkspace) {
-            authStore.setCurrentWorkspaceId(null)
-          }
+          if (isCurrent) authStore.setCurrentWorkspaceId(null)
         },
         rollback: () => {
           queryClient.setQueryData(key, previousWorkspaces)
-          if (isCurrentWorkspace) {
+          if (isCurrent) {
             authStore.setCurrentWorkspaceId(previousWorkspaceId ?? null)
           }
         },
         run: async () => {
-          const [deleteWorkspaceResult, deletePhotoResult] =
-            await Promise.allSettled([
-              deleteWorkspaceFn({ teamId, workspaceId }),
-              deleteWorkspacePhotoFile(teamId, workspaceId),
-            ])
-
-          if (deletePhotoResult.status === "rejected") {
+          const [deleteResult, photoResult] = await Promise.allSettled([
+            deleteWorkspaceFn({ teamId, workspaceId }),
+            deleteWorkspacePhotoFile(teamId, workspaceId),
+          ])
+          if (photoResult.status === "rejected") {
             console.error(
               "[workspaceStore] Failed to delete workspace photo:",
-              deletePhotoResult.reason
+              photoResult.reason
             )
           }
-
-          if (deleteWorkspaceResult.status === "rejected") {
-            throw deleteWorkspaceResult.reason
-          }
+          if (deleteResult.status === "rejected") throw deleteResult.reason
         },
       })
     } finally {
-      if (isCurrentWorkspace) removePending(pendingUserIds, uid)
+      if (isCurrent) removePending(pendingUserIds, uid)
       setTimeout(() => removePending(pendingWorkspaceIds, workspaceId), 120)
     }
   }
@@ -639,7 +544,7 @@ export const useWorkspaceStore = defineStore("workspaces", () => {
     isLoading,
     isBootstrapping,
 
-    // Pending state
+    // Pending
     pendingWorkspaceIds,
 
     // Computed

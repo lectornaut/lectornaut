@@ -134,8 +134,16 @@ const codeBlockThemeNames = editorThemes.flatMap((theme) => [
 ])
 
 // Code blocks get a header strip with a copy button — same on every
-// surface. The library handles the DOM; we just turn it on.
-const codeBlockProps = { showHeader: true, showCopyButton: true } as const
+// surface. The library handles the DOM; we just turn it on. Every other
+// header action defaults to ON in markstream, so the ones we don't want
+// (expand, font-size steppers, HTML preview) must be explicitly opted out.
+const codeBlockProps = {
+  showHeader: true,
+  showCopyButton: true,
+  showExpandButton: false,
+  showFontSizeButtons: false,
+  showPreviewButton: false,
+} as const
 
 // Code blocks render through markstream's Shiki node (MarkdownCodeBlockNode,
 // wired in registerMarkdownOverrides) — driven by the same Shiki themes the

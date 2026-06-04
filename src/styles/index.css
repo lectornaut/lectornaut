@@ -359,14 +359,20 @@
 */
 
 /* ── Spacing scale — shared by all three surfaces ──────────────────────
-   markstream gives each block a SYMMETRIC margin (`margin: var(…) 0`), and
-   adjacent margins collapse — so every `--ms-flow-*-y` below is literally
-   the gap between two neighbouring blocks (never the sum of both). All
-   values are `em` so the rhythm scales with each surface's text size.
+   markstream gives each NON-heading block a SYMMETRIC margin
+   (`margin: var(…) 0`), and adjacent margins collapse — so every
+   `--ms-flow-*-y` below is literally the gap between two neighbouring
+   blocks (never the sum of both). Every value is `em` (never `rem`) so the
+   rhythm scales with each surface's own text size rather than the root's.
 
-   Headings break that symmetry on purpose: the top margin (a section
-   break) is set ABOVE the 1em block gap and scales h1→h6, while the bottom
-   margin is small so a heading binds to the content it introduces. */
+   Headings break that symmetry on purpose — the library renders them with
+   independent `margin-top`/`margin-bottom`. The TOP margin is the section
+   break: set above the base block gap and largest on `h2` (the section
+   heading — `h1` is treated as a one-off title, so it just leads with a
+   small top gap). The BOTTOM margin is kept BELOW the base on purpose: it
+   loses the margin-collapse to the next block's own top gap, so a heading
+   binds to the content it introduces at the normal base distance instead
+   of floating away from it. */
 .markstream-vue[data-custom-id="chat"],
 .markstream-vue[data-custom-id="changelog-sheet"],
 .markstream-vue[data-custom-id="changelog-page"] {
@@ -390,36 +396,49 @@
    * it — mirrors the 320px cap the prior Monaco renderer enforced. */
   --ms-size-code-max-height: 20rem;
 
-  /* Block-to-block gaps. 1.5em base so a paragraph break reads as clearly
-   * separate — comfortably more than the line leading (line-height − 1em).
-   * Code & tables sit above that base so the margin-collapse can't mask
-   * them; `hr-y` is a hard break. `list-item-y` is the TIGHT gap *within*
-   * a list. Indents are horizontal and left at the library's feel. */
+  /* Block-to-block gaps. 1.25em base so a paragraph break reads as clearly
+   * separate — ~2.5× the line gap (leading 1.5 leaves a 0.5em gap between
+   * lines) yet tighter than the library's airy 1.5em default, which
+   * over-spaces a narrow chat bubble. A list is a block like a paragraph,
+   * so it shares the base. Heavy blocks (code, tables) sit ABOVE the base
+   * so the margin-collapse can't fold them flush against neighbouring
+   * prose; `hr-y` is a hard section break (well above the base). The whole
+   * scale is `em`, so it tracks each surface's text size. `list-item-y` is
+   * the TIGHT gap *within* a list. Indents are horizontal and left at the
+   * library's feel. */
   --ms-flow-paragraph-y: 0;
-  --ms-flow-list-y: 1em;
+  --ms-flow-list-y: 1.25em;
   --ms-flow-list-item-y: 0.5em;
   --ms-flow-list-indent: 1.5em;
-  --ms-flow-blockquote-y: 1em;
+  --ms-flow-blockquote-y: 1.25em;
   --ms-flow-blockquote-indent: 1em;
-  --ms-flow-codeblock-y: 1em;
-  --ms-flow-table-y: 1em;
-  --ms-flow-hr-y: 1em;
+  --ms-flow-codeblock-y: 1.5em;
+  --ms-flow-table-y: 1.5em;
+  --ms-flow-hr-y: 2em;
 
-  /* Headings: top margin kept ABOVE the 1.5em block gap (section break,
-   * scales down by level) so headings still dominate now that paragraphs
-   * are roomier; bottom margin small (binds to following content). */
-  --ms-flow-heading-1-mt: 1em;
-  --ms-flow-heading-1-mb: 1em;
-  --ms-flow-heading-2-mt: 1em;
-  --ms-flow-heading-2-mb: 1em;
-  --ms-flow-heading-3-mt: 1em;
-  --ms-flow-heading-3-mb: 1em;
+  /* Headings: TOP margin is the section break — above the 1.25em base gap
+   * and scaled by level (largest on h2; h1 just leads as a title, so it
+   * takes only a small top gap). BOTTOM margin is kept small — deliberately
+   * BELOW the base — so it loses the margin-collapse to the following
+   * block's own top gap: the heading then binds to its content at the base
+   * distance instead of floating. (The previous flat 1em/1em did the
+   * reverse — at h1/h2 the 1em bottom, multiplied by the heading's larger
+   * font, beat the base gap and pushed the heading's own content away.)
+   * These track the library's scaled defaults, tightened a touch for the
+   * narrow chat/sheet bubbles. Remember the values are em-relative to each
+   * heading's font, so a single em buys more space on a bigger heading. */
+  --ms-flow-heading-1-mt: 0.5em;
+  --ms-flow-heading-1-mb: 0.5em;
+  --ms-flow-heading-2-mt: 1.5em;
+  --ms-flow-heading-2-mb: 0.5em;
+  --ms-flow-heading-3-mt: 1.25em;
+  --ms-flow-heading-3-mb: 0.4em;
   --ms-flow-heading-4-mt: 1em;
-  --ms-flow-heading-4-mb: 1em;
+  --ms-flow-heading-4-mb: 0.4em;
   --ms-flow-heading-5-mt: 1em;
-  --ms-flow-heading-5-mb: 1em;
+  --ms-flow-heading-5-mb: 0.3em;
   --ms-flow-heading-6-mt: 1em;
-  --ms-flow-heading-6-mb: 1em;
+  --ms-flow-heading-6-mb: 0.3em;
 
   /* Weight + leading are shared; only heading SIZES differ per surface. */
   --ms-weight-h1: 700;
@@ -475,7 +494,7 @@
    wrapper" pattern the note above prescribes, never a universal `:first-child`. */
 .markstream-vue[data-custom-id="chat"]
   .node-slot[data-node-index="0"]:not(:last-child):has(.bot-thinking-block) {
-  margin-bottom: 1em;
+  margin-bottom: 1.25em;
 }
 
 /* ── Typography polish (chat + sheet, where bubbles are narrow) ───── */

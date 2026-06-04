@@ -1,17 +1,16 @@
 /**
- * Team Store - Team CRUD Operations
+ * Team Store — the current team doc + team CRUD.
  *
- * Handles:
- * - Team creation, update, deletion
- * - Current team selection and switching
- * - Team photo management
+ * Responsibilities:
+ * - `currentTeam`  — the selected team (realtime doc, with a denormalized
+ *   membership-snapshot fallback for instant cold-start paint).
+ * - create / update / delete / switch / clear-selection.
  *
- * Dependencies:
- * - authStore: User authentication and profile
- * - membershipStore: Team memberships and members
- *
- * Reactive Firestore reads flow through TanStack Query (onSnapshot-backed).
- * All mutations go through Cloud Functions for automatic audit logging.
+ * Selection (`currentTeamId`) lives on authStore; membership data lives on
+ * membershipStore. This store binds the current team's doc and runs the team
+ * mutations (which also patch the denormalized `team` snapshot on each
+ * membership row via membershipStore helpers). Mutations go through Cloud
+ * Functions for audit logging.
  */
 
 import {
@@ -62,44 +61,25 @@ export const useTeamStore = defineStore("teams", () => {
     isLoading: isMembershipLoading,
   } = storeToRefs(membershipStore)
 
-  // ============================================================================
-  // Realtime Firestore bindings (TanStack Query)
-  // ============================================================================
-
-  // Computed document reference - null when no team selected
+  // ── Realtime read ───────────────────────────────────────────────────────────
+  // Idle unless a team is selected AND the user is confirmed a member (reading
+  // a team doc the user was removed from would hit a rules denial).
   const teamDocRef = computed(() => {
     const teamId = currentTeamId.value
     if (!teamId) return null
-
-    // Ensure user is actually a member of this team before attempting to read
-    // This prevents "Missing or insufficient permissions" errors if the user was removed
-    const hasMembership = memberships.value.some((m) => m.teamId === teamId)
-    if (!hasMembership) return null
-
+    if (!memberships.value.some((m) => m.teamId === teamId)) return null
     return getTeamRef(teamId)
   })
-
-  // Realtime document binding (TanStack Query + onSnapshot) for current team.
   const teamQuery = useDocumentQuery<ITeam>(teamDocRef)
-  const firestoreCurrentTeam: ComputedRef<ITeam | null | undefined> = computed(
-    () => teamQuery.data.value
-  )
-  const isFirestoreLoading: ComputedRef<boolean> = computed(
-    () => teamQuery.isLoading.value
-  )
+  const firestoreCurrentTeam = computed(() => teamQuery.data.value)
+  const isTeamDocLoading = computed(() => teamQuery.isLoading.value)
 
-  // ============================================================================
-  // State (for optimistic updates)
-  // ============================================================================
-
-  // Pending operation tracking
+  // ── State ───────────────────────────────────────────────────────────────────
   const pendingTeamIds = shallowRef(createPendingSet())
 
   const teamDocKey = (teamId: string): FirestoreQueryKey =>
     queryKeys.doc(`teams/${teamId}`)
 
-  // Drives team-doc writes (update/delete; create seeds a temp doc then the
-  // real one). Selection (currentTeamId) stays on authStore's Pinia overlay.
   const teamMutation = useFirestoreMutation<
     {
       keys: FirestoreQueryKey[]
@@ -125,19 +105,11 @@ export const useTeamStore = defineStore("teams", () => {
     run: () => Promise<void>
   ): Promise<void> => teamMutation.mutateAsync({ keys, apply, rollback, run })
 
-  // ============================================================================
-  // Computed
-  // ============================================================================
-
-  // Current team straight from the realtime cache, falling back to the
-  // denormalized `team` snapshot on the membership row for instant display
-  // before the team-doc query resolves (cold-start is covered by the persisted
-  // cache + this fallback). update/delete apply their optimistic value into the
-  // team-doc cache (held until the server ack reconciles).
-  // Annotated `ITeam | null`: the membership fallback is a `team` snapshot
-  // (a `pick` of the team schema, no `billing`), which is assignable to ITeam
-  // since `billing` is optional — so `currentTeam.billing` stays `undefined`
-  // while the snapshot shows, exactly as before, until the team-doc query lands.
+  // ── Computed ────────────────────────────────────────────────────────────────
+  // Realtime doc first; fall back to the denormalized membership `team` snapshot
+  // so the team paints instantly before the doc query resolves. The snapshot is
+  // a pick of the team schema (no `billing`), assignable to ITeam since billing
+  // is optional — so `currentTeam.billing` stays undefined until the doc lands.
   const currentTeam = computed<ITeam | null>(() => {
     const teamId = currentTeamId.value
     if (!teamId) return null
@@ -149,23 +121,16 @@ export const useTeamStore = defineStore("teams", () => {
   })
 
   const isLoading = computed(() => {
-    // Still loading if auth/user profile is loading
-    if (isAuthLoading.value) {
-      return true
+    if (isAuthLoading.value) return true
+    if (currentTeamId.value) {
+      return isTeamDocLoading.value && !currentTeam.value
     }
-    // If user has a currentTeamId, wait for team data to load
-    const teamId = currentTeamId.value
-    if (teamId) {
-      return isFirestoreLoading.value && !currentTeam.value
-    }
-    // No team selected - not loading
     return false
   })
 
   const isTeamPending = computed(
     () => (id: string) => pendingTeamIds.value.has(id)
   )
-
   const hasAnyPendingOperation = computed(
     () =>
       pendingTeamIds.value.size > 0 ||
@@ -173,64 +138,50 @@ export const useTeamStore = defineStore("teams", () => {
       pendingMembershipIds.value.size > 0
   )
 
-  // Handle stale currentTeamId (e.g. team deleted by owner or membership removed)
+  // ── Stale-selection cleanup ─────────────────────────────────────────────────
+  // Drop a currentTeamId that Firestore confirms is gone (team deleted, or
+  // membership revoked).
   watch(
     [
       currentTeamId,
       firestoreCurrentTeam,
-      isFirestoreLoading,
+      isTeamDocLoading,
       isMembershipLoading,
     ],
     async ([teamId, team, loading, membershipLoading]) => {
       if (!teamId || loading || membershipLoading) return
-
-      // The query emits `undefined` between docRef becoming non-null and the
-      // first snapshot landing. Only `null` signals "team genuinely missing".
-      // Without this distinction the watch can warn-log on the loading window
-      // and (in narrow timing windows) clear a valid currentTeamId.
+      // `undefined` is the loading window (no snapshot yet); only `null` means
+      // the doc is genuinely missing. Acting on `undefined` would clear a valid
+      // selection in narrow timing windows.
       if (team === undefined) return
 
-      // If Firestore confirmed the team doesn't exist and we don't have a
-      // pending operation for this team
       if (team === null && !pendingTeamIds.value.has(teamId)) {
+        // Re-confirm membership is truly gone before clearing.
+        if (memberships.value.some((m) => m.teamId === teamId)) return
         console.warn(
-          "[teamStore] Detected stale team ID (team deleted or membership removed), clearing...",
+          "[teamStore] Detected stale team ID (deleted or removed), clearing...",
           teamId
         )
-        // Verify one more time that we really don't have membership
-        const hasMembership = memberships.value.some((m) => m.teamId === teamId)
-        if (!hasMembership) {
-          try {
-            await authStore.setCurrentTeamId(null)
-          } catch (error) {
-            console.error(
-              "[teamStore] Failed to clear stale currentTeamId:",
-              error
-            )
-            authStore.setCurrentTeamIdLocal(null)
-          }
+        try {
+          await authStore.setCurrentTeamId(null)
+        } catch (error) {
+          console.error(
+            "[teamStore] Failed to clear stale currentTeamId:",
+            error
+          )
+          authStore.setCurrentTeamIdLocal(null)
         }
       }
     }
   )
 
-  // ============================================================================
-  // Cleanup
-  // ============================================================================
-
+  // ── Teardown ────────────────────────────────────────────────────────────────
   function cleanup() {
     authStore.cleanup()
     membershipStore.cleanup()
   }
 
-  // ============================================================================
-  // Actions
-  // ============================================================================
-
-  /**
-   * Create a new team with optimistic update.
-   * Uses Cloud Function for automatic audit logging.
-   */
+  // ── Actions ─────────────────────────────────────────────────────────────────
   async function createTeam(
     name: string,
     options?: {
@@ -242,31 +193,28 @@ export const useTeamStore = defineStore("teams", () => {
     if (!currentUser.value || !userProfile.value) return
     const { photoFile, username, isPublic } = options ?? {}
 
-    // Generate a temporary ID for optimistic update - will be replaced by server
     const tempId = `temp_${Date.now()}_${Math.random().toString(36).slice(2)}`
     const now = Timestamp.now()
-
-    // Photo upload happens after team creation since we need the real team ID.
-    const photoURL: string | null = null
-
-    const newTeam: ITeam = {
+    // Photo upload happens after creation (needs the real id), so the temp doc
+    // starts photoless.
+    const optimisticTeam: ITeam = {
       id: tempId,
       name,
-      photoURL,
+      photoURL: null,
       username: null,
       isPublic: false,
       createdAt: now,
       updatedAt: now,
     }
 
-    const creatorUid = currentUser.value!.uid
-    const previousCurrentTeamId = currentTeamId.value
+    const creatorUid = currentUser.value.uid
+    const previousTeamId = currentTeamId.value
     const previousMemberships = cloneState(memberships.value)
     const previousTeamMembers = cloneState(teamMembers.value)
     const tempKey = teamDocKey(tempId)
 
     let actualTeamId: string | undefined
-    let resolvedPhotoURL: string | null = photoURL
+    let resolvedPhotoURL: string | null = null
     let resolvedUsername: string | null = null
     let resolvedIsPublic = false
 
@@ -276,32 +224,27 @@ export const useTeamStore = defineStore("teams", () => {
       await runTeamMutation(
         [tempKey],
         () => {
-          // Seed the temp team doc + select it (selection = Pinia overlay).
-          queryClient.setQueryData<ITeam>(tempKey, newTeam)
+          queryClient.setQueryData<ITeam>(tempKey, optimisticTeam)
           authStore.setCurrentTeamIdLocal(tempId)
         },
         () => {
           queryClient.removeQueries({ queryKey: tempKey, exact: true })
-          authStore.setCurrentTeamIdLocal(previousCurrentTeamId ?? null)
+          authStore.setCurrentTeamIdLocal(previousTeamId ?? null)
           membershipStore.rollbackMemberships(previousMemberships)
           membershipStore.rollbackTeamMembers(previousTeamMembers)
         },
         async () => {
-          const result = await createTeamFn({ name, photoURL })
+          const result = await createTeamFn({ name, photoURL: null })
           actualTeamId = result.data.teamId
 
-          // Best-effort photo upload after the team exists.
+          // Best-effort photo upload once the team exists.
           if (photoFile && actualTeamId) {
             try {
-              const uploadedPhotoURL = await uploadTeamPhoto(
-                actualTeamId,
-                photoFile
-              )
+              resolvedPhotoURL = await uploadTeamPhoto(actualTeamId, photoFile)
               await updateTeamFn({
                 teamId: actualTeamId,
-                photoURL: uploadedPhotoURL,
+                photoURL: resolvedPhotoURL,
               })
-              resolvedPhotoURL = uploadedPhotoURL
             } catch (error) {
               console.error("[teamStore] Error uploading team photo:", error)
             }
@@ -327,9 +270,9 @@ export const useTeamStore = defineStore("teams", () => {
             }
           }
 
-          // Seed the real team doc + switch the selection to the server id.
+          // Seed the real doc + move the selection to the server id.
           queryClient.setQueryData<ITeam>(teamDocKey(actualTeamId), {
-            ...newTeam,
+            ...optimisticTeam,
             id: actualTeamId,
             photoURL: resolvedPhotoURL,
             username: resolvedUsername,
@@ -346,23 +289,15 @@ export const useTeamStore = defineStore("teams", () => {
     return actualTeamId
   }
 
-  /**
-   * Switch to a different team with optimistic update
-   */
   async function switchTeam(teamId: string): Promise<void> {
     if (!currentUser.value || !userProfile.value) return
     if (currentTeamId.value === teamId) return
-
-    // Selection is the Pinia overlay (authStore). `currentTeam` falls back to
-    // the target team's denormalized membership snapshot for instant display,
-    // and authStore.setCurrentTeamId rolls the selection back on error.
+    // Selection is the authStore overlay; currentTeam falls back to the target
+    // team's membership snapshot for instant display, and setCurrentTeamId rolls
+    // the selection back on error.
     await authStore.setCurrentTeamId(teamId)
   }
 
-  /**
-   * Update team details with optimistic update.
-   * Uses Cloud Function for automatic audit logging.
-   */
   async function updateTeam(
     teamId: string,
     updates: {
@@ -374,7 +309,6 @@ export const useTeamStore = defineStore("teams", () => {
   ): Promise<void> {
     if (!currentUser.value) return
 
-    // Check if user is owner of the team (using centralized permissions)
     const membership = memberships.value.find((m) => m.teamId === teamId)
     if (!membership || !roleCan(membership.role, Capabilities.EDIT_TEAM)) {
       throw new Error("Only team owners and admins can update team details")
@@ -384,8 +318,7 @@ export const useTeamStore = defineStore("teams", () => {
     const optimisticPhotoURL =
       photoFile instanceof File ? URL.createObjectURL(photoFile) : undefined
 
-    // Prepare optimistic updates for team data
-    const teamUpdates: Partial<ITeam> = {
+    const optimisticPatch: Partial<ITeam> = {
       ...(name !== undefined ? { name } : {}),
       ...(username !== undefined ? { username } : {}),
       ...(isPublic !== undefined ? { isPublic } : {}),
@@ -397,31 +330,28 @@ export const useTeamStore = defineStore("teams", () => {
     }
 
     const teamKey = teamDocKey(teamId)
-    // `patchTeam` also rewrites the denormalized `team` snapshot on the
-    // memberships LIST cache (via updateTeamInMemberships). Hold that key too,
-    // otherwise the memberships onSnapshot listener can deliver a
-    // pre-server-apply snapshot that clobbers the optimistic patch mid-update
-    // (the team name/photo would flicker back in the switcher/sidebar).
+    // `patch` also rewrites the denormalized `team` snapshot on the memberships
+    // LIST cache, so hold that key too — otherwise the memberships listener can
+    // deliver a pre-apply snapshot that flickers the optimistic name/photo back.
     const membershipsKey = membershipStore.membershipsCacheKey()
     const previousTeamDoc = queryClient.getQueryData<ITeam>(teamKey)
     const previousMemberships = cloneState(memberships.value)
     let resolvedPhotoURL: string | null | undefined =
       photoFile === null ? null : undefined
 
-    // Patch the team-doc cache + the denormalized copy on the membership rows.
-    const patchTeam = (patch: Partial<ITeam>) => {
+    const patch = (changes: Partial<ITeam>) => {
       const current = queryClient.getQueryData<ITeam>(teamKey)
       if (current) {
-        queryClient.setQueryData<ITeam>(teamKey, { ...current, ...patch })
+        queryClient.setQueryData<ITeam>(teamKey, { ...current, ...changes })
       }
-      membershipStore.updateTeamInMemberships(teamId, patch)
+      membershipStore.updateTeamInMemberships(teamId, changes)
     }
 
     addPending(pendingTeamIds, teamId)
     try {
       await runTeamMutation(
         membershipsKey ? [teamKey, membershipsKey] : [teamKey],
-        () => patchTeam(teamUpdates),
+        () => patch(optimisticPatch),
         () => {
           queryClient.setQueryData(teamKey, previousTeamDoc)
           membershipStore.rollbackMemberships(previousMemberships)
@@ -441,46 +371,35 @@ export const useTeamStore = defineStore("teams", () => {
               : {}),
           })
 
-          // Replace the optimistic blob URL with the uploaded URL.
           if (photoFile !== undefined && resolvedPhotoURL !== undefined) {
-            patchTeam({ photoURL: resolvedPhotoURL })
+            patch({ photoURL: resolvedPhotoURL })
           }
-
-          // Clean up the storage object when the photo is explicitly removed.
           if (resolvedPhotoURL === null) {
             await deleteTeamPhotoFile(teamId)
           }
         }
       )
     } finally {
-      if (optimisticPhotoURL) {
-        URL.revokeObjectURL(optimisticPhotoURL)
-      }
+      if (optimisticPhotoURL) URL.revokeObjectURL(optimisticPhotoURL)
       setTimeout(() => removePending(pendingTeamIds, teamId), 120)
     }
   }
 
-  /**
-   * Delete a team with optimistic update.
-   * Uses Cloud Function for automatic audit logging.
-   */
   async function deleteTeam(teamId: string): Promise<void> {
     if (!currentUser.value) return
 
-    // Check if user is owner of the team (using centralized permissions)
     const membership = memberships.value.find((m) => m.teamId === teamId)
     if (!membership || !roleCan(membership.role, Capabilities.DELETE_TEAM)) {
       throw new Error("Only team owners can delete the team")
     }
 
     const teamKey = teamDocKey(teamId)
-    // delete's optimistic apply removes this team's rows from the memberships
-    // LIST cache (removeMembershipsForTeam); hold that key alongside the team
-    // doc so the listener can't re-add them before the server delete lands.
+    // delete drops this team's rows from the memberships LIST cache, so hold
+    // that key alongside the team doc.
     const membershipsKey = membershipStore.membershipsCacheKey()
     const previousMemberships = cloneState(memberships.value)
     const previousTeamDoc = queryClient.getQueryData<ITeam>(teamKey)
-    const previousCurrentTeamId = currentTeamId.value
+    const previousTeamId = currentTeamId.value
     const isCurrent = currentTeam.value?.id === teamId
 
     addPending(pendingTeamIds, teamId)
@@ -498,12 +417,12 @@ export const useTeamStore = defineStore("teams", () => {
           membershipStore.rollbackMemberships(previousMemberships)
           queryClient.setQueryData(teamKey, previousTeamDoc)
           if (isCurrent) {
-            authStore.setCurrentTeamIdLocal(previousCurrentTeamId ?? null)
+            authStore.setCurrentTeamIdLocal(previousTeamId ?? null)
           }
         },
         async () => {
-          // Delete storage files before the cloud function (which may revoke
-          // permission before the storage cleanup could run).
+          // Delete storage before the cloud function, which may revoke access
+          // before the cleanup could otherwise run.
           await deleteTeamPhotoFile(teamId)
           await deleteTeamFn({ teamId })
         }
@@ -527,7 +446,7 @@ export const useTeamStore = defineStore("teams", () => {
     teamMembers,
     isLoading,
 
-    // Pending state
+    // Pending
     pendingTeamIds,
     pendingUserIds,
     pendingMembershipIds,
@@ -538,7 +457,7 @@ export const useTeamStore = defineStore("teams", () => {
     isMembershipPending: membershipStore.isMembershipPending,
     hasAnyPendingOperation,
 
-    // Team Actions
+    // Actions
     createTeam,
     switchTeam,
     updateTeam,

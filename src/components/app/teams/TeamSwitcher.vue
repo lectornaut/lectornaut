@@ -26,13 +26,12 @@ const {
   getCannotCreateTeamReason,
 } = useTeamActions()
 
-const isCreatingTeamDialogOpen = ref(false)
+const isCreateTeamDialogOpen = ref(false)
 
-// Let any surface (e.g. the sidebar "Create New" menu) open the create-team
-// dialog without re-mounting it, mirroring the `Workspace.Switch` listener in
-// WorkspaceSwitcher.
+// Allow other surfaces (e.g. the sidebar "Create New" menu) to open the
+// create-team dialog without re-mounting it.
 const openCreateTeam = () => {
-  isCreatingTeamDialogOpen.value = true
+  isCreateTeamDialogOpen.value = true
 }
 emitter.on("Dialog.CreateTeam.Open", openCreateTeam)
 onUnmounted(() => emitter.off("Dialog.CreateTeam.Open", openCreateTeam))
@@ -45,12 +44,11 @@ const teams = computed(() =>
   }))
 )
 
-// Agents show up in the members table, but the switcher's avatar preview
-// stays human-only — it renders user photos / initials.
+// The avatar preview stays human-only — agents show in the members table but
+// not in this strip.
 const humanTeamMembers = computed(() =>
   teamMembers.value.filter(isUserMembership)
 )
-
 const hiddenTeamMemberNames = computed(() =>
   humanTeamMembers.value
     .slice(3)
@@ -63,19 +61,10 @@ const hiddenTeamMemberNames = computed(() =>
 const currentPlanLabel = computed(() => {
   const billing = currentTeam.value?.billing
   const planKey = billing?.planKey
-
   if (!planKey || !isTeamBillingEntitled(billing ?? null)) {
     return "Free"
   }
-
-  const normalizedPlan = `${planKey[0].toUpperCase()}${planKey.slice(1)}`
-  // if (billing?.interval === "year") {
-  //   return `${normalizedPlan} (Annual)`
-  // }
-  // if (billing?.interval === "month") {
-  //   return `${normalizedPlan} (Monthly)`
-  // }
-  return `${normalizedPlan}`
+  return `${planKey[0].toUpperCase()}${planKey.slice(1)}`
 })
 </script>
 
@@ -289,7 +278,7 @@ const currentPlanLabel = computed(() => {
                                 :disabled="!canCreateTeam"
                                 @click="
                                   canCreateTeam &&
-                                  (isCreatingTeamDialogOpen = true)
+                                  (isCreateTeamDialogOpen = true)
                                 "
                               >
                                 <IconCirclePlus />
@@ -330,5 +319,5 @@ const currentPlanLabel = computed(() => {
       </ContextMenu>
     </SidebarMenuItem>
   </SidebarMenu>
-  <TeamDialog v-model:open="isCreatingTeamDialogOpen" mode="create" />
+  <TeamDialog v-model:open="isCreateTeamDialogOpen" mode="create" />
 </template>

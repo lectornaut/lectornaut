@@ -19,9 +19,9 @@ const {
 
 const { currentTeam, clearCurrentTeam } = useTeamActions()
 
-const isCreatingWorkspaceDialogOpen = ref(false)
+const isCreateWorkspaceDialogOpen = ref(false)
 
-const computedWorkspaces = computed(() =>
+const workspaceOptions = computed(() =>
   workspaces.value.map((w) => ({
     label: w.name,
     value: w.id,
@@ -29,9 +29,8 @@ const computedWorkspaces = computed(() =>
   }))
 )
 
-const handleSwitchWorkspace = async (workspaceId: AcceptableValue) => {
-  if (typeof workspaceId !== "string") return
-  await switchWorkspace(workspaceId)
+const onSelectWorkspace = (value: AcceptableValue) => {
+  if (typeof value === "string") void switchWorkspace(value)
 }
 
 const deselectTeam = async () => {
@@ -65,7 +64,7 @@ const deselectTeam = async () => {
         v-else
         :model-value="currentWorkspace?.id"
         :disabled="!currentTeam"
-        @update:model-value="handleSwitchWorkspace"
+        @update:model-value="onSelectWorkspace"
       >
         <SelectTrigger class="w-full">
           <SelectValue
@@ -74,11 +73,11 @@ const deselectTeam = async () => {
         </SelectTrigger>
         <SelectContent>
           <SelectGroup>
-            <SelectLabel v-if="computedWorkspaces.length === 0">
+            <SelectLabel v-if="workspaceOptions.length === 0">
               {{ t("components.workspaceSelector.noWorkspaces") }}
             </SelectLabel>
             <SelectItem
-              v-for="workspace in computedWorkspaces"
+              v-for="workspace in workspaceOptions"
               :key="workspace.value"
               :value="workspace.value"
             >
@@ -108,7 +107,7 @@ const deselectTeam = async () => {
                 variant="secondary"
                 class="justify-start"
                 :disabled="!currentTeam || !canCreateWorkspace"
-                @click="isCreatingWorkspaceDialogOpen = true"
+                @click="isCreateWorkspaceDialogOpen = true"
               >
                 <IconCirclePlus />
                 {{ t("components.workspaceSelector.createWorkspace") }}
@@ -129,9 +128,6 @@ const deselectTeam = async () => {
       <IconUsers />
       {{ t("components.workspaceSelector.changeTeam") }}
     </Button>
-    <WorkspaceDialog
-      v-model:open="isCreatingWorkspaceDialogOpen"
-      mode="create"
-    />
+    <WorkspaceDialog v-model:open="isCreateWorkspaceDialogOpen" mode="create" />
   </Empty>
 </template>
