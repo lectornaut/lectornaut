@@ -2,28 +2,63 @@
 import {
   IconArrowLeftToLine,
   IconArrowRightToLine,
+  IconChevronDown,
   IconChevronLeft,
   IconChevronRight,
 } from "@/data/icons"
-import type { Table } from "@tanstack/vue-table"
+import type { Row, Table } from "@tanstack/vue-table"
 
 defineProps<{
   table: Table<TData>
 }>()
+
+// Optional bulk-actions menu for the current selection. When a consumer wires
+// this slot, the dashed count chip on the left turns into a dropdown trigger;
+// otherwise it stays a plain informational chip (backward compatible).
+defineSlots<{
+  "selection-actions"?: (props: {
+    table: Table<TData>
+    rows: Row<TData>[]
+    count: number
+  }) => unknown
+}>()
 </script>
 
 <template>
-  <div class="bg-background flex items-center justify-between gap-2 p-2">
+  <div
+    class="flex shrink-0 items-center justify-between gap-2 overflow-x-auto p-2"
+  >
     <div class="flex grow items-center justify-start gap-2">
-      <Button
-        v-if="table.getFilteredSelectedRowModel().rows.length"
-        variant="outline"
-        class="border-dashed"
-      >
-        {{ table.getFilteredSelectedRowModel().rows.length }} /
-        {{ table.getFilteredRowModel().rows.length }}
-        {{ $t("components.dataTable.selected") }}
-      </Button>
+      <template v-if="table.getFilteredSelectedRowModel().rows.length">
+        <!-- Slotted bulk actions: the count chip becomes a dropdown trigger. -->
+        <DropdownMenu v-if="$slots['selection-actions']">
+          <DropdownMenuTrigger as-child>
+            <Button
+              variant="outline"
+              class="data-[state=open]:bg-accent border-dashed"
+            >
+              {{ table.getFilteredSelectedRowModel().rows.length }} /
+              {{ table.getFilteredRowModel().rows.length }}
+              {{ $t("components.dataTable.selected") }}
+              <IconChevronDown />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="start" side="top" class="min-w-48">
+            <slot
+              name="selection-actions"
+              :table="table"
+              :rows="table.getFilteredSelectedRowModel().rows"
+              :count="table.getFilteredSelectedRowModel().rows.length"
+            />
+          </DropdownMenuContent>
+        </DropdownMenu>
+        <!-- No slot: keep the original non-interactive informational chip. -->
+        <Button v-else variant="outline" class="border-dashed">
+          {{ table.getFilteredSelectedRowModel().rows.length }} /
+          {{ table.getFilteredRowModel().rows.length }}
+          {{ $t("components.dataTable.selected") }}
+        </Button>
+      </template>
     </div>
     <div class="flex grow items-center justify-end gap-2">
       <TooltipProvider>

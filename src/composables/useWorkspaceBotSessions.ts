@@ -7,8 +7,11 @@
  * `where("ownerUid", "==", uid)` / `where("visibility", "==", "shared")`
  * queries. This composable runs an *unfiltered* `botSessions` query so
  * the team admin/owner can see every member's chat — owned, shared, or
- * private — in one list. Non-admins receive an empty snapshot because
- * the Firestore rule clause requires `isTeamAdmin(teamId)`.
+ * private — in one list. Agent-owned sessions (headless workflow
+ * runs, `ownerUid = agentId`) are then dropped client-side: they have their
+ * own home in Settings → Workflows plus the run-history view and would
+ * otherwise flood this human-chat admin table. Non-admins receive an empty
+ * snapshot because the Firestore rule clause requires `isTeamAdmin(teamId)`.
  *
  * Mutations reuse the same Cloud Function callables as the per-user
  * sidebar (`renameBotSession`, `archiveBotSession`, `deleteBotSession`).
@@ -23,8 +26,11 @@ import {
   deleteBotSession,
   renameBotSession,
 } from "@/composables/useFunctions"
+import { isBuiltInAgentId } from "@/data/builtInAgents"
 import { useAuthStore } from "@/stores/authStore"
+import { useMembershipStore } from "@/stores/membershipStore"
 import type { IBotSession } from "@/types/domain"
+import { isAgentMembership } from "@/types/membership"
 import { createWorkspaceBotSessionsQuery } from "@/utils/firebase/firebase-helpers"
 import { useCollectionQuery } from "@/utils/firebase/firebase-query"
 import { storeToRefs } from "pinia"
@@ -48,6 +54,7 @@ export interface UseWorkspaceBotSessionsReturn {
 export function useWorkspaceBotSessions(): UseWorkspaceBotSessionsReturn {
   const { currentTeamId, currentWorkspaceId } = storeToRefs(useAuthStore())
   const { canManageBotSessions } = useCurrentTeamRole(currentTeamId)
+  const { teamMembers } = storeToRefs(useMembershipStore())
 
   const queryRef = computed(() => {
     // Short-circuit when the user can't manage: skip subscribing
@@ -75,7 +82,31 @@ export function useWorkspaceBotSessions(): UseWorkspaceBotSessionsReturn {
       : null
   })
 
-  const sessions = computed<IBotSession[]>(() => sessionsQuery.data.value ?? [])
+  // Custom team agents enrolled as agent memberships. A headless workflow run
+  // persists a fresh session owned by the agent it ran as (`ownerUid =
+  // agentId`; see `runHeadlessAgentTurn`).
+  const customAgentUids = computed(
+    () =>
+      new Set(teamMembers.value.filter(isAgentMembership).map((m) => m.agentId))
+  )
+
+  // True when a session is owned by an agent rather than a human. Two cases,
+  // because not every agent is a membership doc:
+  //   • built-in agents (e.g. the Default agent `_default`) are `_`-prefixed
+  //     and have NO membership doc — `getMembershipRoleOrNull` synthesizes
+  //     their role — so the membership set alone misses them. Predefined
+  //     workflows run as `_default`, so this is the COMMON case, not an edge.
+  //   • custom team agents are enrolled, so they appear in `customAgentUids`.
+  // Owner-less legacy docs (ownerUid absent) are treated as human and kept.
+  const isAgentOwned = (uid: string | undefined): boolean =>
+    !!uid && (isBuiltInAgentId(uid) || customAgentUids.value.has(uid))
+
+  // Exclude agent-owned (workflow-run) sessions: they have their own home in
+  // Settings → Workflows + the run-history view, and listing them here mixes
+  // unattended automation runs into the human-chat admin table.
+  const sessions = computed<IBotSession[]>(() =>
+    (sessionsQuery.data.value ?? []).filter((s) => !isAgentOwned(s.ownerUid))
+  )
 
   const isLoading = computed<boolean>(() => sessionsQuery.isLoading.value)
 

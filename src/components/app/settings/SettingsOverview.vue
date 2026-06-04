@@ -1,5 +1,4 @@
 <script lang="ts" setup>
-import SettingsRestricted from "@/components/app/settings/SettingsRestricted.vue"
 import { useCanViewTeamSettings } from "@/composables/useCanViewTeamSettings"
 import { usePhotoUpload } from "@/composables/usePhotoUpload"
 import { useTeamActions } from "@/composables/useTeamActions"
@@ -526,7 +525,6 @@ const discardChanges = () => {
         </FieldSet>
       </FieldGroup>
     </div>
-
     <SettingsUnsavedBar
       v-if="hasPendingChanges"
       :saving="isSaving || isUpdatingOverview"

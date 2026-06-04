@@ -21,7 +21,7 @@
  * (no header — there's no input to echo) so a thinking block reads as
  * the same kind of card as a tool-call result.
  */
-import AppMarkdown from "@/components/app/markdown/AppMarkdown.vue"
+
 import { IconChevronRight } from "@/data/icons"
 
 const props = defineProps<{

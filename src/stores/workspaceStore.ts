@@ -270,6 +270,27 @@ export const useWorkspaceStore = defineStore("workspaces", () => {
       const isMember = memberships.value.some((m) => m.teamId === teamId)
       if (!isMember) return
 
+      // `currentWorkspaceId` and `workspaces` update from INDEPENDENT reactive
+      // sources, so a team switch is not atomic across them: the selection
+      // overlay flips to the new team synchronously (setCurrentTeamIdLocal →
+      // hydrateMembershipPreferencesForTeam runs inline), while the workspaces
+      // collection query's `data` ref only catches up to the new team a tick
+      // later. That leaves a window where `workspaceList` still holds the
+      // PREVIOUS team's rows while `workspaceId` already points at the new
+      // team's selection. The new selection is (correctly) absent from the old
+      // list — and clearing on that absence persists `currentWorkspaceId: null`
+      // into the NEW team's prefs doc, silently wiping a valid selection on
+      // nearly every team switch (Firestore-first authoritative → lost for good,
+      // not just this session). Every workspace row carries its `teamId`; a list
+      // that isn't the current team's cannot testify to whether the current
+      // team's selection is stale, so wait for it to catch up. (An empty list is
+      // vacuously the current team's — a genuinely empty team still clears a
+      // dangling id, releasing the bootstrap gate.)
+      const listMatchesCurrentTeam = workspaceList.every(
+        (w) => w.teamId === teamId
+      )
+      if (!listMatchesCurrentTeam) return
+
       // Check if the current workspace exists in the list
       const exists = workspaceList.some((w) => w.id === workspaceId)
 

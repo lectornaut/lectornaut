@@ -200,6 +200,17 @@ export const useAuthStore = defineStore("auth", () => {
   const isMembershipPreferencesError: ComputedRef<boolean> = computed(
     () => membershipPreferencesQuery.isError.value
   )
+  // True while the membership-preferences query is serving data that was
+  // restored from the persisted TanStack cache but has not yet been confirmed
+  // by a live Firestore snapshot. Stale ≠ absent: the query has data, but that
+  // data may be out of date (e.g. the user switched workspaces on another
+  // device, or did so on this device and closed the tab before the cache was
+  // persisted with the new value). We must NOT treat stale data as authoritative
+  // in either the `membershipPreferences` getter or the reconciliation watch —
+  // doing so is exactly the "workspace selection lost on reload" bug.
+  const isMembershipPreferencesStale: ComputedRef<boolean> = computed(
+    () => membershipPreferencesQuery.isStale.value
+  )
 
   // Mirror `userPreferences`: Firestore (incl. the surviving TanStack read
   // cache) is authoritative when idle; the optimistic overlay only wins while a
@@ -224,12 +235,32 @@ export const useAuthStore = defineStore("auth", () => {
   // confirms the doc is MISSING (`null`). Without that guard, a missing/not-yet
   // -written doc clobbered the overlay (and its cache) with `null` on every
   // reload, which is the bug this pair of comments exists to prevent.
+  //
+  // STALE-CACHE EXCEPTION: `isMembershipPreferencesStale` is a third case the
+  // original Firestore-first rule didn't account for. A stale TanStack cache
+  // entry is non-null (so it passes the `??` precedence) but may carry an
+  // older workspace ID — e.g. if the user switched workspaces and the live
+  // snapshot hadn't arrived before the tab was closed. In that case the stale
+  // cache overrides the localStorage hydration value (which IS current). We
+  // therefore fall back to overlay-first while the query is stale, and switch
+  // to Firestore-first once a live snapshot confirms the value.
   const membershipPreferences = computed({
     get: () => {
       if (
         currentUser.value &&
         pendingUserIds.value.has(currentUser.value.uid)
       ) {
+        return (
+          optimisticMembershipPreferences.value ??
+          firestoreMembershipPreferences.value ??
+          defaultMembershipPreferences()
+        )
+      }
+      // While the query is stale (data is from the persisted cache, not yet
+      // confirmed by a live snapshot), prefer the optimistic overlay — it was
+      // written by `setCurrentWorkspaceId` and reflects the user's most recent
+      // selection on this device, which is more current than the stale cache.
+      if (isMembershipPreferencesStale.value) {
         return (
           optimisticMembershipPreferences.value ??
           firestoreMembershipPreferences.value ??
@@ -393,8 +424,9 @@ export const useAuthStore = defineStore("auth", () => {
       firestoreMembershipPreferences,
       isMembershipPreferencesLoading,
       isMembershipPreferencesError,
+      isMembershipPreferencesStale,
     ],
-    ([teamId, preferences, loading, errored]) => {
+    ([teamId, preferences, loading, errored, isStale]) => {
       if (!currentUser.value || !teamId || loading) {
         return
       }
@@ -410,6 +442,20 @@ export const useAuthStore = defineStore("auth", () => {
       // workspace-loading bug). When `errored`, fall through and release the
       // gate against the hydrated/empty overlay instead of blocking.
       if (preferences === undefined && !errored) return
+
+      // Do NOT treat stale TanStack cache data as a live Firestore snapshot.
+      // `isStale` is true when `restoreQueryCache()` loaded the persisted cache
+      // but the live onSnapshot listener has not yet delivered a fresh value.
+      // Acting on that stale value would:
+      //   1. Release the bootstrap gate against a potentially out-of-date
+      //      workspace selection.
+      //   2. Overwrite the localStorage hydration cache (`persistMembership-
+      //      PreferencesForTeam`) with the stale cached value, destroying the
+      //      newer workspace ID that `setCurrentWorkspaceId` wrote there before
+      //      the tab was closed.
+      // The error exception is preserved: a terminal read failure is definitive
+      // and must release the gate regardless of staleness.
+      if (isStale && !errored) return
 
       // Mirror the userPreferences reconciliation (the team-selection path that
       // ALREADY survives reload): let Firestore overwrite the cold-start

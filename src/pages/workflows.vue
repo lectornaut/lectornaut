@@ -351,6 +351,9 @@ const formatWhen = (ts: unknown): string =>
       <template #expanded="{ row }">
         <RunDetails :run="row.original.run" />
       </template>
+      <template #selection-actions="{ table, rows, count }">
+        <RunsSelectionActions :table="table" :rows="rows" :count="count" />
+      </template>
     </DataTable>
   </div>
 

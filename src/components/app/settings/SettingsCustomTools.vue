@@ -885,9 +885,11 @@ const handleEditorSave = async (): Promise<void> => {
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="string">string</SelectItem>
-                        <SelectItem value="number">number</SelectItem>
-                        <SelectItem value="boolean">boolean</SelectItem>
+                        <SelectGroup>
+                          <SelectItem value="string">string</SelectItem>
+                          <SelectItem value="number">number</SelectItem>
+                          <SelectItem value="boolean">boolean</SelectItem>
+                        </SelectGroup>
                       </SelectContent>
                     </Select>
                     <div class="col-span-3 flex items-center gap-2">
@@ -978,9 +980,11 @@ const handleEditorSave = async (): Promise<void> => {
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="string">string</SelectItem>
-                        <SelectItem value="number">number</SelectItem>
-                        <SelectItem value="boolean">boolean</SelectItem>
+                        <SelectGroup>
+                          <SelectItem value="string">string</SelectItem>
+                          <SelectItem value="number">number</SelectItem>
+                          <SelectItem value="boolean">boolean</SelectItem>
+                        </SelectGroup>
                       </SelectContent>
                     </Select>
                     <div class="col-span-3 flex items-center gap-2">
@@ -1064,28 +1068,30 @@ const handleEditorSave = async (): Promise<void> => {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem
-                        v-for="kind in actionKinds"
-                        :key="kind"
-                        :value="kind"
-                      >
-                        <div class="flex flex-col items-start gap-0.5">
-                          <span>
-                            {{
-                              t(
-                                `settings.agents.customTools.action.kinds.${kind}`
-                              )
-                            }}
-                          </span>
-                          <span class="text-muted-foreground text-xs">
-                            {{
-                              t(
-                                `settings.agents.customTools.action.kindDescriptions.${kind}`
-                              )
-                            }}
-                          </span>
-                        </div>
-                      </SelectItem>
+                      <SelectGroup>
+                        <SelectItem
+                          v-for="kind in actionKinds"
+                          :key="kind"
+                          :value="kind"
+                        >
+                          <div class="flex flex-col items-start gap-0.5">
+                            <span>
+                              {{
+                                t(
+                                  `settings.agents.customTools.action.kinds.${kind}`
+                                )
+                              }}
+                            </span>
+                            <span class="text-muted-foreground text-xs">
+                              {{
+                                t(
+                                  `settings.agents.customTools.action.kindDescriptions.${kind}`
+                                )
+                              }}
+                            </span>
+                          </div>
+                        </SelectItem>
+                      </SelectGroup>
                     </SelectContent>
                   </Select>
                 </Field>
@@ -1132,11 +1138,13 @@ const handleEditorSave = async (): Promise<void> => {
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="GET">GET</SelectItem>
-                        <SelectItem value="POST">POST</SelectItem>
-                        <SelectItem value="PUT">PUT</SelectItem>
-                        <SelectItem value="PATCH">PATCH</SelectItem>
-                        <SelectItem value="DELETE">DELETE</SelectItem>
+                        <SelectGroup>
+                          <SelectItem value="GET">GET</SelectItem>
+                          <SelectItem value="POST">POST</SelectItem>
+                          <SelectItem value="PUT">PUT</SelectItem>
+                          <SelectItem value="PATCH">PATCH</SelectItem>
+                          <SelectItem value="DELETE">DELETE</SelectItem>
+                        </SelectGroup>
                       </SelectContent>
                     </Select>
                   </Field>
@@ -1367,21 +1375,23 @@ const handleEditorSave = async (): Promise<void> => {
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="__follow__">
-                          {{
-                            t(
-                              "settings.agents.customTools.action.promptTemplate.modelNone"
-                            )
-                          }}
-                        </SelectItem>
-                        <SelectSeparator />
-                        <SelectItem
-                          v-for="model in botModels"
-                          :key="model.id"
-                          :value="model.id"
-                        >
-                          {{ model.name }}
-                        </SelectItem>
+                        <SelectGroup>
+                          <SelectItem value="__follow__">
+                            {{
+                              t(
+                                "settings.agents.customTools.action.promptTemplate.modelNone"
+                              )
+                            }}
+                          </SelectItem>
+                          <SelectSeparator />
+                          <SelectItem
+                            v-for="model in botModels"
+                            :key="model.id"
+                            :value="model.id"
+                          >
+                            {{ model.name }}
+                          </SelectItem>
+                        </SelectGroup>
                       </SelectContent>
                     </Select>
                   </Field>
@@ -1416,27 +1426,29 @@ const handleEditorSave = async (): Promise<void> => {
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="__any__">
-                          {{
-                            t(
-                              "settings.agents.customTools.action.workspaceSearch.scopeAny"
-                            )
-                          }}
-                        </SelectItem>
-                        <SelectItem value="code">
-                          {{
-                            t(
-                              "settings.agents.customTools.action.workspaceSearch.scopeCode"
-                            )
-                          }}
-                        </SelectItem>
-                        <SelectItem value="write">
-                          {{
-                            t(
-                              "settings.agents.customTools.action.workspaceSearch.scopeWrite"
-                            )
-                          }}
-                        </SelectItem>
+                        <SelectGroup>
+                          <SelectItem value="__any__">
+                            {{
+                              t(
+                                "settings.agents.customTools.action.workspaceSearch.scopeAny"
+                              )
+                            }}
+                          </SelectItem>
+                          <SelectItem value="code">
+                            {{
+                              t(
+                                "settings.agents.customTools.action.workspaceSearch.scopeCode"
+                              )
+                            }}
+                          </SelectItem>
+                          <SelectItem value="write">
+                            {{
+                              t(
+                                "settings.agents.customTools.action.workspaceSearch.scopeWrite"
+                              )
+                            }}
+                          </SelectItem>
+                        </SelectGroup>
                       </SelectContent>
                     </Select>
                   </Field>

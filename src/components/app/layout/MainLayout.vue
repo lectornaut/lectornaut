@@ -337,6 +337,7 @@ const closeTab = (id: string) => {
       <Tooltip>
         <TooltipTrigger as-child>
           <ResizableHandle
+            v-motion-fade-visible
             class="data-[resize-handle-state=drag]:after:bg-muted data-[resize-handle-state=hover]:after:bg-muted data-[resize-handle-state=hover]:bg-muted data-[resize-handle-state=drag]:bg-muted focus-visible:after:bg-muted! z-30 w-0! transition before:pointer-events-auto before:absolute before:inset-y-0 before:left-1/2 before:w-3 before:-translate-x-1/2 focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:outline-none focus-visible:after:scale-400 data-resize-handle:after:w-px data-[resize-handle-state=drag]:after:scale-400 data-[resize-handle-state=hover]:after:scale-400"
             :class="{
               'data-resize-handle:after:bg-muted': !sidebarPanel?.isCollapsed,

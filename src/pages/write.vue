@@ -90,6 +90,7 @@ const {
   collabReady,
   collabAwareness,
   externalEditorContent,
+  adoptEditorBaseline,
   saveContent,
 } = useCollabPage({
   scope: nodeScope,
@@ -155,6 +156,7 @@ useHead(() => ({
         :collaboration-doc="collabDoc"
         :collaboration-awareness="collabAwareness"
         :external-content="externalEditorContent"
+        @baseline="adoptEditorBaseline"
       />
     </OverlayScrollbarsWrapper>
     <div

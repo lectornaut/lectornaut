@@ -1,5 +1,4 @@
 <script lang="ts" setup>
-import SettingsRestricted from "@/components/app/settings/SettingsRestricted.vue"
 import { useCanViewTeamSettings } from "@/composables/useCanViewTeamSettings"
 import {
   cloneAgentConfig,

@@ -947,15 +947,17 @@ const handleSave = async (): Promise<void> => {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="manual">
-                      {{ t("settings.workflows.triggerManualOpt") }}
-                    </SelectItem>
-                    <SelectItem value="schedule">
-                      {{ t("settings.workflows.triggerScheduleOpt") }}
-                    </SelectItem>
-                    <SelectItem value="event">
-                      {{ t("settings.workflows.triggerEventOpt") }}
-                    </SelectItem>
+                    <SelectGroup>
+                      <SelectItem value="manual">
+                        {{ t("settings.workflows.triggerManualOpt") }}
+                      </SelectItem>
+                      <SelectItem value="schedule">
+                        {{ t("settings.workflows.triggerScheduleOpt") }}
+                      </SelectItem>
+                      <SelectItem value="event">
+                        {{ t("settings.workflows.triggerEventOpt") }}
+                      </SelectItem>
+                    </SelectGroup>
                   </SelectContent>
                 </Select>
               </div>
@@ -969,15 +971,17 @@ const handleSave = async (): Promise<void> => {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="interval">
-                      {{ t("settings.workflows.schedInterval") }}
-                    </SelectItem>
-                    <SelectItem value="daily">
-                      {{ t("settings.workflows.schedDaily") }}
-                    </SelectItem>
-                    <SelectItem value="weekly">
-                      {{ t("settings.workflows.schedWeekly") }}
-                    </SelectItem>
+                    <SelectGroup>
+                      <SelectItem value="interval">
+                        {{ t("settings.workflows.schedInterval") }}
+                      </SelectItem>
+                      <SelectItem value="daily">
+                        {{ t("settings.workflows.schedDaily") }}
+                      </SelectItem>
+                      <SelectItem value="weekly">
+                        {{ t("settings.workflows.schedWeekly") }}
+                      </SelectItem>
+                    </SelectGroup>
                   </SelectContent>
                 </Select>
 
@@ -1009,13 +1013,15 @@ const handleSave = async (): Promise<void> => {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem
-                        v-for="(d, i) in dayNames"
-                        :key="i"
-                        :value="i"
-                      >
-                        {{ d }}
-                      </SelectItem>
+                      <SelectGroup>
+                        <SelectItem
+                          v-for="(d, i) in dayNames"
+                          :key="i"
+                          :value="i"
+                        >
+                          {{ d }}
+                        </SelectItem>
+                      </SelectGroup>
                     </SelectContent>
                   </Select>
                 </div>
@@ -1042,12 +1048,14 @@ const handleSave = async (): Promise<void> => {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="write">
-                        {{ t("settings.workflows.scopeWrite") }}
-                      </SelectItem>
-                      <SelectItem value="code">
-                        {{ t("settings.workflows.scopeCode") }}
-                      </SelectItem>
+                      <SelectGroup>
+                        <SelectItem value="write">
+                          {{ t("settings.workflows.scopeWrite") }}
+                        </SelectItem>
+                        <SelectItem value="code">
+                          {{ t("settings.workflows.scopeCode") }}
+                        </SelectItem>
+                      </SelectGroup>
                     </SelectContent>
                   </Select>
                 </div>
@@ -1077,12 +1085,14 @@ const handleSave = async (): Promise<void> => {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="write">
-                      {{ t("settings.workflows.scopeWrite") }}
-                    </SelectItem>
-                    <SelectItem value="code">
-                      {{ t("settings.workflows.scopeCode") }}
-                    </SelectItem>
+                    <SelectGroup>
+                      <SelectItem value="write">
+                        {{ t("settings.workflows.scopeWrite") }}
+                      </SelectItem>
+                      <SelectItem value="code">
+                        {{ t("settings.workflows.scopeCode") }}
+                      </SelectItem>
+                    </SelectGroup>
                   </SelectContent>
                 </Select>
               </div>
@@ -1112,8 +1122,10 @@ const handleSave = async (): Promise<void> => {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="code">code</SelectItem>
-                      <SelectItem value="write">write</SelectItem>
+                      <SelectGroup>
+                        <SelectItem value="code">code</SelectItem>
+                        <SelectItem value="write">write</SelectItem>
+                      </SelectGroup>
                     </SelectContent>
                   </Select>
                   <Input
@@ -1139,12 +1151,14 @@ const handleSave = async (): Promise<void> => {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="require_review">
-                      {{ t("settings.workflows.modeReviewOpt") }}
-                    </SelectItem>
-                    <SelectItem value="automatic">
-                      {{ t("settings.workflows.modeAutomaticOpt") }}
-                    </SelectItem>
+                    <SelectGroup>
+                      <SelectItem value="require_review">
+                        {{ t("settings.workflows.modeReviewOpt") }}
+                      </SelectItem>
+                      <SelectItem value="automatic">
+                        {{ t("settings.workflows.modeAutomaticOpt") }}
+                      </SelectItem>
+                    </SelectGroup>
                   </SelectContent>
                 </Select>
                 <p class="text-muted-foreground text-xs">

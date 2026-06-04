@@ -77,7 +77,13 @@ const membershipPreferencesConverter = zodConverter<IMembershipPreferences>(
 )
 const botSessionConverter = zodConverter<IBotSession>(
   botSessionSchema,
-  "botSession"
+  "botSession",
+  // `teams/{teamId}/workspaces/{workspaceId}/botSessions/{id}` — teamId and
+  // workspaceId are canonically defined by the doc's location. Inject them
+  // from the path so legacy/partial docs that never denormalized them into
+  // the body still satisfy the schema (the unfiltered admin Sessions query
+  // is the only surface that reads such docs).
+  { teamId: 1, workspaceId: 3 }
 )
 
 // ============================================================================

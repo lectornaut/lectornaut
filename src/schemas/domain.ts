@@ -769,9 +769,21 @@ export const teamCustomToolWriteSchema = teamCustomToolSchema.extend({
 
 export const botSessionSchema = z.object({
   id: z.string(),
+  // teamId + workspaceId are injected from the doc path by `botSessionConverter`
+  // (see firebase-helpers.ts), so they parse cleanly even on legacy/partial
+  // docs that never denormalized them into the body.
   teamId: z.string(),
   workspaceId: z.string(),
-  ownerUid: z.string(),
+  /**
+   * Owner uid is genuine body data — unlike teamId/workspaceId it is NOT
+   * derivable from the doc path, so it can't be healed at the read boundary.
+   * Optional on read so the unfiltered admin query (Settings → Sessions)
+   * doesn't throw on legacy/partial docs that predate ownerUid
+   * denormalization; consumers treat an absent owner as "unknown". Every
+   * server write path (`FirestoreBotSessionStore.save`) still sets it, so
+   * docs touched after that change always carry it.
+   */
+  ownerUid: z.string().optional(),
   title: z.string().optional(),
   preview: z.string().optional(),
   messageCount: z.number().optional(),

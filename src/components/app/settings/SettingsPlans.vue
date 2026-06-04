@@ -1,5 +1,4 @@
 <script lang="ts" setup>
-import SettingsRestricted from "@/components/app/settings/SettingsRestricted.vue"
 import { useCanViewTeamSettings } from "@/composables/useCanViewTeamSettings"
 import {
   changeSubscriptionPlan as changeSubscriptionPlanFn,
@@ -608,7 +607,6 @@ const getButtonLabel = (planId: BillingPlanKey) => {
         </FieldSet>
       </FieldGroup>
     </div>
-
     <SettingsUnsavedBar
       v-if="canManageBilling && hasPendingChanges"
       :saving="isSaving"

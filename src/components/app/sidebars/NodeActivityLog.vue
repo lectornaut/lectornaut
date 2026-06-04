@@ -17,6 +17,8 @@ import { useAuthStore } from "@/stores/authStore"
 import { useMembershipStore } from "@/stores/membershipStore"
 import { isAgentMembership, isUserMembership } from "@/types/membership"
 import type { ILogEntry } from "@/types/logs"
+import { tsToDate } from "@/utils/firebase/firebase-timestamps"
+import { formatTimeAgo } from "@vueuse/core"
 import { storeToRefs } from "pinia"
 
 type OverlayScrollbarsWrapperRef = ComponentPublicInstance<{
@@ -96,11 +98,14 @@ const ACTION_ICONS = {
   "content.attachment.delete": IconTrash2,
 } as const
 
-const resolveTimestamp = (entry: ILogEntry) => entry.timestamp?.toDate?.()
+const resolveTimestamp = (entry: ILogEntry) => tsToDate(entry.timestamp)
 
+// `formatTimeAgo` is VueUse's PURE relative-time formatter; unlike `useTimeAgo`
+// it installs no interval, so calling it once per render (these helpers run in
+// the `v-for`) leaves no orphaned tickers. `useDateFormat` is timer-free.
 const formatTimestamp = (entry: ILogEntry) => {
   const timestamp = resolveTimestamp(entry)
-  return timestamp ? useTimeAgo(timestamp).value : "—"
+  return timestamp ? formatTimeAgo(timestamp) : "—"
 }
 
 const formatTimestampTitle = (entry: ILogEntry) => {
@@ -110,10 +115,8 @@ const formatTimestampTitle = (entry: ILogEntry) => {
     : undefined
 }
 
-const formatTimestampDateTime = (entry: ILogEntry) => {
-  const timestamp = entry.timestamp?.toDate?.()
-  return timestamp ? timestamp.toISOString() : undefined
-}
+const formatTimestampDateTime = (entry: ILogEntry) =>
+  resolveTimestamp(entry)?.toISOString()
 
 interface ResolvedActor {
   name: string

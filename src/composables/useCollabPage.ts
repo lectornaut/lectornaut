@@ -75,6 +75,12 @@ export interface UseCollabPageReturn {
    * `code` docs apply internally to the Y.Text and never use this.
    */
   externalEditorContent: Ref<{ seq: number; content: string } | null>
+  /**
+   * Adopt the editor's canonical serialization of the just-opened document as
+   * the dirty baseline. Wired to the rich-text editor's one-shot `baseline`
+   * event (see `adoptEditorBaseline` for the rationale).
+   */
+  adoptEditorBaseline: (value: string) => void
   saveContent: () => Promise<void>
 }
 
@@ -502,6 +508,30 @@ export function useCollabPage(
     }
   }
 
+  // --- Editor-reported baseline ---
+  // An editor re-serializes the content it loads into its OWN canonical form,
+  // which can differ byte-for-byte from the stored `content` even though the
+  // documents are identical. The mismatch is invisible for `code` (raw text
+  // round-trips, and `onSessionCreated` already reseeds `lastSyncedContent`
+  // from `getText()`), but real for `write`: an agent edit persists
+  // `markdownToTiptapJson(...)` output, NOT the editor's `getJSON()`, so when
+  // Tiptap reopens the doc and re-emits its canonical serialization the editor
+  // looks dirty on open with no user input.
+  //
+  // The rich-text editor can't report its canonical form at session-creation
+  // time (it mounts only after `collabReady`), so it fires a one-shot event
+  // once created. Treat that as the sync baseline — the `write` analogue of the
+  // `onSessionCreated` → `getText()` reseed the code editor does synchronously.
+  // Fires once per open (the editor is keyed by file id), before any user
+  // interaction, so it can't swallow a genuine edit. Saving heals the doc: the
+  // persisted `content` then IS the editor's canonical form.
+  const adoptEditorBaseline = (value: string) => {
+    if (!selectedFile.value) return
+    const normalized = normalizeContent(value)
+    lastSyncedContent.value = normalized
+    isDirty.value = normalizeContent(editorContent.value) !== normalized
+  }
+
   // --- Cleanup ---
   onBeforeUnmount(() => {
     relayUnsub?.()
@@ -531,6 +561,7 @@ export function useCollabPage(
     collabReady,
     collabAwareness,
     externalEditorContent,
+    adoptEditorBaseline,
     saveContent,
   }
 }

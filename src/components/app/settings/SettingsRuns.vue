@@ -1,5 +1,4 @@
 <script lang="ts" setup>
-import SettingsRestricted from "@/components/app/settings/SettingsRestricted.vue"
 import { runColumns, type RunRow } from "@/components/app/runs/runColumns"
 import { useCanViewTeamSettings } from "@/composables/useCanViewTeamSettings"
 import { useRunsExplorer } from "@/composables/useRunsExplorer"
@@ -144,6 +143,13 @@ const {
               >
                 <template #expanded="{ row }">
                   <RunDetails :run="row.original.run" />
+                </template>
+                <template #selection-actions="{ table, rows, count }">
+                  <RunsSelectionActions
+                    :table="table"
+                    :rows="rows"
+                    :count="count"
+                  />
                 </template>
               </DataTable>
             </FieldContent>

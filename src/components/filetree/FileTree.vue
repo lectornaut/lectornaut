@@ -16,7 +16,6 @@ import {
   type WorkspaceNodeScope,
 } from "@/types/nodes"
 import { computed, onBeforeUnmount, reactive, ref, watch } from "vue"
-import TreeNode from "./TreeNode.vue"
 
 const props = withDefaults(
   defineProps<{

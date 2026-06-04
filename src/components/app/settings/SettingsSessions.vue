@@ -1,5 +1,4 @@
 <script lang="ts" setup>
-import DataTable from "@/components/table/DataTable.vue"
 import DataTableColumnHeader from "@/components/table/DataTableColumnHeader.vue"
 import SettingsSessionsRowActions from "@/components/app/settings/SettingsSessionsRowActions.vue"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
@@ -56,6 +55,10 @@ const {
 // isn't part of its public surface).
 const { teamMembers } = storeToRefs(useMembershipStore())
 
+// Agent-owned sessions (headless workflow runs) are filtered out upstream in
+// `useWorkspaceBotSessions`, so every session reaching this view is a human
+// chat (or an owner-less legacy doc). The owner map therefore only needs the
+// team's user memberships.
 const memberByUid = computed<Map<string, IMembership>>(
   () =>
     new Map(
@@ -63,8 +66,8 @@ const memberByUid = computed<Map<string, IMembership>>(
     )
 )
 
-const memberName = (uid: string): string => {
-  const m = memberByUid.value.get(uid)
+const memberName = (uid: string | undefined): string => {
+  const m = uid ? memberByUid.value.get(uid) : undefined
   return (
     m?.user?.displayName ||
     m?.user?.email ||
@@ -308,7 +311,9 @@ const columns = computed<ColumnDef<IBotSession>[]>(() => [
     // visually consistent.
     id: "owner",
     accessorFn: (row) =>
-      memberByUid.value.has(row.ownerUid) ? row.ownerUid : "__unknown__",
+      row.ownerUid && memberByUid.value.has(row.ownerUid)
+        ? row.ownerUid
+        : "__unknown__",
     header: ({ column }) =>
       h(DataTableColumnHeader, {
         column: toUnknownColumn(column),
@@ -316,7 +321,7 @@ const columns = computed<ColumnDef<IBotSession>[]>(() => [
       }),
     cell: ({ row }) => {
       const uid = row.original.ownerUid
-      const member = memberByUid.value.get(uid)
+      const member = uid ? memberByUid.value.get(uid) : undefined
       const name = memberName(uid)
       return h("div", { class: "flex min-w-0 items-center gap-2" }, [
         h(Avatar, { class: "size-6 shrink-0" }, () => [
@@ -527,7 +532,6 @@ const selectedSessions = computed(() =>
   selectedRows.value.map((r) => r.original as IBotSession)
 )
 
-const hasSelection = computed(() => selectedRows.value.length > 0)
 const selectionCount = computed(() => selectedRows.value.length)
 
 // Admins can mutate any session, so "actionable" == the full selection.
@@ -649,50 +653,6 @@ const submitDelete = async () => {
             </FieldContent>
           </Field>
 
-          <Field v-if="hasSelection" orientation="horizontal">
-            <FieldContent>
-              <FieldLabel class="tabular-nums">
-                {{
-                  t("settings.sessions.selectedCount", {
-                    count: selectionCount,
-                  })
-                }}
-              </FieldLabel>
-            </FieldContent>
-            <div class="flex items-center gap-2">
-              <Button
-                v-if="selectionHasActive"
-                variant="outline"
-                :disabled="bulkBusy || isMutating"
-                @click="bulkArchive(true)"
-              >
-                <IconArchive />
-                {{ t("settings.sessions.bulkArchive") }}
-              </Button>
-              <Button
-                v-if="selectionHasArchived"
-                variant="outline"
-                :disabled="bulkBusy || isMutating"
-                @click="bulkArchive(false)"
-              >
-                <IconRotateCcw />
-                {{ t("settings.sessions.bulkRestore") }}
-              </Button>
-              <Button
-                variant="destructive"
-                :disabled="bulkBusy || isMutating"
-                @click="openBulkDelete"
-              >
-                <IconTrash2 />
-                {{ t("settings.sessions.bulkDelete") }}
-              </Button>
-              <Button variant="ghost" @click="clearSelection">
-                <IconX />
-                {{ t("settings.sessions.bulkClear") }}
-              </Button>
-            </div>
-          </Field>
-
           <Field orientation="horizontal">
             <FieldContent class="min-w-0">
               <Empty v-if="isLoading && sessions.length === 0">
@@ -726,7 +686,52 @@ const submitDelete = async () => {
                 :columns="columns"
                 :column-pinning="{ left: ['select'], right: ['actions'] }"
                 class="overflow-clip rounded-xl border"
-              />
+              >
+                <!-- Bulk actions for the footer's selected-count chip. Admins -->
+                <!-- can mutate any row, so the whole selection is actionable. -->
+                <template #selection-actions>
+                  <DropdownMenuLabel class="text-muted-foreground tabular-nums">
+                    {{
+                      t("settings.sessions.selectedCount", {
+                        count: selectionCount,
+                      })
+                    }}
+                  </DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    v-if="selectionHasActive"
+                    :disabled="bulkBusy || isMutating"
+                    @click="bulkArchive(true)"
+                  >
+                    <IconArchive />
+                    {{ t("settings.sessions.bulkArchive") }}
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    v-if="selectionHasArchived"
+                    :disabled="bulkBusy || isMutating"
+                    @click="bulkArchive(false)"
+                  >
+                    <IconRotateCcw />
+                    {{ t("settings.sessions.bulkRestore") }}
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    variant="destructive"
+                    :disabled="bulkBusy || isMutating"
+                    @click="openBulkDelete"
+                  >
+                    <IconTrash2 />
+                    {{ t("settings.sessions.bulkDelete") }}
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    :disabled="bulkBusy"
+                    @click="clearSelection"
+                  >
+                    <IconX />
+                    {{ t("settings.sessions.bulkClear") }}
+                  </DropdownMenuItem>
+                </template>
+              </DataTable>
             </FieldContent>
           </Field>
         </template>

@@ -193,7 +193,19 @@ function coerceNumericTimestamps(
  */
 export function zodConverter<T extends DocumentData>(
   schema: ZodType<T>,
-  context: string
+  context: string,
+  /**
+   * Optional map of `fieldName → 0-based path-segment index`. Each named
+   * field is filled from the document's own path, exactly as `id` is filled
+   * from `snap.id`. Use for ancestor ids that are denormalized into the body
+   * for server-side convenience but are *canonically* defined by the doc's
+   * location — e.g. a doc at `teams/{teamId}/workspaces/{workspaceId}/…`
+   * passes `{ teamId: 1, workspaceId: 3 }`. The path value always wins (the
+   * location can't lie), and — like `id` — this heals legacy/partial docs
+   * written before the field was denormalized, so a strict `z.string()`
+   * schema parses cleanly without a data migration.
+   */
+  pathFields?: Readonly<Record<string, number>>
 ): FirestoreDataConverter<T> {
   return {
     toFirestore(value: T): DocumentData {
@@ -201,17 +213,20 @@ export function zodConverter<T extends DocumentData>(
     },
     fromFirestore(snap: QueryDocumentSnapshot, options?: SnapshotOptions): T {
       const data = coerceNumericTimestamps(snap.data(options))
-      // Inject `snap.id` into the parsed data. The doc's path-derived id
-      // is canonical; storing it in the body is denormalization. This
-      // makes schemas with `id: z.string()` parse cleanly even when the
-      // body was written without explicit `id` (legacy docs, or docs
-      // written by code that didn't denormalize). Spread before `id` so
-      // an explicit body value is overridden by the canonical one.
-      return parseOrWarn(
-        schema,
-        { ...data, id: snap.id },
-        `${context}:${snap.ref.path}`
-      )
+      // Inject `snap.id` (and any `pathFields`) into the parsed data. The
+      // doc's path-derived id is canonical; storing it in the body is
+      // denormalization. This makes schemas with `id: z.string()` parse
+      // cleanly even when the body was written without explicit `id`
+      // (legacy docs, or docs written by code that didn't denormalize).
+      // Spread before the injected keys so the canonical path value wins.
+      const enriched: Record<string, unknown> = { ...data, id: snap.id }
+      if (pathFields) {
+        const segments = snap.ref.path.split("/")
+        for (const [field, index] of Object.entries(pathFields)) {
+          enriched[field] = segments[index]
+        }
+      }
+      return parseOrWarn(schema, enriched, `${context}:${snap.ref.path}`)
     },
   }
 }

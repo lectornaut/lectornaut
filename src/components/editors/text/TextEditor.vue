@@ -104,6 +104,14 @@ const props = withDefaults(
 
 const emit = defineEmits<{
   (e: "update:modelValue", value: string): void
+  /**
+   * Fired once, right after the editor is created, with the editor's canonical
+   * serialization of the content it just loaded. The persisted `content` (e.g.
+   * an agent edit stored as `markdownToTiptapJson` output) need not match this
+   * canonical form byte-for-byte, so the parent adopts it as the dirty baseline
+   * to avoid a freshly opened doc looking "unsaved" with no user input.
+   */
+  (e: "baseline", value: string): void
 }>()
 
 const EDITOR_COLORS = accents.filter(
@@ -734,6 +742,13 @@ const editor = useEditor({
 
     syncTableOfContentsScrollParent(currentEditor)
     syncModelFromEditor(currentEditor, { immediate: true })
+    // Report the canonical serialization of the loaded doc as the sync
+    // baseline. `syncModelFromEditor` has just set `currentSerializedModelValue`
+    // to exactly this value and emitted it via `update:modelValue`, so the
+    // parent's `editorContent` already matches — adopting it as the baseline
+    // makes `isDirty` false on open even when the stored `content` was a
+    // non-canonical (e.g. agent-authored) encoding of the same document.
+    emit("baseline", currentSerializedModelValue)
   },
   onUpdate: () => {
     scheduleModelSync()
