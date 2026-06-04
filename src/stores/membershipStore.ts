@@ -22,9 +22,7 @@ import {
   removeMember as removeMemberFn,
   removeMembers as removeMembersFn,
   removeTeamAgentMember as removeTeamAgentMemberFn,
-  sendInvitation as sendInvitationFn,
 } from "@/composables/useFunctions"
-import { defaultTeamRole } from "@/helpers/defaults"
 import { queryClient } from "@/modules/queryClient"
 import { parseSafe } from "@/schemas/_utils"
 import { membershipSchema, teamMemberSchema } from "@/schemas/membership"
@@ -32,7 +30,6 @@ import { useAuthStore } from "@/stores/authStore"
 import type { ITeam } from "@/types/domain"
 import {
   isAgentMembership,
-  isMembershipRole,
   isUserMembership,
   type IAgentMembership,
   type IMembership,
@@ -449,27 +446,6 @@ export const useMembershipStore = defineStore("memberships", () => {
   }
 
   // ── Member mutations ────────────────────────────────────────────────────────
-  async function inviteMember(
-    teamId: string,
-    email: string,
-    role: IMembership["role"] = defaultTeamRole
-  ): Promise<void> {
-    if (!currentUser.value) return
-    if (!isMembershipRole(role)) throw new Error("Invalid invitation role")
-
-    const actorRole = resolveActorRoleForTeam(teamId)
-    if (
-      !can(currentUser.value, Capabilities.INVITE_MEMBER, {
-        scope: "team",
-        teamRole: actorRole,
-      })
-    ) {
-      throw new Error("You do not have permission to invite members")
-    }
-
-    await sendInvitationFn({ teamId, email, role })
-  }
-
   async function changeRole(
     teamId: string,
     userId: string,
@@ -894,7 +870,6 @@ export const useMembershipStore = defineStore("memberships", () => {
     getTeamMemberCount,
 
     // Actions
-    inviteMember,
     changeRole,
     removeMember,
     removeMembers,

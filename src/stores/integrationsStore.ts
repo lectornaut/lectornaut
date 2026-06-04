@@ -5,7 +5,11 @@
  * This is the client mirror of `functions/src/integrations.ts`'s resolver:
  *   - Reads the collection via the shared TanStack cache (`useCollectionQuery`,
  *     one ref-counted `onSnapshot` per team; Firestore rule allows member
- *     reads). Writes are callable-only (see `useIntegrations`).
+ *     reads). Writes are callable-applied, but the store owns their OPTIMISTIC
+ *     layer (`setEnabled` / `install` / `uninstall` / `remove`): it patches
+ *     this same cache + holds the key against the listener, so every facade
+ *     reading through it (`teamAgentsStore`, `teamCustomToolsStore`,
+ *     `useIntegrations`) reflects the change instantly with one rollback path.
  *   - CATALOG OVERLAY: a built-in agent/tool resolves as installed+enabled
  *     UNLESS the team has a divergence doc (uninstalled → `archivedAt`, or
  *     disabled → `enabled:false`). A built-in with no doc has no row in the
@@ -20,18 +24,29 @@
  * This store covers agents + tools only.
  */
 
+import {
+  deleteIntegration as deleteIntegrationFn,
+  installIntegration as installIntegrationFn,
+  setIntegrationEnabled as setIntegrationEnabledFn,
+  uninstallIntegration as uninstallIntegrationFn,
+  type DeleteIntegrationResponse,
+  type IntegrationMutationResponse,
+} from "@/composables/useFunctions"
 import { BOT_TOOL_CATALOG } from "@/data/botTools"
 import { BUILT_IN_AGENTS } from "@/data/builtInAgents"
 import { firestore } from "@/modules/firebase"
+import { queryClient } from "@/modules/queryClient"
 import { useAuthStore } from "@/stores/authStore"
 import type {
   IAgentIntegrationSpec,
   IToolIntegrationSpec,
 } from "@/types/domain"
 import {
+  holdOptimistic,
   useCollectionQuery,
   type CollectionQuerySource,
 } from "@/utils/firebase/firebase-query"
+import { queryKeys } from "@/utils/firebase/firebase-query-keys"
 import {
   collection,
   Timestamp,
@@ -168,6 +183,114 @@ function resolveStored(doc: StoredIntegration): ResolvedIntegration {
   }
 }
 
+// ─── Optimistic write helpers ────────────────────────────────────────────────
+
+/** Addresses an integration: custom by `integrationId`, built-in by key. */
+type IntegrationTarget = {
+  integrationId?: string
+  type?: AgentOrTool
+  sourceKey?: string
+}
+
+const integrationsCacheKey = (teamId: string) =>
+  queryKeys.list(`teams/${teamId}/integrations`)
+
+/** Resolve a target to the stored doc the cache already holds, if any. */
+function findStoredForTarget(
+  docs: StoredIntegration[],
+  target: IntegrationTarget
+): StoredIntegration | null {
+  if (target.integrationId) {
+    return docs.find((d) => d.id === target.integrationId) ?? null
+  }
+  if (target.type && target.sourceKey) {
+    return (
+      docs.find(
+        (d) =>
+          d.source !== "custom" &&
+          d.type === target.type &&
+          d.sourceKey === target.sourceKey
+      ) ?? null
+    )
+  }
+  return null
+}
+
+/**
+ * Build a synthetic divergence doc for a built-in that has no stored doc yet,
+ * so an optimistic disable/uninstall has a row to render. The built-in doc id
+ * IS its catalog `sourceKey`, so the server's real doc replaces this on the
+ * next snapshot. Returns null for an unknown key (skip the optimistic insert).
+ */
+function synthesizeBuiltinDoc(
+  teamId: string,
+  type: AgentOrTool,
+  sourceKey: string,
+  flags: { enabled: boolean; archivedAt: Timestamp | null }
+): StoredIntegration | null {
+  const now = Timestamp.now()
+  const base = {
+    id: sourceKey,
+    teamId,
+    source: "builtin" as const,
+    sourceKey,
+    enabled: flags.enabled,
+    archivedAt: flags.archivedAt,
+    spec: null,
+    createdAt: now,
+    updatedAt: now,
+    createdByUid: "",
+  }
+  if (type === "agent") {
+    const def = BUILT_IN_AGENTS.find((a) => a.id === sourceKey)
+    if (!def) return null
+    return {
+      ...base,
+      type: "agent",
+      name: def.name,
+      description: def.description,
+      avatarSeed: def.avatarSeed,
+    }
+  }
+  const tool = BOT_TOOL_CATALOG.find((entry) => entry.name === sourceKey)
+  if (!tool) return null
+  return {
+    ...base,
+    type: "tool",
+    name: tool.label,
+    description: tool.description,
+    avatarSeed: tool.name,
+  }
+}
+
+/**
+ * Patch the target's stored doc (enabled / archivedAt), synthesizing a built-in
+ * divergence row when the target is a catalog key with no doc yet. Pure — the
+ * store wraps it with the cache hold/rollback.
+ */
+function applyOptimisticIntegrationPatch(
+  current: StoredIntegration[],
+  teamId: string,
+  target: IntegrationTarget,
+  patch: Partial<Pick<StoredIntegration, "enabled" | "archivedAt">>
+): StoredIntegration[] {
+  const now = Timestamp.now()
+  const existing = findStoredForTarget(current, target)
+  if (existing) {
+    return current.map((d) =>
+      d === existing ? { ...d, ...patch, updatedAt: now } : d
+    )
+  }
+  if (target.type && target.sourceKey) {
+    const synth = synthesizeBuiltinDoc(teamId, target.type, target.sourceKey, {
+      enabled: patch.enabled ?? true,
+      archivedAt: patch.archivedAt ?? null,
+    })
+    if (synth) return [...current, synth]
+  }
+  return current
+}
+
 // ─── Store ───────────────────────────────────────────────────────────────────
 
 export const useIntegrationsStore = defineStore("integrations", () => {
@@ -286,6 +409,104 @@ export const useIntegrationsStore = defineStore("integrations", () => {
     integrations.value.filter((i) => i.installed && i.enabled)
   )
 
+  // ── Optimistic writes (cache patch + hold + rollback; callable-applied) ───
+  //
+  // These wrap the unified `integration*` callables with the same hold-the-key
+  // pattern the attachment composables use: apply the change to THIS store's
+  // `teams/{teamId}/integrations` cache synchronously, hold the key so the live
+  // listener can't echo pre-apply state, run the callable, then reconcile on
+  // the held snapshot's release (or roll back on failure). The `integrations`
+  // overlay re-derives downstream, so every facade reflects the change at once.
+
+  const runIntegrationWrite = async <T>(
+    teamId: string,
+    applyOptimistic: (current: StoredIntegration[]) => StoredIntegration[],
+    run: () => Promise<T>
+  ): Promise<T> => {
+    const key = integrationsCacheKey(teamId)
+    const previous = queryClient.getQueryData<(StoredIntegration | null)[]>(key)
+    const release = holdOptimistic(key)
+    queryClient.setQueryData<(StoredIntegration | null)[]>(
+      key,
+      applyOptimistic(
+        (previous ?? []).filter((d): d is StoredIntegration => !!d)
+      )
+    )
+    try {
+      return await run()
+    } catch (error) {
+      queryClient.setQueryData(key, previous)
+      throw error
+    } finally {
+      setTimeout(() => release(), 120)
+    }
+  }
+
+  const requireTeamId = (): string => {
+    const teamId = currentTeamId.value
+    if (!teamId) throw new Error("No active team.")
+    return teamId
+  }
+
+  /** Enable/disable. Custom via `integrationId`; built-in via `type`+`sourceKey`. */
+  const setEnabled = (
+    target: IntegrationTarget,
+    enabled: boolean
+  ): Promise<IntegrationMutationResponse> => {
+    const teamId = requireTeamId()
+    return runIntegrationWrite(
+      teamId,
+      (current) =>
+        applyOptimisticIntegrationPatch(current, teamId, target, { enabled }),
+      () =>
+        setIntegrationEnabledFn({ teamId, ...target, enabled }).then(
+          (r) => r.data
+        )
+    )
+  }
+
+  /** Install / restore (un-archive). Built-in via key, custom via id. */
+  const install = (
+    target: IntegrationTarget
+  ): Promise<IntegrationMutationResponse> => {
+    const teamId = requireTeamId()
+    return runIntegrationWrite(
+      teamId,
+      (current) =>
+        applyOptimisticIntegrationPatch(current, teamId, target, {
+          archivedAt: null,
+        }),
+      () => installIntegrationFn({ teamId, ...target }).then((r) => r.data)
+    )
+  }
+
+  /** Uninstall / archive (soft). Built-in via key, custom via id. */
+  const uninstall = (
+    target: IntegrationTarget
+  ): Promise<IntegrationMutationResponse> => {
+    const teamId = requireTeamId()
+    return runIntegrationWrite(
+      teamId,
+      (current) =>
+        applyOptimisticIntegrationPatch(current, teamId, target, {
+          archivedAt: Timestamp.now(),
+        }),
+      () => uninstallIntegrationFn({ teamId, ...target }).then((r) => r.data)
+    )
+  }
+
+  /** Hard-delete a custom integration (drops the row). */
+  const remove = (
+    integrationId: string
+  ): Promise<DeleteIntegrationResponse> => {
+    const teamId = requireTeamId()
+    return runIntegrationWrite(
+      teamId,
+      (current) => current.filter((d) => d.id !== integrationId),
+      () => deleteIntegrationFn({ teamId, integrationId }).then((r) => r.data)
+    )
+  }
+
   return {
     isLoading,
     loadError,
@@ -294,5 +515,10 @@ export const useIntegrationsStore = defineStore("integrations", () => {
     toolIntegrations,
     dispatchable,
     getById,
+    // Optimistic writes (shared by the agent/tool facades + useIntegrations).
+    setEnabled,
+    install,
+    uninstall,
+    remove,
   }
 })

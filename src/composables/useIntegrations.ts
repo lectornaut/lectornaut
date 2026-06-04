@@ -22,13 +22,10 @@
 
 import {
   createIntegration as createIntegrationFn,
-  deleteIntegration as deleteIntegrationFn,
-  installIntegration as installIntegrationFn,
-  setIntegrationEnabled as setIntegrationEnabledFn,
-  uninstallIntegration as uninstallIntegrationFn,
   updateIntegration as updateIntegrationFn,
 } from "@/composables/useFunctions"
 import { useAuthStore } from "@/stores/authStore"
+import { useIntegrationsStore } from "@/stores/integrationsStore"
 import { useMembershipStore } from "@/stores/membershipStore"
 import { useTeamWorkflowsStore } from "@/stores/teamWorkflowsStore"
 import type {
@@ -54,6 +51,9 @@ export function useIntegrations() {
   const canManage = computed(() => isOwner.value || isAdmin.value)
 
   const workflowsStore = useTeamWorkflowsStore()
+  // Owns the optimistic write layer for agents/tools (cache patch + rollback);
+  // this composable adds the admin gate + Integrations-page toasts on top.
+  const integrationsStore = useIntegrationsStore()
 
   const authStore = useAuthStore()
   const { currentTeamId } = storeToRefs(authStore)
@@ -92,37 +92,30 @@ export function useIntegrations() {
   }
 
   // ── Built-in agents (install/uninstall = catalog membership) ─────────────
+  // Optimistic via `integrationsStore` (shared cache patch + rollback); `run`
+  // still owns the admin gate + success/error toasts.
   const addBuiltInAgent = (sourceKey: string): Promise<void> =>
-    run(
-      (teamId) => installIntegrationFn({ teamId, type: "agent", sourceKey }),
-      {
-        success: t("settings.integrations.agents.addSuccess"),
-        error: t("settings.integrations.agents.addError"),
-      }
-    )
+    run(() => integrationsStore.install({ type: "agent", sourceKey }), {
+      success: t("settings.integrations.agents.addSuccess"),
+      error: t("settings.integrations.agents.addError"),
+    })
   const removeBuiltInAgent = (sourceKey: string): Promise<void> =>
-    run(
-      (teamId) => uninstallIntegrationFn({ teamId, type: "agent", sourceKey }),
-      {
-        success: t("settings.integrations.agents.removeSuccess"),
-        error: t("settings.integrations.agents.removeError"),
-      }
-    )
+    run(() => integrationsStore.uninstall({ type: "agent", sourceKey }), {
+      success: t("settings.integrations.agents.removeSuccess"),
+      error: t("settings.integrations.agents.removeError"),
+    })
 
   // ── Built-in tools ───────────────────────────────────────────────────────
   const addBuiltInTool = (sourceKey: string): Promise<void> =>
-    run((teamId) => installIntegrationFn({ teamId, type: "tool", sourceKey }), {
+    run(() => integrationsStore.install({ type: "tool", sourceKey }), {
       success: t("settings.integrations.tools.addSuccess"),
       error: t("settings.integrations.tools.addError"),
     })
   const removeBuiltInTool = (sourceKey: string): Promise<void> =>
-    run(
-      (teamId) => uninstallIntegrationFn({ teamId, type: "tool", sourceKey }),
-      {
-        success: t("settings.integrations.tools.removeSuccess"),
-        error: t("settings.integrations.tools.removeError"),
-      }
-    )
+    run(() => integrationsStore.uninstall({ type: "tool", sourceKey }), {
+      success: t("settings.integrations.tools.removeSuccess"),
+      error: t("settings.integrations.tools.removeError"),
+    })
 
   // ── Workflows (team availability — the Integrations tier) ─────────────────
   // Toggling here records WHICH presets the team offers (workspace-agnostic).
@@ -179,25 +172,25 @@ export function useIntegrations() {
     target: { integrationId?: string; type?: AgentOrTool; sourceKey?: string },
     enabled: boolean
   ): Promise<void> =>
-    run((teamId) => setIntegrationEnabledFn({ teamId, ...target, enabled }), {
+    run(() => integrationsStore.setEnabled(target, enabled), {
       error: t("settings.integrations.permissionRequired"),
     })
 
   /** Re-install (un-archive) a custom integration by id. */
   const restore = (integrationId: string): Promise<void> =>
-    run((teamId) => installIntegrationFn({ teamId, integrationId }), {
+    run(() => integrationsStore.install({ integrationId }), {
       error: t("settings.integrations.permissionRequired"),
     })
 
   /** Soft-archive (uninstall) any integration by id. */
   const uninstall = (integrationId: string): Promise<void> =>
-    run((teamId) => uninstallIntegrationFn({ teamId, integrationId }), {
+    run(() => integrationsStore.uninstall({ integrationId }), {
       error: t("settings.integrations.permissionRequired"),
     })
 
   /** Hard-delete a custom integration. */
   const remove = (integrationId: string): Promise<void> =>
-    run((teamId) => deleteIntegrationFn({ teamId, integrationId }), {
+    run(() => integrationsStore.remove(integrationId), {
       error: t("settings.integrations.permissionRequired"),
     })
 

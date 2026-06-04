@@ -272,6 +272,21 @@ export interface BotAgentConfig {
   topK: number
   /** Hard cap on the model's reply length, in tokens. */
   maxOutputTokens: number
+  /**
+   * Whether to ask reasoning-capable models to emit chain-of-thought
+   * ("thinking") before the answer, surfaced as collapsible <thinking>
+   * blocks in chat. Only effective for models that support it (see
+   * `modelSupportsThinking` in bot.ts); others ignore it. Team-scoped.
+   */
+  thinking: boolean
+  /**
+   * When true, each turn pre-retrieves the workspace nodes most relevant to
+   * the user's message and folds compact snippets into the system prompt
+   * (retrieval-augmented grounding), independent of the model's own
+   * `searchWorkspaceNodes` tool calls. Costs one embedding lookup per
+   * message; off by default. Team-scoped.
+   */
+  autoContext: boolean
   /** Pre-selected mode for new chats; the composer can override per-turn. */
   defaultMode: BotChatMode
   /** Workspace-level system prompt; mode-specific suffix appended at runtime. */
@@ -301,6 +316,12 @@ const DEFAULT_BOT_AGENT_CONFIG: BotAgentConfig = {
   // teams can raise this in Settings → Agents up to the
   // `BOT_AGENT_BOUNDS.maxOutputTokens.max = 65536` ceiling.
   maxOutputTokens: 4096,
+  // Reasoning-capable models emit <thinking> by default; teams can turn
+  // this off in Settings → AI to trim latency and token cost.
+  thinking: true,
+  // Automatic RAG grounding is opt-in — it adds an embedding lookup per
+  // message, so teams enable it deliberately in Settings → AI.
+  autoContext: false,
   defaultMode: "auto",
   systemPromptBase:
     "You are a helpful AI assistant embedded in this team's " +
@@ -392,6 +413,8 @@ const botAgentConfigUpdateSchema = z.object({
     .min(BOT_AGENT_BOUNDS.maxOutputTokens.min)
     .max(BOT_AGENT_BOUNDS.maxOutputTokens.max)
     .optional(),
+  thinking: z.boolean().optional(),
+  autoContext: z.boolean().optional(),
   defaultMode: z.enum(BOT_CHAT_MODES).optional(),
   systemPromptBase: z
     .string()
@@ -604,6 +627,8 @@ const botAgentConfigDocSchema = z
       BOT_AGENT_BOUNDS.maxOutputTokens.max,
       DEFAULT_BOT_AGENT_CONFIG.maxOutputTokens
     ),
+    thinking: cappedToolToggle(DEFAULT_BOT_AGENT_CONFIG.thinking),
+    autoContext: cappedToolToggle(DEFAULT_BOT_AGENT_CONFIG.autoContext),
     defaultMode: z
       .enum(BOT_CHAT_MODES)
       .catch(DEFAULT_BOT_AGENT_CONFIG.defaultMode),
@@ -710,6 +735,8 @@ function applyAgentConfigOverrides(
     topP: parsed.topP,
     topK: parsed.topK,
     maxOutputTokens: parsed.maxOutputTokens,
+    thinking: parsed.thinking,
+    autoContext: parsed.autoContext,
     defaultMode: parsed.defaultMode,
     systemPromptBase: parsed.systemPromptBase,
     promptSuffixes: parsed.promptSuffixes,

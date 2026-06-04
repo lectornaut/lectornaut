@@ -22,8 +22,12 @@
  * for `genkitClient.ts`).
  */
 
-import { z } from "genkit/beta"
+import { z, type Part } from "genkit/beta"
 
+import {
+  buildMediaPartFromStorage,
+  isSupportedMediaContentType,
+} from "./botMedia.js"
 import { admin, db } from "./firebase.js"
 
 // ===========================================================================
@@ -80,6 +84,12 @@ const PER_TURN_NODE_CONTENT_BUDGET_BYTES = 400_000
  */
 const MAX_ATTACHMENT_INLINE_BYTES = 50_000
 
+/**
+ * Max number of binary attachments (image/PDF) turned into media parts on a
+ * single turn. Bounds request size when an attached node has many images.
+ */
+const MAX_MEDIA_PARTS_PER_TURN = 8
+
 const TEXT_MIME_PREFIXES = [
   "text/",
   "application/json",
@@ -105,6 +115,13 @@ interface NodeContextAttachment {
   size: number | null
   content?: string
   contentTruncated?: boolean
+  /**
+   * Built media part for a supported binary attachment (image/PDF). Only
+   * populated when the turn carries media (a real user message). Collected
+   * by `loadAndBuildContextBlock` into the user turn's prompt — media can't
+   * live in the system-prompt string where the text block goes.
+   */
+  media?: Part
 }
 
 interface NodeContextEntry {
@@ -140,7 +157,8 @@ function isTextLikeMime(mime: string | null | undefined): boolean {
  * prior behavior; nothing about the failure surfaces to the user.
  */
 async function fetchAttachmentContext(
-  attSnap: FirebaseFirestore.QueryDocumentSnapshot
+  attSnap: FirebaseFirestore.QueryDocumentSnapshot,
+  includeMedia: boolean
 ): Promise<NodeContextAttachment> {
   const att = attSnap.data() ?? {}
   const mimeType = typeof att.mimeType === "string" ? att.mimeType : null
@@ -178,12 +196,33 @@ async function fetchAttachmentContext(
     }
   }
 
+  // Binary media branch — for supported image/PDF attachments, build a
+  // base64 media part the model can actually see (text-like bodies were
+  // handled above, so this only runs when `attContent` stayed undefined).
+  // Gated on `includeMedia` so non-media turns (transfer second-turn,
+  // interrupt resume) skip the extra Storage download.
+  let media: Part | undefined
+  if (
+    includeMedia &&
+    storagePath &&
+    attContent === undefined &&
+    isSupportedMediaContentType(mimeType)
+  ) {
+    media =
+      (await buildMediaPartFromStorage({
+        storagePath,
+        contentType: mimeType,
+        size,
+      })) ?? undefined
+  }
+
   return {
     name: displayName,
     mimeType,
     size,
     ...(attContent !== undefined ? { content: attContent } : {}),
     ...(attTruncated ? { contentTruncated: true } : {}),
+    ...(media ? { media } : {}),
   }
 }
 
@@ -216,7 +255,8 @@ async function fetchNodeContext(
   teamId: string,
   workspaceId: string,
   ref: NodeRef,
-  perNodeContentCap: number
+  perNodeContentCap: number,
+  includeMedia: boolean
 ): Promise<NodeContextEntry | null> {
   // Kick off node doc + attachments queries in parallel. Both reads are
   // independent — the node doc tells us whether the entry exists, and
@@ -270,7 +310,9 @@ async function fetchNodeContext(
   // assembly downstream (`buildContextPromptBlock` lists attachments
   // in the order they arrive here).
   const attachments = await Promise.all(
-    attachmentsSnap.docs.map((attSnap) => fetchAttachmentContext(attSnap))
+    attachmentsSnap.docs.map((attSnap) =>
+      fetchAttachmentContext(attSnap, includeMedia)
+    )
   )
 
   return {
@@ -428,9 +470,10 @@ function buildContextPromptBlockFromEntries(
 export async function loadAndBuildContextBlock(
   teamId: string,
   workspaceId: string,
-  refs: readonly NodeRef[]
-): Promise<string> {
-  if (refs.length === 0) return ""
+  refs: readonly NodeRef[],
+  includeMedia: boolean
+): Promise<{ block: string; media: Part[] }> {
+  if (refs.length === 0) return { block: "", media: [] }
 
   const perNodeContentCap = Math.min(
     MAX_NODE_CONTENT_BYTES,
@@ -439,9 +482,36 @@ export async function loadAndBuildContextBlock(
 
   const entries = await Promise.all(
     refs.map((ref) =>
-      fetchNodeContext(teamId, workspaceId, ref, perNodeContentCap)
+      fetchNodeContext(
+        teamId,
+        workspaceId,
+        ref,
+        perNodeContentCap,
+        includeMedia
+      )
     )
   )
   const present = entries.filter((e): e is NodeContextEntry => e !== null)
-  return buildContextPromptBlockFromEntries(present)
+  const block = buildContextPromptBlockFromEntries(present)
+
+  // Collect supported binary attachments as labeled media parts for the user
+  // turn (media can't ride in the system-prompt string). Each gets a short
+  // text label so the model can map the bytes back to a named file. Bounded
+  // per turn so a node with many images can't blow the request size.
+  const media: Part[] = []
+  let mediaCount = 0
+  for (const entry of present) {
+    for (const att of entry.attachments) {
+      if (!att.media) continue
+      if (mediaCount >= MAX_MEDIA_PARTS_PER_TURN) break
+      media.push({
+        text: `[Attached file "${att.name}" on ${entry.scope} ${entry.type} "${entry.name}"]`,
+      })
+      media.push(att.media)
+      mediaCount += 1
+    }
+    if (mediaCount >= MAX_MEDIA_PARTS_PER_TURN) break
+  }
+
+  return { block, media }
 }

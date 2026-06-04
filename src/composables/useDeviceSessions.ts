@@ -12,8 +12,13 @@ import {
 import { generateRandomString } from "@/helpers/utilities"
 import { auth, firestore } from "@/modules/firebase"
 import { emitter } from "@/modules/mitt"
+import { queryClient } from "@/modules/queryClient"
 import type { IUserSession } from "@/types/session"
-import { useCollectionQuery } from "@/utils/firebase/firebase-query"
+import {
+  holdOptimistic,
+  useCollectionQuery,
+} from "@/utils/firebase/firebase-query"
+import { queryKeys } from "@/utils/firebase/firebase-query-keys"
 import {
   useDocumentVisibility,
   useEventListener,
@@ -591,12 +596,48 @@ export function useDeviceSessions() {
 
   // ── Actions ────────────────────────────────────────────────────────────
 
+  // Optimistic cache write: drop the revoked row(s) from the live sessions
+  // cache, hold the key against the listener, run the callable, then reconcile
+  // on release / roll back on error. The component's `isRevoking` spinner is
+  // moot on the happy path — the revoked row unmounts immediately.
+  async function runSessionsWrite<T>(
+    applyOptimistic: (current: IUserSession[]) => IUserSession[],
+    run: () => Promise<T>
+  ): Promise<T> {
+    const uid = user.value?.uid
+    const key = uid ? queryKeys.list(`users/${uid}/sessions`) : null
+    const previous = key
+      ? queryClient.getQueryData<IUserSession[]>(key)
+      : undefined
+    const release = key ? holdOptimistic(key) : null
+    if (key) {
+      queryClient.setQueryData<IUserSession[]>(
+        key,
+        applyOptimistic(previous ?? [])
+      )
+    }
+    try {
+      return await run()
+    } catch (error) {
+      if (key) queryClient.setQueryData(key, previous)
+      throw error
+    } finally {
+      if (release) setTimeout(() => release(), 120)
+    }
+  }
+
   async function revokeAllOtherSessions() {
-    return revokeAllSessions({ currentSessionId })
+    return runSessionsWrite(
+      (current) => current.filter((s) => s.id === currentSessionId),
+      () => revokeAllSessions({ currentSessionId })
+    )
   }
 
   async function revokeSingleSession(sessionId: string) {
-    return revokeSession({ sessionId, currentSessionId })
+    return runSessionsWrite(
+      (current) => current.filter((s) => s.id !== sessionId),
+      () => revokeSession({ sessionId, currentSessionId })
+    )
   }
 
   return {

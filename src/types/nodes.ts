@@ -1,4 +1,5 @@
 import type {
+  botSessionAttachmentSchema,
   fileNodeSchema,
   folderNodeSchema,
   nodeBaseSchema,
@@ -30,6 +31,7 @@ export type WorkspaceNode = z.infer<typeof workspaceNodeSchema>
 export type WorkspaceNodeAttachment = z.infer<
   typeof workspaceNodeAttachmentSchema
 >
+export type IBotSessionAttachment = z.infer<typeof botSessionAttachmentSchema>
 
 // ─── Runtime helpers ─────────────────────────────────────────────────────────
 

@@ -10,6 +10,8 @@ import { COST_BUDGET } from "./costBudget.js"
 import { admin, db } from "./firebase.js"
 import {
   ATTACHMENT_NAME_MAX_LENGTH,
+  botSessionAttachmentsCollectionPath,
+  isBotSessionAttachmentStoragePath,
   isWorkspaceNodeAttachmentStoragePath,
   normalizeAttachmentDisplayName,
   workspaceNodeAttachmentsCollectionPath,
@@ -2524,6 +2526,359 @@ export const deleteWorkspaceNodeAttachment = onCall(
       deleted: result.deleted,
       logId: result.logId,
     }
+  }
+)
+
+// =============================================================================
+// Bot Chat Session Attachments
+// =============================================================================
+//
+// Mirror of the node-attachment callables above, keyed on a chat session
+// instead of a workspace node. Two differences: no audit-log writes (chat
+// uploads are ephemeral), and an extra session-writability check so a PRIVATE
+// chat's attachments can't be modified by other members. Bytes upload
+// client→Storage directly (gated by storage.rules); these callables write the
+// metadata doc after re-reading the object's authoritative content-type + size.
+
+function botSessionDocPath(
+  teamId: string,
+  workspaceId: string,
+  sessionId: string
+): string {
+  return `teams/${teamId}/workspaces/${workspaceId}/botSessions/${sessionId}`
+}
+
+function botSessionAttachmentDocumentPath(
+  teamId: string,
+  workspaceId: string,
+  sessionId: string,
+  attachmentId: string
+): string {
+  return `${botSessionAttachmentsCollectionPath(teamId, workspaceId, sessionId)}/${attachmentId}`
+}
+
+function assertBotSessionAttachmentStoragePath(
+  value: unknown,
+  params: {
+    teamId: string
+    workspaceId: string
+    sessionId: string
+    attachmentId: string
+  }
+): string {
+  const storagePath = assertString(value, "storagePath")
+  if (!isBotSessionAttachmentStoragePath(storagePath, params)) {
+    throw new HttpsError(
+      "invalid-argument",
+      "storagePath does not match the expected session-attachment location."
+    )
+  }
+  return storagePath
+}
+
+/**
+ * Gate mutations on the chat session's own access model: only the owner, a
+ * shared/public session, or a team admin may modify its attachments. Runs
+ * inside the transaction where the session doc is available; the team-level
+ * `MANAGE_WORKSPACE_CONTENT` capability is checked separately by each callable.
+ */
+function assertBotSessionAttachmentWritable(
+  sessionData: Record<string, unknown>,
+  actorId: string,
+  role: unknown
+): void {
+  if (sessionData.archivedAt) {
+    throw new HttpsError(
+      "failed-precondition",
+      "Cannot modify attachments on an archived chat session."
+    )
+  }
+  const ownerUid =
+    typeof sessionData.ownerUid === "string" ? sessionData.ownerUid : null
+  const visibility =
+    typeof sessionData.visibility === "string"
+      ? sessionData.visibility
+      : "private"
+  const isOwner = ownerUid === actorId
+  const isAdmin = role === "owner" || role === "admin"
+  const isShared = visibility === "shared" || visibility === "public"
+  if (!isOwner && !isShared && !isAdmin) {
+    throw new HttpsError(
+      "permission-denied",
+      "You can't modify attachments on this chat session."
+    )
+  }
+}
+
+export const createBotSessionAttachment = onCall(
+  CALLABLE_OPTS,
+  async (request) => {
+    assertAuthenticated(request)
+
+    const teamId = assertString(request.data?.teamId, "teamId")
+    const workspaceId = assertString(request.data?.workspaceId, "workspaceId")
+    const sessionId = assertString(request.data?.sessionId, "sessionId")
+    const attachmentId = assertString(
+      request.data?.attachmentId,
+      "attachmentId"
+    )
+    const displayName = assertAttachmentDisplayName(
+      request.data?.displayName,
+      "displayName"
+    )
+    const originalName = assertString(
+      request.data?.originalName,
+      "originalName"
+    )
+    const storagePath = assertBotSessionAttachmentStoragePath(
+      request.data?.storagePath,
+      { teamId, workspaceId, sessionId, attachmentId }
+    )
+
+    const actorId = request.auth.uid
+    const role = await getTeamRole(teamId, actorId)
+    if (
+      !can(actorId, Capabilities.MANAGE_WORKSPACE_CONTENT, {
+        scope: "workspace",
+        teamRole: role,
+      })
+    ) {
+      throw new HttpsError(
+        "permission-denied",
+        "You do not have permission to manage chat attachments."
+      )
+    }
+
+    const storageMetadata = await readStorageObjectMetadata(storagePath)
+
+    return db.runTransaction(async (transaction) => {
+      const sessionRef = db.doc(
+        botSessionDocPath(teamId, workspaceId, sessionId)
+      )
+      const sessionSnap = await transaction.get(sessionRef)
+      if (!sessionSnap.exists) {
+        throw new HttpsError("not-found", "Chat session not found.")
+      }
+      assertBotSessionAttachmentWritable(
+        sessionSnap.data() ?? {},
+        actorId,
+        role
+      )
+
+      const attachmentRef = db.doc(
+        botSessionAttachmentDocumentPath(
+          teamId,
+          workspaceId,
+          sessionId,
+          attachmentId
+        )
+      )
+      const attachmentSnap = await transaction.get(attachmentRef)
+      if (attachmentSnap.exists) {
+        throw new HttpsError("already-exists", "Attachment already exists.")
+      }
+
+      const now = admin.firestore.FieldValue.serverTimestamp()
+      transaction.set(attachmentRef, {
+        workspaceId,
+        sessionId,
+        displayName,
+        originalName,
+        storagePath,
+        mimeType: storageMetadata.mimeType,
+        size: storageMetadata.size,
+        createdAt: now,
+        createdBy: actorId,
+        updatedAt: now,
+        updatedBy: actorId,
+      })
+
+      return { attachmentId, created: true }
+    })
+  }
+)
+
+export const updateBotSessionAttachment = onCall(
+  CALLABLE_OPTS,
+  async (request) => {
+    assertAuthenticated(request)
+
+    const teamId = assertString(request.data?.teamId, "teamId")
+    const workspaceId = assertString(request.data?.workspaceId, "workspaceId")
+    const sessionId = assertString(request.data?.sessionId, "sessionId")
+    const attachmentId = assertString(
+      request.data?.attachmentId,
+      "attachmentId"
+    )
+    const displayName = assertAttachmentDisplayName(
+      request.data?.displayName,
+      "displayName"
+    )
+    const hasReplacement = request.data?.storagePath !== undefined
+
+    if (request.data?.originalName !== undefined && !hasReplacement) {
+      throw new HttpsError(
+        "invalid-argument",
+        "originalName can only be provided when replacing the attachment file."
+      )
+    }
+
+    const nextStoragePath = hasReplacement
+      ? assertBotSessionAttachmentStoragePath(request.data?.storagePath, {
+          teamId,
+          workspaceId,
+          sessionId,
+          attachmentId,
+        })
+      : undefined
+    const nextOriginalName = hasReplacement
+      ? assertString(request.data?.originalName, "originalName")
+      : undefined
+
+    const actorId = request.auth.uid
+    const role = await getTeamRole(teamId, actorId)
+    if (
+      !can(actorId, Capabilities.MANAGE_WORKSPACE_CONTENT, {
+        scope: "workspace",
+        teamRole: role,
+      })
+    ) {
+      throw new HttpsError(
+        "permission-denied",
+        "You do not have permission to manage chat attachments."
+      )
+    }
+
+    const storageMetadata =
+      hasReplacement && nextStoragePath
+        ? await readStorageObjectMetadata(nextStoragePath)
+        : null
+
+    const result = await db.runTransaction(async (transaction) => {
+      const sessionRef = db.doc(
+        botSessionDocPath(teamId, workspaceId, sessionId)
+      )
+      const sessionSnap = await transaction.get(sessionRef)
+      if (!sessionSnap.exists) {
+        throw new HttpsError("not-found", "Chat session not found.")
+      }
+      assertBotSessionAttachmentWritable(
+        sessionSnap.data() ?? {},
+        actorId,
+        role
+      )
+
+      const attachmentRef = db.doc(
+        botSessionAttachmentDocumentPath(
+          teamId,
+          workspaceId,
+          sessionId,
+          attachmentId
+        )
+      )
+      const attachmentSnap = await transaction.get(attachmentRef)
+      if (!attachmentSnap.exists) {
+        throw new HttpsError("not-found", "Attachment not found.")
+      }
+
+      const before = attachmentSnap.data() ?? {}
+      const previousStoragePath =
+        typeof before.storagePath === "string" ? before.storagePath : null
+
+      const updates: Record<string, unknown> = { displayName }
+      if (hasReplacement) {
+        updates.originalName = nextOriginalName ?? before.originalName ?? null
+        updates.storagePath = nextStoragePath
+        updates.mimeType = storageMetadata?.mimeType ?? null
+        updates.size = storageMetadata?.size ?? null
+      }
+
+      const now = admin.firestore.FieldValue.serverTimestamp()
+      transaction.update(attachmentRef, {
+        ...updates,
+        updatedAt: now,
+        updatedBy: actorId,
+      })
+
+      return { previousStoragePath, nextStoragePath: nextStoragePath ?? null }
+    })
+
+    if (
+      hasReplacement &&
+      result.previousStoragePath &&
+      result.previousStoragePath !== result.nextStoragePath
+    ) {
+      await deleteStorageObjectIfExists(result.previousStoragePath)
+    }
+
+    return { attachmentId, updated: true }
+  }
+)
+
+export const deleteBotSessionAttachment = onCall(
+  CALLABLE_OPTS,
+  async (request) => {
+    assertAuthenticated(request)
+
+    const teamId = assertString(request.data?.teamId, "teamId")
+    const workspaceId = assertString(request.data?.workspaceId, "workspaceId")
+    const sessionId = assertString(request.data?.sessionId, "sessionId")
+    const attachmentId = assertString(
+      request.data?.attachmentId,
+      "attachmentId"
+    )
+
+    const actorId = request.auth.uid
+    const role = await getTeamRole(teamId, actorId)
+    if (
+      !can(actorId, Capabilities.MANAGE_WORKSPACE_CONTENT, {
+        scope: "workspace",
+        teamRole: role,
+      })
+    ) {
+      throw new HttpsError(
+        "permission-denied",
+        "You do not have permission to manage chat attachments."
+      )
+    }
+
+    const result = await db.runTransaction(async (transaction) => {
+      const sessionRef = db.doc(
+        botSessionDocPath(teamId, workspaceId, sessionId)
+      )
+      const sessionSnap = await transaction.get(sessionRef)
+      if (!sessionSnap.exists) {
+        throw new HttpsError("not-found", "Chat session not found.")
+      }
+      assertBotSessionAttachmentWritable(
+        sessionSnap.data() ?? {},
+        actorId,
+        role
+      )
+
+      const attachmentRef = db.doc(
+        botSessionAttachmentDocumentPath(
+          teamId,
+          workspaceId,
+          sessionId,
+          attachmentId
+        )
+      )
+      const attachmentSnap = await transaction.get(attachmentRef)
+      if (!attachmentSnap.exists) {
+        throw new HttpsError("not-found", "Attachment not found.")
+      }
+
+      const before = attachmentSnap.data() ?? {}
+      const storagePath =
+        typeof before.storagePath === "string" ? before.storagePath : null
+      transaction.delete(attachmentRef)
+      return { storagePath }
+    })
+
+    await deleteStorageObjectIfExists(result.storagePath)
+
+    return { attachmentId, deleted: true }
   }
 )
 

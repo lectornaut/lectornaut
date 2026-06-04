@@ -7,18 +7,24 @@ import {
   type BotChatNodeRef,
 } from "@/composables/useBotChat"
 import { useDictation } from "@/composables/useDictation"
+import {
+  useSessionAttachmentsState,
+  type BotSessionAttachmentContext,
+} from "@/composables/useSessionAttachments"
 import { isBuiltInAgentId } from "@/data/builtInAgents"
 import { BOT_NODE_TOOL_CATALOG, BOT_TOOL_CATALOG } from "@/data/botTools"
 import {
   IconAiFill,
   IconArrowUp,
   IconAsterisk,
+  IconAtSign,
   IconBadgeCheck,
   IconBot,
   IconFile,
   IconFolder,
   IconMic,
   IconPlus,
+  IconUpload,
   IconX,
 } from "@/data/icons"
 import { findBotModel } from "@/helpers/defaults"
@@ -40,6 +46,7 @@ import { storeToRefs } from "pinia"
 import { computed, inject, nextTick, ref, watch, watchEffect } from "vue"
 import type { Component } from "vue"
 import Avatar from "vue-boring-avatars"
+import { toast } from "vue-sonner"
 
 const { t } = useI18n()
 
@@ -92,9 +99,6 @@ const { currentTeamId, currentWorkspaceId } = storeToRefs(authStore)
 
 const attachedNodes = computed<BotChatNodeRef[]>(
   () => botChat?.attachedNodes.value ?? []
-)
-const canAttachMoreNodes = computed(
-  () => botChat?.canAttachMoreNodes.value ?? false
 )
 const hasAttachedNodes = computed(() => attachedNodes.value.length > 0)
 
@@ -240,6 +244,74 @@ const canOpenAttachSheet = computed(
     !!currentTeamId.value &&
     !!currentWorkspaceId.value
 )
+
+// ── Session attachments (uploaded files) ──────────────────────────────────
+//
+// Uploaded files live on the chat session (full CRUD in the Bot inspector's
+// "Attachments" tab). Here we expose a quick "Upload files" action + chips
+// for the per-turn selection so the recurring token cost stays visible.
+// Scoped to the current session id; null (a brand-new chat) disables uploads
+// until the first message creates the session (the chicken-and-egg gate).
+const sessionAttachmentContext = computed<BotSessionAttachmentContext | null>(
+  () => {
+    const teamId = currentTeamId.value
+    const workspaceId = currentWorkspaceId.value
+    const sessionId = botChat?.sessionId.value ?? null
+    if (!teamId || !workspaceId || !sessionId) return null
+    return { teamId, workspaceId, sessionId }
+  }
+)
+const { attachments: sessionAttachments, createAttachmentFromFile } =
+  useSessionAttachmentsState(sessionAttachmentContext)
+
+const selectedAttachmentIds = computed<string[]>(
+  () => botChat?.selectedAttachmentIds.value ?? []
+)
+const selectedAttachments = computed(() =>
+  selectedAttachmentIds.value.map((id) => ({
+    id,
+    name:
+      sessionAttachments.value.find((entry) => entry.id === id)?.displayName ??
+      "File",
+  }))
+)
+const hasSelectedAttachments = computed(
+  () => selectedAttachments.value.length > 0
+)
+const deselectAttachment = (id: string) =>
+  botChat?.toggleAttachmentSelection(id)
+
+const canUploadFiles = computed(
+  () => !!botChat?.sessionId.value && canOpenAttachSheet.value
+)
+
+const { files: uploadFiles, open: openUploadDialog } = useFileDialog({
+  multiple: true,
+})
+const triggerSessionUpload = () => {
+  if (!canUploadFiles.value) return
+  openUploadDialog()
+}
+watch(uploadFiles, async (files) => {
+  if (!files || files.length === 0) return
+  let success = 0
+  for (const file of Array.from(files)) {
+    try {
+      const id = await createAttachmentFromFile(file)
+      if (!selectedAttachmentIds.value.includes(id)) {
+        botChat?.toggleAttachmentSelection(id)
+      }
+      success += 1
+    } catch (uploadError) {
+      toast.error((uploadError as Error).message)
+    }
+  }
+  if (success > 0) {
+    toast.success(
+      success === 1 ? "File attached." : `${success} files attached.`
+    )
+  }
+})
 
 /**
  * Per-scope id sets the FileTree uses to render checkmarks. Derived
@@ -819,90 +891,147 @@ const onToolMenuCloseAutoFocus = (event: Event) => {
         :disabled="isSending || isReadOnly"
         @keydown="handleKeydown"
       />
-      <InputGroupAddon v-if="hasAttachedNodes" align="block-start">
+      <InputGroupAddon
+        v-if="hasAttachedNodes || hasSelectedAttachments"
+        align="block-start"
+      >
         <ItemGroup>
-          <Item
-            v-for="node in attachedNodeDetails"
-            :key="`${node.scope}:${node.nodeId}`"
-            :variant="node.status === 'ok' ? 'muted' : 'outline'"
-            size="xs"
-          >
-            <ItemMedia variant="icon">
-              <Component :is="node.type === 'folder' ? IconFolder : IconFile" />
-            </ItemMedia>
-            <ItemContent>
-              <ItemTitle v-if="node.status === 'deleted'" class="italic">
-                {{ t("ai.attachedNodeDeleted") }}
-              </ItemTitle>
-              <template v-else>
-                <ItemTitle>{{ node.name }}</ItemTitle>
-                <ItemDescription
-                  v-if="node.status === 'archived'"
-                  class="uppercase"
-                >
-                  {{ t("ai.attachedNodeArchived") }}
-                </ItemDescription>
-                <ItemDescription v-else class="uppercase">
-                  {{ node.scope }}
-                </ItemDescription>
-              </template>
-            </ItemContent>
-            <ItemActions>
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger as-child>
-                    <InputGroupButton
-                      size="icon-xs"
-                      :disabled="isReadOnly || isSending"
-                      @click="
-                        detachAttachedNode({
-                          scope: node.scope,
-                          nodeId: node.nodeId,
-                        })
-                      "
-                    >
-                      <IconX />
-                    </InputGroupButton>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    {{
-                      t("ai.detachContextNode", { name: node.name }, node.name)
-                    }}
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-            </ItemActions>
-          </Item>
+          <template v-if="hasAttachedNodes">
+            <Item
+              v-for="node in attachedNodeDetails"
+              :key="`${node.scope}:${node.nodeId}`"
+              :variant="node.status === 'ok' ? 'muted' : 'outline'"
+              size="xs"
+            >
+              <ItemMedia variant="icon">
+                <Component
+                  :is="node.type === 'folder' ? IconFolder : IconFile"
+                />
+              </ItemMedia>
+              <ItemContent>
+                <ItemTitle v-if="node.status === 'deleted'" class="italic">
+                  {{ t("ai.attachedNodeDeleted") }}
+                </ItemTitle>
+                <template v-else>
+                  <ItemTitle>{{ node.name }}</ItemTitle>
+                  <ItemDescription
+                    v-if="node.status === 'archived'"
+                    class="uppercase"
+                  >
+                    {{ t("ai.attachedNodeArchived") }}
+                  </ItemDescription>
+                  <ItemDescription v-else class="uppercase">
+                    {{ node.scope }}
+                  </ItemDescription>
+                </template>
+              </ItemContent>
+              <ItemActions>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger as-child>
+                      <InputGroupButton
+                        size="icon-xs"
+                        :disabled="isReadOnly || isSending"
+                        @click="
+                          detachAttachedNode({
+                            scope: node.scope,
+                            nodeId: node.nodeId,
+                          })
+                        "
+                      >
+                        <IconX />
+                      </InputGroupButton>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      {{
+                        t(
+                          "ai.detachContextNode",
+                          { name: node.name },
+                          node.name
+                        )
+                      }}
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </ItemActions>
+            </Item>
+          </template>
+          <template v-if="hasSelectedAttachments">
+            <Item
+              v-for="att in selectedAttachments"
+              :key="`att:${att.id}`"
+              variant="muted"
+              size="xs"
+            >
+              <ItemMedia variant="icon">
+                <IconUpload />
+              </ItemMedia>
+              <ItemContent>
+                <ItemTitle>{{ att.name }}</ItemTitle>
+                <ItemDescription class="uppercase">file</ItemDescription>
+              </ItemContent>
+              <ItemActions>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger as-child>
+                      <InputGroupButton
+                        size="icon-xs"
+                        :disabled="isReadOnly || isSending"
+                        @click="deselectAttachment(att.id)"
+                      >
+                        <IconX />
+                      </InputGroupButton>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      {{
+                        t("ai.detachAttachment", { name: att.name }, att.name)
+                      }}
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </ItemActions>
+            </Item>
+          </template>
         </ItemGroup>
       </InputGroupAddon>
       <InputGroupAddon align="block-end">
-        <Sheet v-model:open="attachSheetOpen">
-          <TooltipProvider>
-            <Tooltip>
-              <SheetTrigger as-child>
-                <TooltipTrigger as-child>
+        <TooltipProvider>
+          <Tooltip>
+            <DropdownMenu>
+              <TooltipTrigger as-child>
+                <DropdownMenuTrigger as-child>
                   <InputGroupButton
                     variant="outline"
                     size="icon-xs"
-                    :disabled="!canOpenAttachSheet"
+                    :disabled="!canOpenAttachSheet && !canUploadFiles"
                   >
                     <IconPlus />
                   </InputGroupButton>
-                </TooltipTrigger>
-              </SheetTrigger>
-              <TooltipContent>
-                {{
-                  canAttachMoreNodes
-                    ? t("ai.attachContext")
-                    : t("ai.attachContextFull", {
-                        count: BOT_CHAT_MAX_ATTACHED_NODES,
-                      })
-                }}
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
+                </DropdownMenuTrigger>
+              </TooltipTrigger>
+              <TooltipContent>{{ t("ai.attachContent") }}</TooltipContent>
+              <DropdownMenuContent align="start">
+                <DropdownMenuItem
+                  :disabled="!canUploadFiles"
+                  @select="triggerSessionUpload"
+                >
+                  <IconUpload />
+                  {{ t("ai.uploadFiles") }}
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  :disabled="!canOpenAttachSheet"
+                  @select="attachSheetOpen = true"
+                >
+                  <IconAtSign />
+                  {{ t("ai.attachContext") }}
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </Tooltip>
+        </TooltipProvider>
+        <Sheet v-model:open="attachSheetOpen">
           <SheetContent
-            class="m-2 mt-[calc(var(--spacing-titlebar-height,0)+(--spacing(2)))] h-auto! gap-0 overflow-clip rounded-xl border"
+            class="m-2 mt-[calc(var(--spacing-titlebar-height,0px)+(--spacing(2)))] h-auto! gap-0 overflow-clip rounded-xl border"
           >
             <SheetHeader>
               <SheetTitle>{{ t("ai.attachContext") }}</SheetTitle>

@@ -35,7 +35,10 @@ const filteredShortcuts = computed(() =>
             v-for="(category, index) in filteredShortcuts"
             :key="category.id"
           >
-            <CommandGroup :heading="category.title">
+            <CommandGroup
+              :heading="category.title"
+              class="**:data-[slot=command-group-heading]:text-muted-foreground **:data-[slot=command-group-heading]:p-2 **:data-[slot=command-group-heading]:text-xs **:data-[slot=command-group-heading]:font-medium"
+            >
               <CommandItem
                 v-for="shortcut in category.shortcuts"
                 :key="shortcut.event"

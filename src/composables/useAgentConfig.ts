@@ -57,6 +57,8 @@ export const AI_CONFIG_KEYS = [
   "topP",
   "topK",
   "maxOutputTokens",
+  "thinking",
+  "autoContext",
   "defaultMode",
   "systemPromptBase",
   "promptSuffixes",

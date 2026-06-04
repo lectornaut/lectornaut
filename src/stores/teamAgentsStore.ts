@@ -17,10 +17,7 @@
 
 import {
   createIntegration as createIntegrationFn,
-  deleteIntegration as deleteIntegrationFn,
-  installIntegration as installIntegrationFn,
   setIntegrationEnabled as setIntegrationEnabledFn,
-  uninstallIntegration as uninstallIntegrationFn,
   updateIntegration as updateIntegrationFn,
   type CreateTeamAgentDraft,
   type UpdateTeamAgentPatch,
@@ -291,38 +288,39 @@ export const useTeamAgentsStore = defineStore("teamAgents", () => {
       return integrationToTeamAgent(data.integration)
     })
 
-  const archive = (agentId: string): Promise<ITeamAgent> =>
-    withSave(async (teamId) => {
-      const { data } = await uninstallIntegrationFn({
-        teamId,
-        integrationId: agentId,
-      })
-      return integrationToTeamAgent(data.integration)
+  // Lifecycle toggles are OPTIMISTIC: they delegate to the integrations store,
+  // which patches the shared cache + rolls back on failure. They deliberately
+  // skip `withSave`/`isSaving` so the row Switch flips instantly and toggles on
+  // different agents don't block each other (the editor's create/update keep
+  // `withSave` — a brief save spinner is fine for a form dialog).
+  const archive = async (agentId: string): Promise<ITeamAgent> => {
+    const { integration } = await integrationsStore.uninstall({
+      integrationId: agentId,
     })
+    return integrationToTeamAgent(integration)
+  }
 
-  const restore = (agentId: string): Promise<ITeamAgent> =>
-    withSave(async (teamId) => {
-      const { data } = await installIntegrationFn({
-        teamId,
-        integrationId: agentId,
-      })
-      return integrationToTeamAgent(data.integration)
+  const restore = async (agentId: string): Promise<ITeamAgent> => {
+    const { integration } = await integrationsStore.install({
+      integrationId: agentId,
     })
+    return integrationToTeamAgent(integration)
+  }
 
-  const setEnabled = (agentId: string, enabled: boolean): Promise<ITeamAgent> =>
-    withSave(async (teamId) => {
-      const { data } = await setIntegrationEnabledFn({
-        teamId,
-        integrationId: agentId,
-        enabled,
-      })
-      return integrationToTeamAgent(data.integration)
-    })
+  const setEnabled = async (
+    agentId: string,
+    enabled: boolean
+  ): Promise<ITeamAgent> => {
+    const { integration } = await integrationsStore.setEnabled(
+      { integrationId: agentId },
+      enabled
+    )
+    return integrationToTeamAgent(integration)
+  }
 
-  const remove = (agentId: string): Promise<void> =>
-    withSave(async (teamId) => {
-      await deleteIntegrationFn({ teamId, integrationId: agentId })
-    })
+  const remove = async (agentId: string): Promise<void> => {
+    await integrationsStore.remove(agentId)
+  }
 
   return {
     agents,

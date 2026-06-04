@@ -260,6 +260,48 @@ export interface DeleteWorkspaceNodeAttachmentResponse {
   logId: string
 }
 
+export interface CreateBotSessionAttachmentRequest {
+  teamId: string
+  workspaceId: string
+  sessionId: string
+  attachmentId: string
+  displayName: string
+  originalName: string
+  storagePath: string
+}
+
+export interface CreateBotSessionAttachmentResponse {
+  attachmentId: string
+  created: boolean
+}
+
+export interface UpdateBotSessionAttachmentRequest {
+  teamId: string
+  workspaceId: string
+  sessionId: string
+  attachmentId: string
+  displayName: string
+  storagePath?: string
+  originalName?: string
+}
+
+export interface UpdateBotSessionAttachmentResponse {
+  attachmentId: string
+  updated: boolean
+}
+
+export interface DeleteBotSessionAttachmentRequest {
+  teamId: string
+  workspaceId: string
+  sessionId: string
+  attachmentId: string
+}
+
+export interface DeleteBotSessionAttachmentResponse {
+  attachmentId: string
+  deleted: boolean
+}
+
 // =============================================================================
 // Membership Request/Response Types
 // =============================================================================
@@ -597,6 +639,12 @@ export interface SendBotMessageRequest {
    * restoring the agent re-binds the session automatically.
    */
   activeAgentId?: string | null
+  /**
+   * Chat-session attachment ids the user selected to include as media on this
+   * turn (per-turn selectable). Resolved server-side to base64 media parts;
+   * empty/omitted sends no uploads.
+   */
+  attachmentIds?: string[]
 }
 
 export interface SendBotMessageResponse {
@@ -809,6 +857,8 @@ export type UpdateTeamAgentConfigPatch = Partial<{
   topP: number
   topK: number
   maxOutputTokens: number
+  thinking: boolean
+  autoContext: boolean
   defaultMode: IBotAgentConfig["defaultMode"]
   systemPromptBase: string
   promptSuffixes: Partial<IBotAgentConfig["promptSuffixes"]>
@@ -1117,6 +1167,21 @@ export const deleteWorkspaceNodeAttachment = createTypedCallable<
   DeleteWorkspaceNodeAttachmentRequest,
   DeleteWorkspaceNodeAttachmentResponse
 >("deleteWorkspaceNodeAttachment")
+
+export const createBotSessionAttachment = createTypedCallable<
+  CreateBotSessionAttachmentRequest,
+  CreateBotSessionAttachmentResponse
+>("createBotSessionAttachment")
+
+export const updateBotSessionAttachment = createTypedCallable<
+  UpdateBotSessionAttachmentRequest,
+  UpdateBotSessionAttachmentResponse
+>("updateBotSessionAttachment")
+
+export const deleteBotSessionAttachment = createTypedCallable<
+  DeleteBotSessionAttachmentRequest,
+  DeleteBotSessionAttachmentResponse
+>("deleteBotSessionAttachment")
 
 // =============================================================================
 // Membership Functions

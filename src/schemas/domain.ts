@@ -467,6 +467,10 @@ export const botAgentConfigSchema = z.object({
   topP: z.number().min(0).max(1),
   topK: z.number().int().min(1).max(100),
   maxOutputTokens: z.number().int().min(256).max(65536),
+  // `.catch(true)` mirrors the server's forgiving normalization and keeps the
+  // client resilient if a response predates the field (deploy ordering).
+  thinking: z.boolean().catch(true),
+  autoContext: z.boolean().catch(false),
   defaultMode: botAgentDefaultModeSchema,
   systemPromptBase: z.string().max(4000),
   promptSuffixes: z.object({

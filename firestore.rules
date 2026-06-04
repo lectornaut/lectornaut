@@ -45,6 +45,22 @@ service cloud.firestore {
       return scope in ["code", "write"];
     }
 
+    function botSessionPath(teamId, workspaceId, sessionId) {
+      return /databases/$(database)/documents/teams/$(teamId)/workspaces/$(workspaceId)/botSessions/$(sessionId);
+    }
+
+    // Mirror the botSessions read predicate for attachment-subcollection reads
+    // so a private chat's attachments aren't enumerable by other members. The
+    // repeated get() is cached within one rule evaluation (single read).
+    function canReadBotSession(teamId, workspaceId, sessionId) {
+      return isTeamMember(teamId)
+        && (
+          get(botSessionPath(teamId, workspaceId, sessionId)).data.ownerUid == request.auth.uid
+          || get(botSessionPath(teamId, workspaceId, sessionId)).data.visibility == "shared"
+          || isTeamAdmin(teamId)
+        );
+    }
+
     function roomPath(contentId) {
       return /databases/$(database)/documents/signaling/$(contentId);
     }
@@ -398,6 +414,14 @@ service cloud.firestore {
               || isTeamAdmin(teamId)
             );
           allow write: if false;
+
+          // Chat-session attachment metadata — written only via Cloud Functions
+          // (admin SDK). Read respects the parent session's visibility so a
+          // private chat's files aren't enumerable by other members.
+          match /attachments/{attachmentId} {
+            allow read: if canReadBotSession(teamId, workspaceId, sessionId);
+            allow write: if false;
+          }
         }
 
         // Workflow run history for this workspace — admin-only read (the Runs

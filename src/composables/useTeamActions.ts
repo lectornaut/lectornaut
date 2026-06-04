@@ -1,6 +1,5 @@
 import { createActionRunner } from "@/composables/useActionRunner"
 import { useLoadingState } from "@/composables/useLoadingState"
-import { defaultTeamRole } from "@/helpers/defaults"
 import { useMembershipStore } from "@/stores/membershipStore"
 import { useTeamStore } from "@/stores/teamStore"
 import { isUserMembership, type IMembership } from "@/types/membership"
@@ -415,29 +414,6 @@ export function useTeamActions(targetTeamId?: Ref<string | null | undefined>) {
       }
     )
 
-  const inviteMember = async (
-    email: string,
-    role: IMembership["role"] = defaultTeamRole
-  ) =>
-    memberActions.run(
-      `invite-${email}`,
-      async () => {
-        const teamId = effectiveTeamId.value
-        if (!teamId) return
-        if (!canInviteMembers.value) {
-          throw new Error(
-            getCannotInviteMembersReason.value ||
-              "You do not have permission to invite members"
-          )
-        }
-        await membershipStore.inviteMember(teamId, email, role)
-      },
-      {
-        success: "Member invited successfully",
-        error: "Failed to invite member",
-      }
-    )
-
   return {
     // State
     currentTeam,
@@ -487,6 +463,5 @@ export function useTeamActions(targetTeamId?: Ref<string | null | undefined>) {
     updateTeam,
     updateTeamPhoto,
     removeTeamPhoto,
-    inviteMember,
   }
 }

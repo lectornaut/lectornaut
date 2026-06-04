@@ -29,11 +29,13 @@
  * `updateBotSessionVisibility` callable.
  */
 
+import { cacheControl } from "@genkit-ai/anthropic"
 import { onCallGenkit } from "firebase-functions/https"
 import * as logger from "firebase-functions/logger"
 import { HttpsError, type CallableRequest } from "firebase-functions/v2/https"
 import {
   z,
+  type Part,
   type SessionData,
   type SessionStore,
   type ToolArgument,
@@ -72,12 +74,17 @@ import {
   type NodeRef,
 } from "./botContext.js"
 import { findRelatedNodesTool } from "./botLink.js"
+import { loadSessionAttachmentMediaParts } from "./botMedia.js"
 import {
   NODE_READ_TOOLS,
   NODE_WRITE_TOOLS,
   type CapturedNodeChange,
 } from "./botNodeTools.js"
-import { listWorkspaceNodesTool, searchWorkspaceNodesTool } from "./botRag.js"
+import {
+  buildAutoContextBlock,
+  listWorkspaceNodesTool,
+  searchWorkspaceNodesTool,
+} from "./botRag.js"
 import { summarizeNodeTool } from "./botSummarize.js"
 import {
   DEFAULT_AGENT_DEFINITION,
@@ -1716,6 +1723,13 @@ const SendBotMessageInput = z.object({
    */
   contextNodes: z.array(NodeRefSchema).max(CONTEXT_NODE_MAX).default([]),
   /**
+   * Chat-session attachment ids the user selected to include as media on THIS
+   * turn (per-turn selectable in the composer). Resolved server-side to base64
+   * media parts via `loadSessionAttachmentMediaParts`. Empty/absent on a
+   * brand-new session (nothing uploaded yet).
+   */
+  attachmentIds: z.array(z.string().min(1)).max(6).default([]),
+  /**
    * Set only when creating a new session, to bind it to a specific
    * workspace node. Enables `findBotSessionByPinnedNode` to resume the
    * same chat the next time the node's inspector tab opens. Ignored on
@@ -2291,6 +2305,12 @@ interface PreparedChatTurn {
   actionContext: BotActionContext
   /** The session doc loaded for this turn (null on fresh-session creation). */
   existingSession: BotSessionDocSummary | null
+  /**
+   * Media parts (base64 `data:` URLs) built from supported binary attachments
+   * of the attached context nodes — prepended (after the text) to the user
+   * turn's `prompt`. Empty unless the turn carries a real user message.
+   */
+  userMediaParts: Part[]
   /** Post-clamp model wire-name used for `chat.model` + persistence. */
   effectiveModel: BotAgentModel
 }
@@ -2340,6 +2360,16 @@ async function prepareChatTurn(opts: {
   sessionId: string | null
   mode: BotChatMode
   contextNodes: NodeRef[]
+  /**
+   * The user's latest message text — used ONLY as the query for automatic
+   * workspace context retrieval (when the team enables `autoContext`). The
+   * actual prompt is still sent by the caller via `chat.sendStream`. Omitted
+   * by the transfer second-turn and interrupt-resume paths, which have no
+   * fresh user query to retrieve against (so they get no auto-context).
+   */
+  message?: string
+  /** Chat-session attachment ids selected for this turn (multimodal media). */
+  attachmentIds?: string[]
   activeAgentId: string | null | undefined
   model: BotAgentModel | undefined
   pinnedNode?: NodeRef
@@ -2383,6 +2413,8 @@ async function prepareChatTurn(opts: {
     sessionId,
     mode,
     contextNodes,
+    message,
+    attachmentIds,
     activeAgentId,
     pinnedNode,
     requireExistingSession,
@@ -2644,17 +2676,42 @@ async function prepareChatTurn(opts: {
   //     team-wide `customTools` flag; the factory rebuilds each one per
   //     turn so admin schema changes propagate without a deploy. Empty
   //     when the feature is off OR the team has none.
-  const [session, contextBlock, dispatchableToolIntegrations] =
-    await Promise.all([
-      sessionId
-        ? ai.loadSession(sessionId, { store })
-        : Promise.resolve(ai.createSession({ store })),
-      loadAndBuildContextBlock(teamId, workspaceId, contextNodes),
-      // Installed + enabled tool integrations (built-in via catalog overlay +
-      // custom). Built-in keys gate the static tools in `pickChatTools`;
-      // custom integrations are rebuilt per-turn via `buildCustomToolForChat`.
-      listDispatchable(teamId, "tool"),
-    ])
+  const [
+    session,
+    nodeContext,
+    dispatchableToolIntegrations,
+    autoContextBlock,
+    sessionMediaParts,
+  ] = await Promise.all([
+    sessionId
+      ? ai.loadSession(sessionId, { store })
+      : Promise.resolve(ai.createSession({ store })),
+    loadAndBuildContextBlock(teamId, workspaceId, contextNodes, !!message),
+    // Installed + enabled tool integrations (built-in via catalog overlay +
+    // custom). Built-in keys gate the static tools in `pickChatTools`;
+    // custom integrations are rebuilt per-turn via `buildCustomToolForChat`.
+    listDispatchable(teamId, "tool"),
+    // Automatic RAG: when the team enables `autoContext`, embed the user's
+    // message and fold a compact snippet block of the nearest workspace nodes
+    // into the system prompt. Best-effort ("" when disabled / on any
+    // failure). Deduped against the explicitly-attached `contextNodes`.
+    buildAutoContextBlock({
+      enabled: agentConfig.autoContext,
+      teamId,
+      workspaceId,
+      query: message ?? "",
+      excludeKeys: new Set(contextNodes.map((n) => `${n.scope}:${n.nodeId}`)),
+    }),
+    // Chat-session uploads the user selected for THIS turn → base64 media
+    // parts. Same `includeMedia` gate as the node-attachment media above.
+    loadSessionAttachmentMediaParts({
+      teamId,
+      workspaceId,
+      sessionId,
+      attachmentIds: attachmentIds ?? [],
+      includeMedia: !!message,
+    }),
+  ])
   // Built-in tool wire-names installed + enabled this turn.
   const enabledBuiltInTools = new Set(
     dispatchableToolIntegrations
@@ -2796,7 +2853,12 @@ async function prepareChatTurn(opts: {
   // thing the model reads, right after the untrusted text itself. Always
   // present (web/search results are untrusted even on read-only turns);
   // contextBlock is dropped from the join when empty.
-  const systemPrompt = [baseSystem, contextBlock, WORKSPACE_SAFETY_DIRECTIVE]
+  const systemPrompt = [
+    baseSystem,
+    nodeContext.block,
+    autoContextBlock,
+    WORKSPACE_SAFETY_DIRECTIVE,
+  ]
     .filter(Boolean)
     .join("\n\n")
 
@@ -2819,7 +2881,7 @@ async function prepareChatTurn(opts: {
     maxOutputTokens: agentConfig.maxOutputTokens,
   }
   let turnConfig: Record<string, unknown> = sampling
-  if (modelSupportsThinking(effectiveModel)) {
+  if (agentConfig.thinking && modelSupportsThinking(effectiveModel)) {
     if (provider === "google") {
       turnConfig = { ...sampling, thinkingConfig: { includeThoughts: true } }
     } else if (provider === "anthropic") {
@@ -2835,9 +2897,19 @@ async function prepareChatTurn(opts: {
     }
   }
 
+  // Anthropic prompt caching: mark the (large, turn-stable) system prompt as
+  // an ephemeral cache breakpoint so Claude reuses the tokenized system+tools
+  // prefix across turns in a session — a substantial input-token saving on
+  // multi-turn chats. Gemini/OpenAI cache automatically server-side and would
+  // ignore the hint, so we only annotate the request for Anthropic models.
+  const system =
+    provider === "anthropic"
+      ? [{ text: systemPrompt, metadata: { ...cacheControl() } }]
+      : systemPrompt
+
   const chat = session.chat({
     model: resolveModel(effectiveModel),
-    system: systemPrompt,
+    system,
     tools: chatTools,
     context: actionContext,
     config: turnConfig,
@@ -2858,7 +2930,14 @@ async function prepareChatTurn(opts: {
     }),
   })
 
-  return { chat, session, actionContext, existingSession, effectiveModel }
+  return {
+    chat,
+    session,
+    actionContext,
+    existingSession,
+    effectiveModel,
+    userMediaParts: [...nodeContext.media, ...sessionMediaParts],
+  }
 }
 
 /** Options for {@link runAgentTurn}. */
@@ -2873,6 +2952,8 @@ interface RunAgentTurnOptions {
   mode: BotChatMode
   model: BotAgentModel | undefined
   contextNodes: NodeRef[]
+  /** Chat-session attachment ids selected for this turn (multimodal media). */
+  attachmentIds?: string[]
   activeAgentId: string | null | undefined
   pinnedNode?: NodeRef
   /** Stream sink. Omitted → a no-op, for headless runs with no client. */
@@ -2946,7 +3027,7 @@ async function runAgentTurn(
       )
     : NOOP_RELEASE
   try {
-    const { chat, session, actionContext, existingSession } =
+    const { chat, session, actionContext, existingSession, userMediaParts } =
       await prepareChatTurn({
         principal: opts.principal,
         teamId: opts.teamId,
@@ -2954,6 +3035,8 @@ async function runAgentTurn(
         sessionId: opts.sessionId,
         mode: opts.mode,
         contextNodes: opts.contextNodes,
+        message: opts.message,
+        attachmentIds: opts.attachmentIds,
         activeAgentId: opts.activeAgentId,
         model: opts.model,
         pinnedNode: opts.pinnedNode,
@@ -2986,10 +3069,17 @@ async function runAgentTurn(
     // deadline race (`streamChatToClient`) aborts it on expiry, so a hung
     // provider call is genuinely cancelled rather than left to finish in the
     // background. `maxTurns` raises Genkit's default tool-iteration budget.
+    // Multimodal turn: when the attached nodes contributed media parts
+    // (images/PDFs), send the user turn as a `[text, ...media]` array;
+    // otherwise keep the plain-string prompt (cheaper, unchanged behavior).
+    const turnPrompt: string | Part[] =
+      userMediaParts.length > 0
+        ? [{ text: opts.message }, ...userMediaParts]
+        : opts.message
     const turnAbort = new AbortController()
     const firstFinal = await streamChatToClient(
       chat.sendStream({
-        prompt: opts.message,
+        prompt: turnPrompt,
         abortSignal: turnAbort.signal,
         maxTurns: TOOL_MAX_TURNS,
       }) as ChatStreamResult,
@@ -3181,6 +3271,7 @@ const sendBotMessageFlow = ai.defineFlow(
       contextNodes: input.contextNodes,
       activeAgentId: input.activeAgentId,
       pinnedNode: input.pinnedNode,
+      attachmentIds: input.attachmentIds,
       sendChunk,
       archivedSessionMessage:
         "This chat is archived. Restore it before sending new messages.",

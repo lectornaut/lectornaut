@@ -12,6 +12,9 @@
     "attachContext": "Attach context",
     "attachContextFull": "Attachment limit reached ({count})",
     "attachContextDescription": "Pick workspace items to ground the model in your code and writing.",
+    "attachContent": "Attach content",
+    "uploadFiles": "Upload files",
+    "detachAttachment": "Remove {name}",
     "attachContextNoWorkspace": "Select a workspace before attaching context.",
     "attachContextCount": "{count} of {max} items attached",
     "attachedNodeDeleted": "Deleted file",
@@ -1545,6 +1548,14 @@
       "maxOutputTokens": {
         "label": "Max output tokens",
         "description": "Hard cap on the model's reply length."
+      },
+      "thinking": {
+        "label": "Reasoning",
+        "description": "Let reasoning-capable models (Gemini 2.5+/3, Claude 3.7/4) think step by step before answering, shown as collapsible thinking in chat. Improves quality on hard tasks at some added latency and token cost; models without reasoning ignore this."
+      },
+      "autoContext": {
+        "label": "Automatic context",
+        "description": "Before each reply, automatically search the workspace for nodes relevant to the user's message and add short snippets to the prompt. Grounds answers without waiting for the agent to search, at the cost of one embedding lookup per message. Off by default."
       },
       "defaultMode": {
         "label": "Default mode",

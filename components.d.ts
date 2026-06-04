@@ -332,6 +332,7 @@ declare module 'vue' {
     SelectTrigger: typeof import('./src/components/ui/select/SelectTrigger.vue')['default']
     SelectValue: typeof import('./src/components/ui/select/SelectValue.vue')['default']
     Separator: typeof import('./src/components/ui/separator/Separator.vue')['default']
+    SessionAttachments: typeof import('./src/components/app/sidebars/SessionAttachments.vue')['default']
     SessionRevokedDialog: typeof import('./src/components/app/global/SessionRevokedDialog.vue')['default']
     Settings: typeof import('./src/components/app/global/Settings.vue')['default']
     SettingsAccount: typeof import('./src/components/app/settings/SettingsAccount.vue')['default']

@@ -140,9 +140,28 @@ const activeMembers = computed(() => {
   return members.value.filter((m) => !!m.id)
 })
 
-const stagedInvites = computed(() => {
-  return members.value.filter((m) => !m.id)
-})
+// Emails that already have a live PENDING invitation — including the optimistic
+// row `sendInvitation` adds synchronously at submit. A staged draft is hidden
+// the moment its invitation appears, so the same email never renders twice
+// (editable draft + pending row) during the send round-trip. If a send fails,
+// its optimistic invitation rolls back and the draft reappears for retry — no
+// extra bookkeeping. Emails are normalized to match `sendInvitation`'s
+// trim+lowercase.
+const pendingInvitationEmails = computed(
+  () =>
+    new Set(
+      teamInvitations.value
+        .filter((invite) => invite.status === "pending")
+        .map((invite) => invite.email.trim().toLowerCase())
+    )
+)
+
+const stagedInvites = computed(() =>
+  members.value.filter(
+    (m) =>
+      !m.id && !pendingInvitationEmails.value.has(m.email.trim().toLowerCase())
+  )
+)
 
 const userRole = computed(() => {
   if (props.mode === "create") return "owner"

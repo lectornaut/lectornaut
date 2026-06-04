@@ -77,3 +77,22 @@ export const workspaceNodeAttachmentSchema = z.object({
   updatedAt: timestampSchema,
   updatedBy: z.string(),
 })
+
+/**
+ * Chat-session attachment — same shape as a node attachment but scoped to a
+ * bot chat session (`sessionId`) instead of a workspace node (`nodeId`+`scope`).
+ */
+export const botSessionAttachmentSchema = z.object({
+  id: z.string(),
+  workspaceId: z.string(),
+  sessionId: z.string(),
+  displayName: z.string(),
+  originalName: z.string(),
+  storagePath: z.string(),
+  mimeType: z.string().nullable().optional(),
+  size: z.number().nullable().optional(),
+  createdAt: timestampSchema,
+  createdBy: z.string(),
+  updatedAt: timestampSchema,
+  updatedBy: z.string(),
+})

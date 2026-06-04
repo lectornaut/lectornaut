@@ -543,6 +543,143 @@ const keepMenuOpen = (event: Event) => {
 
         <FieldSeparator />
 
+        <!-- Reasoning -->
+        <FieldSet>
+          <Field orientation="horizontal">
+            <FieldContent>
+              <FieldLabel for="agent-thinking">
+                {{ t("settings.agents.thinking.label") }}
+              </FieldLabel>
+              <FieldDescription>
+                {{ t("settings.agents.thinking.description") }}
+              </FieldDescription>
+            </FieldContent>
+            <Switch
+              id="agent-thinking"
+              :model-value="draft.thinking"
+              :disabled="!canEdit"
+              @update:model-value="(value) => (draft.thinking = Boolean(value))"
+            />
+          </Field>
+        </FieldSet>
+
+        <FieldSeparator />
+
+        <!-- Workspace grounding -->
+        <FieldSet>
+          <Field orientation="horizontal">
+            <FieldContent>
+              <FieldLabel for="agent-auto-context">
+                {{ t("settings.agents.autoContext.label") }}
+              </FieldLabel>
+              <FieldDescription>
+                {{ t("settings.agents.autoContext.description") }}
+              </FieldDescription>
+            </FieldContent>
+            <Switch
+              id="agent-auto-context"
+              :model-value="draft.autoContext"
+              :disabled="!canEdit"
+              @update:model-value="
+                (value) => (draft.autoContext = Boolean(value))
+              "
+            />
+          </Field>
+        </FieldSet>
+
+        <FieldSeparator />
+
+        <!-- System prompt -->
+        <FieldSet>
+          <Field orientation="horizontal">
+            <FieldContent>
+              <FieldLabel>
+                {{ t("settings.agents.systemPrompt.label") }}
+              </FieldLabel>
+              <FieldDescription>
+                {{ t("settings.agents.systemPrompt.description") }}
+              </FieldDescription>
+            </FieldContent>
+          </Field>
+
+          <Field orientation="vertical">
+            <FieldContent>
+              <FieldLabel for="agent-system-prompt-base">
+                {{ t("settings.agents.systemPromptBase.label") }}
+              </FieldLabel>
+              <FieldDescription>
+                {{ t("settings.agents.systemPromptBase.description") }}
+              </FieldDescription>
+            </FieldContent>
+            <Textarea
+              id="agent-system-prompt-base"
+              v-model="draft.systemPromptBase"
+              :placeholder="t('settings.agents.systemPromptBase.placeholder')"
+              :maxlength="botAgentBounds.systemPromptBase.max"
+              :disabled="!canEdit"
+              rows="3"
+            />
+          </Field>
+
+          <Field orientation="vertical">
+            <FieldContent>
+              <FieldLabel>
+                {{ t("settings.agents.promptSuffixes.label") }}
+              </FieldLabel>
+              <FieldDescription>
+                {{ t("settings.agents.promptSuffixes.description") }}
+              </FieldDescription>
+            </FieldContent>
+          </Field>
+
+          <Field orientation="vertical">
+            <FieldContent>
+              <FieldLabel for="agent-suffix-auto">
+                {{ t("settings.agents.promptSuffixes.auto") }}
+              </FieldLabel>
+            </FieldContent>
+            <Textarea
+              id="agent-suffix-auto"
+              v-model="draft.promptSuffixes.auto"
+              :maxlength="botAgentBounds.promptSuffix.max"
+              :disabled="!canEdit"
+              rows="3"
+            />
+          </Field>
+
+          <Field orientation="vertical">
+            <FieldContent>
+              <FieldLabel for="agent-suffix-agent">
+                {{ t("settings.agents.promptSuffixes.agent") }}
+              </FieldLabel>
+            </FieldContent>
+            <Textarea
+              id="agent-suffix-agent"
+              v-model="draft.promptSuffixes.agent"
+              :maxlength="botAgentBounds.promptSuffix.max"
+              :disabled="!canEdit"
+              rows="3"
+            />
+          </Field>
+
+          <Field orientation="vertical">
+            <FieldContent>
+              <FieldLabel for="agent-suffix-manual">
+                {{ t("settings.agents.promptSuffixes.manual") }}
+              </FieldLabel>
+            </FieldContent>
+            <Textarea
+              id="agent-suffix-manual"
+              v-model="draft.promptSuffixes.manual"
+              :maxlength="botAgentBounds.promptSuffix.max"
+              :disabled="!canEdit"
+              rows="3"
+            />
+          </Field>
+        </FieldSet>
+
+        <FieldSeparator />
+
         <!-- Generation parameters -->
         <FieldSet>
           <Field orientation="horizontal">
@@ -658,97 +795,6 @@ const keepMenuOpen = (event: Event) => {
                 {{ draft.maxOutputTokens }}
               </span>
             </div>
-          </Field>
-        </FieldSet>
-
-        <FieldSeparator />
-
-        <!-- System prompt -->
-        <FieldSet>
-          <Field orientation="horizontal">
-            <FieldContent>
-              <FieldLabel>
-                {{ t("settings.agents.systemPrompt.label") }}
-              </FieldLabel>
-              <FieldDescription>
-                {{ t("settings.agents.systemPrompt.description") }}
-              </FieldDescription>
-            </FieldContent>
-          </Field>
-
-          <Field orientation="vertical">
-            <FieldContent>
-              <FieldLabel for="agent-system-prompt-base">
-                {{ t("settings.agents.systemPromptBase.label") }}
-              </FieldLabel>
-              <FieldDescription>
-                {{ t("settings.agents.systemPromptBase.description") }}
-              </FieldDescription>
-            </FieldContent>
-            <Textarea
-              id="agent-system-prompt-base"
-              v-model="draft.systemPromptBase"
-              :placeholder="t('settings.agents.systemPromptBase.placeholder')"
-              :maxlength="botAgentBounds.systemPromptBase.max"
-              :disabled="!canEdit"
-              rows="3"
-            />
-          </Field>
-
-          <Field orientation="vertical">
-            <FieldContent>
-              <FieldLabel>
-                {{ t("settings.agents.promptSuffixes.label") }}
-              </FieldLabel>
-              <FieldDescription>
-                {{ t("settings.agents.promptSuffixes.description") }}
-              </FieldDescription>
-            </FieldContent>
-          </Field>
-
-          <Field orientation="vertical">
-            <FieldContent>
-              <FieldLabel for="agent-suffix-auto">
-                {{ t("settings.agents.promptSuffixes.auto") }}
-              </FieldLabel>
-            </FieldContent>
-            <Textarea
-              id="agent-suffix-auto"
-              v-model="draft.promptSuffixes.auto"
-              :maxlength="botAgentBounds.promptSuffix.max"
-              :disabled="!canEdit"
-              rows="3"
-            />
-          </Field>
-
-          <Field orientation="vertical">
-            <FieldContent>
-              <FieldLabel for="agent-suffix-agent">
-                {{ t("settings.agents.promptSuffixes.agent") }}
-              </FieldLabel>
-            </FieldContent>
-            <Textarea
-              id="agent-suffix-agent"
-              v-model="draft.promptSuffixes.agent"
-              :maxlength="botAgentBounds.promptSuffix.max"
-              :disabled="!canEdit"
-              rows="3"
-            />
-          </Field>
-
-          <Field orientation="vertical">
-            <FieldContent>
-              <FieldLabel for="agent-suffix-manual">
-                {{ t("settings.agents.promptSuffixes.manual") }}
-              </FieldLabel>
-            </FieldContent>
-            <Textarea
-              id="agent-suffix-manual"
-              v-model="draft.promptSuffixes.manual"
-              :maxlength="botAgentBounds.promptSuffix.max"
-              :disabled="!canEdit"
-              rows="3"
-            />
           </Field>
         </FieldSet>
 

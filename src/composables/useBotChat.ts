@@ -308,6 +308,18 @@ export interface BotChatContext {
   detachNode: (node: BotChatNodeRef) => void
   /** Drop every attached node. */
   clearAttachedNodes: () => void
+  /**
+   * Chat-session attachment ids the user has toggled "include" for sends.
+   * Per-turn selectable: sent with every message while selected (the composer
+   * shows them as chips so the token cost stays visible). Cleared by
+   * `startNewSession`. The uploaded files themselves persist independently
+   * (managed via `useSessionAttachmentsState`).
+   */
+  selectedAttachmentIds: Ref<string[]>
+  /** Toggle whether an uploaded attachment is included in sends. Idempotent. */
+  toggleAttachmentSelection: (attachmentId: string) => void
+  /** Drop every attachment selection (does NOT delete the uploaded files). */
+  clearAttachmentSelection: () => void
   // ── Per-node sessions (NodeInspectorSidebar Bot tab) ────────────────
   /**
    * Bind this chat to a workspace node:
@@ -423,6 +435,23 @@ export function useBotChat(): BotChatContext {
 
   const clearAttachedNodes = () => {
     attachedNodes.value = []
+  }
+
+  // Per-turn selection of chat-session uploads to include as media. The
+  // uploaded files persist (managed by `useSessionAttachmentsState`); this is
+  // just which of them ride along on the next send(s). Mirrors `attachedNodes`.
+  const selectedAttachmentIds = ref<string[]>([])
+
+  const toggleAttachmentSelection = (attachmentId: string) => {
+    if (!attachmentId) return
+    const current = selectedAttachmentIds.value
+    selectedAttachmentIds.value = current.includes(attachmentId)
+      ? current.filter((id) => id !== attachmentId)
+      : [...current, attachmentId]
+  }
+
+  const clearAttachmentSelection = () => {
+    selectedAttachmentIds.value = []
   }
 
   // Team-scoped agent config — read directly from the Pinia store so
@@ -871,6 +900,9 @@ export function useBotChat(): BotChatContext {
     // is also cleared so a stale node-tab binding can't leak into an
     // unrelated new chat.
     attachedNodes.value = []
+    // The per-turn attachment selection is per-session too — clear it (the
+    // uploads were scoped to the old session and don't apply to a new chat).
+    selectedAttachmentIds.value = []
     pendingPinnedNode.value = null
     // Reset to the team's configured default mode. The user's prior
     // pick was scoped to the just-ended conversation; a new chat should
@@ -1189,6 +1221,9 @@ export function useBotChat(): BotChatContext {
       scope: node.scope,
       nodeId: node.nodeId,
     }))
+    // Snapshot the per-turn attachment selection at send time too, for the
+    // same reason — mid-stream toggles shouldn't change this turn's media.
+    const attachmentIds = [...selectedAttachmentIds.value]
     // Only forward `pinnedNode` when we're creating a new session AND
     // the caller (typically NodeInspectorSidebar's Bot tab) set a
     // pending pin. The server ignores it on resumed sessions, but we
@@ -1208,6 +1243,7 @@ export function useBotChat(): BotChatContext {
           mode: mode.value,
           model: model.value,
           contextNodes,
+          attachmentIds,
           ...(pinnedNode ? { pinnedNode } : {}),
           // Always send `activeAgentId` (even when null) so the server
           // knows the user's intent for this turn. Omitting the field
@@ -1616,6 +1652,9 @@ export function useBotChat(): BotChatContext {
     attachNode,
     detachNode,
     clearAttachedNodes,
+    selectedAttachmentIds,
+    toggleAttachmentSelection,
+    clearAttachmentSelection,
     selectOrCreateNodeSession,
     startNewPinnedNodeSession,
     pendingPinnedNode,

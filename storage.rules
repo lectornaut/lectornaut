@@ -78,5 +78,20 @@ service firebase.storage {
         && !isBlockedAttachmentType();
       allow delete: if isWorkspaceNodeScope(scope) && canManageWorkspaceContent(teamId);
     }
+
+    // Chat-session attachments — same root + size/blocked-type rules as node
+    // attachments, with `botSessions/{sessionId}` in the `{scope}/{nodeId}`
+    // slot. The node rule above denies these (isWorkspaceNodeScope is false),
+    // so this dedicated rule grants them. Reads are team-wide here, but the
+    // random attachmentId path is only discoverable via the visibility-gated
+    // Firestore metadata doc, so private-session files stay effectively private.
+    match /attachments/teams/{teamId}/workspaces/{workspaceId}/botSessions/{sessionId}/{attachmentId}/{version}/{fileName} {
+      allow read: if isTeamMember(teamId);
+      allow create, update: if canManageWorkspaceContent(teamId)
+        && request.resource != null
+        && request.resource.size <= 25 * 1024 * 1024
+        && !isBlockedAttachmentType();
+      allow delete: if canManageWorkspaceContent(teamId);
+    }
   }
 }

@@ -1,11 +1,25 @@
 /**
- * Layout Store with Optimistic Firestore Updates
+ * Layout Store
+ * ============
  *
- * Manages tabs and layout navigation with:
- * - Instant UI updates via optimistic state changes
- * - Automatic rollback on Firestore errors
- * - pendingIds tracking to prevent snapshot overwrites
- * - Debounced persistence to Firestore
+ * Owns two independent slices of per-user layout state, each backed by its own
+ * Firestore document and kept responsive with optimistic local updates:
+ *
+ *   1. Tabs — the open/active/recently-closed tab strip. Scoped to the active
+ *      workspace at `teams/{team}/memberships/{uid}/workspaces/{ws}/layout/tabs`,
+ *      so switching workspace swaps the whole strip.
+ *
+ *   2. Navigation + UI prefs — the sidebar nav order/visibility, the panel
+ *      collapse flags, and per-agent visibility. Scoped to the user at
+ *      `users/{uid}/layout/navigation`, so these follow the user across
+ *      workspaces and devices.
+ *
+ * Writes are optimistic: local state changes immediately, the Firestore write
+ * is queued through the sync engine, and a failure rolls the local state back.
+ * Reads come through TanStack-backed `useDocumentQuery`, which surfaces three
+ * states we depend on: `undefined` (loading), `null` (confirmed-absent), or the
+ * parsed document. Snapshot-application is gated by pending-operation flags so
+ * an in-flight optimistic edit is never clobbered by an interim server tick.
  */
 
 import { defaultMenu } from "@/helpers/defaults"
@@ -31,62 +45,66 @@ import {
 import { useDocumentQuery } from "@/utils/firebase/firebase-query"
 import { safeSetDocument as safeSetDoc } from "@/utils/firebase/firebase-sync-engine"
 import { useStorage, watchDebounced } from "@vueuse/core"
-import { collection, doc } from "firebase/firestore"
+import { doc } from "firebase/firestore"
 import { defineStore, storeToRefs } from "pinia"
 import { useCurrentUser } from "vuefire"
 
 export type Tab = LayoutTab
 export type NavItem = (typeof defaultMenu)[number]
 
+// Debounce for every "settled state → Firestore" watcher. Long enough to
+// collapse a burst of edits into one write, short enough to feel instant.
+const PERSIST_DEBOUNCE_MS = 500
+
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null
 
-const toLayoutTabsDoc = (value: unknown): LayoutTabsDoc | null =>
+const asTabsDoc = (value: unknown): LayoutTabsDoc | null =>
   isRecord(value) ? (value as LayoutTabsDoc) : null
 
-const toLayoutNavigationDoc = (value: unknown): LayoutNavigationDoc | null =>
+const asNavigationDoc = (value: unknown): LayoutNavigationDoc | null =>
   isRecord(value) ? (value as LayoutNavigationDoc) : null
 
+// Coerce a tab's optional `pinned` to a strict boolean so downstream
+// comparisons and the pinned/regular partition never trip over `undefined`.
 const normalizeTab = (tab: Tab): Tab => ({
   ...tab,
   pinned: Boolean(tab.pinned),
 })
 
+/**
+ * Stable partition that floats pinned tabs to the front while preserving the
+ * relative order within each group. This is the canonical tab ordering — it
+ * runs after every mutation and after a drag reorder so pinned tabs can never
+ * end up interleaved with regular ones.
+ */
 const normalizeTabs = (value: Tab[]): Tab[] => {
-  const pinnedTabs: Tab[] = []
-  const regularTabs: Tab[] = []
-
+  const pinned: Tab[] = []
+  const regular: Tab[] = []
   for (const tab of value) {
-    const normalizedTab = normalizeTab(tab)
-    if (normalizedTab.pinned) {
-      pinnedTabs.push(normalizedTab)
-      continue
-    }
-
-    regularTabs.push(normalizedTab)
+    const next = normalizeTab(tab)
+    ;(next.pinned ? pinned : regular).push(next)
   }
-
-  return [...pinnedTabs, ...regularTabs]
+  return [...pinned, ...regular]
 }
 
 const normalizeTabHistory = (value: Tab[]): Tab[] => value.map(normalizeTab)
 
 export const useLayoutStore = defineStore("layout", () => {
   const user = useCurrentUser()
-  const teamStore = useTeamStore()
-  const { currentTeam } = storeToRefs(teamStore)
-  const workspaceStore = useWorkspaceStore()
-  const { currentWorkspace } = storeToRefs(workspaceStore)
+  const { currentTeam } = storeToRefs(useTeamStore())
+  const { currentWorkspace } = storeToRefs(useWorkspaceStore())
 
-  // ============================================================================
+  // ==========================================================================
   // State
-  // ============================================================================
+  // ==========================================================================
 
+  // UI-prefs lane: each flag writes to localStorage instantly (optimistic,
+  // offline-safe) and is mirrored into the per-user `navigation.ui` doc for
+  // cross-device sync. Keys are stable contracts — never rename them.
   const sidebarOpen = useStorage<boolean>("layout.sidebar.open", true)
-  // When true, the MainSidebar uses `collapsible="icon"` instead of
-  // `offcanvas`: closing it shrinks the rail to icon-width rather than
-  // sliding it offscreen. Lives in the same UI-prefs lane as sidebarOpen so
-  // it round-trips through `navigation.ui` and stays in sync across devices.
+  // When pinned, MainSidebar collapses to an icon rail instead of sliding
+  // offscreen. Same lane as `sidebarOpen`.
   const sidebarPinned = useStorage<boolean>("layout.sidebar.pinned", false)
   const leftPanelCollapsed = useStorage<boolean>(
     "layout.panel.left.collapsed",
@@ -100,51 +118,58 @@ export const useLayoutStore = defineStore("layout", () => {
     "layout.panel.bottom.collapsed",
     false
   )
-  // Personal toggle for the Agents sidebar section (MainSidebar footer).
-  // Lives in the UI-prefs lane alongside the panel collapse flags: instant
-  // localStorage write + mirrored to Firestore `navigation.ui` for cross-device
-  // sync. Defaults visible so existing users keep seeing the section.
+  // Visibility of the whole Agents section in the sidebar footer. Defaults
+  // visible so existing users keep seeing it.
   const agentsSidebarVisible = useStorage<boolean>(
     "layout.sidebar.agents.visible",
     true
   )
-  // Per-agent visibility within the Agents section. Map of agent id →
-  // shown. Opt-out (missing key = visible) so new agents appear without a
-  // migration. Shares the UI-prefs lane: instant localStorage + mirrored
-  // to the user's `navigation.agentVisibility` field for cross-device sync.
+  // Per-agent visibility map (agentId → shown). Opt-out semantics: a missing
+  // key means visible, so newly-added agents appear without a migration.
   const agentVisibility = useStorage<Record<string, boolean>>(
     "layout.sidebar.agents.visibility",
     {}
   )
 
+  // Tabs lane (Firestore-authoritative, hydrated per workspace).
   const tabs = ref<Tab[]>([])
   const activeTabId = ref("")
   const recentlyClosed = ref<Tab[]>([])
   const tabIndicators = ref<Record<string, LayoutTabIndicator>>({})
+
+  // Navigation lane (Firestore-authoritative, hydrated per user).
   const activeNavItems = ref<NavItem[]>([])
+
   const isHydrated = ref(false)
 
-  // Pending operation tracking
+  // Pending-operation tracking. While a tab id sits in `pendingTabIds`, inbound
+  // snapshots for the tabs doc are ignored so the optimistic edit survives.
   const pendingTabIds = shallowRef(createPendingSet())
   const pendingNavigation = shallowRef(false)
+  // Set while we copy a remote `navigation.ui` snapshot into the local refs, so
+  // the "mark dirty" watcher can tell our own apply apart from a user toggle.
   const isApplyingNavigationUiSnapshot = shallowRef(false)
+  // True once a UI pref changed locally and hasn't round-tripped to Firestore.
+  // Gates snapshot application so a stale remote doc can't revert a fresh edit.
   const navigationUiDirty = ref(false)
 
-  // ============================================================================
+  // ==========================================================================
   // Computed
-  // ============================================================================
+  // ==========================================================================
 
   const activeTab = computed(() =>
-    tabs.value.find((t) => t.id === activeTabId.value)
+    tabs.value.find((tab) => tab.id === activeTabId.value)
   )
 
-  /** Check if a specific tab has a pending operation */
   const isTabPending = computed(
     () => (id: string) => pendingTabIds.value.has(id)
   )
 
-  /** Check if any tab operation is pending */
   const hasAnyTabPending = computed(() => pendingTabIds.value.size > 0)
+
+  // ==========================================================================
+  // UI-prefs snapshot helpers
+  // ==========================================================================
 
   const getNavigationUiState = (): NavigationUiState => ({
     sidebarOpen: sidebarOpen.value,
@@ -155,6 +180,9 @@ export const useLayoutStore = defineStore("layout", () => {
     agentsSidebarVisible: agentsSidebarVisible.value,
   })
 
+  // A remote `ui` snapshot is "in sync" only when every field is a boolean and
+  // equals its local counterpart. Used to clear the dirty flag after our own
+  // write lands.
   const isNavigationUiSnapshotInSync = (ui: Partial<NavigationUiState>) =>
     typeof ui.sidebarOpen === "boolean" &&
     ui.sidebarOpen === sidebarOpen.value &&
@@ -169,86 +197,64 @@ export const useLayoutStore = defineStore("layout", () => {
     typeof ui.agentsSidebarVisible === "boolean" &&
     ui.agentsSidebarVisible === agentsSidebarVisible.value
 
-  // Opt-out lookup: only an explicit `false` hides an agent. Reads
-  // `agentVisibility.value`, so callers inside a computed/template render
-  // (e.g. `Agents.vue`'s `visibleAgents`, the menu checkboxes) stay
-  // reactive to changes without extra wiring.
+  // Opt-out lookup: only an explicit `false` hides an agent. Reading the ref
+  // here keeps template/computed callers reactive.
   const isAgentVisible = (agentId: string): boolean =>
     agentVisibility.value[agentId] !== false
 
-  // True once every locally-set key is reflected in the snapshot. Used to
-  // clear the dirty flag after our own write round-trips. Deliberately a
-  // subset check (local ⊆ saved): the snapshot may carry extra keys for
-  // agents toggled on another device and later deleted — ignoring them
-  // keeps a stale key from wedging the prefs permanently dirty.
+  // Subset check (local ⊆ saved): every locally-set key must match the saved
+  // map. Deliberately ignores extra saved keys so a key set then dropped on
+  // another device can't wedge the prefs permanently dirty.
   const isAgentVisibilityPersisted = (
     saved: Record<string, boolean>
-  ): boolean => {
-    const local = agentVisibility.value
-    for (const id of Object.keys(local)) {
-      if (saved[id] !== local[id]) return false
-    }
-    return true
-  }
+  ): boolean =>
+    Object.keys(agentVisibility.value).every(
+      (id) => saved[id] === agentVisibility.value[id]
+    )
 
-  // True when `candidate` holds exactly the same keys/values as the local
-  // map — guards the snapshot-apply assignment so an identical merge
-  // doesn't churn reactivity.
+  // Exact key/value equality — guards the snapshot-apply assignment so an
+  // identical merge doesn't churn reactivity.
   const agentVisibilityEquals = (
     candidate: Record<string, boolean>
   ): boolean => {
     const local = agentVisibility.value
-    if (Object.keys(local).length !== Object.keys(candidate).length)
-      return false
-    for (const id of Object.keys(candidate)) {
-      if (local[id] !== candidate[id]) return false
-    }
-    return true
+    const localKeys = Object.keys(local)
+    const candidateKeys = Object.keys(candidate)
+    if (localKeys.length !== candidateKeys.length) return false
+    return candidateKeys.every((id) => local[id] === candidate[id])
   }
 
-  // ============================================================================
-  // Firestore Refs
-  // ============================================================================
+  // ==========================================================================
+  // Firestore document refs
+  // ==========================================================================
 
   const tabsDocRef = computed(() => {
-    if (
-      !user.value?.uid ||
-      !currentTeam.value?.id ||
-      !currentWorkspace.value?.id
-    )
-      return null
+    const uid = user.value?.uid
+    const teamId = currentTeam.value?.id
+    const workspaceId = currentWorkspace.value?.id
+    if (!uid || !teamId || !workspaceId) return null
     return doc(
-      collection(
-        doc(
-          collection(
-            doc(
-              collection(
-                doc(collection(firestore, "teams"), currentTeam.value.id),
-                "memberships"
-              ),
-              user.value.uid
-            ),
-            "workspaces"
-          ),
-          currentWorkspace.value.id
-        ),
-        "layout"
-      ),
+      firestore,
+      "teams",
+      teamId,
+      "memberships",
+      uid,
+      "workspaces",
+      workspaceId,
+      "layout",
       "tabs"
     )
   })
 
   const navigationDocRef = computed(() => {
-    if (!user.value?.uid) return null
-    return doc(
-      collection(doc(collection(firestore, "users"), user.value.uid), "layout"),
-      "navigation"
-    )
+    const uid = user.value?.uid
+    if (!uid) return null
+    return doc(firestore, "users", uid, "layout", "navigation")
   })
 
-  // ============================================================================
-  // Hydration (TanStack Query) with Optimistic Protection
-  // ============================================================================
+  // ==========================================================================
+  // Reads (TanStack Query, realtime)
+  // ==========================================================================
 
   const { data: tabsDocData, isLoading: tabsPending } =
     useDocumentQuery(tabsDocRef)
@@ -259,25 +265,116 @@ export const useLayoutStore = defineStore("layout", () => {
     () => (tabsPending.value || navPending.value) && !isHydrated.value
   )
 
-  // Watch Tabs Data - protected against optimistic overwrites
+  // ==========================================================================
+  // Persistence helpers (function declarations: hoisted so the watchers and
+  // the debounced sync below can reference them before this point in source).
+  // ==========================================================================
+
+  function persistTabs(): Promise<boolean> {
+    return safeSetDoc(
+      tabsDocRef.value,
+      {
+        tabs: tabs.value,
+        active: activeTabId.value,
+        recentlyClosed: recentlyClosed.value,
+      },
+      "layout.tabs.persist"
+    )
+  }
+
+  function persistNavigationUiState(): Promise<boolean> {
+    return safeSetDoc(
+      navigationDocRef.value,
+      {
+        ui: getNavigationUiState(),
+        agentVisibility: agentVisibility.value,
+      },
+      "layout.navigation.ui.persist"
+    )
+  }
+
+  function persistNavigation(): Promise<boolean> {
+    if (!navigationDocRef.value) return Promise.resolve(false)
+
+    const order = activeNavItems.value.map((item) => item.id)
+    const activeIds = new Set(order)
+    const visibleItems: Record<string, boolean> = {}
+    for (const item of defaultMenu) {
+      visibleItems[item.id] = activeIds.has(item.id)
+    }
+
+    return safeSetDoc(
+      navigationDocRef.value,
+      { visibleItems, order },
+      "layout.navigation.persist"
+    )
+  }
+
+  // Tab-indicator maintenance (hoisted: referenced by the tabsDocData watch).
+  function pruneTabIndicators(nextTabs: Tab[] = tabs.value) {
+    const validIds = new Set(nextTabs.map((tab) => tab.id))
+    tabIndicators.value = Object.fromEntries(
+      Object.entries(tabIndicators.value).filter(([id]) => validIds.has(id))
+    )
+  }
+
+  // Prepend a closed tab to the recently-closed history (hoisted: referenced by
+  // the close actions). Collapses a duplicate of the current head and caps at 20.
+  function addToHistory(tab: Tab) {
+    const head = recentlyClosed.value[0]
+    if (
+      head?.fullPath === tab.fullPath &&
+      head?.name === tab.name &&
+      head?.pinned === Boolean(tab.pinned)
+    ) {
+      return
+    }
+    recentlyClosed.value = [
+      {
+        id: generateId(),
+        name: tab.name,
+        fullPath: tab.fullPath,
+        pinned: Boolean(tab.pinned),
+      },
+      ...recentlyClosed.value,
+    ].slice(0, 20)
+  }
+
+  // ==========================================================================
+  // Debounced UI-prefs sync
+  //
+  // Declared BEFORE the `navDocData` watch on purpose: that watch is
+  // `immediate` and reads synchronously from the persisted query cache, so its
+  // first callback can run during store setup and reads `pendingNavigationUi`
+  // (to skip applying remote state mid-write). The binding must exist by then.
+  // ==========================================================================
+
+  const { trigger: persistNavigationUiWithSync, pending: pendingNavigationUi } =
+    createDebouncedCloudSync({
+      persist: persistNavigationUiState,
+      id: "navigation-ui",
+      source: "layout.navigation.ui.persist",
+      canPersist: () => navigationDocRef.value !== null,
+      errorLabel: "layout.navigationUi",
+    })
+
+  // ==========================================================================
+  // Hydration watchers (read → local state, guarded against optimistic clobber)
+  // ==========================================================================
+
+  // Tabs doc → local tab state.
   watch(
     tabsDocData,
-    (doc) => {
-      // Skip if any tab operations are pending
+    (snapshot) => {
+      // An in-flight optimistic tab op owns the local state right now.
       if (pendingTabIds.value.size > 0) return
-
-      // Skip if the document ref is null (user/team not loaded yet)
-      // We only want to reset tabs when we have a valid ref but the doc doesn't exist
+      // No valid ref yet (user/team/workspace not resolved) — nothing to apply.
       if (!tabsDocRef.value) return
+      // `undefined` is the loading window; only `null` means confirmed-absent.
+      if (snapshot === undefined) return
 
-      // The query emits `undefined` between docRef becoming non-null and the
-      // first snapshot landing. Treating that as "no saved tabs" would wipe
-      // tabs on the immediate fire — the `null` case below is the only one
-      // that signals Firestore-confirmed absence.
-      if (doc === undefined) return
-
-      if (!doc) {
-        // Reset tabs when switching to a team with no saved tabs
+      if (!snapshot) {
+        // Confirmed empty: a workspace with no saved tabs. Reset everything.
         tabs.value = []
         activeTabId.value = ""
         recentlyClosed.value = []
@@ -285,7 +382,7 @@ export const useLayoutStore = defineStore("layout", () => {
         return
       }
 
-      const tabsDoc = toLayoutTabsDoc(doc)
+      const tabsDoc = asTabsDoc(snapshot)
       tabs.value = normalizeTabs(tabsDoc?.tabs ?? [])
       activeTabId.value = tabsDoc?.active ?? ""
       recentlyClosed.value = normalizeTabHistory(tabsDoc?.recentlyClosed ?? [])
@@ -294,29 +391,28 @@ export const useLayoutStore = defineStore("layout", () => {
     { immediate: true }
   )
 
-  // Reset tabs when team or workspace changes (tabsDocRef will update automatically)
+  // Team/workspace change → pause sync and clear local tabs until the new
+  // workspace's snapshot lands. The `oldId !== undefined` guard skips the
+  // initial resolution (when both go from undefined to a value).
   watch(
     [() => currentTeam.value?.id, () => currentWorkspace.value?.id],
     ([newTeamId, newWorkspaceId], [oldTeamId, oldWorkspaceId]) => {
-      if (
-        (newTeamId !== oldTeamId && oldTeamId !== undefined) ||
-        (newWorkspaceId !== oldWorkspaceId && oldWorkspaceId !== undefined)
-      ) {
-        // Keep tab synchronization paused until the new workspace snapshot is ready.
-        isHydrated.value = false
+      const teamChanged = newTeamId !== oldTeamId && oldTeamId !== undefined
+      const workspaceChanged =
+        newWorkspaceId !== oldWorkspaceId && oldWorkspaceId !== undefined
+      if (!teamChanged && !workspaceChanged) return
 
-        // Clear local state while waiting for new team/workspace's tabs to load
-        tabs.value = []
-        activeTabId.value = ""
-        recentlyClosed.value = []
-        tabIndicators.value = {}
-      }
+      isHydrated.value = false
+      tabs.value = []
+      activeTabId.value = ""
+      recentlyClosed.value = []
+      tabIndicators.value = {}
     }
   )
 
-  // Mark UI prefs as dirty immediately when changed locally.
-  // `agentVisibility` is reassigned wholesale on every toggle (immutable
-  // update), so top-level ref reactivity catches it without `deep`.
+  // Local UI-pref change → mark dirty. `flush: "sync"` so the flag is set before
+  // any subsequent snapshot watcher can run. `agentVisibility` is reassigned
+  // wholesale on every toggle, so top-level reactivity catches it without `deep`.
   watch(
     [
       sidebarOpen,
@@ -334,39 +430,17 @@ export const useLayoutStore = defineStore("layout", () => {
     { flush: "sync" }
   )
 
-  // Re-entrancy-safe debounced persister for UI layout state, with global sync
-  // queue tracking (queues one extra run when rapid toggles happen during a save).
-  //
-  // MUST be declared before the `navDocData` watch below. That watch is
-  // `immediate: true`, and reads now hydrate synchronously from the persisted
-  // query cache, so its first callback can run *during store setup* and read
-  // `pendingNavigationUi` (it skips applying remote state while a local write is
-  // in flight). Declaring it here guarantees the binding is initialized before
-  // that synchronous first fire. Under VueFire this read was async, so the value
-  // was `undefined` on the immediate fire and the callback early-returned before
-  // reaching the reference — the ordering bug stayed latent until cache hydration
-  // made the first read synchronous.
-  const { trigger: persistNavigationUiWithSync, pending: pendingNavigationUi } =
-    createDebouncedCloudSync({
-      persist: persistNavigationUiState,
-      id: "navigation-ui",
-      source: "layout.navigation.ui.persist",
-      canPersist: () => navigationDocRef.value !== null,
-      errorLabel: "layout.navigationUi",
-    })
-
-  // Watch Navigation Data - protected against optimistic overwrites
+  // Navigation doc → UI prefs + nav items.
   watch(
     navDocData,
-    (doc) => {
-      // The query emits `undefined` before the first snapshot arrives. Without
-      // this guard the immediate fire would treat "loading" as "no saved nav"
-      // and reset `activeNavItems` to `defaultMenu`, flashing the default menu
-      // before the user's customized nav arrives from Firestore.
-      if (doc === undefined) return
+    (snapshot) => {
+      // Loading window — don't flash defaults before the real doc arrives.
+      if (snapshot === undefined) return
 
-      const navigationDoc = toLayoutNavigationDoc(doc)
+      const navigationDoc = asNavigationDoc(snapshot)
       if (!navigationDoc) {
+        // Confirmed-absent (or non-object) doc: fall back to the default menu,
+        // but only when we aren't mid-write and aren't still loading.
         if (!pendingNavigation.value && !navPending.value) {
           activeNavItems.value = [...defaultMenu]
         }
@@ -378,10 +452,9 @@ export const useLayoutStore = defineStore("layout", () => {
         ? (navigationDoc.agentVisibility as Record<string, boolean>)
         : null
 
-      // Clear the dirty flag once our own write round-trips. Every field
-      // present in the snapshot (ui and/or agentVisibility) must match
-      // local; an absent field is not gating, so an older doc that predates
-      // either feature won't keep the prefs stuck dirty.
+      // Clear the dirty flag once our own write round-trips. Each field present
+      // in the snapshot must match local; an absent field is not gating, so an
+      // older doc that predates either feature won't keep prefs stuck dirty.
       if (
         navigationUiDirty.value &&
         (ui || savedAgentVisibility) &&
@@ -392,6 +465,7 @@ export const useLayoutStore = defineStore("layout", () => {
         navigationUiDirty.value = false
       }
 
+      // Apply the remote UI snapshot only when nothing local is pending/dirty.
       if (
         (ui || savedAgentVisibility) &&
         !pendingNavigationUi.value &&
@@ -438,14 +512,10 @@ export const useLayoutStore = defineStore("layout", () => {
             }
           }
           if (savedAgentVisibility) {
-            // Merge remote keys over local rather than replace, so a key
-            // just set on this device isn't dropped by an older snapshot.
-            // Guarded by isApplyingNavigationUiSnapshot so it can't re-mark
-            // the prefs dirty.
-            const merged = {
-              ...agentVisibility.value,
-              ...savedAgentVisibility,
-            }
+            // Merge remote over local (not replace) so a key just set on this
+            // device isn't dropped by an older snapshot. Guarded by the
+            // applying flag so it can't re-mark prefs dirty.
+            const merged = { ...agentVisibility.value, ...savedAgentVisibility }
             if (!agentVisibilityEquals(merged)) {
               agentVisibility.value = merged
             }
@@ -455,9 +525,13 @@ export const useLayoutStore = defineStore("layout", () => {
         }
       }
 
-      // Skip nav reconciliation if navigation operation is pending
+      // A nav-items mutation owns `activeNavItems` right now.
       if (pendingNavigation.value) return
 
+      // Reconcile `activeNavItems` from the saved order + visibility:
+      //   - opt-out visibility (only an explicit `false` hides an item),
+      //   - saved order first (for known + visible ids),
+      //   - then any remaining visible items in default-menu order.
       const savedVisibility = navigationDoc.visibleItems ?? {}
       const savedOrder = (navigationDoc.order ?? []).filter(
         (value): value is string => typeof value === "string"
@@ -465,142 +539,71 @@ export const useLayoutStore = defineStore("layout", () => {
 
       const visibleIds = new Set<string>()
       for (const item of defaultMenu) {
-        if (savedVisibility[item.id] !== false) {
-          visibleIds.add(item.id)
-        }
+        if (savedVisibility[item.id] !== false) visibleIds.add(item.id)
       }
 
-      const newActiveItems: NavItem[] = []
+      const nextActiveItems: NavItem[] = []
       const processedIds = new Set<string>()
-
       for (const id of savedOrder) {
-        const item = defaultMenu.find((i) => i.id === id)
+        const item = defaultMenu.find((entry) => entry.id === id)
         if (item && visibleIds.has(id)) {
-          newActiveItems.push(item)
+          nextActiveItems.push(item)
           processedIds.add(id)
         }
       }
-
       for (const item of defaultMenu) {
         if (visibleIds.has(item.id) && !processedIds.has(item.id)) {
-          newActiveItems.push(item)
+          nextActiveItems.push(item)
         }
       }
 
-      activeNavItems.value = newActiveItems
+      activeNavItems.value = nextActiveItems
     },
     { immediate: true }
   )
 
-  // Set isHydrated when all critical documents are loaded or failed to load
-  // Only set hydrated when we have valid refs (user/team loaded) AND documents are no longer pending
+  // Hydration gate: hydrated only once we have a valid tabs ref AND no layout
+  // doc is still pending. Re-enters hydration mode while anything refreshes.
   watch(
     [tabsPending, navPending, tabsDocRef],
     ([tp, np, tabsRef]) => {
-      // Don't mark as hydrated if we don't have a valid tabs doc ref yet
-      // (meaning user or team hasn't loaded)
-      if (!tabsRef) {
+      if (!tabsRef || tp || np) {
         isHydrated.value = false
         return
       }
-
-      // Re-enter hydration mode whenever any layout document is refreshing.
-      if (tp || np) {
-        isHydrated.value = false
-        return
-      }
-
       isHydrated.value = true
     },
     { immediate: true }
   )
 
-  // ============================================================================
-  // Persistence Helpers
-  // ============================================================================
+  // ==========================================================================
+  // Persistence watchers (debounced: settled local state → Firestore)
+  // ==========================================================================
 
-  /**
-   * Persist tabs with optimistic update protection
-   */
-  async function persistTabs(): Promise<boolean> {
-    return safeSetDoc(
-      tabsDocRef.value,
-      {
-        tabs: tabs.value,
-        active: activeTabId.value,
-        recentlyClosed: recentlyClosed.value,
-      },
-      "layout.tabs.persist"
-    )
-  }
-
-  /**
-   * Persist UI layout preferences with optimistic update protection
-   */
-  async function persistNavigationUiState(): Promise<boolean> {
-    return safeSetDoc(
-      navigationDocRef.value,
-      {
-        ui: getNavigationUiState(),
-        agentVisibility: agentVisibility.value,
-      },
-      "layout.navigation.ui.persist"
-    )
-  }
-
-  /**
-   * Persist navigation with optimistic update protection
-   */
-  async function persistNavigation(): Promise<boolean> {
-    if (!navigationDocRef.value) return false
-
-    const visibleItems: Record<string, boolean> = {}
-    const order = activeNavItems.value.map((item) => item.id)
-    const activeIds = new Set(order)
-
-    for (const item of defaultMenu) {
-      visibleItems[item.id] = activeIds.has(item.id)
-    }
-
-    return safeSetDoc(
-      navigationDocRef.value,
-      { visibleItems, order },
-      "layout.navigation.persist"
-    )
-  }
-
-  // ============================================================================
-  // Debounced Persistence Watchers
-  // ============================================================================
-
-  // Persist Tabs (debounced)
-  // No `deep: true` — every tab mutation reassigns the array (or replaces tab
-  // objects via `.map`), so top-level reactivity catches all changes. A deep
-  // walk would run on every route navigation via `updateActiveTab`.
+  // Tabs. No `deep` — every mutation reassigns the array or replaces tab
+  // objects, so top-level reactivity is enough (and a deep walk would fire on
+  // every route navigation via `updateActiveTab`).
   watchDebounced(
     [tabs, activeTabId, recentlyClosed],
     () => {
-      // Skip persistence during pending operations (will be handled by the action)
       if (pendingTabIds.value.size > 0) return
       if (!tabsDocRef.value || tabsPending.value || !isHydrated.value) return
-      persistTabs()
+      void persistTabs()
     },
-    { debounce: 500 }
+    { debounce: PERSIST_DEBOUNCE_MS }
   )
 
-  // Persist Navigation (debounced)
-  // No `deep: true` — every mutation reassigns `activeNavItems`.
+  // Nav items. No `deep` — every mutation reassigns `activeNavItems`.
   watchDebounced(
     activeNavItems,
     () => {
-      // Skip persistence during pending operations
       if (pendingNavigation.value) return
-      persistNavigation()
+      void persistNavigation()
     },
-    { debounce: 500 }
+    { debounce: PERSIST_DEBOUNCE_MS }
   )
 
-  // Persist UI Layout State (debounced)
+  // UI prefs. Only persists when a local change actually marked things dirty.
   watchDebounced(
     [
       sidebarOpen,
@@ -615,32 +618,23 @@ export const useLayoutStore = defineStore("layout", () => {
       if (!navigationUiDirty.value) return
       void persistNavigationUiWithSync()
     },
-    { debounce: 500 }
+    { debounce: PERSIST_DEBOUNCE_MS }
   )
 
-  // ============================================================================
-  // Actions: Tabs (with Optimistic Updates)
-  // ============================================================================
+  // ==========================================================================
+  // Tab actions (optimistic)
+  // ==========================================================================
 
   function createTab(
     fullPath: string,
     name?: string,
     options?: { pinned?: boolean }
   ): Tab {
-    if (name) {
-      return {
-        id: generateId(),
-        name,
-        fullPath,
-        pinned: Boolean(options?.pinned),
-      }
-    }
-    // Note: Router resolution usually happens in component,
-    // but we can pass the resolved name or handle it here if we had access to router.
-    // For now, we'll expect the component to pass a name or we use a default.
+    // Truthy fallback (matches the original): an empty-string name — which can
+    // arrive via an external `Tabs.Add` mitt payload — still becomes "New tab".
     return {
       id: generateId(),
-      name: "New tab",
+      name: name || "New tab",
       fullPath,
       pinned: Boolean(options?.pinned),
     }
@@ -650,132 +644,84 @@ export const useLayoutStore = defineStore("layout", () => {
     tabs.value = normalizeTabs(tabs.value)
   }
 
-  function pruneTabIndicators(nextTabs = tabs.value) {
-    const validIds = new Set(nextTabs.map((tab) => tab.id))
-    tabIndicators.value = Object.fromEntries(
-      Object.entries(tabIndicators.value).filter(([id]) => validIds.has(id))
-    )
-  }
-
   function setTabIndicator(id: string, indicator: LayoutTabIndicator) {
     if (!tabs.value.some((tab) => tab.id === id)) return
-    tabIndicators.value = {
-      ...tabIndicators.value,
-      [id]: indicator,
-    }
+    tabIndicators.value = { ...tabIndicators.value, [id]: indicator }
   }
 
   function clearTabIndicator(id: string) {
     if (!tabIndicators.value[id]) return
-
-    const remainingIndicators = { ...tabIndicators.value }
-    delete remainingIndicators[id]
-    tabIndicators.value = remainingIndicators
+    const next = { ...tabIndicators.value }
+    delete next[id]
+    tabIndicators.value = next
   }
 
   function getTabIndicator(id: string) {
     return tabIndicators.value[id] ?? null
   }
 
-  /**
-   * Add a new tab with optimistic update
-   */
   async function addTab(
     fullPath = "/new",
     name = "New tab",
     options?: { pinned?: boolean }
   ): Promise<Tab> {
     const newTab = createTab(fullPath, name, options)
-
-    // Clone previous state for rollback
     const previousTabs = cloneState(tabs.value)
     const previousActiveTabId = activeTabId.value
 
     await withOptimisticUpdate(
       pendingTabIds,
       newTab.id,
-      // Apply optimistic update
       () => {
         tabs.value = normalizeTabs([...tabs.value, newTab])
         activeTabId.value = newTab.id
       },
-      // Rollback on error
       () => {
         tabs.value = previousTabs
         activeTabId.value = previousActiveTabId
       },
-      // Persistence
       async () => {
-        const success = await persistTabs()
-        if (!success) {
-          throw new Error("Failed to persist tab")
-        }
+        if (!(await persistTabs())) throw new Error("Failed to persist tab")
       }
     )
 
     return newTab
   }
 
-  function addToHistory(tab: Tab) {
-    const head = recentlyClosed.value[0]
-    if (
-      head?.fullPath === tab.fullPath &&
-      head?.name === tab.name &&
-      head?.pinned === Boolean(tab.pinned)
-    )
-      return
-    recentlyClosed.value = [
-      {
-        id: generateId(),
-        name: tab.name,
-        fullPath: tab.fullPath,
-        pinned: Boolean(tab.pinned),
-      },
-      ...recentlyClosed.value,
-    ].slice(0, 20)
-  }
-
-  /**
-   * Close a tab with optimistic update
-   */
   async function closeTab(id: string): Promise<{ nextPath: string } | null> {
-    const idx = tabs.value.findIndex((t) => t.id === id)
+    const idx = tabs.value.findIndex((tab) => tab.id === id)
     if (idx === -1) return null
 
     const closing = tabs.value[idx]
-    if (!closing) return null
-    if (closing.pinned) return null
+    if (!closing || closing.pinned) return null
 
-    // Clone previous state for rollback
     const previousTabs = cloneState(tabs.value)
     const previousActiveTabId = activeTabId.value
     const previousRecentlyClosed = cloneState(recentlyClosed.value)
     const previousTabIndicators = cloneState(tabIndicators.value)
 
-    let nextPathResult: string | null = null
+    let nextPath: string | null = null
 
     await withOptimisticUpdate(
       pendingTabIds,
       id,
-      // Apply optimistic update
       () => {
-        // Add to history
         addToHistory(closing)
 
-        // Prepare new state
         const newTabs = [...tabs.value]
         newTabs.splice(idx, 1)
 
         let nextId = activeTabId.value
-
         if (newTabs.length === 0) {
           nextId = ""
-          nextPathResult = "/start"
+          nextPath = "/start"
         } else if (closing.id === activeTabId.value) {
+          // After splicing index `idx`, the tab now at `idx` is the one that
+          // followed the closed tab; fall back to its predecessor.
           const nextTab = newTabs[idx] || newTabs[idx - 1]
           if (nextTab) {
             nextId = nextTab.id
-            nextPathResult = nextTab.fullPath
+            nextPath = nextTab.fullPath
           }
         }
 
@@ -783,71 +729,59 @@ export const useLayoutStore = defineStore("layout", () => {
         activeTabId.value = nextId
         pruneTabIndicators(newTabs)
       },
-      // Rollback on error
       () => {
         tabs.value = previousTabs
         activeTabId.value = previousActiveTabId
         recentlyClosed.value = previousRecentlyClosed
         tabIndicators.value = previousTabIndicators
       },
-      // Persistence
       async () => {
-        const success = await persistTabs()
-        if (!success) {
+        if (!(await persistTabs())) {
           throw new Error("Failed to persist tab close")
         }
       }
     )
 
-    return nextPathResult ? { nextPath: nextPathResult } : null
+    return nextPath ? { nextPath } : null
   }
 
-  /**
-   * Close all tabs except one with optimistic update
-   */
   async function closeOtherTabs(keepId: string): Promise<void> {
-    const keep = tabs.value.find((t) => t.id === keepId)
+    const keep = tabs.value.find((tab) => tab.id === keepId)
     if (!keep) return
 
-    // Clone previous state for rollback
-    const previousTabs = cloneState(tabs.value)
-    const previousActiveTabId = activeTabId.value
-    const previousRecentlyClosed = cloneState(recentlyClosed.value)
-    const previousTabIndicators = cloneState(tabIndicators.value)
-
-    const tabsToClose = tabs.value.filter((t) => !t.pinned && t.id !== keepId)
+    const tabsToClose = tabs.value.filter(
+      (tab) => !tab.pinned && tab.id !== keepId
+    )
     if (tabsToClose.length === 0) {
       activeTabId.value = keep.id
       return
     }
 
-    // Mark every closing tab pending (not just one key): the batch helper tracks
-    // all of them and handles rollback, replacing the previous single-ID
-    // `withOptimisticUpdate` workaround that could only mark `keepId`.
+    const previousTabs = cloneState(tabs.value)
+    const previousActiveTabId = activeTabId.value
+    const previousRecentlyClosed = cloneState(recentlyClosed.value)
+    const previousTabIndicators = cloneState(tabIndicators.value)
+
     await withOptimisticBatchUpdate(
       pendingTabIds,
-      tabsToClose.map((t) => t.id),
-      // Apply optimistic update
+      tabsToClose.map((tab) => tab.id),
       () => {
         tabsToClose.forEach(addToHistory)
-        const remainingTabs = normalizeTabs(
-          tabs.value.filter((t) => t.pinned || t.id === keepId)
+        const remaining = normalizeTabs(
+          tabs.value.filter((tab) => tab.pinned || tab.id === keepId)
         )
-        tabs.value = remainingTabs
+        tabs.value = remaining
         activeTabId.value = keep.id
-        pruneTabIndicators(remainingTabs)
+        pruneTabIndicators(remaining)
       },
-      // Rollback on error
       () => {
         tabs.value = previousTabs
         activeTabId.value = previousActiveTabId
         recentlyClosed.value = previousRecentlyClosed
         tabIndicators.value = previousTabIndicators
       },
-      // Persistence
       async () => {
-        const success = await persistTabs()
-        if (!success) {
+        if (!(await persistTabs())) {
           throw new Error("Failed to persist closeOtherTabs")
         }
       },
@@ -855,48 +789,38 @@ export const useLayoutStore = defineStore("layout", () => {
     )
   }
 
-  /**
-   * Close all tabs with optimistic update
-   */
   async function closeAllTabs(): Promise<void> {
     const tabsToClose = tabs.value.filter((tab) => !tab.pinned)
     if (tabsToClose.length === 0) return
 
-    // Clone previous state for rollback
     const previousTabs = cloneState(tabs.value)
     const previousActiveTabId = activeTabId.value
     const previousRecentlyClosed = cloneState(recentlyClosed.value)
     const previousTabIndicators = cloneState(tabIndicators.value)
 
-    // Mark every closing tab pending; the batch helper handles rollback too,
-    // replacing the prior manual addPending/try/catch/finally scaffold.
     await withOptimisticBatchUpdate(
       pendingTabIds,
-      tabsToClose.map((t) => t.id),
-      // Apply optimistic update
+      tabsToClose.map((tab) => tab.id),
       () => {
         tabsToClose.forEach(addToHistory)
-        const remainingTabs = normalizeTabs(
-          tabs.value.filter((tab) => tab.pinned)
-        )
-        const nextActiveTab = remainingTabs.find(
+        const remaining = normalizeTabs(tabs.value.filter((tab) => tab.pinned))
+        const stillActive = remaining.find(
           (tab) => tab.id === activeTabId.value
         )
-        tabs.value = remainingTabs
-        activeTabId.value = nextActiveTab?.id ?? remainingTabs[0]?.id ?? ""
-        pruneTabIndicators(remainingTabs)
+        tabs.value = remaining
+        activeTabId.value = stillActive?.id ?? remaining[0]?.id ?? ""
+        pruneTabIndicators(remaining)
       },
-      // Rollback on error
       () => {
         tabs.value = previousTabs
         activeTabId.value = previousActiveTabId
         recentlyClosed.value = previousRecentlyClosed
         tabIndicators.value = previousTabIndicators
       },
-      // Persistence
       async () => {
-        const success = await persistTabs()
-        if (!success) throw new Error("Failed to persist closeAllTabs")
+        if (!(await persistTabs())) {
+          throw new Error("Failed to persist closeAllTabs")
+        }
       },
       { source: "layout.tabs.closeAll" }
     )
@@ -906,9 +830,6 @@ export const useLayoutStore = defineStore("layout", () => {
     recentlyClosed.value = []
   }
 
-  /**
-   * Reopen the last closed tab
-   */
   function reopenLastClosed(): Tab | null {
     if (recentlyClosed.value.length === 0) return null
     const [last, ...rest] = recentlyClosed.value
@@ -917,13 +838,9 @@ export const useLayoutStore = defineStore("layout", () => {
     return last
   }
 
-  /**
-   * Duplicate a tab with optimistic update
-   */
   async function duplicateTab(id: string): Promise<void> {
-    const tab = tabs.value.find((t) => t.id === id)
-    if (!tab) return
-    if (isDefaultRoute(tab)) return
+    const tab = tabs.value.find((entry) => entry.id === id)
+    if (!tab || isDefaultRoute(tab)) return
 
     const duplicate = createTab(
       tab.fullPath,
@@ -931,62 +848,49 @@ export const useLayoutStore = defineStore("layout", () => {
       { pinned: false }
     )
 
-    // Clone previous state for rollback
     const previousTabs = cloneState(tabs.value)
     const previousActiveTabId = activeTabId.value
 
     await withOptimisticUpdate(
       pendingTabIds,
       duplicate.id,
-      // Apply optimistic update
       () => {
         tabs.value = normalizeTabs([...tabs.value, duplicate])
         activeTabId.value = duplicate.id
       },
-      // Rollback on error
       () => {
         tabs.value = previousTabs
         activeTabId.value = previousActiveTabId
       },
-      // Persistence
       async () => {
-        const success = await persistTabs()
-        if (!success) {
+        if (!(await persistTabs())) {
           throw new Error("Failed to persist duplicateTab")
         }
       }
     )
   }
 
-  /**
-   * Rename a tab with optimistic update
-   */
   async function renameTab(id: string, newName: string): Promise<void> {
-    const tab = tabs.value.find((t) => t.id === id)
-    if (!tab) return
-    if (isDefaultRoute(tab)) return
-    if (!newName.trim()) return
+    const tab = tabs.value.find((entry) => entry.id === id)
+    if (!tab || isDefaultRoute(tab)) return
+    const trimmed = newName.trim()
+    if (!trimmed) return
 
-    // Clone previous state for rollback
     const previousTabs = cloneState(tabs.value)
 
     await withOptimisticUpdate(
       pendingTabIds,
       id,
-      // Apply optimistic update
       () => {
-        tabs.value = tabs.value.map((t) =>
-          t.id === id ? { ...t, name: newName.trim() } : t
+        tabs.value = tabs.value.map((entry) =>
+          entry.id === id ? { ...entry, name: trimmed } : entry
         )
       },
-      // Rollback on error
       () => {
         tabs.value = previousTabs
       },
-      // Persistence
       async () => {
-        const success = await persistTabs()
-        if (!success) {
+        if (!(await persistTabs())) {
           throw new Error("Failed to persist renameTab")
         }
       }
@@ -994,9 +898,8 @@ export const useLayoutStore = defineStore("layout", () => {
   }
 
   async function setTabPinned(id: string, pinned: boolean): Promise<void> {
-    const tab = tabs.value.find((t) => t.id === id)
-    if (!tab) return
-    if (tab.pinned === pinned) return
+    const tab = tabs.value.find((entry) => entry.id === id)
+    if (!tab || tab.pinned === pinned) return
 
     const previousTabs = cloneState(tabs.value)
 
@@ -1005,15 +908,16 @@ export const useLayoutStore = defineStore("layout", () => {
       id,
       () => {
         tabs.value = normalizeTabs(
-          tabs.value.map((t) => (t.id === id ? { ...t, pinned } : t))
+          tabs.value.map((entry) =>
+            entry.id === id ? { ...entry, pinned } : entry
+          )
         )
       },
       () => {
         tabs.value = previousTabs
       },
       async () => {
-        const success = await persistTabs()
-        if (!success) {
+        if (!(await persistTabs())) {
           throw new Error("Failed to persist setTabPinned")
         }
       }
@@ -1024,17 +928,20 @@ export const useLayoutStore = defineStore("layout", () => {
     activeTabId.value = id
   }
 
+  // Point the active tab at a new path (and optionally rename it) without
+  // creating a tab — used by the router→store sync to "consume" the active tab.
   function updateActiveTab(fullPath: string, name?: string) {
     if (!activeTabId.value) return
-    const activeTabIndex = tabs.value.findIndex(
-      (t) => t.id === activeTabId.value
+    const idx = tabs.value.findIndex((tab) => tab.id === activeTabId.value)
+    if (idx === -1) return
+    tabs.value = tabs.value.map((tab, i) =>
+      i === idx ? { ...tab, fullPath, ...(name ? { name } : {}) } : tab
     )
-    if (activeTabIndex !== -1) {
-      tabs.value = tabs.value.map((t, i) =>
-        i === activeTabIndex ? { ...t, fullPath, ...(name ? { name } : {}) } : t
-      )
-    }
   }
+
+  // ==========================================================================
+  // Navigation actions (optimistic, single-flight via pendingNavigation)
+  // ==========================================================================
 
   async function mutateNavigationItems(options: {
     id: string
@@ -1047,18 +954,13 @@ export const useLayoutStore = defineStore("layout", () => {
 
     try {
       options.applyOptimistic()
-
       await withCloudSyncOperation(
         async () => {
-          const success = await persistNavigation()
-          if (!success) {
+          if (!(await persistNavigation())) {
             throw new Error(`Failed to persist ${options.actionName}`)
           }
         },
-        {
-          id: options.id,
-          source: options.source,
-        }
+        { id: options.id, source: options.source }
       )
     } catch (error) {
       activeNavItems.value = previousNavItems
@@ -1069,13 +971,6 @@ export const useLayoutStore = defineStore("layout", () => {
     }
   }
 
-  // ============================================================================
-  // Actions: Navigation (with Optimistic Updates)
-  // ============================================================================
-
-  /**
-   * Toggle a navigation item's visibility with optimistic update
-   */
   async function toggleNavItem(
     itemId: string,
     checked: boolean
@@ -1086,23 +981,19 @@ export const useLayoutStore = defineStore("layout", () => {
       actionName: "toggleNavItem",
       applyOptimistic: () => {
         if (checked) {
-          const item = defaultMenu.find((i) => i.id === itemId)
+          const item = defaultMenu.find((entry) => entry.id === itemId)
           if (item && !activeNavItems.value.some((i) => i.id === itemId)) {
             activeNavItems.value = [...activeNavItems.value, item]
           }
           return
         }
-
         activeNavItems.value = activeNavItems.value.filter(
-          (i) => i.id !== itemId
+          (item) => item.id !== itemId
         )
       },
     })
   }
 
-  /**
-   * Set navigation items with optimistic update
-   */
   async function setNavItems(items: NavItem[]): Promise<void> {
     await mutateNavigationItems({
       id: "set",
@@ -1114,20 +1005,14 @@ export const useLayoutStore = defineStore("layout", () => {
     })
   }
 
-  /**
-   * Toggle a single agent's visibility in the Agents sidebar section.
-   * Writes an explicit boolean (never deletes the key) so re-showing an
-   * agent overrides any remote `false` under Firestore's merge semantics.
-   * Persistence rides the debounced UI-prefs watcher — no direct write.
-   */
+  // Toggle a single agent's visibility. Writes an explicit boolean (never
+  // deletes the key) so re-showing an agent overrides a remote `false` under
+  // Firestore merge semantics. Persistence rides the debounced UI-prefs watcher.
   function setAgentVisible(agentId: string, visible: boolean): void {
     if (isAgentVisible(agentId) === visible) return
     agentVisibility.value = { ...agentVisibility.value, [agentId]: visible }
   }
 
-  /**
-   * Reset navigation items to defaults with optimistic update
-   */
   async function resetNavItems(): Promise<void> {
     await mutateNavigationItems({
       id: "reset",

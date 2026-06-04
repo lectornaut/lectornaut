@@ -531,6 +531,8 @@ export const defaultBotAgentConfig: IBotAgentConfig = {
   topP: 0.95,
   topK: 40,
   maxOutputTokens: 2048,
+  thinking: true,
+  autoContext: false,
   defaultMode: "auto",
   systemPromptBase:
     "You are a helpful AI assistant embedded in this team's " +

@@ -27,12 +27,18 @@ import {
   renameBotSession,
 } from "@/composables/useFunctions"
 import { isBuiltInAgentId } from "@/data/builtInAgents"
+import { queryClient } from "@/modules/queryClient"
 import { useAuthStore } from "@/stores/authStore"
 import { useMembershipStore } from "@/stores/membershipStore"
 import type { IBotSession } from "@/types/domain"
 import { isAgentMembership } from "@/types/membership"
 import { createWorkspaceBotSessionsQuery } from "@/utils/firebase/firebase-helpers"
-import { useCollectionQuery } from "@/utils/firebase/firebase-query"
+import {
+  holdOptimistic,
+  useCollectionQuery,
+} from "@/utils/firebase/firebase-query"
+import { queryKeys } from "@/utils/firebase/firebase-query-keys"
+import { Timestamp } from "firebase/firestore"
 import { storeToRefs } from "pinia"
 import { computed, ref, type ComputedRef, type Ref } from "vue"
 import { toast } from "vue-sonner"
@@ -115,6 +121,37 @@ export function useWorkspaceBotSessions(): UseWorkspaceBotSessionsReturn {
   // disable buttons while a batch runs.
   const isMutating = ref(false)
 
+  // Optimistic cache write: patch the live botSessions cache (keyed with the
+  // same `scope:workspace-all` params as the admin query), hold the key against
+  // the listener, run the callable, then reconcile on release / roll back on
+  // error. `isMutating` still gates the dialog spinner + sequential bulk
+  // actions; this just makes the LIST reflect the change instantly.
+  const runSessionWrite = async (
+    teamId: string,
+    workspaceId: string,
+    applyOptimistic: (current: IBotSession[]) => IBotSession[],
+    run: () => Promise<unknown>
+  ): Promise<void> => {
+    const key = queryKeys.list(
+      `teams/${teamId}/workspaces/${workspaceId}/botSessions`,
+      { scope: "workspace-all" }
+    )
+    const previous = queryClient.getQueryData<IBotSession[]>(key)
+    const release = holdOptimistic(key)
+    queryClient.setQueryData<IBotSession[]>(
+      key,
+      applyOptimistic(previous ?? [])
+    )
+    try {
+      await run()
+    } catch (error) {
+      queryClient.setQueryData(key, previous)
+      throw error
+    } finally {
+      setTimeout(() => release(), 120)
+    }
+  }
+
   const rename = async (id: string, title: string): Promise<void> => {
     const teamId = currentTeamId.value
     const workspaceId = currentWorkspaceId.value
@@ -127,12 +164,19 @@ export function useWorkspaceBotSessions(): UseWorkspaceBotSessionsReturn {
     if (isMutating.value) return
     isMutating.value = true
     try {
-      await renameBotSession({
+      await runSessionWrite(
         teamId,
         workspaceId,
-        sessionId: id,
-        title: trimmed,
-      })
+        (current) =>
+          current.map((s) => (s.id === id ? { ...s, title: trimmed } : s)),
+        () =>
+          renameBotSession({
+            teamId,
+            workspaceId,
+            sessionId: id,
+            title: trimmed,
+          })
+      )
     } catch (error) {
       console.error("[useWorkspaceBotSessions] rename failed:", error)
       toast.error("Failed to rename chat.")
@@ -148,12 +192,18 @@ export function useWorkspaceBotSessions(): UseWorkspaceBotSessionsReturn {
     if (isMutating.value) return
     isMutating.value = true
     try {
-      await archiveBotSession({
+      await runSessionWrite(
         teamId,
         workspaceId,
-        sessionId: id,
-        archived,
-      })
+        (current) =>
+          current.map((s) =>
+            s.id === id
+              ? { ...s, archivedAt: archived ? Timestamp.now() : null }
+              : s
+          ),
+        () =>
+          archiveBotSession({ teamId, workspaceId, sessionId: id, archived })
+      )
     } catch (error) {
       console.error("[useWorkspaceBotSessions] archive failed:", error)
       toast.error("Failed to update chat.")
@@ -169,7 +219,12 @@ export function useWorkspaceBotSessions(): UseWorkspaceBotSessionsReturn {
     if (isMutating.value) return
     isMutating.value = true
     try {
-      await deleteBotSession({ teamId, workspaceId, sessionId: id })
+      await runSessionWrite(
+        teamId,
+        workspaceId,
+        (current) => current.filter((s) => s.id !== id),
+        () => deleteBotSession({ teamId, workspaceId, sessionId: id })
+      )
     } catch (error) {
       console.error("[useWorkspaceBotSessions] delete failed:", error)
       toast.error("Failed to delete chat.")

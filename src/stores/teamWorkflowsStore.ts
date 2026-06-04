@@ -37,18 +37,25 @@ import {
   type WorkflowReviewDecision,
 } from "@/composables/useFunctions"
 import { firestore } from "@/modules/firebase"
+import { queryClient } from "@/modules/queryClient"
 import { useAuthStore } from "@/stores/authStore"
 import type { IWorkflow, IWorkflowRun } from "@/types/domain"
 import {
+  holdOptimistic,
   useCollectionQuery,
   type CollectionQuerySource,
 } from "@/utils/firebase/firebase-query"
+import {
+  queryKeys,
+  type FirestoreQueryKey,
+} from "@/utils/firebase/firebase-query-keys"
 import {
   collection,
   collectionGroup,
   limit,
   orderBy,
   query,
+  Timestamp,
   where,
   type FirestoreDataConverter,
 } from "firebase/firestore"
@@ -247,6 +254,39 @@ export const useTeamWorkflowsStore = defineStore("teamWorkflows", () => {
     return workspaceId
   }
 
+  // Optimistic cache writes for the lifecycle toggles: patch the live TanStack
+  // cache (the team-wide workflows collectionGroup, or a workspace's runs list),
+  // hold the key against the listener, run the callable, then reconcile on the
+  // held snapshot's release — or roll back on failure. Mirrors the integrations
+  // store: the row reflects the change instantly, no wait for the round-trip +
+  // snapshot echo. (create/update/enablePreset keep their `isSaving` spinner —
+  // they're form-dialog saves, not toggles.)
+  const workflowsCacheKey = (teamId: string): FirestoreQueryKey =>
+    queryKeys.list(`collectionGroup:workflows:${teamId}`)
+  const runsCacheKey = (
+    teamId: string,
+    workspaceId: string
+  ): FirestoreQueryKey =>
+    queryKeys.list(`teams/${teamId}/workspaces/${workspaceId}/workflowRuns`)
+
+  const runCacheWrite = async <T>(
+    key: FirestoreQueryKey,
+    applyOptimistic: (current: T[]) => T[],
+    run: () => Promise<unknown>
+  ): Promise<void> => {
+    const previous = queryClient.getQueryData<T[]>(key)
+    const release = holdOptimistic(key)
+    queryClient.setQueryData<T[]>(key, applyOptimistic(previous ?? []))
+    try {
+      await run()
+    } catch (error) {
+      queryClient.setQueryData(key, previous)
+      throw error
+    } finally {
+      setTimeout(() => release(), 120)
+    }
+  }
+
   const create = async (draft: CreateWorkflowDraft): Promise<string> => {
     const teamId = requireTeam()
     if (isSaving.value)
@@ -282,7 +322,13 @@ export const useTeamWorkflowsStore = defineStore("teamWorkflows", () => {
   ): Promise<void> => {
     const teamId = requireTeam()
     const workspaceId = requireWorkflowWorkspaceId(workflowId)
-    await setTeamWorkflowEnabledFn({ teamId, workspaceId, workflowId, enabled })
+    await runCacheWrite<IWorkflow>(
+      workflowsCacheKey(teamId),
+      (current) =>
+        current.map((w) => (w.id === workflowId ? { ...w, enabled } : w)),
+      () =>
+        setTeamWorkflowEnabledFn({ teamId, workspaceId, workflowId, enabled })
+    )
   }
 
   const archive = async (
@@ -291,13 +337,26 @@ export const useTeamWorkflowsStore = defineStore("teamWorkflows", () => {
   ): Promise<void> => {
     const teamId = requireTeam()
     const workspaceId = requireWorkflowWorkspaceId(workflowId)
-    await archiveTeamWorkflowFn({ teamId, workspaceId, workflowId, archived })
+    await runCacheWrite<IWorkflow>(
+      workflowsCacheKey(teamId),
+      (current) =>
+        current.map((w) =>
+          w.id === workflowId
+            ? { ...w, archivedAt: archived ? Timestamp.now() : null }
+            : w
+        ),
+      () => archiveTeamWorkflowFn({ teamId, workspaceId, workflowId, archived })
+    )
   }
 
   const remove = async (workflowId: string): Promise<void> => {
     const teamId = requireTeam()
     const workspaceId = requireWorkflowWorkspaceId(workflowId)
-    await deleteTeamWorkflowFn({ teamId, workspaceId, workflowId })
+    await runCacheWrite<IWorkflow>(
+      workflowsCacheKey(teamId),
+      (current) => current.filter((w) => w.id !== workflowId),
+      () => deleteTeamWorkflowFn({ teamId, workspaceId, workflowId })
+    )
   }
 
   const runNow = async (workflowId: string): Promise<string> => {
@@ -337,7 +396,11 @@ export const useTeamWorkflowsStore = defineStore("teamWorkflows", () => {
       (r) => r.id === runId
     )?.workspaceId
     if (!workspaceId) throw new Error("Run not found.")
-    await deleteTeamWorkflowRunFn({ teamId, workspaceId, runId })
+    await runCacheWrite<IWorkflowRun>(
+      runsCacheKey(teamId, workspaceId),
+      (current) => current.filter((r) => r.id !== runId),
+      () => deleteTeamWorkflowRunFn({ teamId, workspaceId, runId })
+    )
   }
 
   /** Materialize a predefined catalog preset as a runnable workflow. */

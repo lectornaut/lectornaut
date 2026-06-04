@@ -16,10 +16,7 @@
 
 import {
   createIntegration as createIntegrationFn,
-  deleteIntegration as deleteIntegrationFn,
-  installIntegration as installIntegrationFn,
   setIntegrationEnabled as setIntegrationEnabledFn,
-  uninstallIntegration as uninstallIntegrationFn,
   updateIntegration as updateIntegrationFn,
   type CreateTeamCustomToolDraft,
   type UpdateTeamCustomToolPatch,
@@ -340,41 +337,37 @@ export const useTeamCustomToolsStore = defineStore("teamCustomTools", () => {
       return integrationToTool(data.integration)
     })
 
-  const archive = (toolId: string): Promise<ITeamCustomTool> =>
-    withSave(async (teamId) => {
-      const { data } = await uninstallIntegrationFn({
-        teamId,
-        integrationId: toolId,
-      })
-      return integrationToTool(data.integration)
+  // Lifecycle toggles are OPTIMISTIC — delegate to the integrations store
+  // (shared cache patch + rollback), skipping `withSave`/`isSaving` so the row
+  // Switch flips instantly. Create/update keep `withSave` (form-dialog save).
+  const archive = async (toolId: string): Promise<ITeamCustomTool> => {
+    const { integration } = await integrationsStore.uninstall({
+      integrationId: toolId,
     })
+    return integrationToTool(integration)
+  }
 
-  const restore = (toolId: string): Promise<ITeamCustomTool> =>
-    withSave(async (teamId) => {
-      const { data } = await installIntegrationFn({
-        teamId,
-        integrationId: toolId,
-      })
-      return integrationToTool(data.integration)
+  const restore = async (toolId: string): Promise<ITeamCustomTool> => {
+    const { integration } = await integrationsStore.install({
+      integrationId: toolId,
     })
+    return integrationToTool(integration)
+  }
 
-  const setEnabled = (
+  const setEnabled = async (
     toolId: string,
     enabled: boolean
-  ): Promise<ITeamCustomTool> =>
-    withSave(async (teamId) => {
-      const { data } = await setIntegrationEnabledFn({
-        teamId,
-        integrationId: toolId,
-        enabled,
-      })
-      return integrationToTool(data.integration)
-    })
+  ): Promise<ITeamCustomTool> => {
+    const { integration } = await integrationsStore.setEnabled(
+      { integrationId: toolId },
+      enabled
+    )
+    return integrationToTool(integration)
+  }
 
-  const remove = (toolId: string): Promise<void> =>
-    withSave(async (teamId) => {
-      await deleteIntegrationFn({ teamId, integrationId: toolId })
-    })
+  const remove = async (toolId: string): Promise<void> => {
+    await integrationsStore.remove(toolId)
+  }
 
   return {
     tools,

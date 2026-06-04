@@ -79,6 +79,44 @@ export const buildWorkspaceNodeAttachmentStoragePath = ({
 }: WorkspaceNodeAttachmentStoragePathParams) =>
   `${getWorkspaceNodeAttachmentStoragePrefix(params)}/${version}/${sanitizeAttachmentFileName(fileName)}`
 
+// ─── Bot chat-session attachments ────────────────────────────────────────────
+// Same storage root + sanitize/blocked-mime/size rules as node attachments,
+// with `botSessions/{sessionId}` occupying the `{scope}/{nodeId}` slot.
+
+export interface BotSessionAttachmentPathParams {
+  teamId: string
+  workspaceId: string
+  sessionId: string
+  attachmentId: string
+}
+
+export interface BotSessionAttachmentStoragePathParams extends BotSessionAttachmentPathParams {
+  version: string
+  fileName: string
+}
+
+export const getBotSessionAttachmentsCollectionPath = (
+  teamId: string,
+  workspaceId: string,
+  sessionId: string
+) =>
+  `teams/${teamId}/workspaces/${workspaceId}/botSessions/${sessionId}/attachments`
+
+export const getBotSessionAttachmentStoragePrefix = ({
+  teamId,
+  workspaceId,
+  sessionId,
+  attachmentId,
+}: BotSessionAttachmentPathParams) =>
+  `${NODE_ATTACHMENTS_STORAGE_ROOT}/teams/${teamId}/workspaces/${workspaceId}/botSessions/${sessionId}/${attachmentId}`
+
+export const buildBotSessionAttachmentStoragePath = ({
+  version,
+  fileName,
+  ...params
+}: BotSessionAttachmentStoragePathParams) =>
+  `${getBotSessionAttachmentStoragePrefix(params)}/${version}/${sanitizeAttachmentFileName(fileName)}`
+
 export const formatAttachmentSize = (
   size: number | null | undefined
 ): string => {

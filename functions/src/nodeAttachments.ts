@@ -50,3 +50,40 @@ export const isWorkspaceNodeAttachmentStoragePath = (
   path: string,
   params: WorkspaceNodeAttachmentPathParams
 ) => path.startsWith(`${getWorkspaceNodeAttachmentStoragePrefix(params)}/`)
+
+// ---------------------------------------------------------------------------
+// Bot chat-session attachments
+//
+// Same storage root + sanitize/blocked-mime rules as node attachments, but
+// `botSessions/{sessionId}` occupies the `{scope}/{nodeId}` slot of the
+// layout. Keeping them under the same `attachments/` root means the existing
+// node storage rule simply denies them (`isWorkspaceNodeScope("botSessions")`
+// is false) and a dedicated session rule grants them.
+// ---------------------------------------------------------------------------
+
+export interface BotSessionAttachmentPathParams {
+  teamId: string
+  workspaceId: string
+  sessionId: string
+  attachmentId: string
+}
+
+export const botSessionAttachmentsCollectionPath = (
+  teamId: string,
+  workspaceId: string,
+  sessionId: string
+) =>
+  `teams/${teamId}/workspaces/${workspaceId}/botSessions/${sessionId}/attachments`
+
+export const getBotSessionAttachmentStoragePrefix = ({
+  teamId,
+  workspaceId,
+  sessionId,
+  attachmentId,
+}: BotSessionAttachmentPathParams) =>
+  `${NODE_ATTACHMENTS_STORAGE_ROOT}/teams/${teamId}/workspaces/${workspaceId}/botSessions/${sessionId}/${attachmentId}`
+
+export const isBotSessionAttachmentStoragePath = (
+  path: string,
+  params: BotSessionAttachmentPathParams
+) => path.startsWith(`${getBotSessionAttachmentStoragePrefix(params)}/`)
