@@ -5,6 +5,7 @@ import { BUILT_IN_AGENTS, isBuiltInAgentId } from "@/data/builtInAgents"
 import {
   IconAtSign,
   IconBan,
+  IconBot,
   IconCheck,
   IconCircle,
   IconCircleDashed,
@@ -421,29 +422,21 @@ const takenAgentIds = computed(() => {
   return ids
 })
 
-/** Agent options matching the search text and not already taken. */
-const filteredAgentOptions = computed<AgentOption[]>(() => {
-  const query = inviteEmail.value.trim().toLowerCase()
-  return availableAgents.value.filter((agent) => {
-    if (takenAgentIds.value.has(agent.id)) return false
-    if (!query) return true
-    return (
-      agent.name.toLowerCase().includes(query) ||
-      agent.description.toLowerCase().includes(query)
-    )
-  })
-})
+/**
+ * Agents the user can still add — taken ones removed. The combobox's own
+ * `<Command>` handles the text search (matching each item's content), so this
+ * is only the business-level "not already a member/staged" filter.
+ */
+const pickableAgents = computed<AgentOption[]>(() =>
+  availableAgents.value.filter((agent) => !takenAgentIds.value.has(agent.id))
+)
 
-/** Whether the typed text is a fresh, valid email we can stage as an invite. */
-const canInviteTypedEmail = computed(() => {
-  const email = inviteEmail.value.trim()
-  if (!isValidEmail(email)) return false
-  if (members.value.some((m) => m.email === email)) return false
-  if (user.value?.email === email) return false
-  return true
-})
-
-/** Stage an agent to be added as a member (role is locked to "member"). */
+/**
+ * Stage an agent to be added as a member (role is locked to "member"). The
+ * picker stays open so several agents can be added in a row — the just-staged
+ * one drops out of `pickableAgents`, and `<Command>` clears its own search on
+ * select.
+ */
 const stageAgent = (agent: AgentOption) => {
   if (!canInviteMembers.value && props.mode !== "create") {
     toast.error(t(getCannotInviteMembersReason.value || ""))
@@ -458,8 +451,6 @@ const stageAgent = (agent: AgentOption) => {
     isBuiltIn: agent.isBuiltIn,
     existing: false,
   })
-  inviteEmail.value = ""
-  invitePickerOpen.value = false
 }
 
 /** Remove a staged or already-existing agent member from the dialog. */
@@ -1343,9 +1334,23 @@ const handleSubmit = async () => {
                               "
                               autocomplete="off"
                               :disabled="!canInviteMembers && mode !== 'create'"
-                              @focus="invitePickerOpen = true"
                               @keydown.enter.prevent="addMember"
                             />
+                            <InputGroupAddon align="inline-end">
+                              <PopoverTrigger as-child>
+                                <InputGroupButton
+                                  size="icon-xs"
+                                  :disabled="
+                                    !canInviteMembers && mode !== 'create'
+                                  "
+                                  :aria-label="
+                                    t('components.teamDialog.tooltips.addAgent')
+                                  "
+                                >
+                                  <IconBot />
+                                </InputGroupButton>
+                              </PopoverTrigger>
+                            </InputGroupAddon>
                           </InputGroup>
                         </TooltipTrigger>
                         <TooltipContent
@@ -1353,80 +1358,79 @@ const handleSubmit = async () => {
                         >
                           {{ t(getCannotInviteMembersReason || "") }}
                         </TooltipContent>
+                        <TooltipContent v-else>
+                          {{ t("components.teamDialog.tooltips.addAgent") }}
+                        </TooltipContent>
                       </Tooltip>
                     </TooltipProvider>
                   </div>
                 </PopoverAnchor>
                 <PopoverContent
                   align="start"
-                  class="w-(--reka-popover-trigger-width) p-1"
-                  @open-auto-focus.prevent
-                  @close-auto-focus.prevent
+                  class="w-(--reka-popover-trigger-width) p-0"
                 >
-                  <div class="max-h-64 overflow-y-auto">
-                    <button
-                      v-for="agent in filteredAgentOptions"
-                      :key="agent.id"
-                      type="button"
-                      class="hover:bg-accent flex w-full items-center gap-2 rounded-md p-2 text-left"
-                      @click="stageAgent(agent)"
-                    >
-                      <span
-                        class="size-6 shrink-0 overflow-hidden rounded-full"
-                      >
-                        <BoringAvatar
-                          variant="beam"
-                          :size="24"
-                          :name="agentAvatarSeed(agent)"
-                          :colors="[
-                            'var(--color-chart-1)',
-                            'var(--color-chart-2)',
-                            'var(--color-chart-3)',
-                            'var(--color-chart-4)',
-                            'var(--color-chart-5)',
-                          ]"
-                        />
-                      </span>
-                      <span class="flex min-w-0 flex-col">
-                        <span
-                          class="flex items-center gap-1.5 truncate text-sm"
-                        >
-                          {{ agent.name }}
-                          <Badge variant="secondary">
-                            {{ t("components.teamDialog.labels.agentBadge") }}
-                          </Badge>
-                        </span>
-                        <span
-                          v-if="agent.description"
-                          class="text-muted-foreground truncate text-xs"
-                        >
-                          {{ agent.description }}
-                        </span>
-                      </span>
-                    </button>
-                    <button
-                      v-if="canInviteTypedEmail"
-                      type="button"
-                      class="hover:bg-accent flex w-full items-center gap-2 rounded-md p-2 text-left text-sm"
-                      @click="addMember"
-                    >
-                      <IconAtSign class="size-4 shrink-0" />
-                      {{
-                        t("components.teamDialog.tooltips.inviteEmail", {
-                          email: inviteEmail.trim(),
-                        })
-                      }}
-                    </button>
-                    <p
-                      v-if="
-                        filteredAgentOptions.length === 0 &&
-                        !canInviteTypedEmail
+                  <Command>
+                    <CommandInput
+                      :placeholder="
+                        $t('components.teamDialog.placeholders.searchAgents')
                       "
-                      class="text-muted-foreground p-2 text-center text-xs"
-                    >
-                      {{ t("components.teamDialog.labels.noAgentMatches") }}
-                    </p>
-                  </div>
+                      class="placeholder:text-muted-foreground border-none bg-transparent focus:border-inherit focus:ring-0"
+                    />
+                    <CommandList>
+                      <CommandEmpty v-if="pickableAgents.length > 0">
+                        {{ t("components.teamDialog.labels.noAgentMatches") }}
+                      </CommandEmpty>
+                      <p
+                        v-else
+                        class="text-muted-foreground p-3 text-center text-xs"
+                      >
+                        {{ t("components.teamDialog.labels.noAgentMatches") }}
+                      </p>
+                      <CommandGroup>
+                        <CommandItem
+                          v-for="agent in pickableAgents"
+                          :key="agent.id"
+                          :value="agent.id"
+                          @select="stageAgent(agent)"
+                        >
+                          <span
+                            class="size-6 shrink-0 overflow-hidden rounded-full"
+                          >
+                            <BoringAvatar
+                              variant="beam"
+                              :size="24"
+                              :name="agentAvatarSeed(agent)"
+                              :colors="[
+                                'var(--color-chart-1)',
+                                'var(--color-chart-2)',
+                                'var(--color-chart-3)',
+                                'var(--color-chart-4)',
+                                'var(--color-chart-5)',
+                              ]"
+                            />
+                          </span>
+                          <span class="flex min-w-0 flex-col">
+                            <span
+                              class="flex items-center gap-1.5 truncate text-sm"
+                            >
+                              {{ agent.name }}
+                              <Badge variant="secondary">
+                                {{
+                                  t("components.teamDialog.labels.agentBadge")
+                                }}
+                              </Badge>
+                            </span>
+                            <span
+                              v-if="agent.description"
+                              class="text-muted-foreground truncate text-xs"
+                            >
+                              {{ agent.description }}
+                            </span>
+                          </span>
+                        </CommandItem>
+                      </CommandGroup>
+                    </CommandList>
+                  </Command>
                 </PopoverContent>
               </Popover>
             </ButtonGroup>

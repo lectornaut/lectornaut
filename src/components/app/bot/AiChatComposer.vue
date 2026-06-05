@@ -659,8 +659,25 @@ const handleSend = async () => {
   }
 
   userInput.value = ""
-  pendingUploadFiles.value = []
+  // Keep the preview chips visible THROUGH the send (they read from the
+  // buffer) so the file doesn't flicker to nothing mid-stream; clear + promote
+  // to selected only once the turn commits.
   await botChat.sendMessage(text, sendOpts)
+  pendingUploadFiles.value = []
+  // The uploads are now committed under the freshly-created session. Add them
+  // to the per-turn selection so they persist as selected chips for subsequent
+  // turns — matching the existing-session upload path, which selects on upload.
+  // The user can unselect from the chip row or the inspector sidebar. Guarded
+  // on the session having actually been created (a failed send leaves
+  // `sessionId` null), and clearing the buffer first so the two ref writes
+  // batch into a single render (chip swaps pending → selected, no duplicate).
+  if (sendOpts && botChat.sessionId.value === sendOpts.newSessionId) {
+    for (const pending of sendOpts.pendingAttachments) {
+      if (!selectedAttachmentIds.value.includes(pending.attachmentId)) {
+        botChat.toggleAttachmentSelection(pending.attachmentId)
+      }
+    }
+  }
 }
 
 const handleKeydown = (event: KeyboardEvent) => {

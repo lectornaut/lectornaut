@@ -2967,7 +2967,8 @@
         "publicTeamUrl": "Public at {url}",
         "inviteEmail": "Invite {email}",
         "removeAgent": "Remove agent",
-        "agentRoleLocked": "Agents join as members — role can't be changed"
+        "agentRoleLocked": "Agents join as members — role can't be changed",
+        "addAgent": "Add an agent"
       },
       "labels": {
         "clickToChange": "Click to change",
@@ -2991,7 +2992,8 @@
         "teamName": "Acme Inc.",
         "email": "user{'@'}example.com",
         "publicHandle": "acme",
-        "inviteOrAgent": "Email address or search agents…"
+        "inviteOrAgent": "Email address or search agents…",
+        "searchAgents": "Search agents…"
       },
       "roles": {
         "owner": "Owner",
