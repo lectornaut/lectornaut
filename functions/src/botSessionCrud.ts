@@ -25,7 +25,6 @@ import {
   onCall,
   type CallableRequest,
 } from "firebase-functions/v2/https"
-
 import {
   extractMessagesFromSessionData,
   getMembershipRole,

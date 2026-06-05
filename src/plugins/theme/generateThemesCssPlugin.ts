@@ -2,7 +2,6 @@ import { readFileSync, writeFileSync } from "node:fs"
 import { resolve } from "node:path"
 import { fileURLToPath } from "node:url"
 import type { HmrContext, Plugin, ViteDevServer } from "vite"
-
 import { generateThemeCss } from "./themeGenerator"
 
 export interface GenerateThemesCssPluginOptions {

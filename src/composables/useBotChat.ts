@@ -33,6 +33,7 @@ import {
   updateBotSessionVisibility,
   type BotChatMode,
   type BotChatNodeRef,
+  type BotSessionPendingAttachment,
 } from "@/composables/useFunctions"
 import {
   botModelProviders,
@@ -269,7 +270,19 @@ export interface BotChatContext {
   canEditActive: Ref<boolean>
   canChangeVisibilityActive: Ref<boolean>
   canManageActive: Ref<boolean>
-  sendMessage: (text: string) => Promise<void>
+  /**
+   * Send a turn. `opts.newSessionId` + `opts.pendingAttachments` drive the
+   * brand-new-chat single-send upload path: the composer mints a session id,
+   * uploads the buffered files' bytes to it, and passes the refs here so the
+   * very first message carries them (the server writes the attachment docs).
+   */
+  sendMessage: (
+    text: string,
+    opts?: {
+      newSessionId?: string
+      pendingAttachments?: BotSessionPendingAttachment[]
+    }
+  ) => Promise<void>
   /**
    * Resume a chat that's paused on an `askQuestion` interrupt.
    * The `messageId` + `ref` locate the tool segment (so the UI can
@@ -1166,7 +1179,13 @@ export function useBotChat(): BotChatContext {
     return { appendText, pushToolCall, fillToolResult }
   }
 
-  const sendMessage = async (text: string) => {
+  const sendMessage = async (
+    text: string,
+    opts?: {
+      newSessionId?: string
+      pendingAttachments?: BotSessionPendingAttachment[]
+    }
+  ) => {
     const trimmed = text.trim()
     if (!trimmed) return
 
@@ -1238,12 +1257,19 @@ export function useBotChat(): BotChatContext {
         {
           teamId,
           workspaceId,
-          sessionId: sessionId.value,
+          // For a brand-new chat with buffered uploads the composer mints the
+          // id (so it can upload blobs to the right path before sending) and
+          // passes it here; otherwise this is null (server mints) or the
+          // resumed session id.
+          sessionId: sessionId.value ?? opts?.newSessionId ?? null,
           message: trimmed,
           mode: mode.value,
           model: model.value,
           contextNodes,
           attachmentIds,
+          ...(opts?.pendingAttachments && opts.pendingAttachments.length > 0
+            ? { pendingAttachments: opts.pendingAttachments }
+            : {}),
           ...(pinnedNode ? { pinnedNode } : {}),
           // Always send `activeAgentId` (even when null) so the server
           // knows the user's intent for this turn. Omitting the field

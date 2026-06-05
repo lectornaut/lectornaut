@@ -40,7 +40,6 @@
 import { googleAI } from "@genkit-ai/google-genai"
 import { HttpsError } from "firebase-functions/v2/https"
 import { z } from "genkit/beta"
-
 import { ai, isAiModelProviderConfigured } from "./genkitClient.js"
 // Type-only imports (erased at runtime — no import cycle with botNodeTools).
 import type { CapturedNodeChange } from "./botNodeTools.js"

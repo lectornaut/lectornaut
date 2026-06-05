@@ -29,7 +29,6 @@
 
 import { HttpsError, onCall } from "firebase-functions/v2/https"
 import { z } from "genkit/beta"
-
 import { getMembershipRole, requireVerifiedAuth } from "./bot.js"
 import { BOT_CHAT_MODES, type BotChatMode } from "./botBuiltinTools.js"
 import { admin, db } from "./firebase.js"

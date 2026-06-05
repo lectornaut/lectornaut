@@ -39,7 +39,6 @@
 import * as logger from "firebase-functions/logger"
 import { HttpsError, onCall } from "firebase-functions/v2/https"
 import { z } from "genkit/beta"
-
 import { getMembershipRole, requireVerifiedAuth } from "./bot.js"
 import { db } from "./firebase.js"
 import { ai } from "./genkitClient.js"

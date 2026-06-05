@@ -74,7 +74,11 @@ import {
   type NodeRef,
 } from "./botContext.js"
 import { findRelatedNodesTool } from "./botLink.js"
-import { loadSessionAttachmentMediaParts } from "./botMedia.js"
+import {
+  loadSessionAttachmentMediaParts,
+  materializeSessionAttachments,
+  type PendingSessionAttachmentInput,
+} from "./botMedia.js"
 import {
   NODE_READ_TOOLS,
   NODE_WRITE_TOOLS,
@@ -1730,6 +1734,29 @@ const SendBotMessageInput = z.object({
    */
   attachmentIds: z.array(z.string().min(1)).max(6).default([]),
   /**
+   * Files the client uploaded to Storage for THIS turn whose metadata docs
+   * don't exist yet — the brand-new-chat single-send path. The client mints
+   * the `sessionId` above, uploads each blob to `botSessions/{sessionId}/…`
+   * (Storage permits this without the session doc), and passes the refs here.
+   * The server validates each `storagePath`, re-reads the authoritative
+   * content-type/size, writes the attachment doc, and folds the resulting ids
+   * into the media-loading step — so the very first message can carry uploads
+   * without a pre-existing session. Requires MANAGE_WORKSPACE_CONTENT (mirrors
+   * `createBotSessionAttachment`). Existing-session uploads use the
+   * `createBotSessionAttachment` callable + `attachmentIds` instead.
+   */
+  pendingAttachments: z
+    .array(
+      z.object({
+        attachmentId: z.string().min(1),
+        storagePath: z.string().min(1),
+        displayName: z.string().min(1),
+        originalName: z.string().min(1),
+      })
+    )
+    .max(6)
+    .default([]),
+  /**
    * Set only when creating a new session, to bind it to a specific
    * workspace node. Enables `findBotSessionByPinnedNode` to resume the
    * same chat the next time the node's inspector tab opens. Ignored on
@@ -2370,6 +2397,12 @@ async function prepareChatTurn(opts: {
   message?: string
   /** Chat-session attachment ids selected for this turn (multimodal media). */
   attachmentIds?: string[]
+  /**
+   * Client-uploaded-but-uncommitted attachments for this turn (brand-new-chat
+   * single-send path). The interactive `sendBotMessage` flow forwards these;
+   * transfer/interrupt/headless callers leave them empty.
+   */
+  pendingAttachments?: readonly PendingSessionAttachmentInput[]
   activeAgentId: string | null | undefined
   model: BotAgentModel | undefined
   pinnedNode?: NodeRef
@@ -2415,6 +2448,7 @@ async function prepareChatTurn(opts: {
     contextNodes,
     message,
     attachmentIds,
+    pendingAttachments,
     activeAgentId,
     pinnedNode,
     requireExistingSession,
@@ -2456,7 +2490,17 @@ async function prepareChatTurn(opts: {
   // `canEditActive`. Archived sessions reject regardless of role —
   // archiving is a soft "read-only" flag.
   const existingSession: BotSessionDocSummary | null = loadedSession
-  if (sessionId) {
+  // A client-minted sessionId carrying pending uploads is the brand-new-chat
+  // single-send path: the doc legitimately doesn't exist yet (the client chose
+  // the id so it could upload blobs to the right Storage path before sending),
+  // and `createSession({ sessionId })` below mints it. Skip the "not found"
+  // rejection for exactly that case; every other provided id is a resume.
+  const creatingNewSessionWithClientId =
+    !!sessionId &&
+    !existingSession &&
+    !requireExistingSession &&
+    (pendingAttachments?.length ?? 0) > 0
+  if (sessionId && !creatingNewSessionWithClientId) {
     if (!existingSession) {
       throw new HttpsError("not-found", "Session not found.")
     }
@@ -2477,10 +2521,48 @@ async function prepareChatTurn(opts: {
         "You don't have permission to send messages in this chat."
       )
     }
-  } else if (requireExistingSession) {
+  } else if (!sessionId && requireExistingSession) {
     // Interrupt-response flow can't operate without a session — the
     // pending interrupt lives inside the SessionData blob.
     throw new HttpsError("invalid-argument", "sessionId is required.")
+  }
+
+  // Pending uploads (brand-new-chat single-send path). The client uploaded
+  // these blobs to `botSessions/{sessionId}/…` Storage (allowed without the
+  // session doc) and is sending their refs inline. Write the attachment docs
+  // now — BEFORE the media load below reads them — and fold the ids into this
+  // turn's selection. Gated on MANAGE_WORKSPACE_CONTENT, matching
+  // `createBotSessionAttachment`. For a brand-new chat the session doc is
+  // materialized by `createSession({ sessionId })` at end-of-turn save (so
+  // `isNew` stays true and the title derives correctly).
+  const materializedAttachmentIds: string[] = []
+  if (pendingAttachments && pendingAttachments.length > 0) {
+    if (!sessionId) {
+      throw new HttpsError(
+        "invalid-argument",
+        "pendingAttachments require a sessionId."
+      )
+    }
+    if (
+      !can(actingId, Capabilities.MANAGE_WORKSPACE_CONTENT, {
+        scope: "workspace",
+        teamRole: role,
+      })
+    ) {
+      throw new HttpsError(
+        "permission-denied",
+        "You do not have permission to upload chat attachments."
+      )
+    }
+    materializedAttachmentIds.push(
+      ...(await materializeSessionAttachments({
+        teamId,
+        workspaceId,
+        sessionId,
+        actorId: actingId,
+        pendingAttachments,
+      }))
+    )
   }
 
   // Resolve active agent. Lookup precedence: input override →
@@ -2645,7 +2727,7 @@ async function prepareChatTurn(opts: {
   // resumed sessions keeps the invariant "pinnedNodeKey → exactly one
   // new session" crisp.
   const newSessionPinnedNodeKey =
-    !sessionId && pinnedNode
+    (!sessionId || creatingNewSessionWithClientId) && pinnedNode
       ? pinnedNodeKey(sessionOwnerUid, pinnedNode.scope, pinnedNode.nodeId)
       : undefined
 
@@ -2684,7 +2766,9 @@ async function prepareChatTurn(opts: {
     sessionMediaParts,
   ] = await Promise.all([
     sessionId
-      ? ai.loadSession(sessionId, { store })
+      ? creatingNewSessionWithClientId
+        ? Promise.resolve(ai.createSession({ store, sessionId }))
+        : ai.loadSession(sessionId, { store })
       : Promise.resolve(ai.createSession({ store })),
     loadAndBuildContextBlock(teamId, workspaceId, contextNodes, !!message),
     // Installed + enabled tool integrations (built-in via catalog overlay +
@@ -2708,7 +2792,7 @@ async function prepareChatTurn(opts: {
       teamId,
       workspaceId,
       sessionId,
-      attachmentIds: attachmentIds ?? [],
+      attachmentIds: [...(attachmentIds ?? []), ...materializedAttachmentIds],
       includeMedia: !!message,
     }),
   ])
@@ -2954,6 +3038,12 @@ interface RunAgentTurnOptions {
   contextNodes: NodeRef[]
   /** Chat-session attachment ids selected for this turn (multimodal media). */
   attachmentIds?: string[]
+  /**
+   * Client-uploaded-but-uncommitted attachments for this turn (brand-new-chat
+   * single-send path). Only the interactive `sendBotMessage` flow sets this;
+   * headless/interrupt callers leave it empty.
+   */
+  pendingAttachments?: readonly PendingSessionAttachmentInput[]
   activeAgentId: string | null | undefined
   pinnedNode?: NodeRef
   /** Stream sink. Omitted → a no-op, for headless runs with no client. */
@@ -3037,6 +3127,7 @@ async function runAgentTurn(
         contextNodes: opts.contextNodes,
         message: opts.message,
         attachmentIds: opts.attachmentIds,
+        pendingAttachments: opts.pendingAttachments,
         activeAgentId: opts.activeAgentId,
         model: opts.model,
         pinnedNode: opts.pinnedNode,
@@ -3272,6 +3363,7 @@ const sendBotMessageFlow = ai.defineFlow(
       activeAgentId: input.activeAgentId,
       pinnedNode: input.pinnedNode,
       attachmentIds: input.attachmentIds,
+      pendingAttachments: input.pendingAttachments,
       sendChunk,
       archivedSessionMessage:
         "This chat is archived. Restore it before sending new messages.",

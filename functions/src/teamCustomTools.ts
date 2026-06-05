@@ -13,7 +13,6 @@
 import { logger } from "firebase-functions/v2"
 import { HttpsError } from "firebase-functions/v2/https"
 import { tool, z } from "genkit/beta"
-
 import type { BotActionContext } from "./botBuiltinTools.js"
 import { searchWorkspaceNodesTool } from "./botRag.js"
 import {

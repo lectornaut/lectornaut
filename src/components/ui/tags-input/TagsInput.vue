@@ -22,7 +22,7 @@ const forwarded = useForwardPropsEmits(delegatedProps, emits)
     :class="
       cn(
         'border-input bg-background flex flex-wrap items-center gap-2 rounded-md border px-2 py-1 text-sm shadow-xs transition-[color,box-shadow] outline-none',
-        'focus-within:border-ring focus-within:ring-ring/50 focus-within:ring-[3px]',
+        'focus-within:border-ring focus-within:ring-ring/50 focus-within:ring-3',
         'aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive',
         props.class
       )

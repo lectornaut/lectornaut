@@ -22,6 +22,7 @@ export const notificationTypeSchema = z.enum([
   "invitation.declined",
   "member.joined",
   "member.removed",
+  "workflow.run",
 ])
 
 export const notificationSourceSchema = z.object({

@@ -5,7 +5,17 @@ import path, { dirname } from "node:path"
 import { fileURLToPath } from "node:url"
 
 const baseDir = dirname(fileURLToPath(import.meta.url))
-const templatesDir = path.join(baseDir, "templates")
+// In source this module lives at `src/emails/`, so templates are a sibling
+// `templates/` dir. esbuild bundles everything into a single
+// `functions-deploy/index.js` at the deploy root, so this module is flattened
+// there and the build copies templates to `<root>/emails/templates` instead.
+// Resolve whichever layout actually exists so rendering works in both the dev
+// source tree and the deployed bundle.
+const templatesDir =
+  [
+    path.join(baseDir, "templates"),
+    path.join(baseDir, "emails", "templates"),
+  ].find((dir) => fs.existsSync(dir)) ?? path.join(baseDir, "templates")
 const templateContentCache = new Map<string, string>()
 const compiledTemplateCache = new Map<
   string,

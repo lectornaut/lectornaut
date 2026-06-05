@@ -1,12 +1,11 @@
 <script setup lang="ts">
+import { CheckIcon } from "@lucide/vue"
 import type {
   ContextMenuCheckboxItemEmits,
   ContextMenuCheckboxItemProps,
 } from "reka-ui"
-
 import type { HTMLAttributes } from "vue"
 import { reactiveOmit } from "@vueuse/core"
-import { CheckIcon } from "lucide-vue-next"
 import {
   ContextMenuCheckboxItem,
   ContextMenuItemIndicator,

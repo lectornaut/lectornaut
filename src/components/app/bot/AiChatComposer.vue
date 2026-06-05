@@ -7,7 +7,9 @@ import {
   type BotChatNodeRef,
 } from "@/composables/useBotChat"
 import { useDictation } from "@/composables/useDictation"
+import type { BotSessionPendingAttachment } from "@/composables/useFunctions"
 import {
+  stageBotSessionAttachmentBlob,
   useSessionAttachmentsState,
   type BotSessionAttachmentContext,
 } from "@/composables/useSessionAttachments"
@@ -28,6 +30,8 @@ import {
   IconX,
 } from "@/data/icons"
 import { findBotModel } from "@/helpers/defaults"
+import { NODE_ATTACHMENT_MAX_FILE_SIZE_BYTES } from "@/helpers/node-attachments"
+import { generateId } from "@/helpers/utilities"
 import { useIntegrationsStore } from "@/stores/integrationsStore"
 import { useAuthStore } from "@/stores/authStore"
 import { useFileTreeStore } from "@/stores/fileTreeStore"
@@ -250,8 +254,10 @@ const canOpenAttachSheet = computed(
 // Uploaded files live on the chat session (full CRUD in the Bot inspector's
 // "Attachments" tab). Here we expose a quick "Upload files" action + chips
 // for the per-turn selection so the recurring token cost stays visible.
-// Scoped to the current session id; null (a brand-new chat) disables uploads
-// until the first message creates the session (the chicken-and-egg gate).
+// Scoped to the current session id; on a brand-new chat (null) this query is
+// idle and picks are buffered locally instead (see `pendingUploadFiles`),
+// then staged + sent with the first message — so uploads no longer wait on a
+// session existing.
 const sessionAttachmentContext = computed<BotSessionAttachmentContext | null>(
   () => {
     const teamId = currentTeamId.value
@@ -281,9 +287,22 @@ const hasSelectedAttachments = computed(
 const deselectAttachment = (id: string) =>
   botChat?.toggleAttachmentSelection(id)
 
-const canUploadFiles = computed(
-  () => !!botChat?.sessionId.value && canOpenAttachSheet.value
-)
+// Uploads no longer require an existing session: on a brand-new chat the
+// picked files are buffered locally (preview chips) and their bytes are staged
+// + sent with the first message (see `handleSend`). The gate matches "attach
+// context" — team + workspace + editable.
+const canUploadFiles = computed(() => canOpenAttachSheet.value)
+
+// Brand-new chat (no session id yet): files the user picked, held as local
+// previews and uploaded only when the first message is sent. Deferring the
+// upload to send avoids creating a session — or orphaning blobs — for a chat
+// the user never sends. On an existing session the immediate-upload path in
+// `watch(uploadFiles)` is used instead.
+const pendingUploadFiles = ref<File[]>([])
+const hasPendingUploads = computed(() => pendingUploadFiles.value.length > 0)
+const removePendingUpload = (index: number) => {
+  pendingUploadFiles.value.splice(index, 1)
+}
 
 const { files: uploadFiles, open: openUploadDialog } = useFileDialog({
   multiple: true,
@@ -294,6 +313,21 @@ const triggerSessionUpload = () => {
 }
 watch(uploadFiles, async (files) => {
   if (!files || files.length === 0) return
+  // Brand-new chat: no session id to upload into yet. Buffer the files as
+  // local previews; their bytes are staged + attached with the first message
+  // in `handleSend`. Size-check up front so an oversized pick is rejected
+  // before send (the stage step + server re-check it too).
+  if (!botChat?.sessionId.value) {
+    for (const file of Array.from(files)) {
+      if (file.size > NODE_ATTACHMENT_MAX_FILE_SIZE_BYTES) {
+        toast.error(`${file.name} is larger than 25 MB.`)
+        continue
+      }
+      pendingUploadFiles.value.push(file)
+    }
+    return
+  }
+  // Existing session: upload immediately and select for the next turn.
   let success = 0
   for (const file of Array.from(files)) {
     try {
@@ -588,8 +622,45 @@ const handleSend = async () => {
   if (isDisabled.value || !botChat) return
   stopDictation()
   const text = userInput.value
+
+  // Brand-new chat with buffered uploads: mint a session id, stage each file's
+  // bytes to it, and hand the refs to `sendMessage` so the first turn carries
+  // them — the server writes the attachment docs + materializes the session in
+  // the same call. If nothing stages successfully we fall back to a plain new
+  // chat (per-file errors are toasted).
+  let sendOpts:
+    | {
+        newSessionId: string
+        pendingAttachments: BotSessionPendingAttachment[]
+      }
+    | undefined
+  if (hasPendingUploads.value && !botChat.sessionId.value) {
+    const teamId = currentTeamId.value
+    const workspaceId = currentWorkspaceId.value
+    if (teamId && workspaceId) {
+      const newSessionId = generateId()
+      const staged: BotSessionPendingAttachment[] = []
+      for (const file of pendingUploadFiles.value) {
+        try {
+          staged.push(
+            await stageBotSessionAttachmentBlob(
+              { teamId, workspaceId, sessionId: newSessionId },
+              file
+            )
+          )
+        } catch (uploadError) {
+          toast.error((uploadError as Error).message)
+        }
+      }
+      if (staged.length > 0) {
+        sendOpts = { newSessionId, pendingAttachments: staged }
+      }
+    }
+  }
+
   userInput.value = ""
-  await botChat.sendMessage(text)
+  pendingUploadFiles.value = []
+  await botChat.sendMessage(text, sendOpts)
 }
 
 const handleKeydown = (event: KeyboardEvent) => {
@@ -892,7 +963,7 @@ const onToolMenuCloseAutoFocus = (event: Event) => {
         @keydown="handleKeydown"
       />
       <InputGroupAddon
-        v-if="hasAttachedNodes || hasSelectedAttachments"
+        v-if="hasAttachedNodes || hasSelectedAttachments || hasPendingUploads"
         align="block-start"
       >
         <ItemGroup>
@@ -985,6 +1056,42 @@ const onToolMenuCloseAutoFocus = (event: Event) => {
                     <TooltipContent>
                       {{
                         t("ai.detachAttachment", { name: att.name }, att.name)
+                      }}
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </ItemActions>
+            </Item>
+          </template>
+          <template v-if="hasPendingUploads">
+            <Item
+              v-for="(file, index) in pendingUploadFiles"
+              :key="`pending:${index}:${file.name}`"
+              variant="muted"
+              size="xs"
+            >
+              <ItemMedia variant="icon">
+                <IconUpload />
+              </ItemMedia>
+              <ItemContent>
+                <ItemTitle>{{ file.name }}</ItemTitle>
+                <ItemDescription class="uppercase">pending</ItemDescription>
+              </ItemContent>
+              <ItemActions>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger as-child>
+                      <InputGroupButton
+                        size="icon-xs"
+                        :disabled="isReadOnly || isSending"
+                        @click="removePendingUpload(index)"
+                      >
+                        <IconX />
+                      </InputGroupButton>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      {{
+                        t("ai.detachAttachment", { name: file.name }, file.name)
                       }}
                     </TooltipContent>
                   </Tooltip>

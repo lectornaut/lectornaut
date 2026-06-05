@@ -1,9 +1,8 @@
 <script setup lang="ts">
+import { ChevronDownIcon, ChevronUpIcon } from "@lucide/vue"
 import type { AccordionTriggerProps } from "reka-ui"
-
 import type { HTMLAttributes } from "vue"
 import { reactiveOmit } from "@vueuse/core"
-import { ChevronDownIcon, ChevronUpIcon } from "lucide-vue-next"
 import { AccordionHeader, AccordionTrigger } from "reka-ui"
 import { cn } from "@/lib/utils"
 

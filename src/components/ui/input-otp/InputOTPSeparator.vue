@@ -1,8 +1,7 @@
 <script setup lang="ts">
+import { MinusIcon } from "@lucide/vue"
 import type { HTMLAttributes } from "vue"
-
 import { reactiveOmit } from "@vueuse/core"
-import { MinusIcon } from "lucide-vue-next"
 import { useForwardProps } from "reka-ui"
 import { cn } from "@/lib/utils"
 

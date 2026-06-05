@@ -1,4 +1,5 @@
 import admin from "firebase-admin"
+import type { IMembershipRole } from "./permissions.js"
 
 // Notification Channel Types
 export type NotificationChannel = "inApp" | "email" | "native"
@@ -20,6 +21,7 @@ export type NotificationType =
   | "invitation.declined"
   | "member.joined"
   | "member.removed"
+  | "workflow.run"
 
 export interface NotificationCategorySettings {
   communication: boolean
@@ -90,6 +92,15 @@ export const NotificationTypeConfig: Record<NotificationType, ChannelConfig> = {
     email: true,
     native: true,
     category: "security",
+  },
+  // Workflow run completions worth a human's attention (awaiting review,
+  // error, blocked). `communication` so users can mute it; `native: false`
+  // keeps errors/blocked from popping desktop alerts.
+  "workflow.run": {
+    inApp: true,
+    email: true,
+    native: false,
+    category: "communication",
   },
 }
 
@@ -180,8 +191,6 @@ export {
   type PermissionContext,
   type Scope,
 } from "./permissions.js"
-
-import type { IMembershipRole } from "./permissions.js"
 
 // Types that are only used in functions (not shared with client)
 export type NodeType = "folder" | "file"

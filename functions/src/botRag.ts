@@ -39,15 +39,13 @@
  * `findNearest()` will accept queries — see `firestore.indexes.json`.
  */
 
-import { createHash } from "node:crypto"
-
 import { defineFirestoreRetriever } from "@genkit-ai/firebase"
 import { googleAI } from "@genkit-ai/google-genai"
 import { FieldValue } from "firebase-admin/firestore"
 import * as logger from "firebase-functions/logger"
 import { onDocumentWritten } from "firebase-functions/v2/firestore"
 import { Document, z } from "genkit/beta"
-
+import { createHash } from "node:crypto"
 import { db } from "./firebase.js"
 import { ai, isAiModelProviderConfigured } from "./genkitClient.js"
 import { redactText } from "./genkitMiddleware.js"

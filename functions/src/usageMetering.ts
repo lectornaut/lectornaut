@@ -16,7 +16,6 @@
 
 import * as logger from "firebase-functions/logger"
 import { HttpsError } from "firebase-functions/v2/https"
-
 import { getPlanTokenAllowance, type PlanKey } from "./billingConfig.js"
 import { admin, db } from "./firebase.js"
 

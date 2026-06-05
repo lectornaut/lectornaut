@@ -39,7 +39,6 @@
  */
 
 import { z } from "genkit/beta"
-
 import { logEvent } from "./audit.js"
 import { admin, db } from "./firebase.js"
 import { ai } from "./genkitClient.js"

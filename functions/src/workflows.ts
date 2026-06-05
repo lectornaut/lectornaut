@@ -33,7 +33,6 @@ import {
 import { HttpsError, onCall } from "firebase-functions/v2/https"
 import { onSchedule } from "firebase-functions/v2/scheduler"
 import { z } from "zod"
-
 import { DEFAULT_AGENT_ID } from "./agents.js"
 import { assertAdminRole as assertTeamAdminRole } from "./authGuards.js"
 import { estimateTokenCostUsd } from "./billingConfig.js"
@@ -52,13 +51,20 @@ import {
 import { BUILT_IN_AGENTS_BY_ID, isBuiltInAgentId } from "./builtInAgents.js"
 import { admin, db } from "./firebase.js"
 import { makeEventIdempotencyKey, runIdempotentEvent } from "./idempotency.js"
+import { sendNotificationToMany } from "./notifier.js"
 import {
   CALLABLE_OPTS,
   GENKIT_OPTS,
   SCHEDULED_OPTS,
   TRIGGER_OPTS,
 } from "./runtimeConfig.js"
-import { anthropicApiKey, geminiApiKey, openaiApiKey } from "./secrets.js"
+import {
+  anthropicApiKey,
+  geminiApiKey,
+  openaiApiKey,
+  postmarkApiKey,
+} from "./secrets.js"
+import { getTeamAdminsAndOwners } from "./teams.js"
 import { assertWorkflowAutomaticEntitled } from "./usageMetering.js"
 import { getWorkflowPreset } from "./workflowPresets.js"
 
@@ -743,15 +749,7 @@ export const reviewTeamWorkflowRun = onCall<{
   const agentId = run.agentId ?? ""
   // Built-ins have no `agents/{id}` doc — resolve their display name from the
   // static registry; custom agents read it from their Firestore doc.
-  let agentName = "Agent"
-  if (isBuiltInAgentId(agentId)) {
-    agentName = BUILT_IN_AGENTS_BY_ID[agentId]?.name ?? "Agent"
-  } else if (agentId) {
-    const agentSnap = await db
-      .doc(`${integrationsPath(teamId)}/${agentId}`)
-      .get()
-    agentName = (agentSnap.data()?.name as string | undefined) ?? "Agent"
-  }
+  const agentName = await resolveAgentName(teamId, agentId)
   const resolved: ResolvedNodeContext = {
     teamId,
     workspaceId,
@@ -1207,6 +1205,190 @@ function makeWorkflowTrigger(scope: "code" | "write") {
 export const runWorkflowsOnCodeWrite = makeWorkflowTrigger("code")
 export const runWorkflowsOnWriteWrite = makeWorkflowTrigger("write")
 
+// ─── Completion notifications ─────────────────────────────────────────────────
+
+/**
+ * Resolve an agent's display name. Built-ins (`_`-prefixed) have no
+ * `agents/{id}` doc — their name lives in the static registry; custom agents
+ * read it from their Firestore doc. Shared by the run-completion notification
+ * and the review-replay path.
+ */
+async function resolveAgentName(
+  teamId: string,
+  agentId: string
+): Promise<string> {
+  if (!agentId) return "Agent"
+  if (isBuiltInAgentId(agentId)) {
+    return BUILT_IN_AGENTS_BY_ID[agentId]?.name ?? "Agent"
+  }
+  const agentSnap = await db.doc(`${integrationsPath(teamId)}/${agentId}`).get()
+  return (agentSnap.data()?.name as string | undefined) ?? "Agent"
+}
+
+/**
+ * The run outcomes worth telling a human about, with the label + email accent
+ * colour shown in the notification. Routine `success` and `skipped` are
+ * intentionally absent — notifying on every scheduled success would flood
+ * inboxes. `applied`/`partially_applied`/`cancelled` happen at human review
+ * time (handled on screen), so they're not here either.
+ */
+const RUN_NOTIFY: Partial<
+  Record<
+    RunStatus,
+    { label: string; kind: "review" | "error" | "blocked"; color: string }
+  >
+> = {
+  awaiting_review: {
+    label: "Awaiting review",
+    kind: "review",
+    color: "#7c3aed",
+  },
+  error: { label: "Error", kind: "error", color: "#dc2626" },
+  blocked: { label: "Blocked", kind: "blocked", color: "#d97706" },
+}
+
+/** Human label for a run's trigger (mirrors the client `runTriggerOptions`). */
+function runTriggerLabel(triggeredBy: unknown): string {
+  const type =
+    triggeredBy && typeof triggeredBy === "object"
+      ? (triggeredBy as { type?: unknown }).type
+      : undefined
+  if (type === "schedule") return "Schedule"
+  if (type === "event") return "Content change"
+  if (type === "manual") return "Manual"
+  return "—"
+}
+
+/**
+ * Notify team admins/owners when a run finishes in a noteworthy state
+ * (awaiting review, error, blocked) — a no-op for every other status. Reuses
+ * the shared notifier (`sendNotificationToMany`), so per-user channel/category
+ * preferences and the `workflow.run` email template apply automatically.
+ *
+ * Best-effort: any failure is logged and swallowed so it can never throw out of
+ * the worker. A thrown error there could trigger a Cloud Functions retry, which
+ * would re-run the LLM turn and double-spend.
+ */
+async function notifyRunCompletion(params: {
+  teamId: string
+  workspaceId: string
+  runId: string
+  workflow: WorkflowDoc | undefined
+  run: FirebaseFirestore.DocumentData
+  status: RunStatus
+  extra: Record<string, unknown>
+}): Promise<void> {
+  const meta = RUN_NOTIFY[params.status]
+  if (!meta) return // only the noteworthy statuses notify
+
+  try {
+    const { teamId, workspaceId, workflow, run, extra } = params
+
+    const recipients = await getTeamAdminsAndOwners(teamId)
+    if (recipients.length === 0) return
+
+    const workflowName = workflow?.name || "Workflow"
+    const agentName = await resolveAgentName(
+      teamId,
+      typeof run.agentId === "string" ? run.agentId : ""
+    )
+
+    // Workspace name is decorative — never let it block the notification.
+    let workspaceName = ""
+    try {
+      const wsSnap = await db
+        .doc(`teams/${teamId}/workspaces/${workspaceId}`)
+        .get()
+      workspaceName = (wsSnap.data()?.name as string | undefined) ?? ""
+    } catch {
+      workspaceName = ""
+    }
+
+    // The run's lightweight change summaries (parallel to proposedChanges).
+    const changesRaw = Array.isArray(extra.changes)
+      ? (extra.changes as Record<string, unknown>[])
+      : []
+    const changeCount = changesRaw.length
+    const changeList = changesRaw.slice(0, 5).map((c) => ({
+      op: typeof c.op === "string" ? c.op : "change",
+      summary: typeof c.summary === "string" ? c.summary : "",
+    }))
+
+    const usage = (extra.usage ?? run.usage ?? null) as {
+      inputTokens?: number
+      outputTokens?: number
+      estimatedCostUsd?: number
+    } | null
+    const tokenTotal = usage
+      ? (usage.inputTokens ?? 0) + (usage.outputTokens ?? 0)
+      : 0
+    const costUsd =
+      usage && typeof usage.estimatedCostUsd === "number"
+        ? `$${usage.estimatedCostUsd.toFixed(2)}`
+        : ""
+
+    const replyPreview =
+      typeof extra.replyPreview === "string" ? extra.replyPreview : ""
+    const errorMessage = typeof extra.error === "string" ? extra.error : ""
+    const triggerLabel = runTriggerLabel(run.triggeredBy)
+
+    const title = `${workflowName} — ${meta.label}`
+    let description: string
+    if (meta.kind === "review") {
+      const noun = changeCount === 1 ? "change" : "changes"
+      description = `${changeCount} ${noun} staged for review · via ${triggerLabel}`
+    } else if (meta.kind === "error") {
+      description = errorMessage ? `Run failed: ${errorMessage}` : "Run failed."
+    } else {
+      description = errorMessage
+        ? `Run blocked: ${errorMessage}`
+        : "Run blocked (over budget or not entitled)."
+    }
+    description = description.slice(0, 160)
+
+    const workflowId =
+      typeof run.workflowId === "string" ? run.workflowId : params.runId
+
+    const templateData = {
+      workflowName,
+      statusLabel: meta.label,
+      statusColor: meta.color,
+      isReview: meta.kind === "review",
+      isError: meta.kind === "error",
+      isBlocked: meta.kind === "blocked",
+      triggerLabel,
+      agentName,
+      workspaceName,
+      changeCount,
+      changeList,
+      replyPreview,
+      errorMessage,
+      tokens: tokenTotal ? tokenTotal.toLocaleString("en-US") : "",
+      costUsd,
+    }
+
+    await sendNotificationToMany(
+      recipients.map((m) => ({
+        userId: m.userId,
+        userEmail: m.email,
+        type: "workflow.run" as const,
+        title,
+        description,
+        url: "/runs",
+        source: { entityType: "workflow", entityId: workflowId },
+        emailData: { templateData },
+      }))
+    )
+  } catch (err) {
+    logger.warn("[workflows] run-completion notification failed", {
+      teamId: params.teamId,
+      runId: params.runId,
+      status: params.status,
+      errorMessage: err instanceof Error ? err.message : String(err),
+    })
+  }
+}
+
 // ─── Worker ───────────────────────────────────────────────────────────────────
 
 /**
@@ -1220,7 +1402,9 @@ export const executeWorkflowRun = onDocumentCreated(
   {
     document: "teams/{teamId}/workspaces/{workspaceId}/workflowRuns/{runId}",
     ...GENKIT_OPTS,
-    secrets: [geminiApiKey, anthropicApiKey, openaiApiKey],
+    // postmarkApiKey: the worker emails admins on noteworthy run outcomes
+    // (awaiting_review / error / blocked) via notifyRunCompletion.
+    secrets: [geminiApiKey, anthropicApiKey, openaiApiKey, postmarkApiKey],
   },
   async (event) => {
     const snap = event.data
@@ -1258,6 +1442,20 @@ export const executeWorkflowRun = onDocumentCreated(
               lastRunStatus: status,
             })
             .catch(() => undefined)
+
+          // Best-effort: notify admins/owners on noteworthy outcomes (awaiting
+          // review / error / blocked). A no-op for routine success; guarded
+          // internally so it can never throw and trigger a worker retry. `wf`
+          // is resolved above before any finish() call, so the closure is safe.
+          await notifyRunCompletion({
+            teamId,
+            workspaceId,
+            runId: snap.ref.id,
+            workflow: wf,
+            run,
+            status,
+            extra,
+          })
         }
 
         // The workflow may have been disabled/deleted between enqueue and now.

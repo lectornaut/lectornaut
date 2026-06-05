@@ -1,7 +1,6 @@
 <script lang="ts" setup>
+import { MoreHorizontalIcon } from "@lucide/vue"
 import type { HTMLAttributes } from "vue"
-
-import { MoreHorizontalIcon } from "lucide-vue-next"
 import { cn } from "@/lib/utils"
 
 const props = defineProps<{

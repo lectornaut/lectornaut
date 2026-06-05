@@ -11,6 +11,7 @@
   },
   "iconLibrary": "lucide",
   "rtl": false,
+  "pointer": true,
   "aliases": {
     "components": "@/components",
     "utils": "@/lib/utils",

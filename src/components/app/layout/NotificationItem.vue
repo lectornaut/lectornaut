@@ -14,6 +14,7 @@ import {
   IconTrash,
   IconUserRoundMinus,
   IconUserRoundPlus,
+  IconWorkflow,
 } from "@/data/icons"
 import { type INotification } from "@/types/notification"
 
@@ -47,6 +48,8 @@ const typeIcon = computed(() => {
       return IconUserRoundPlus
     case "member.removed":
       return IconUserRoundMinus
+    case "workflow.run":
+      return IconWorkflow
     default:
       return IconCircle
   }

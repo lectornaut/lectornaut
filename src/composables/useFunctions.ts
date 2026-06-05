@@ -588,6 +588,19 @@ export interface BotChatNodeRef {
   nodeId: string
 }
 
+/**
+ * One client-uploaded-but-uncommitted chat attachment — the brand-new-chat
+ * single-send upload path. The blob is already in Storage (uploaded to the
+ * client-minted `sessionId`'s path); the server writes the metadata doc on
+ * receipt, re-reading the authoritative content-type/size.
+ */
+export interface BotSessionPendingAttachment {
+  attachmentId: string
+  storagePath: string
+  displayName: string
+  originalName: string
+}
+
 export interface SendBotMessageRequest {
   teamId: string
   workspaceId: string
@@ -645,6 +658,15 @@ export interface SendBotMessageRequest {
    * empty/omitted sends no uploads.
    */
   attachmentIds?: string[]
+  /**
+   * Files uploaded to Storage for THIS turn whose metadata docs don't exist
+   * yet — the brand-new-chat single-send path. The client mints `sessionId`,
+   * uploads each blob to `botSessions/{sessionId}/…`, and passes the refs here;
+   * the server writes the attachment docs (re-reading authoritative
+   * content-type/size) and includes them as media this turn. Existing-session
+   * uploads use the `createBotSessionAttachment` callable + `attachmentIds`.
+   */
+  pendingAttachments?: BotSessionPendingAttachment[]
 }
 
 export interface SendBotMessageResponse {

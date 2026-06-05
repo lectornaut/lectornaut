@@ -36,7 +36,6 @@
 
 import { HttpsError } from "firebase-functions/v2/https"
 import { z } from "genkit/beta"
-
 import { loadTeamAgentConfig } from "./botAgentConfig.js"
 import { db } from "./firebase.js"
 import { ai, resolveModel } from "./genkitClient.js"

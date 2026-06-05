@@ -18,10 +18,15 @@
  */
 
 import * as logger from "firebase-functions/logger"
+import { HttpsError } from "firebase-functions/v2/https"
 import type { Part } from "genkit/beta"
-
 import { admin, db } from "./firebase.js"
-import { botSessionAttachmentsCollectionPath } from "./nodeAttachments.js"
+import {
+  ATTACHMENT_NAME_MAX_LENGTH,
+  botSessionAttachmentsCollectionPath,
+  isBotSessionAttachmentStoragePath,
+  normalizeAttachmentDisplayName,
+} from "./nodeAttachments.js"
 
 /**
  * Content types we turn into media parts — the universal-safe intersection
@@ -167,4 +172,100 @@ export async function loadSessionAttachmentMediaParts(opts: {
     }
   }
   return parts
+}
+
+/**
+ * One client-uploaded-but-uncommitted attachment — the brand-new-chat
+ * single-send upload path (see `SendBotMessageInput.pendingAttachments`).
+ */
+export interface PendingSessionAttachmentInput {
+  attachmentId: string
+  storagePath: string
+  displayName: string
+  originalName: string
+}
+
+/**
+ * Persist attachment metadata docs for blobs the client already uploaded to
+ * Storage but hasn't committed. Mirrors `createBotSessionAttachment` in
+ * `audit.ts`: each `storagePath` is validated against the expected
+ * `botSessions/{sessionId}/…` prefix, the authoritative content-type + size are
+ * re-read from the object (never trusted from the client), then the doc is
+ * written. Returns the written attachment ids so the caller can fold them into
+ * the turn's media selection.
+ *
+ * The parent `botSessions/{sessionId}` doc need NOT exist yet — Firestore lets
+ * us write the `attachments` subcollection independently, and the caller's
+ * `createSession({ sessionId })` lazily persists the parent at end-of-turn. The
+ * MANAGE_WORKSPACE_CONTENT capability check is the CALLER's responsibility;
+ * this helper is pure validation + persistence.
+ */
+export async function materializeSessionAttachments(opts: {
+  teamId: string
+  workspaceId: string
+  sessionId: string
+  actorId: string
+  pendingAttachments: readonly PendingSessionAttachmentInput[]
+}): Promise<string[]> {
+  const { teamId, workspaceId, sessionId, actorId } = opts
+  const collectionPath = botSessionAttachmentsCollectionPath(
+    teamId,
+    workspaceId,
+    sessionId
+  )
+  const written: string[] = []
+  for (const pending of opts.pendingAttachments) {
+    if (
+      !isBotSessionAttachmentStoragePath(pending.storagePath, {
+        teamId,
+        workspaceId,
+        sessionId,
+        attachmentId: pending.attachmentId,
+      })
+    ) {
+      throw new HttpsError(
+        "invalid-argument",
+        "storagePath does not match the expected session-attachment location."
+      )
+    }
+
+    const file = admin.storage().bucket().file(pending.storagePath)
+    const [exists] = await file.exists()
+    if (!exists) {
+      throw new HttpsError(
+        "failed-precondition",
+        "Uploaded attachment file was not found in storage."
+      )
+    }
+    const [metadata] = await file.getMetadata()
+    const parsedSize =
+      typeof metadata.size === "string" && metadata.size.length > 0
+        ? Number.parseInt(metadata.size, 10)
+        : null
+    const size = Number.isFinite(parsedSize) ? parsedSize : null
+
+    const displayName =
+      (
+        normalizeAttachmentDisplayName(pending.displayName) ||
+        normalizeAttachmentDisplayName(pending.originalName) ||
+        "File"
+      ).slice(0, ATTACHMENT_NAME_MAX_LENGTH) || "File"
+
+    const now = admin.firestore.FieldValue.serverTimestamp()
+    await db.doc(`${collectionPath}/${pending.attachmentId}`).set({
+      workspaceId,
+      sessionId,
+      displayName,
+      originalName: pending.originalName,
+      storagePath: pending.storagePath,
+      mimeType: metadata.contentType ?? null,
+      size,
+      createdAt: now,
+      createdBy: actorId,
+      updatedAt: now,
+      updatedBy: actorId,
+    })
+    written.push(pending.attachmentId)
+  }
+  return written
 }

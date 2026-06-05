@@ -35,7 +35,6 @@
 import * as logger from "firebase-functions/logger"
 import { HttpsError } from "firebase-functions/v2/https"
 import type { ModelMiddleware } from "genkit/model"
-
 import { generateId } from "./utilities.js"
 
 /**

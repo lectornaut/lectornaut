@@ -19,6 +19,7 @@ import {
   createBotSessionAttachment,
   deleteBotSessionAttachment,
   updateBotSessionAttachment,
+  type BotSessionPendingAttachment,
 } from "@/composables/useFunctions"
 import {
   buildBotSessionAttachmentStoragePath,
@@ -103,6 +104,30 @@ const uploadBlob = async (
     contentType ? { contentType } : undefined
   )
   return storagePath
+}
+
+/**
+ * Upload one file's BYTES to its chat-session Storage path and return the
+ * reference WITHOUT writing the metadata doc — the brand-new-chat single-send
+ * upload path. The metadata doc is created server-side by `sendBotMessage` on
+ * receipt (it re-reads the authoritative content-type/size), so there's no
+ * `createBotSessionAttachment` callable here and the session doc need not exist
+ * yet. The caller supplies a (client-minted) `sessionId` so the blob lands at
+ * the final `botSessions/{sessionId}/…` location. Mirrors the front half of
+ * `createAttachmentFromFile`; the blocked-MIME + path checks live in
+ * `uploadBlob`.
+ */
+export async function stageBotSessionAttachmentBlob(
+  ctx: BotSessionAttachmentContext,
+  file: File
+): Promise<BotSessionPendingAttachment> {
+  if (file.size > NODE_ATTACHMENT_MAX_FILE_SIZE_BYTES) {
+    throw new Error("Each attachment must be 25 MB or smaller.")
+  }
+  const attachmentId = generateId()
+  const displayName = validateAttachmentDisplayName(file.name)
+  const storagePath = await uploadBlob(file, attachmentId, ctx)
+  return { attachmentId, storagePath, displayName, originalName: file.name }
 }
 
 export function useSessionAttachmentsState(

@@ -1,7 +1,6 @@
 <script setup lang="ts">
+import { Loader2Icon } from "@lucide/vue"
 import type { HTMLAttributes } from "vue"
-
-import { Loader2Icon } from "lucide-vue-next"
 import { cn } from "@/lib/utils"
 
 const props = defineProps<{

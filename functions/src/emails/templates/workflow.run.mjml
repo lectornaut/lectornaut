@@ -1,0 +1,94 @@
+<mjml>
+  <mj-head>
+    <mj-title>{{ title }}</mj-title>
+    <mj-preview>{{ description }}</mj-preview>
+    <mj-attributes>
+      <mj-all
+        font-family="'Helvetica Neue', Helvetica, Arial, sans-serif"
+      ></mj-all>
+      <mj-text font-size="14px" line-height="24px" color="black"></mj-text>
+      <mj-button
+        font-size="14px"
+        color="white"
+        background-color="black"
+        border-radius="8px"
+        font-weight="bold"
+      ></mj-button>
+    </mj-attributes>
+  </mj-head>
+  <mj-body>
+    <mj-include path="../partials/header.mjml" />
+
+    <mj-section padding="0">
+      <mj-column>
+        <mj-text font-size="16px" font-weight="bold">
+          {{ workflowName }}
+        </mj-text>
+
+        <mj-text>
+          {{#if isReview}}
+          This automation run staged changes that need your review.
+          {{/if}}
+          {{#if isError}}
+          This automation run finished with an error.
+          {{/if}}
+          {{#if isBlocked}}
+          This automation run was blocked before it could finish.
+          {{/if}}
+        </mj-text>
+
+        <mj-text>
+          <strong>Status:</strong>
+          <span style="color: {{ statusColor }}; font-weight: bold;">{{
+            statusLabel
+          }}</span>
+        </mj-text>
+        <mj-text><strong>Trigger:</strong> {{ triggerLabel }}</mj-text>
+        <mj-text><strong>Agent:</strong> {{ agentName }}</mj-text>
+        {{#if workspaceName}}
+        <mj-text><strong>Workspace:</strong> {{ workspaceName }}</mj-text>
+        {{/if}}
+
+        {{#if changeCount}}
+        <mj-text font-weight="bold" padding-top="12px">
+          {{ changeCount }} proposed change(s)
+        </mj-text>
+        {{#each changeList}}
+        <mj-text padding-top="0" padding-bottom="4px">
+          &bull; <strong>{{ this.op }}</strong> &mdash; {{ this.summary }}
+        </mj-text>
+        {{/each}}
+        {{/if}}
+
+        {{#if errorMessage}}
+        <mj-text
+          container-background-color="#fef2f2"
+          color="#991b1b"
+          padding="12px"
+        >
+          {{ errorMessage }}
+        </mj-text>
+        {{/if}}
+
+        {{#if replyPreview}}
+        <mj-text font-weight="bold" padding-top="12px" padding-bottom="4px">
+          Agent note
+        </mj-text>
+        <mj-text color="#374151">{{ replyPreview }}</mj-text>
+        {{/if}}
+
+        {{#if tokens}}
+        <mj-text color="gray" font-size="12px" padding-top="12px">
+          {{ tokens }} tokens{{#if costUsd}} &middot; est. {{ costUsd }}{{/if}}
+        </mj-text>
+        {{/if}}
+
+        <mj-button href="{{ ctaUrl }}" align="left" padding-top="16px">
+          View run
+        </mj-button>
+      </mj-column>
+    </mj-section>
+
+    <mj-include path="../partials/footer.mjml" />
+  </mj-body>
+</mjml>
