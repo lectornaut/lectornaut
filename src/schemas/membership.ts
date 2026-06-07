@@ -145,3 +145,61 @@ export const membershipDocDataWriteSchema = membershipDocDataSchema.extend({
   createdAt: timestampInputSchema.optional(),
   updatedAt: timestampInputSchema.optional(),
 })
+
+// ─── Per-(member, workspace) state ───────────────────────────────────────────
+
+/**
+ * The document at
+ *   teams/{teamId}/memberships/{userId}/workspaces/{workspaceId}
+ *
+ * holding state specific to one member *within one workspace*. Today that is
+ * an optional per-workspace ROLE OVERRIDE: when set, it combines with the
+ * member's team role under **elevate-only** semantics (`effectiveRole` in
+ * `@lectornaut/shared/permissions`) so a member can be granted more power in a
+ * single workspace without changing their team-wide role. `role` absent or
+ * `null` means "no override — use the team role".
+ *
+ * Functions-only write (see `firestore.rules`): the member can READ their own
+ * per-workspace role but can never self-assign it, so this is NOT an
+ * escalation surface. The sibling `.../workspaces/{workspaceId}/layout/tabs`
+ * doc holds the member's per-workspace tab layout under the same contract.
+ */
+export const membershipWorkspaceSchema = z.object({
+  role: membershipRoleSchema.nullable().optional(),
+  /**
+   * Workspace participation. `true` = the member is excluded (a non-member of
+   * this workspace). Absent/`false` = participating.
+   */
+  excluded: z.boolean().optional(),
+  /**
+   * Denormalized GROUP-derived role: the member's max role over every team
+   * group they belong to that THIS workspace grants (see `groupGrants`).
+   * Functions-only write (kept in sync by the `onGroup*Written` triggers) — it
+   * exists so firestore.rules can fold group elevation into the content gate
+   * without iterating groups. The functions read path stays authoritative by
+   * resolving groups live, so this is a rules-only mirror. Absent = no group
+   * elevation here. Optional so over-strict reads never drop the doc.
+   */
+  groupRole: membershipRoleSchema.nullable().optional(),
+  updatedAt: timestampSchema.optional(),
+})
+
+export const membershipWorkspaceWriteSchema = membershipWorkspaceSchema.extend({
+  role: membershipRoleSchema.nullable().optional(),
+  excluded: z.boolean().optional(),
+  updatedAt: timestampInputSchema.optional(),
+})
+
+/**
+ * Read-side variant of the per-workspace override doc, carrying the workspace
+ * id (the doc's own id, injected by `zodConverter`). Used when the signed-in
+ * user *lists* their own `…/memberships/{uid}/workspaces` subcollection to
+ * resolve their effective role per workspace — so workspace-scoped affordances
+ * can honor an elevate-only direct/group grant instead of collapsing to the
+ * team role.
+ */
+export const membershipWorkspaceRecordSchema = membershipWorkspaceSchema.extend(
+  {
+    id: z.string(),
+  }
+)

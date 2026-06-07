@@ -59,6 +59,8 @@ export const useTeamStore = defineStore("teams", () => {
     teamMembers,
     pendingMembershipIds,
     isLoading: isMembershipLoading,
+    isError: isMembershipError,
+    isStale: isMembershipStale,
   } = storeToRefs(membershipStore)
 
   // ── Realtime read ───────────────────────────────────────────────────────────
@@ -139,38 +141,64 @@ export const useTeamStore = defineStore("teams", () => {
   )
 
   // ── Stale-selection cleanup ─────────────────────────────────────────────────
-  // Drop a currentTeamId that Firestore confirms is gone (team deleted, or
-  // membership revoked).
+  // Drop a currentTeamId that Firestore confirms is gone (team deleted) or that
+  // the user is no longer a member of (membership revoked / never joined).
+  const clearStaleSelection = async () => {
+    try {
+      await authStore.setCurrentTeamId(null)
+    } catch (error) {
+      console.error("[teamStore] Failed to clear stale currentTeamId:", error)
+      authStore.setCurrentTeamIdLocal(null)
+    }
+  }
+
   watch(
     [
       currentTeamId,
       firestoreCurrentTeam,
       isTeamDocLoading,
       isMembershipLoading,
+      isMembershipError,
+      isMembershipStale,
     ],
     async ([teamId, team, loading, membershipLoading]) => {
       if (!teamId || loading || membershipLoading) return
-      // `undefined` is the loading window (no snapshot yet); only `null` means
-      // the doc is genuinely missing. Acting on `undefined` would clear a valid
-      // selection in narrow timing windows.
-      if (team === undefined) return
+      // Never act mid-mutation: a team create / join / switch marks pending and
+      // its membership snapshot may not have landed yet — clearing now would
+      // drop a selection that's about to become valid.
+      if (hasAnyPendingOperation.value || pendingTeamIds.value.has(teamId)) {
+        return
+      }
 
-      if (team === null && !pendingTeamIds.value.has(teamId)) {
-        // Re-confirm membership is truly gone before clearing.
-        if (memberships.value.some((m) => m.teamId === teamId)) return
+      const isMember = memberships.value.some((m) => m.teamId === teamId)
+
+      // Case A — membership revoked, or never a member. `teamDocRef` disables
+      // the team-doc query whenever the user isn't in `memberships`, so
+      // `firestoreCurrentTeam` never resolves to `null` and Case B below can't
+      // fire for this path. Detect it from the memberships list directly — but
+      // only once that list is a trustworthy live answer: a terminal read error
+      // leaves `memberships` an empty fallback that means "unknown", not "no
+      // teams", and a stale cache may lag the user's real membership set.
+      if (!isMember) {
+        if (isMembershipError.value || isMembershipStale.value) return
         console.warn(
-          "[teamStore] Detected stale team ID (deleted or removed), clearing...",
+          "[teamStore] currentTeamId not in memberships (revoked or never joined), clearing...",
           teamId
         )
-        try {
-          await authStore.setCurrentTeamId(null)
-        } catch (error) {
-          console.error(
-            "[teamStore] Failed to clear stale currentTeamId:",
-            error
-          )
-          authStore.setCurrentTeamIdLocal(null)
-        }
+        await clearStaleSelection()
+        return
+      }
+
+      // Case B — team deleted. The doc query is live (user is a member) and a
+      // `null` snapshot confirms the doc is genuinely gone. `undefined` is the
+      // loading window — acting on it would clear a valid selection in narrow
+      // timing windows.
+      if (team === null) {
+        console.warn(
+          "[teamStore] Detected stale team ID (deleted), clearing...",
+          teamId
+        )
+        await clearStaleSelection()
       }
     }
   )
@@ -421,9 +449,10 @@ export const useTeamStore = defineStore("teams", () => {
           }
         },
         async () => {
-          // Delete storage before the cloud function, which may revoke access
-          // before the cleanup could otherwise run.
-          await deleteTeamPhotoFile(teamId)
+          // Photo + nested storage (workspace/group avatars, attachments)
+          // cleanup is handled server-side by the deleteTeam callable (a prefix
+          // sweep) — admin SDK, so it avoids the post-delete access-revocation
+          // race the client-side delete previously had to work around.
           await deleteTeamFn({ teamId })
         }
       )

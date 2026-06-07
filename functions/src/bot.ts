@@ -120,6 +120,7 @@ import {
 import type { IMembershipRole, WorkspaceNodeScope } from "./types.js"
 import { assertWithinBudget, incrementTeamTokenUsage } from "./usageMetering.js"
 import { generateId } from "./utilities.js"
+import { getWorkspaceRoleOverride } from "./workspaceRoles.js"
 
 // `AuthData` isn't re-exported from `firebase-functions/v2/https`, so derive
 // it from `CallableRequest["auth"]` to avoid reaching into internal paths.
@@ -1583,7 +1584,8 @@ export async function getMembershipRole(
       "You are not a member of this team."
     )
   }
-  return snap.data()?.role as IMembershipRole
+  const role = snap.data()?.role as IMembershipRole
+  return role
 }
 
 /**
@@ -1605,7 +1607,8 @@ export async function getMembershipRoleOrNull(
   if (principalId === DEFAULT_AGENT_ID) return "member"
   const snap = await db.doc(`teams/${teamId}/memberships/${principalId}`).get()
   if (!snap.exists) return null
-  return (snap.data()?.role as IMembershipRole | undefined) ?? null
+  const role = (snap.data()?.role as IMembershipRole | undefined) ?? null
+  return role
 }
 
 interface BotSessionDocSummary {
@@ -2473,16 +2476,22 @@ async function prepareChatTurn(opts: {
   // original error precedence (membership → existence → archived →
   // edit-rights): if `resolveActingRole` rejects, `Promise.all` rejects
   // with that same error first.
-  const [role, loadedSession, agentConfig] = await Promise.all([
-    resolveActingRole(principal, teamId),
-    sessionId
-      ? readSessionDoc(teamId, workspaceId, sessionId)
-      : Promise.resolve(null),
-    // Agent config drives model, prompt, tools, generation knobs, and the
-    // SessionStore's title/preview lengths. Not cached — admin settings
-    // changes should apply on the next send, not after a deploy.
-    loadTeamAgentConfig(teamId),
-  ])
+  const [role, loadedSession, agentConfig, actingWorkspaceRole] =
+    await Promise.all([
+      resolveActingRole(principal, teamId),
+      sessionId
+        ? readSessionDoc(teamId, workspaceId, sessionId)
+        : Promise.resolve(null),
+      // Agent config drives model, prompt, tools, generation knobs, and the
+      // SessionStore's title/preview lengths. Not cached — admin settings
+      // changes should apply on the next send, not after a deploy.
+      loadTeamAgentConfig(teamId),
+      // Per-workspace role override for the acting principal (elevate-only):
+      // lets a member/agent granted rights in THIS workspace edit content here
+      // even when their team role alone wouldn't. Folded into the parallel
+      // batch so it adds no round-trip.
+      getWorkspaceRoleOverride(teamId, workspaceId, actingId),
+    ])
 
   // Edit-permission gate. The owner always has edit; for shared sessions,
   // any full member (owner/admin/member) also has edit — guests, who lack
@@ -2514,6 +2523,7 @@ async function prepareChatTurn(opts: {
         can(actingId, Capabilities.MANAGE_WORKSPACE_CONTENT, {
           scope: "workspace",
           teamRole: role,
+          workspaceRole: actingWorkspaceRole,
         }))
     if (!canEdit) {
       throw new HttpsError(
@@ -2547,6 +2557,7 @@ async function prepareChatTurn(opts: {
       !can(actingId, Capabilities.MANAGE_WORKSPACE_CONTENT, {
         scope: "workspace",
         teamRole: role,
+        workspaceRole: actingWorkspaceRole,
       })
     ) {
       throw new HttpsError(
@@ -2635,13 +2646,17 @@ async function prepareChatTurn(opts: {
   // Either way `canManage/ReadNodes` stay the pure security checks, re-
   // verified inside the tool handlers (`resolveNodeContext` fails closed),
   // so a misconfigured run can only under-permit, never escalate.
-  const activeAgentRole = activeAgent
-    ? await getMembershipRoleOrNull(teamId, activeAgent.id)
-    : null
+  const [activeAgentRole, activeAgentWorkspaceRole] = activeAgent
+    ? await Promise.all([
+        getMembershipRoleOrNull(teamId, activeAgent.id),
+        getWorkspaceRoleOverride(teamId, workspaceId, activeAgent.id),
+      ])
+    : [null, null]
   const agentCanManageNodes = activeAgent
     ? can(activeAgent.id, Capabilities.MANAGE_WORKSPACE_CONTENT, {
         scope: "workspace",
         teamRole: activeAgentRole,
+        workspaceRole: activeAgentWorkspaceRole,
       })
     : true
   const agentCanReadNodes = activeAgent
@@ -2657,7 +2672,7 @@ async function prepareChatTurn(opts: {
     const userCanManageNodes = can(
       principal.uid,
       Capabilities.MANAGE_WORKSPACE_CONTENT,
-      { scope: "workspace", teamRole: role }
+      { scope: "workspace", teamRole: role, workspaceRole: actingWorkspaceRole }
     )
     const userCanReadNodes = can(principal.uid, Capabilities.READ_WORKSPACE, {
       scope: "workspace",
@@ -2673,7 +2688,7 @@ async function prepareChatTurn(opts: {
     canManageNodes = can(
       principal.agentId,
       Capabilities.MANAGE_WORKSPACE_CONTENT,
-      { scope: "workspace", teamRole: role }
+      { scope: "workspace", teamRole: role, workspaceRole: actingWorkspaceRole }
     )
     canReadNodes = can(principal.agentId, Capabilities.READ_WORKSPACE, {
       scope: "workspace",

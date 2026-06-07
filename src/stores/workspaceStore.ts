@@ -44,7 +44,7 @@ import {
   mutateSetDocument,
   mutateWithCoordinator,
 } from "@/utils/firebase/firebase-sync-engine"
-import { Timestamp } from "firebase/firestore"
+import { query as fsQuery, Timestamp, where } from "firebase/firestore"
 import { defineStore, storeToRefs } from "pinia"
 
 export const useWorkspaceStore = defineStore("workspaces", () => {
@@ -74,9 +74,19 @@ export const useWorkspaceStore = defineStore("workspaces", () => {
   // membership is known would hit a rules denial).
   const workspacesQuery = useCollectionQuery<IWorkspace>(() => {
     const teamId = currentTeamId.value
-    if (!teamId || !hasCurrentTeamMembership.value) return null
+    const uid = currentUser.value?.uid
+    if (!teamId || !uid || !hasCurrentTeamMembership.value) return null
+    // Airtight participation: only workspaces whose `memberUids` include the
+    // caller (denormalized server-side; excluded/non-member workspaces are
+    // never returned). firestore.rules requires the same constraint on read.
+    // `memberUids` is seeded at workspace creation and on invite-accept, so this
+    // works on a clean dataset with no backfill.
     const collectionRef = createTeamWorkspacesQuery(teamId)
-    return { query: collectionRef, path: collectionRef.path }
+    return {
+      query: fsQuery(collectionRef, where("memberUids", "array-contains", uid)),
+      path: collectionRef.path,
+      params: { memberUid: uid },
+    }
   })
   const firestoreWorkspaces = computed(() => workspacesQuery.data.value ?? [])
   const isFirestoreLoading = computed(() => workspacesQuery.isLoading.value)
@@ -126,6 +136,10 @@ export const useWorkspaceStore = defineStore("workspaces", () => {
   }
 
   // ── Merged state ────────────────────────────────────────────────────────────
+  // The query already excludes workspaces the caller doesn't participate in
+  // (memberUids array-contains), so the list is the participation set directly.
+  // An excluded current selection (dropped from the query) falls through to the
+  // stale-selection cleanup below (same path as a removed workspace).
   const workspaces = computed(() => firestoreWorkspaces.value)
   const workspaceById = computed(
     () => new Map(workspaces.value.map((w) => [w.id, w]))
@@ -296,8 +310,8 @@ export const useWorkspaceStore = defineStore("workspaces", () => {
     name: string,
     description?: string,
     photoFile?: File
-  ): Promise<void> {
-    if (!currentUser.value || !currentTeamId.value) return
+  ): Promise<string | undefined> {
+    if (!currentUser.value || !currentTeamId.value) return undefined
     if (!canManageWorkspaces.value) {
       throw new Error("Only team owners and admins can create workspaces")
     }
@@ -323,6 +337,10 @@ export const useWorkspaceStore = defineStore("workspaces", () => {
 
     addPending(pendingWorkspaceIds, tempId)
     addPending(pendingUserIds, uid)
+    // Captured inside `run` so callers (e.g. WorkspaceDialog's create flow,
+    // which then assigns per-workspace roles) can act on the real id once the
+    // server confirms. mutateAsync awaits `run`, so this is set on resolve.
+    let createdWorkspaceId: string | undefined
     try {
       await workspaceMutation.mutateAsync({
         keys: [key],
@@ -344,6 +362,7 @@ export const useWorkspaceStore = defineStore("workspaces", () => {
             description: description ?? null,
           })
           const workspaceId = result.data.workspaceId
+          createdWorkspaceId = workspaceId
 
           // Best-effort photo upload — never fail creation over a photo.
           if (photoFile) {
@@ -372,6 +391,8 @@ export const useWorkspaceStore = defineStore("workspaces", () => {
       // fire in the tempId→realId window before the snapshot lands.
       setTimeout(() => removePending(pendingWorkspaceIds, tempId), 120)
     }
+
+    return createdWorkspaceId
   }
 
   async function switchWorkspace(workspaceId: string): Promise<void> {
@@ -518,17 +539,10 @@ export const useWorkspaceStore = defineStore("workspaces", () => {
           }
         },
         run: async () => {
-          const [deleteResult, photoResult] = await Promise.allSettled([
-            deleteWorkspaceFn({ teamId, workspaceId }),
-            deleteWorkspacePhotoFile(teamId, workspaceId),
-          ])
-          if (photoResult.status === "rejected") {
-            console.error(
-              "[workspaceStore] Failed to delete workspace photo:",
-              photoResult.reason
-            )
-          }
-          if (deleteResult.status === "rejected") throw deleteResult.reason
+          // Photo + attachment cleanup is handled server-side by the
+          // deleteWorkspace callable (a prefix sweep over this workspace's
+          // Storage objects).
+          await deleteWorkspaceFn({ teamId, workspaceId })
         },
       })
     } finally {

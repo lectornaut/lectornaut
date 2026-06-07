@@ -27,6 +27,48 @@ service firebase.storage {
         && teamRole(teamId) in ["owner", "admin", "member"];
     }
 
+    // The caller's own per-workspace override doc — functions-only write, so it
+    // can be read but never self-assigned (not an escalation surface). Mirrors
+    // the helpers in firestore.rules; rules can't iterate groups, so the
+    // group contribution is read from the denormalized `groupRole` field the
+    // onGroup*Written triggers keep in sync on this SAME doc.
+    function workspaceOverridePath(teamId, workspaceId) {
+      return /databases/(default)/documents/teams/$(teamId)/memberships/$(request.auth.uid)/workspaces/$(workspaceId);
+    }
+    function isWorkspaceExcluded(teamId, workspaceId) {
+      return firestore.exists(workspaceOverridePath(teamId, workspaceId))
+        && firestore.get(workspaceOverridePath(teamId, workspaceId)).data.get("excluded", false) == true;
+    }
+    function workspaceOverrideRole(teamId, workspaceId) {
+      return isTeamMember(teamId) && firestore.exists(workspaceOverridePath(teamId, workspaceId))
+        ? firestore.get(workspaceOverridePath(teamId, workspaceId)).data.get("role", null)
+        : null;
+    }
+    function workspaceGroupRole(teamId, workspaceId) {
+      return isTeamMember(teamId) && firestore.exists(workspaceOverridePath(teamId, workspaceId))
+        ? firestore.get(workspaceOverridePath(teamId, workspaceId)).data.get("groupRole", null)
+        : null;
+    }
+
+    // EDIT_WORKSPACE gate (owner/admin), elevation-aware: a team owner/admin can
+    // edit any workspace; OR a member elevated to admin/owner in THIS workspace
+    // (direct override or group grant) can, unless explicitly excluded. Team role
+    // is checked first (short-circuits) so an excluded team admin keeps their
+    // entity-level right — matching the updateWorkspace/deleteWorkspace callables.
+    function canEditWorkspaceIn(teamId, workspaceId) {
+      return isTeamMember(teamId)
+        && (
+          teamRole(teamId) in ["owner", "admin"]
+          || (
+            !isWorkspaceExcluded(teamId, workspaceId)
+            && (
+              workspaceOverrideRole(teamId, workspaceId) in ["owner", "admin"]
+              || workspaceGroupRole(teamId, workspaceId) in ["owner", "admin"]
+            )
+          )
+        );
+    }
+
     function isTeamPublic(teamId) {
       return firestore.get(/databases/(default)/documents/teams/$(teamId)).data.isPublic == true;
     }
@@ -65,6 +107,13 @@ service firebase.storage {
 
     match /images/teams/{teamId}/workspaces/{workspaceId}/profilePhoto {
       allow read: if isTeamMember(teamId) || isTeamPublic(teamId);
+      allow create, update: if canEditWorkspaceIn(teamId, workspaceId) && isValidImageUpload();
+      allow delete: if canEditWorkspaceIn(teamId, workspaceId);
+    }
+
+    // Group avatars — group CRUD is team owner/admin only, so mirror that gate.
+    match /images/teams/{teamId}/groups/{groupId}/profilePhoto {
+      allow read: if isTeamMember(teamId);
       allow create, update: if canManageTeamAssets(teamId) && isValidImageUpload();
       allow delete: if canManageTeamAssets(teamId);
     }

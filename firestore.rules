@@ -36,9 +36,58 @@ service cloud.firestore {
         && teamRole(teamId) in ["owner", "admin"];
     }
 
-    function canManageWorkspaceContent(teamId) {
+    // The calling user's per-workspace role override, or null when no grant
+    // doc exists at teams/{teamId}/memberships/{uid}/workspaces/{workspaceId}.
+    // That doc is functions-only write (see the memberships block below), so it
+    // can be read here but never self-assigned — not an escalation surface.
+    function workspaceRoleOverride(teamId, workspaceId) {
       return isTeamMember(teamId)
-        && teamRole(teamId) in ["owner", "admin", "member"];
+          && exists(/databases/$(database)/documents/teams/$(teamId)/memberships/$(request.auth.uid)/workspaces/$(workspaceId))
+        ? get(/databases/$(database)/documents/teams/$(teamId)/memberships/$(request.auth.uid)/workspaces/$(workspaceId)).data.get("role", null)
+        : null;
+    }
+
+    // The calling user's GROUP-derived per-workspace role: a denormalized
+    // `groupRole` field on the SAME override doc, kept in sync by Cloud Functions
+    // (the `onGroup*Written` triggers) = the member's max role over every group
+    // they belong to that this workspace grants. Rules can't iterate groups, so
+    // they read this mirror; the functions read path stays authoritative by
+    // resolving groups live. It is the same doc `workspaceRoleOverride` /
+    // `isWorkspaceExcluded` read, so it adds no billed read within one rule eval.
+    function workspaceGroupRoleOverride(teamId, workspaceId) {
+      return isTeamMember(teamId)
+          && exists(/databases/$(database)/documents/teams/$(teamId)/memberships/$(request.auth.uid)/workspaces/$(workspaceId))
+        ? get(/databases/$(database)/documents/teams/$(teamId)/memberships/$(request.auth.uid)/workspaces/$(workspaceId)).data.get("groupRole", null)
+        : null;
+    }
+
+    // Content management (owner/admin/member), elevation-aware: a per-workspace
+    // override OR a group grant can RAISE a member into content management within
+    // a single workspace (elevate-only — it never removes access the team role
+    // grants). Mirrors can(uid, MANAGE_WORKSPACE_CONTENT, {scope:"workspace",
+    // teamRole, workspaceRole=max(directOverride, groupRole)}) in
+    // shared/permissions.ts. Exclusion is a hard deny that beats every elevation
+    // (matches getWorkspaceRoleOverride throwing on the functions path), so an
+    // excluded member — even a team admin/owner — cannot write content here. The
+    // override role / group role / exclusion gets all hit the SAME override doc,
+    // so together they add no extra billed read within one rule eval.
+    function canManageWorkspaceContentIn(teamId, workspaceId) {
+      return isTeamMember(teamId)
+        && !isWorkspaceExcluded(teamId, workspaceId)
+        && (
+          teamRole(teamId) in ["owner", "admin", "member"]
+          || workspaceRoleOverride(teamId, workspaceId) in ["owner", "admin", "member"]
+          || workspaceGroupRoleOverride(teamId, workspaceId) in ["owner", "admin", "member"]
+        );
+    }
+
+    // True when the calling user is explicitly excluded (a non-member) from this
+    // workspace — set by assignWorkspaceRole({excluded:true}). It is a get() on a
+    // FIXED doc (the caller's own override for this workspace), so it does NOT
+    // vary per result document and is therefore safe to use in `list` rules.
+    function isWorkspaceExcluded(teamId, workspaceId) {
+      return exists(/databases/$(database)/documents/teams/$(teamId)/memberships/$(request.auth.uid)/workspaces/$(workspaceId))
+        && get(/databases/$(database)/documents/teams/$(teamId)/memberships/$(request.auth.uid)/workspaces/$(workspaceId)).data.get("excluded", false) == true;
     }
 
     function isWorkspaceNodeScope(scope) {
@@ -68,7 +117,11 @@ service cloud.firestore {
     function canViewRoom(contentId) {
       return isSignedIn()
         && get(roomPath(contentId)).data.teamId is string
-        && isTeamMember(get(roomPath(contentId)).data.teamId);
+        && isTeamMember(get(roomPath(contentId)).data.teamId)
+        && !isWorkspaceExcluded(
+             get(roomPath(contentId)).data.teamId,
+             get(roomPath(contentId)).data.workspaceId
+           );
     }
 
     function isInvitationRecipient(invitationEmail) {
@@ -139,7 +192,10 @@ service cloud.firestore {
 
     function canCreateSnapshot(contentId) {
       return hasValidSnapshotPayload(contentId)
-        && canManageWorkspaceContent(request.resource.data.teamId);
+        && canManageWorkspaceContentIn(
+             request.resource.data.teamId,
+             request.resource.data.workspaceId
+           );
     }
 
     function canUpdateSnapshot(contentId) {
@@ -149,7 +205,10 @@ service cloud.firestore {
         && request.resource.data.teamId == resource.data.teamId
         && request.resource.data.workspaceId == resource.data.workspaceId
         && request.resource.data.contentId == resource.data.contentId
-        && canManageWorkspaceContent(resource.data.teamId);
+        && canManageWorkspaceContentIn(
+             resource.data.teamId,
+             resource.data.workspaceId
+           );
     }
 
     function isNullableStringField(data, field) {
@@ -207,7 +266,11 @@ service cloud.firestore {
       allow get: if (!exists(/databases/$(database)/documents/snapshots/$(contentId))
                      && canViewRoom(contentId))
                  || (resource.data.teamId is string
-                     && isTeamMember(resource.data.teamId));
+                     && isTeamMember(resource.data.teamId)
+                     && !isWorkspaceExcluded(
+                          resource.data.teamId,
+                          resource.data.workspaceId
+                        ));
       allow list: if false;
       allow create: if canCreateSnapshot(contentId);
       allow update: if canUpdateSnapshot(contentId);
@@ -335,6 +398,17 @@ service cloud.firestore {
         allow write: if false;
       }
 
+      // Groups: reusable named bundles of team members ({ name, memberIds[] };
+      // NO role lives on the group). Member read so the Settings → Groups list +
+      // the WorkspaceDialog provenance ("via {Group}") can render the catalog.
+      // Writes are callable-only (admin-gated — createGroup/updateGroup/
+      // deleteGroup). The role a group confers is a per-workspace grant stored
+      // under each workspace (see `groupGrants` below), never on the group.
+      match /groups/{groupId} {
+        allow read: if isTeamMember(teamId);
+        allow write: if false;
+      }
+
       // Workflow run history now lives UNDER each workspace — see the
       // workflowRuns match in the workspaces block below. Writes stay
       // callable-only (admin SDK).
@@ -375,15 +449,27 @@ service cloud.firestore {
       }
 
       match /workspaces/{workspaceId} {
-        allow read: if isTeamMember(teamId);
+        // Airtight participation. A member sees a workspace only when they're in
+        // its `memberUids` — seeded at creation with the team's humans and kept
+        // in sync on invite-accept / member-remove / exclude. The client lists
+        // with where("memberUids","array-contains",uid) and this rule requires
+        // the same constraint, so an unconstrained list that could surface a
+        // workspace the caller isn't in is denied. Excluded members are removed
+        // from `memberUids`, so they never receive the doc.
+        allow read: if isTeamMember(teamId)
+          && request.auth.uid in resource.data.memberUids;
         allow write: if false;
 
         match /{scope}/{nodeId} {
-          allow read: if isWorkspaceNodeScope(scope) && isTeamMember(teamId);
+          allow read: if isWorkspaceNodeScope(scope)
+            && isTeamMember(teamId)
+            && !isWorkspaceExcluded(teamId, workspaceId);
           allow write: if false;
 
           match /attachments/{attachmentId} {
-            allow read: if isWorkspaceNodeScope(scope) && isTeamMember(teamId);
+            allow read: if isWorkspaceNodeScope(scope)
+              && isTeamMember(teamId)
+              && !isWorkspaceExcluded(teamId, workspaceId);
             allow write: if false;
           }
         }
@@ -408,6 +494,7 @@ service cloud.firestore {
           // Writes always happen via Cloud Functions (sendBotMessage,
           // archiveBotSession, deleteBotSession, …).
           allow read: if isTeamMember(teamId)
+            && !isWorkspaceExcluded(teamId, workspaceId)
             && (
               resource.data.ownerUid == request.auth.uid
               || resource.data.visibility == "shared"
@@ -419,7 +506,8 @@ service cloud.firestore {
           // (admin SDK). Read respects the parent session's visibility so a
           // private chat's files aren't enumerable by other members.
           match /attachments/{attachmentId} {
-            allow read: if canReadBotSession(teamId, workspaceId, sessionId);
+            allow read: if canReadBotSession(teamId, workspaceId, sessionId)
+              && !isWorkspaceExcluded(teamId, workspaceId);
             allow write: if false;
           }
         }
@@ -428,7 +516,20 @@ service cloud.firestore {
         // page + Settings → Runs). Written only by the dispatcher, event
         // triggers, and worker via the admin SDK.
         match /workflowRuns/{runId} {
-          allow read: if isTeamAdmin(teamId);
+          allow read: if isTeamAdmin(teamId)
+            && !isWorkspaceExcluded(teamId, workspaceId);
+          allow write: if false;
+        }
+
+        // Per-(group, workspace) role grant: doc id is the groupId, body is
+        // { groupId, role }. This is the ONLY place a group's conferred role
+        // lives (the group itself is role-less). Member read (the elevation is
+        // not a secret, and the dialog renders granted rows); writes are
+        // callable-only (admin-gated, owner-gated for `owner` —
+        // assignWorkspaceGroupRole). The functions read path folds these in
+        // live; the rules content gate reads the denormalized `groupRole`.
+        match /groupGrants/{groupId} {
+          allow read: if isTeamMember(teamId);
           allow write: if false;
         }
       }

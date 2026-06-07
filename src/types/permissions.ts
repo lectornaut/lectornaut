@@ -7,6 +7,7 @@
 export {
   Capabilities,
   can,
+  effectiveRole,
   hasExactRole,
   roleCan,
   type Capability,

@@ -35,29 +35,46 @@ export function useWorkspaceActions() {
       : null
   )
 
-  const canUpdateWorkspace = computed(() =>
+  // Per-workspace EDIT / DELETE gates. Unlike create (a team-level act), these
+  // are workspace-scoped: a team member elevated to admin/owner inside a single
+  // workspace — directly or via a group grant — can edit/delete THAT workspace.
+  // `can(scope: "workspace")` folds the per-workspace override over the team
+  // role elevate-only, so a team admin/owner keeps access to every workspace
+  // regardless of any override. Pass the row/dialog workspace id; `null`/absent
+  // (e.g. create mode) means "team role only".
+  const canUpdateWorkspace = (
+    workspaceId: string | null | undefined
+  ): boolean =>
     can(currentUser.value, Capabilities.EDIT_WORKSPACE, {
-      scope: "team",
+      scope: "workspace",
       teamRole: currentUserRole.value,
+      workspaceRole: workspaceId
+        ? membershipStore.getWorkspaceRoleOverride(workspaceId)
+        : null,
     })
-  )
-  const getCannotUpdateWorkspaceReason = computed(() =>
-    !canUpdateWorkspace.value
-      ? "Only team owners and admins can update workspaces"
-      : null
-  )
+  const getCannotUpdateWorkspaceReason = (
+    workspaceId: string | null | undefined
+  ): string | null =>
+    canUpdateWorkspace(workspaceId)
+      ? null
+      : "Only owners and admins can update this workspace"
 
-  const canDeleteWorkspace = computed(() =>
+  const canDeleteWorkspace = (
+    workspaceId: string | null | undefined
+  ): boolean =>
     can(currentUser.value, Capabilities.DELETE_WORKSPACE, {
-      scope: "team",
+      scope: "workspace",
       teamRole: currentUserRole.value,
+      workspaceRole: workspaceId
+        ? membershipStore.getWorkspaceRoleOverride(workspaceId)
+        : null,
     })
-  )
-  const getCannotDeleteWorkspaceReason = computed(() =>
-    !canDeleteWorkspace.value
-      ? "Only team owners and admins can delete workspaces"
-      : null
-  )
+  const getCannotDeleteWorkspaceReason = (
+    workspaceId: string | null | undefined
+  ): string | null =>
+    canDeleteWorkspace(workspaceId)
+      ? null
+      : "Only owners and admins can delete this workspace"
 
   /** Switch to a different workspace */
   const switchWorkspace = async (workspaceId: string) => {
@@ -77,9 +94,9 @@ export function useWorkspaceActions() {
     actions.run(
       `delete-${workspaceId}`,
       async () => {
-        if (!canDeleteWorkspace.value) {
+        if (!canDeleteWorkspace(workspaceId)) {
           throw new Error(
-            getCannotDeleteWorkspaceReason.value ||
+            getCannotDeleteWorkspaceReason(workspaceId) ||
               "You do not have permission to delete workspaces"
           )
         }
@@ -106,7 +123,13 @@ export function useWorkspaceActions() {
               "You do not have permission to create workspaces"
           )
         }
-        await workspaceStore.createWorkspace(name, description, photoFile)
+        // Returns the real workspace id so callers can act on it post-create
+        // (e.g. assigning per-workspace roles). `actions.run` propagates it.
+        return await workspaceStore.createWorkspace(
+          name,
+          description,
+          photoFile
+        )
       },
       {
         success: "Workspace created successfully",
@@ -126,9 +149,9 @@ export function useWorkspaceActions() {
     actions.run(
       `update-${workspaceId}`,
       async () => {
-        if (!canUpdateWorkspace.value) {
+        if (!canUpdateWorkspace(workspaceId)) {
           throw new Error(
-            getCannotUpdateWorkspaceReason.value ||
+            getCannotUpdateWorkspaceReason(workspaceId) ||
               "You do not have permission to update workspaces"
           )
         }
@@ -145,9 +168,9 @@ export function useWorkspaceActions() {
     actions.run(
       `photo-${workspaceId}`,
       async () => {
-        if (!canUpdateWorkspace.value) {
+        if (!canUpdateWorkspace(workspaceId)) {
           throw new Error(
-            getCannotUpdateWorkspaceReason.value ||
+            getCannotUpdateWorkspaceReason(workspaceId) ||
               "You do not have permission to update workspaces"
           )
         }
@@ -165,9 +188,9 @@ export function useWorkspaceActions() {
     actions.run(
       `photo-${workspaceId}`,
       async () => {
-        if (!canUpdateWorkspace.value) {
+        if (!canUpdateWorkspace(workspaceId)) {
           throw new Error(
-            getCannotUpdateWorkspaceReason.value ||
+            getCannotUpdateWorkspaceReason(workspaceId) ||
               "You do not have permission to update workspaces"
           )
         }

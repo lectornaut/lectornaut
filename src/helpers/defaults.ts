@@ -17,6 +17,7 @@ import {
   IconFontMono,
   IconFontSans,
   IconFontSansSerif,
+  IconGroup,
   IconHome,
   IconJapan,
   IconLifeBuoy,
@@ -1415,6 +1416,12 @@ export const defaultSettingsTabs = [
         icon: IconUsersRound,
         id: "members",
         description: "settings.descriptions.members",
+      },
+      {
+        name: "settings.titles.groups",
+        icon: IconGroup,
+        id: "groups",
+        description: "settings.descriptions.groups",
       },
       {
         name: "settings.titles.security",

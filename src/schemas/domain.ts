@@ -81,7 +81,12 @@ export const userWriteSchema = userProfileSchema.extend({
 
 export const userPreferencesSchema = z.object({
   currentTeamId: z.string().nullable(),
-  onboarding: z.boolean(),
+  // Genuine body data, not path-derivable — and legacy/partial docs exist that
+  // were written by a `currentTeamId`-only merge (or predate this field). A
+  // required `z.boolean()` makes the read converter throw (DEV) on those docs
+  // and the hydration cache get discarded. Optional + the read-side `?? false`
+  // (authStore) heals them without a migration.
+  onboarding: z.boolean().optional(),
   updatedAt: timestampSchema.optional(),
 })
 
@@ -121,6 +126,19 @@ export const workspaceSchema = z.object({
   name: z.string(),
   description: z.string().nullable().optional(),
   photoURL: z.string().nullable().optional(),
+  /**
+   * Human member uids who participate in this workspace (= team humans minus
+   * those excluded). Denormalized for airtight LIST-level exclusion: the client
+   * queries `where("memberUids","array-contains",uid)` and firestore.rules
+   * gates the workspace read on `uid in memberUids`. Maintained atomically by
+   * the membership lifecycle (createWorkspace seeds it in-transaction;
+   * acceptInvitation adds the new member in-transaction; removeMember(s) fan
+   * out; assignWorkspaceRole toggles it on exclude). No backfill — every
+   * workspace carries it from creation. Optional on the read type only because
+   * Firestore `array-contains` already guarantees its presence on any doc the
+   * query returns. Agents are never included (they don't list workspaces).
+   */
+  memberUids: z.array(z.string()).optional(),
   createdAt: timestampSchema,
   updatedAt: timestampSchema,
 })
@@ -130,6 +148,34 @@ export const workspaceWriteSchema = workspaceSchema.extend({
   teamId: z.string().optional(),
   createdAt: timestampInputSchema,
   updatedAt: timestampInputSchema,
+})
+
+// ─── Group ───────────────────────────────────────────────────────────────────
+
+/**
+ * A team group: a reusable, named bundle of HUMAN team members. A group is
+ * role-less — the role it confers is assigned per-workspace at
+ * `teams/{teamId}/workspaces/{workspaceId}/groupGrants/{groupId}` (elevate-only,
+ * within-workspace only), never on the group itself. Functions-only write
+ * (createGroup / updateGroup / deleteGroup); the client only ever reads.
+ *
+ * `createdByUid` is `.optional()` so a legacy/partial doc never trips the
+ * read-path converter (over-strict read schemas silently drop rows). `teamId`
+ * is path-injected by the converter (`{ teamId: 1 }`), so it stays required.
+ */
+export const groupSchema = z.object({
+  id: z.string(),
+  teamId: z.string(),
+  name: z.string(),
+  // Optional: groups created before descriptions existed have none; `null` is
+  // the explicit "cleared" value written by the update callable.
+  description: z.string().nullable().optional(),
+  memberIds: z.array(z.string()).default([]),
+  // Optional: groups created before avatars existed have no `photoURL`.
+  photoURL: z.string().nullable().optional(),
+  createdByUid: z.string().optional(),
+  createdAt: timestampSchema,
+  updatedAt: timestampSchema,
 })
 
 // ─── Membership-scoped preferences ───────────────────────────────────────────

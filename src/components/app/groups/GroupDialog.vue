@@ -1,0 +1,382 @@
+<script lang="ts" setup>
+import { usePhotoUpload } from "@/composables/usePhotoUpload"
+import { IconUsers, IconX } from "@/data/icons"
+import { getInitials } from "@/helpers/utilities"
+import { useMembershipStore } from "@/stores/membershipStore"
+import { useTeamGroupsStore } from "@/stores/teamGroupsStore"
+import type { IGroup } from "@/types/domain"
+import { isUserMembership, type IMembership } from "@/types/membership"
+import { storeToRefs } from "pinia"
+import { toast } from "vue-sonner"
+
+const props = defineProps<{
+  open?: boolean
+  mode: "create" | "edit"
+  group?: IGroup
+}>()
+
+const emit = defineEmits<{
+  (e: "update:open", value: boolean): void
+}>()
+
+const { t } = useI18n()
+
+const membershipStore = useMembershipStore()
+const { teamMembers } = storeToRefs(membershipStore)
+const groupsStore = useTeamGroupsStore()
+const { usageForGroup } = storeToRefs(groupsStore)
+
+const humanMembers = computed(() => teamMembers.value.filter(isUserMembership))
+
+const memberLabel = (member: IMembership) =>
+  member.user?.displayName || member.user?.email || member.userId
+
+// ── Form state ────────────────────────────────────────────────────────────────
+const isOpen = ref(props.open || false)
+const isSaving = ref(false)
+const groupName = ref("")
+const groupDescription = ref("")
+const selectedIds = ref<Set<string>>(new Set())
+const search = ref("")
+
+// ── Photo upload (staged; committed on Save) ─────────────────────────────────
+const photoFile = ref<File | null>(null)
+const photoPreview = ref<string | null>(null)
+const revokeBlobUrl = () => {
+  if (photoPreview.value?.startsWith("blob:")) {
+    URL.revokeObjectURL(photoPreview.value)
+  }
+}
+const groupPhotoUpload = usePhotoUpload({
+  onUpload: async (_id, file) => {
+    revokeBlobUrl()
+    photoFile.value = file
+    photoPreview.value = URL.createObjectURL(file)
+  },
+})
+const triggerGroupPhotoSelection = () => {
+  groupPhotoUpload.triggerUpload(props.group?.id || "draft-group")
+}
+const removePhoto = () => {
+  revokeBlobUrl()
+  photoFile.value = null
+  photoPreview.value = null
+}
+
+const filteredMembers = computed(() => {
+  const q = search.value.trim().toLowerCase()
+  if (!q) return humanMembers.value
+  return humanMembers.value.filter((m) =>
+    memberLabel(m).toLowerCase().includes(q)
+  )
+})
+
+const isSelected = (userId: string) => selectedIds.value.has(userId)
+
+const toggleMember = (userId: string, checked: boolean) => {
+  const next = new Set(selectedIds.value)
+  if (checked) next.add(userId)
+  else next.delete(userId)
+  selectedIds.value = next
+}
+
+const usageCount = computed(() =>
+  props.mode === "edit" && props.group ? usageForGroup.value(props.group.id) : 0
+)
+
+const resetForm = () => {
+  revokeBlobUrl()
+  groupName.value = ""
+  groupDescription.value = ""
+  selectedIds.value = new Set()
+  search.value = ""
+  photoFile.value = null
+  photoPreview.value = null
+}
+
+const initFromGroup = () => {
+  if (props.mode === "edit" && props.group) {
+    groupName.value = props.group.name
+    groupDescription.value = props.group.description || ""
+    selectedIds.value = new Set(props.group.memberIds)
+    photoPreview.value = props.group.photoURL || null
+  } else {
+    resetForm()
+  }
+}
+
+watch(
+  () => props.open,
+  (val) => {
+    isOpen.value = val ?? false
+  }
+)
+
+watch(isOpen, (val) => {
+  emit("update:open", val)
+  if (val) initFromGroup()
+  else resetForm()
+})
+
+const handleSubmit = async () => {
+  const name = groupName.value.trim()
+  if (!name) return
+
+  isSaving.value = true
+  try {
+    const memberIds = [...selectedIds.value]
+    const description = groupDescription.value.trim() || null
+    if (props.mode === "create") {
+      await groupsStore.createGroup(
+        name,
+        memberIds,
+        description,
+        photoFile.value || undefined
+      )
+    } else if (props.group) {
+      // null filePayload signals "remove the existing photo".
+      let filePayload: File | null | undefined = undefined
+      if (photoFile.value) {
+        filePayload = photoFile.value
+      } else if (props.group.photoURL && !photoPreview.value) {
+        filePayload = null
+      }
+      await groupsStore.updateGroup(props.group.id, {
+        name,
+        description,
+        memberIds,
+        photoFile: filePayload,
+      })
+    }
+    isOpen.value = false
+  } catch (error) {
+    console.error("[GroupDialog] Failed to save group", error)
+    toast.error(
+      t(
+        props.mode === "create"
+          ? "settings.groups.createError"
+          : "settings.groups.updateError"
+      )
+    )
+  } finally {
+    isSaving.value = false
+  }
+}
+</script>
+
+<template>
+  <Dialog v-model:open="isOpen">
+    <DialogContent class="w-md max-w-fit">
+      <DialogHeader>
+        <DialogTitle>
+          {{
+            mode === "create"
+              ? t("components.groupDialog.createTitle")
+              : t("components.groupDialog.editTitle")
+          }}
+        </DialogTitle>
+        <DialogDescription>
+          {{
+            mode === "create"
+              ? t("components.groupDialog.createDescription")
+              : t("components.groupDialog.editDescription")
+          }}
+        </DialogDescription>
+      </DialogHeader>
+
+      <div class="mt-4 grid gap-4">
+        <!-- Group Photo -->
+        <Field class="grid gap-2">
+          <div class="flex flex-col items-center gap-2">
+            <FieldLabel class="text-secondary-foreground text-xs">
+              {{ t("components.groupDialog.photoLabel") }}
+            </FieldLabel>
+            <div class="group relative">
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger as-child>
+                    <Avatar
+                      class="size-16 cursor-pointer"
+                      @click="triggerGroupPhotoSelection"
+                    >
+                      <AvatarImage
+                        class="size-16"
+                        :src="photoPreview!"
+                        referrerpolicy="no-referrer"
+                      />
+                      <AvatarFallback class="size-16">
+                        {{ getInitials(groupName) }}
+                      </AvatarFallback>
+                    </Avatar>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    {{ t("components.groupDialog.uploadPhoto") }}
+                  </TooltipContent>
+                </Tooltip>
+                <Tooltip v-if="photoPreview">
+                  <TooltipTrigger as-child>
+                    <Button
+                      variant="secondary"
+                      class="ring-background absolute -top-2 -right-2 size-4 opacity-0 ring-2 transition group-hover:opacity-100"
+                      size="icon"
+                      @click.stop="removePhoto"
+                    >
+                      <IconX />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    {{ t("components.groupDialog.removePhoto") }}
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            </div>
+            <p>
+              {{
+                photoPreview
+                  ? t("components.groupDialog.clickToChange")
+                  : t("components.groupDialog.clickToUpload")
+              }}
+            </p>
+          </div>
+        </Field>
+
+        <!-- Name -->
+        <Field class="grid gap-2">
+          <FieldLabel
+            class="text-secondary-foreground text-xs"
+            for="group-name"
+          >
+            {{ t("components.groupDialog.nameLabel") }}
+          </FieldLabel>
+          <Input
+            id="group-name"
+            v-model="groupName"
+            :placeholder="t('components.groupDialog.namePlaceholder')"
+            @keyup.enter="handleSubmit"
+          />
+        </Field>
+
+        <!-- Description -->
+        <Field class="grid gap-2">
+          <FieldLabel
+            class="text-secondary-foreground text-xs"
+            for="group-description"
+          >
+            {{ t("components.groupDialog.descriptionLabel") }}
+          </FieldLabel>
+          <Textarea
+            id="group-description"
+            v-model="groupDescription"
+            :placeholder="t('components.groupDialog.descriptionPlaceholder')"
+          />
+        </Field>
+
+        <!-- Members -->
+        <Field class="grid gap-2">
+          <div class="flex items-center justify-between">
+            <FieldLabel class="text-secondary-foreground text-xs">
+              {{ t("components.groupDialog.membersLabel") }}
+            </FieldLabel>
+            <span class="text-muted-foreground text-xs">
+              {{
+                t("components.groupDialog.selectedCount", {
+                  count: selectedIds.size,
+                })
+              }}
+            </span>
+          </div>
+          <p class="text-muted-foreground text-xs">
+            {{ t("components.groupDialog.membersHint") }}
+          </p>
+          <Input
+            v-model="search"
+            :placeholder="t('components.groupDialog.searchPlaceholder')"
+          />
+          <Empty
+            v-if="humanMembers.length === 0"
+            class="border border-dashed p-6"
+          >
+            <EmptyHeader>
+              <EmptyMedia variant="icon">
+                <IconUsers />
+              </EmptyMedia>
+              <EmptyTitle>
+                {{ t("components.groupDialog.noMembers") }}
+              </EmptyTitle>
+            </EmptyHeader>
+          </Empty>
+          <ItemGroup class="max-h-56 overflow-y-auto">
+            <Item
+              v-for="member in filteredMembers"
+              :key="member.userId"
+              as="label"
+              size="sm"
+              class="hover:bg-muted/50 cursor-pointer"
+            >
+              <ItemMedia>
+                <Avatar class="size-7">
+                  <AvatarImage
+                    v-if="member.user?.photoURL"
+                    :src="member.user.photoURL"
+                    referrerpolicy="no-referrer"
+                  />
+                  <AvatarFallback class="text-xs">
+                    {{ getInitials(memberLabel(member)) }}
+                  </AvatarFallback>
+                </Avatar>
+              </ItemMedia>
+              <ItemContent class="gap-0.5 truncate">
+                <ItemTitle class="truncate">
+                  {{ memberLabel(member) }}
+                </ItemTitle>
+                <ItemDescription
+                  v-if="
+                    member.user?.email &&
+                    member.user.email !== memberLabel(member)
+                  "
+                  class="truncate text-xs"
+                >
+                  {{ member.user.email }}
+                </ItemDescription>
+              </ItemContent>
+              <ItemActions>
+                <Checkbox
+                  :model-value="isSelected(member.userId)"
+                  @update:model-value="
+                    (value) => toggleMember(member.userId, value === true)
+                  "
+                />
+              </ItemActions>
+            </Item>
+          </ItemGroup>
+        </Field>
+
+        <!-- Blast-radius cue (edit mode) -->
+        <p
+          v-if="mode === 'edit' && usageCount > 0"
+          class="text-muted-foreground text-xs"
+        >
+          {{
+            t("components.groupDialog.usedInWorkspaces", { count: usageCount })
+          }}
+        </p>
+      </div>
+
+      <DialogFooter>
+        <DialogClose as-child>
+          <Button variant="outline" :disabled="isSaving">
+            {{ t("actions.cancel") }}
+          </Button>
+        </DialogClose>
+        <Button :disabled="isSaving || !groupName.trim()" @click="handleSubmit">
+          <Spinner v-if="isSaving" />
+          {{
+            mode === "create"
+              ? t("components.groupDialog.create")
+              : t("components.groupDialog.saveChanges")
+          }}
+        </Button>
+      </DialogFooter>
+    </DialogContent>
+  </Dialog>
+</template>

@@ -61,14 +61,18 @@ const deleteWorkspaceDialog = useConfirmationDialog<IWorkspace>()
 const handleDeleteWorkspace = () =>
   deleteWorkspaceDialog.confirm((ws) => deleteWorkspace(ws.id))
 
-// Photo upload
+// Photo upload. The per-workspace edit gate needs the row's id, but
+// `usePhotoUpload`'s `canUpload` callback takes no argument — so stash the id
+// of the workspace whose avatar was clicked and gate against that.
+const pendingPhotoWorkspaceId = ref<string | null>(null)
 const workspacePhotoUpload = usePhotoUpload({
   onUpload: updateWorkspacePhoto,
-  canUpload: () => canUpdateWorkspace.value,
+  canUpload: () => canUpdateWorkspace(pendingPhotoWorkspaceId.value),
 })
 
 const handleWorkspaceAvatarClick = (workspace: IWorkspace) => {
-  if (!canUpdateWorkspace.value) return
+  if (!canUpdateWorkspace(workspace.id)) return
+  pendingPhotoWorkspaceId.value = workspace.id
   workspacePhotoUpload.triggerUpload(workspace.id)
 }
 
@@ -226,9 +230,11 @@ const formatCreatedAt = (value: IWorkspace["createdAt"] | null | undefined) => {
                                 <Avatar
                                   class="flex items-center justify-center"
                                   :class="{
-                                    'cursor-pointer': canUpdateWorkspace,
+                                    'cursor-pointer': canUpdateWorkspace(
+                                      workspace.id
+                                    ),
                                     'cursor-not-allowed opacity-60':
-                                      !canUpdateWorkspace,
+                                      !canUpdateWorkspace(workspace.id),
                                   }"
                                   @click="handleWorkspaceAvatarClick(workspace)"
                                 >
@@ -254,8 +260,10 @@ const formatCreatedAt = (value: IWorkspace["createdAt"] | null | undefined) => {
                               </TooltipTrigger>
                               <TooltipContent>
                                 {{
-                                  !canUpdateWorkspace
-                                    ? getCannotUpdateWorkspaceReason
+                                  !canUpdateWorkspace(workspace.id)
+                                    ? getCannotUpdateWorkspaceReason(
+                                        workspace.id
+                                      )
                                     : workspaceLoading.isLoading(
                                           `photo-${workspace.id}`
                                         )
@@ -272,7 +280,7 @@ const formatCreatedAt = (value: IWorkspace["createdAt"] | null | undefined) => {
                                   variant="secondary"
                                   class="ring-background absolute -top-2 -right-2 size-4 opacity-0! ring-2 transition group-hover:enabled:opacity-100!"
                                   size="icon"
-                                  :disabled="!canUpdateWorkspace"
+                                  :disabled="!canUpdateWorkspace(workspace.id)"
                                   @click.stop="
                                     removeWorkspacePhoto(workspace.id)
                                   "
@@ -282,8 +290,10 @@ const formatCreatedAt = (value: IWorkspace["createdAt"] | null | undefined) => {
                               </TooltipTrigger>
                               <TooltipContent>
                                 {{
-                                  !canUpdateWorkspace
-                                    ? getCannotUpdateWorkspaceReason
+                                  !canUpdateWorkspace(workspace.id)
+                                    ? getCannotUpdateWorkspaceReason(
+                                        workspace.id
+                                      )
                                     : t("settings.workspacesList.removePhoto")
                                 }}
                               </TooltipContent>
@@ -346,7 +356,9 @@ const formatCreatedAt = (value: IWorkspace["createdAt"] | null | undefined) => {
                                       <TooltipTrigger as-child>
                                         <div>
                                           <DropdownMenuItem
-                                            :disabled="!canUpdateWorkspace"
+                                            :disabled="
+                                              !canUpdateWorkspace(workspace.id)
+                                            "
                                             @click="
                                               openWorkspaceDialog(
                                                 'edit',
@@ -360,16 +372,22 @@ const formatCreatedAt = (value: IWorkspace["createdAt"] | null | undefined) => {
                                         </div>
                                       </TooltipTrigger>
                                       <TooltipContent
-                                        v-if="!canUpdateWorkspace"
+                                        v-if="!canUpdateWorkspace(workspace.id)"
                                       >
-                                        {{ getCannotUpdateWorkspaceReason }}
+                                        {{
+                                          getCannotUpdateWorkspaceReason(
+                                            workspace.id
+                                          )
+                                        }}
                                       </TooltipContent>
                                     </Tooltip>
                                     <Tooltip>
                                       <TooltipTrigger as-child>
                                         <div>
                                           <DropdownMenuItem
-                                            :disabled="!canDeleteWorkspace"
+                                            :disabled="
+                                              !canDeleteWorkspace(workspace.id)
+                                            "
                                             @click="
                                               deleteWorkspaceDialog.open(
                                                 workspace
@@ -382,9 +400,13 @@ const formatCreatedAt = (value: IWorkspace["createdAt"] | null | undefined) => {
                                         </div>
                                       </TooltipTrigger>
                                       <TooltipContent
-                                        v-if="!canDeleteWorkspace"
+                                        v-if="!canDeleteWorkspace(workspace.id)"
                                       >
-                                        {{ getCannotDeleteWorkspaceReason }}
+                                        {{
+                                          getCannotDeleteWorkspaceReason(
+                                            workspace.id
+                                          )
+                                        }}
                                       </TooltipContent>
                                     </Tooltip>
                                   </DropdownMenuContent>

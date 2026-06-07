@@ -16,7 +16,7 @@ import {
   normalizeAttachmentDisplayName,
   workspaceNodeAttachmentsCollectionPath,
 } from "./nodeAttachments.js"
-import { can } from "./permissions.js"
+import { can, effectiveRole } from "./permissions.js"
 import { CALLABLE_OPTS, DESTRUCTIVE_CALLABLE_OPTS } from "./runtimeConfig.js"
 import { stripeSecretKey } from "./secrets.js"
 import {
@@ -32,6 +32,8 @@ import {
   NodeType,
   WorkspaceNodeScope,
 } from "./types.js"
+import { removeMemberFromWorkspaces } from "./workspaceMembership.js"
+import { resolveWorkspaceGroupRole } from "./workspaceRoles.js"
 
 // =============================================================================
 // Audit Log Types
@@ -209,6 +211,74 @@ async function getTeamRole(
   }
 
   return role
+}
+
+/**
+ * A member's per-workspace role override, or null when none applies. The
+ * override at teams/{teamId}/memberships/{userId}/workspaces/{workspaceId} is
+ * read through the passed transaction (so it sits in the transaction's read
+ * phase alongside the membership/workspace reads). Functions-only-write.
+ */
+async function getWorkspaceRoleOverride(
+  transaction: admin.firestore.Transaction,
+  teamId: string,
+  workspaceId: string,
+  userId: string
+): Promise<IMembershipRole | null> {
+  const overrideRef = db.doc(
+    `teams/${teamId}/memberships/${userId}/workspaces/${workspaceId}`
+  )
+  const overrideSnap = await transaction.get(overrideRef)
+  // Excluded = non-member of the workspace → no effective role (deny). Enforced
+  // here so every content callsite that resolves a workspace role rejects an
+  // excluded actor without per-callsite changes.
+  if (overrideSnap.exists && overrideSnap.data()?.excluded === true) {
+    throw new HttpsError(
+      "permission-denied",
+      "You are not a member of this workspace."
+    )
+  }
+  const directRoleRaw = overrideSnap.exists
+    ? overrideSnap.data()?.role
+    : undefined
+  const directRole = isMembershipRole(directRoleRaw) ? directRoleRaw : null
+  // Fold in group elevation LIVE (elevate-only, max over the member's groups).
+  // Read non-transactionally: groups + grants are admin-managed config, not part
+  // of THIS mutation's consistency boundary, so they stay out of the
+  // transaction's read set (no extra contention on the hot content path).
+  const groupRole = await resolveWorkspaceGroupRole(teamId, workspaceId, userId)
+  return effectiveRole(directRole, groupRole)
+}
+
+/**
+ * Non-transactional variant of {@link getWorkspaceRoleOverride}, for callables
+ * that resolve the caller's role outside a transaction (the batched
+ * `deleteWorkspaceNode` subtree purge and the attachment mutations, which read
+ * the role via `getTeamRole` rather than inside `runTransaction`).
+ */
+async function getWorkspaceRoleOverrideDirect(
+  teamId: string,
+  workspaceId: string,
+  userId: string
+): Promise<IMembershipRole | null> {
+  const overrideSnap = await db
+    .doc(`teams/${teamId}/memberships/${userId}/workspaces/${workspaceId}`)
+    .get()
+  // Excluded = non-member of the workspace → no effective role (deny). See the
+  // transaction-aware variant above.
+  if (overrideSnap.exists && overrideSnap.data()?.excluded === true) {
+    throw new HttpsError(
+      "permission-denied",
+      "You are not a member of this workspace."
+    )
+  }
+  const directRoleRaw = overrideSnap.exists
+    ? overrideSnap.data()?.role
+    : undefined
+  const directRole = isMembershipRole(directRoleRaw) ? directRoleRaw : null
+  // Fold in group elevation LIVE (elevate-only, max over the member's groups).
+  const groupRole = await resolveWorkspaceGroupRole(teamId, workspaceId, userId)
+  return effectiveRole(directRole, groupRole)
 }
 
 function assertString(value: unknown, field: string): string {
@@ -757,7 +827,7 @@ async function readStorageObjectMetadata(storagePath: string): Promise<{
   }
 }
 
-async function deleteStorageObjectIfExists(
+export async function deleteStorageObjectIfExists(
   storagePath: string | null | undefined
 ): Promise<void> {
   if (!storagePath) return
@@ -767,8 +837,31 @@ async function deleteStorageObjectIfExists(
       ignoreNotFound: true,
     })
   } catch (error) {
-    logger.warn("Failed to delete attachment storage object", {
+    logger.warn("Failed to delete storage object", {
       storagePath,
+      error: error instanceof Error ? error.message : String(error),
+    })
+  }
+}
+
+/**
+ * Best-effort recursive Storage cleanup by prefix — deletes every object under
+ * `prefix`. Used when a whole team/workspace is deleted (`recursiveDelete` only
+ * covers Firestore, not Cloud Storage). ALWAYS pass a trailing slash so the
+ * prefix can't bleed into a sibling id (`teams/abc/` must not match
+ * `teams/abcd/`). Never throws — the entity is already gone, so any leftover
+ * object is harmless dead data (logged), not a reason to fail the deletion.
+ */
+export async function deleteStoragePrefix(
+  prefix: string | null | undefined
+): Promise<void> {
+  if (!prefix) return
+
+  try {
+    await admin.storage().bucket().deleteFiles({ prefix, force: true })
+  } catch (error) {
+    logger.warn("Failed to delete storage objects under prefix", {
+      prefix,
       error: error instanceof Error ? error.message : String(error),
     })
   }
@@ -1175,6 +1268,14 @@ export const deleteTeam = onCall(
     // Recursively delete the entire team document tree (all subcollections)
     await db.recursiveDelete(teamRef)
 
+    // Cloud Storage cleanup (recursiveDelete only touches Firestore). One sweep
+    // each clears the team's own photo + every workspace and group avatar
+    // (images/) and every node/bot attachment (attachments/). Best-effort.
+    await Promise.all([
+      deleteStoragePrefix(`images/teams/${teamId}/`),
+      deleteStoragePrefix(`attachments/teams/${teamId}/`),
+    ])
+
     // Also delete related invitations for this team
     const invitationsSnap = await db
       .collection("invitations")
@@ -1257,6 +1358,15 @@ export const createWorkspace = onCall(CALLABLE_OPTS, async (request) => {
       )
     }
 
+    // Seed memberUids = the team's human members (airtight list-level
+    // participation; agents excluded). Read in-transaction for consistency.
+    const membersSnap = await transaction.get(
+      db.collection(`teams/${teamId}/memberships`)
+    )
+    const memberUids = membersSnap.docs
+      .filter((memberDoc) => memberDoc.data()?.kind !== "agent")
+      .map((memberDoc) => memberDoc.id)
+
     const workspaceRef = db.collection(`teams/${teamId}/workspaces`).doc()
     const now = admin.firestore.FieldValue.serverTimestamp()
 
@@ -1266,6 +1376,7 @@ export const createWorkspace = onCall(CALLABLE_OPTS, async (request) => {
       name,
       description,
       photoURL: null,
+      memberUids,
       createdAt: now,
       updatedAt: now,
     }
@@ -1339,12 +1450,30 @@ export const updateWorkspace = onCall(CALLABLE_OPTS, async (request) => {
   return db.runTransaction(async (transaction) => {
     const role = await requireTeamRole(transaction, teamId, actorId)
 
-    if (
-      !can(actorId, Capabilities.EDIT_WORKSPACE, {
-        scope: "team",
+    // EDIT_WORKSPACE is workspace-scoped: a team owner/admin can edit any
+    // workspace, AND a member elevated to admin/owner in THIS workspace (direct
+    // override or group grant) can edit it too. Check the team role first so a
+    // team admin excluded from workspace participation keeps their entity-level
+    // edit right; only fall back to the (exclusion-aware) per-workspace resolver
+    // when the team role alone isn't enough.
+    let allowed = can(actorId, Capabilities.EDIT_WORKSPACE, {
+      scope: "team",
+      teamRole: role,
+    })
+    if (!allowed) {
+      const workspaceRole = await getWorkspaceRoleOverride(
+        transaction,
+        teamId,
+        workspaceId,
+        actorId
+      )
+      allowed = can(actorId, Capabilities.EDIT_WORKSPACE, {
+        scope: "workspace",
         teamRole: role,
+        workspaceRole,
       })
-    ) {
+    }
+    if (!allowed) {
       throw new HttpsError(
         "permission-denied",
         "You do not have permission to update workspaces."
@@ -1395,6 +1524,47 @@ export const updateWorkspace = onCall(CALLABLE_OPTS, async (request) => {
   })
 })
 
+/**
+ * Remove references to a deleted workspace that live OUTSIDE its document
+ * subtree, so `recursiveDelete(workspaceRef)` doesn't reach them: each member's
+ * per-workspace override at `teams/{t}/memberships/{uid}/workspaces/{wid}`
+ * (role / excluded / the denormalized group `groupRole`). Harmless once the
+ * workspace is gone (nothing reads them), but left behind they accumulate as
+ * dead data and clutter the role editor. Pruned best-effort after deletion.
+ *
+ * The workspace's `groupGrants` subcollection lives INSIDE the workspace
+ * subtree, so `recursiveDelete(workspaceRef)` already drops it — and deleting
+ * the override docs below removes the `groupRole` denorm those grants fed. So
+ * both sides of a group grant are cleaned by the workspace deletion.
+ */
+async function cleanupDeletedWorkspaceReferences(
+  teamId: string,
+  workspaceId: string
+): Promise<void> {
+  // Delete each member's per-workspace override doc for this workspace. These
+  // sit under memberships/{uid}/workspaces/{wid}, outside the deleted subtree.
+  // getAll first so we only write deletes for docs that actually exist.
+  const membersSnap = await db
+    .collection(`teams/${teamId}/memberships`)
+    .select()
+    .get()
+  const overrideRefs = membersSnap.docs.map((m) =>
+    db.doc(`teams/${teamId}/memberships/${m.id}/workspaces/${workspaceId}`)
+  )
+  for (const chunk of chunkArray(overrideRefs, 300)) {
+    const snaps = await db.getAll(...chunk)
+    const batch = db.batch()
+    let writes = 0
+    for (const snap of snaps) {
+      if (snap.exists) {
+        batch.delete(snap.ref)
+        writes++
+      }
+    }
+    if (writes > 0) await batch.commit()
+  }
+}
+
 export const deleteWorkspace = onCall(
   DESTRUCTIVE_CALLABLE_OPTS,
   async (request) => {
@@ -1411,12 +1581,29 @@ export const deleteWorkspace = onCall(
       async (transaction) => {
         const memberRole = await requireTeamRole(transaction, teamId, actorId)
 
-        if (
-          !can(actorId, Capabilities.DELETE_WORKSPACE, {
-            scope: "team",
+        // DELETE_WORKSPACE is workspace-scoped: a team owner/admin can delete
+        // any workspace, AND a member elevated to admin/owner in THIS workspace
+        // (direct override or group grant) can delete it. Team role first so an
+        // excluded team admin keeps the right; fall back to the exclusion-aware
+        // per-workspace resolver only when the team role isn't enough.
+        let allowed = can(actorId, Capabilities.DELETE_WORKSPACE, {
+          scope: "team",
+          teamRole: memberRole,
+        })
+        if (!allowed) {
+          const workspaceRole = await getWorkspaceRoleOverride(
+            transaction,
+            teamId,
+            workspaceId,
+            actorId
+          )
+          allowed = can(actorId, Capabilities.DELETE_WORKSPACE, {
+            scope: "workspace",
             teamRole: memberRole,
+            workspaceRole,
           })
-        ) {
+        }
+        if (!allowed) {
           throw new HttpsError(
             "permission-denied",
             "You do not have permission to delete workspaces."
@@ -1450,6 +1637,30 @@ export const deleteWorkspace = onCall(
     // NOTE: This cannot run inside a transaction, hence the two-step approach.
     const workspaceRef = db.doc(`teams/${teamId}/workspaces/${workspaceId}`)
     await db.recursiveDelete(workspaceRef)
+
+    // Step 2b: Prune references that live outside the workspace subtree
+    // (per-member overrides keyed by this workspace). Best-effort — the
+    // workspace is already gone, so leftovers are harmless dead data; log and
+    // continue rather than failing a completed deletion.
+    try {
+      await cleanupDeletedWorkspaceReferences(teamId, workspaceId)
+    } catch (error) {
+      logger.error("Failed to prune references for deleted workspace", {
+        teamId,
+        workspaceId,
+        error,
+      })
+    }
+
+    // Step 2c: Cloud Storage cleanup (recursiveDelete only touches Firestore).
+    // Clears the workspace photo (images/) + every node & bot-session attachment
+    // (attachments/). Best-effort, by prefix scoped to this workspace.
+    await Promise.all([
+      deleteStoragePrefix(`images/teams/${teamId}/workspaces/${workspaceId}/`),
+      deleteStoragePrefix(
+        `attachments/teams/${teamId}/workspaces/${workspaceId}/`
+      ),
+    ])
 
     // Step 3: Log the event
     const logRef = await logEvent({
@@ -1504,6 +1715,12 @@ export const createWorkspaceNode = onCall(CALLABLE_OPTS, async (request) => {
       !can(actorId, Capabilities.MANAGE_WORKSPACE_CONTENT, {
         scope: "workspace",
         teamRole: role,
+        workspaceRole: await getWorkspaceRoleOverride(
+          transaction,
+          teamId,
+          workspaceId,
+          actorId
+        ),
       })
     ) {
       throw new HttpsError(
@@ -1608,6 +1825,12 @@ export const renameWorkspaceNode = onCall(CALLABLE_OPTS, async (request) => {
       !can(actorId, Capabilities.MANAGE_WORKSPACE_CONTENT, {
         scope: "workspace",
         teamRole: role,
+        workspaceRole: await getWorkspaceRoleOverride(
+          transaction,
+          teamId,
+          workspaceId,
+          actorId
+        ),
       })
     ) {
       throw new HttpsError(
@@ -1692,6 +1915,12 @@ export const moveWorkspaceNode = onCall(CALLABLE_OPTS, async (request) => {
       !can(actorId, Capabilities.MANAGE_WORKSPACE_CONTENT, {
         scope: "workspace",
         teamRole: role,
+        workspaceRole: await getWorkspaceRoleOverride(
+          transaction,
+          teamId,
+          workspaceId,
+          actorId
+        ),
       })
     ) {
       throw new HttpsError(
@@ -1783,6 +2012,12 @@ export const archiveWorkspaceNode = onCall(CALLABLE_OPTS, async (request) => {
       !can(actorId, Capabilities.MANAGE_WORKSPACE_CONTENT, {
         scope: "workspace",
         teamRole: role,
+        workspaceRole: await getWorkspaceRoleOverride(
+          transaction,
+          teamId,
+          workspaceId,
+          actorId
+        ),
       })
     ) {
       throw new HttpsError(
@@ -1853,6 +2088,12 @@ export const unarchiveWorkspaceNode = onCall(CALLABLE_OPTS, async (request) => {
       !can(actorId, Capabilities.MANAGE_WORKSPACE_CONTENT, {
         scope: "workspace",
         teamRole: role,
+        workspaceRole: await getWorkspaceRoleOverride(
+          transaction,
+          teamId,
+          workspaceId,
+          actorId
+        ),
       })
     ) {
       throw new HttpsError(
@@ -1923,6 +2164,11 @@ export const deleteWorkspaceNode = onCall(
       !can(actorId, Capabilities.MANAGE_WORKSPACE_CONTENT, {
         scope: "workspace",
         teamRole: role,
+        workspaceRole: await getWorkspaceRoleOverrideDirect(
+          teamId,
+          workspaceId,
+          actorId
+        ),
       })
     ) {
       throw new HttpsError(
@@ -2041,6 +2287,12 @@ export const updateWorkspaceNodeContent = onCall(
         !can(actorId, Capabilities.MANAGE_WORKSPACE_CONTENT, {
           scope: "workspace",
           teamRole: role,
+          workspaceRole: await getWorkspaceRoleOverride(
+            transaction,
+            teamId,
+            workspaceId,
+            actorId
+          ),
         })
       ) {
         throw new HttpsError(
@@ -2139,6 +2391,11 @@ export const createWorkspaceNodeAttachment = onCall(
       !can(actorId, Capabilities.MANAGE_WORKSPACE_CONTENT, {
         scope: "workspace",
         teamRole: role,
+        workspaceRole: await getWorkspaceRoleOverrideDirect(
+          teamId,
+          workspaceId,
+          actorId
+        ),
       })
     ) {
       throw new HttpsError(
@@ -2285,6 +2542,11 @@ export const updateWorkspaceNodeAttachment = onCall(
       !can(actorId, Capabilities.MANAGE_WORKSPACE_CONTENT, {
         scope: "workspace",
         teamRole: role,
+        workspaceRole: await getWorkspaceRoleOverrideDirect(
+          teamId,
+          workspaceId,
+          actorId
+        ),
       })
     ) {
       throw new HttpsError(
@@ -2430,6 +2692,11 @@ export const deleteWorkspaceNodeAttachment = onCall(
       !can(actorId, Capabilities.MANAGE_WORKSPACE_CONTENT, {
         scope: "workspace",
         teamRole: role,
+        workspaceRole: await getWorkspaceRoleOverrideDirect(
+          teamId,
+          workspaceId,
+          actorId
+        ),
       })
     ) {
       throw new HttpsError(
@@ -2641,6 +2908,11 @@ export const createBotSessionAttachment = onCall(
       !can(actorId, Capabilities.MANAGE_WORKSPACE_CONTENT, {
         scope: "workspace",
         teamRole: role,
+        workspaceRole: await getWorkspaceRoleOverrideDirect(
+          teamId,
+          workspaceId,
+          actorId
+        ),
       })
     ) {
       throw new HttpsError(
@@ -2741,6 +3013,11 @@ export const updateBotSessionAttachment = onCall(
       !can(actorId, Capabilities.MANAGE_WORKSPACE_CONTENT, {
         scope: "workspace",
         teamRole: role,
+        workspaceRole: await getWorkspaceRoleOverrideDirect(
+          teamId,
+          workspaceId,
+          actorId
+        ),
       })
     ) {
       throw new HttpsError(
@@ -2834,6 +3111,11 @@ export const deleteBotSessionAttachment = onCall(
       !can(actorId, Capabilities.MANAGE_WORKSPACE_CONTENT, {
         scope: "workspace",
         teamRole: role,
+        workspaceRole: await getWorkspaceRoleOverrideDirect(
+          teamId,
+          workspaceId,
+          actorId
+        ),
       })
     ) {
       throw new HttpsError(
@@ -2995,6 +3277,260 @@ export const assignRoleToUser = onCall(CALLABLE_OPTS, async (request) => {
   })
 })
 
+export const assignWorkspaceRole = onCall(CALLABLE_OPTS, async (request) => {
+  assertAuthenticated(request)
+
+  const teamId = assertString(request.data?.teamId, "teamId")
+  const workspaceId = assertString(request.data?.workspaceId, "workspaceId")
+  const targetUserId = assertString(request.data?.userId, "userId")
+
+  // Partial patch — `role` and `excluded` are independently optional:
+  //   - role:     omitted = leave unchanged; null = clear the override; a role = set it.
+  //   - excluded: omitted = leave unchanged; boolean = set workspace participation.
+  // `excluded: true` makes the member a non-member of this workspace and is
+  // ENFORCED everywhere: it removes the uid from `memberUids` (list query +
+  // workspace read rule), getWorkspaceRoleOverride throws on it (collab/bot/
+  // content callables), and rules deny excluded reads (nodes/snapshots/sessions)
+  // and writes (canManageWorkspaceContentIn). Deny beats every elevation.
+  const roleProvided = request.data?.role !== undefined
+  const role: IMembershipRole | null | undefined = roleProvided
+    ? request.data?.role === null
+      ? null
+      : assertMembershipRole(request.data?.role, "role")
+    : undefined
+  const excluded: boolean | undefined =
+    typeof request.data?.excluded === "boolean"
+      ? (request.data?.excluded as boolean)
+      : undefined
+
+  if (role === undefined && excluded === undefined) {
+    throw new HttpsError(
+      "invalid-argument",
+      "Provide a role and/or an excluded flag to update."
+    )
+  }
+
+  const actorId = request.auth.uid
+  const actorEmail = request.auth.token.email ?? undefined
+
+  return db.runTransaction(async (transaction) => {
+    const actorRole = await requireTeamRole(transaction, teamId, actorId)
+
+    // Per-workspace roles are a team-admin act (same gate as team-role
+    // assignment) in this phase; a future workspace-admin delegation can
+    // relax this without changing the storage shape.
+    if (
+      !can(actorId, Capabilities.UPDATE_MEMBER_ROLE, {
+        scope: "team",
+        teamRole: actorRole,
+      })
+    ) {
+      throw new HttpsError(
+        "permission-denied",
+        "You do not have permission to change workspace roles."
+      )
+    }
+
+    // Granting `owner` — even scoped to one workspace — is owner-only, mirroring
+    // assignRoleToUser's owner-transition guard.
+    if (role === "owner" && actorRole !== "owner") {
+      throw new HttpsError(
+        "permission-denied",
+        "Only team owners can grant the owner role."
+      )
+    }
+
+    // The target must already be a team member: a per-workspace role is an
+    // overlay on top of team membership, never a standalone grant.
+    const membershipRef = db.doc(`teams/${teamId}/memberships/${targetUserId}`)
+    const membershipSnap = await transaction.get(membershipRef)
+    if (!membershipSnap.exists) {
+      throw new HttpsError("not-found", "Membership not found.")
+    }
+
+    // The workspace must exist within the team.
+    const workspaceRef = db.doc(`teams/${teamId}/workspaces/${workspaceId}`)
+    const workspaceSnap = await transaction.get(workspaceRef)
+    if (!workspaceSnap.exists) {
+      throw new HttpsError("not-found", "Workspace not found.")
+    }
+
+    const overrideRef = db.doc(
+      `teams/${teamId}/memberships/${targetUserId}/workspaces/${workspaceId}`
+    )
+    const overrideSnap = await transaction.get(overrideRef)
+    const overrideData = overrideSnap.data() ?? {}
+    const beforeRole =
+      (overrideData.role as IMembershipRole | null | undefined) ?? null
+    const beforeExcluded = overrideData.excluded === true
+
+    // Excluding a member from the workspace strips their uid from `memberUids`,
+    // now the SOLE gate on workspace visibility (the workspace read rule + the
+    // `memberUids array-contains` list query). Two exclusions create an
+    // unrecoverable state, so reject them up front — mirroring the self-/last-
+    // owner guards in removeMember and assignRoleToUser:
+    //   - Excluding YOURSELF drops the workspace from your own list, leaving no
+    //     way back into WorkspaceDialog to re-include yourself (self-lockout;
+    //     only another admin could undo it).
+    //   - Excluding an OWNER strands the team's highest-privilege member — and
+    //     if they are the sole owner, nobody can restore them.
+    // Gated on the transition (excluded && !beforeExcluded) so re-inclusion
+    // (excluded: false) and no-op re-exclusions of legacy data still pass.
+    if (excluded === true && !beforeExcluded) {
+      if (targetUserId === actorId) {
+        throw new HttpsError(
+          "failed-precondition",
+          "You cannot exclude yourself from a workspace. Ask another admin to remove you."
+        )
+      }
+      // Effective role = max(team role, direct override). A team owner or a
+      // workspace owner-override both count.
+      const targetEffectiveRole = effectiveRole(
+        membershipSnap.data()?.role as IMembershipRole | null | undefined,
+        beforeRole
+      )
+      if (targetEffectiveRole === "owner") {
+        throw new HttpsError(
+          "failed-precondition",
+          "You cannot exclude an owner from a workspace. Change their role first."
+        )
+      }
+    }
+
+    const patch: Record<string, unknown> = {
+      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+    }
+    const fields: string[] = []
+    const before: Record<string, unknown> = {}
+    const after: Record<string, unknown> = {}
+    if (role !== undefined && role !== beforeRole) {
+      patch.role = role
+      fields.push("workspaceRole")
+      before.workspaceRole = beforeRole
+      after.workspaceRole = role
+    }
+    if (excluded !== undefined && excluded !== beforeExcluded) {
+      patch.excluded = excluded
+      fields.push("excluded")
+      before.excluded = beforeExcluded
+      after.excluded = excluded
+    }
+
+    if (fields.length === 0) {
+      return {
+        teamId,
+        workspaceId,
+        userId: targetUserId,
+        role: beforeRole,
+        excluded: beforeExcluded,
+        updated: false,
+      }
+    }
+
+    transaction.set(overrideRef, patch, { merge: true })
+
+    // Keep the workspace's participation list in sync for the airtight
+    // list-level rule + client query: excluded → drop the uid, included → add.
+    if (excluded !== undefined && excluded !== beforeExcluded) {
+      transaction.update(workspaceRef, {
+        memberUids: excluded
+          ? admin.firestore.FieldValue.arrayRemove(targetUserId)
+          : admin.firestore.FieldValue.arrayUnion(targetUserId),
+      })
+    }
+
+    const logRef = await logEvent(
+      {
+        teamId,
+        workspaceId,
+        actor: { userId: actorId, email: actorEmail, role: actorRole },
+        action: "membership.workspace_role.update",
+        resource: {
+          type: "membership",
+          id: targetUserId,
+          parentId: workspaceId,
+        },
+        context: buildContext(request),
+        changes: { fields, before, after },
+      },
+      { transaction }
+    )
+
+    return {
+      teamId,
+      workspaceId,
+      userId: targetUserId,
+      role: role !== undefined ? role : beforeRole,
+      excluded: excluded !== undefined ? excluded : beforeExcluded,
+      updated: true,
+      logId: logRef.id,
+    }
+  })
+})
+
+/**
+ * List the per-workspace overrides set for a workspace, keyed by member uid.
+ * Admin-gated (same capability as assigning them) — powers the role-assignment
+ * UI. Reads each member's override doc directly rather than via a
+ * collectionGroup query, since the `workspaces` collection id collides with the
+ * top-level `teams/{t}/workspaces`. Only members WITH a stored override (an
+ * explicit role and/or an `excluded` participation flag) are returned; absent
+ * means "member, inherits the team role".
+ */
+export const listWorkspaceMemberRoles = onCall(
+  CALLABLE_OPTS,
+  async (request) => {
+    assertAuthenticated(request)
+
+    const teamId = assertString(request.data?.teamId, "teamId")
+    const workspaceId = assertString(request.data?.workspaceId, "workspaceId")
+    const actorId = request.auth.uid
+
+    const actorRole = await getTeamRole(teamId, actorId)
+    if (
+      !can(actorId, Capabilities.UPDATE_MEMBER_ROLE, {
+        scope: "team",
+        teamRole: actorRole,
+      })
+    ) {
+      throw new HttpsError(
+        "permission-denied",
+        "You do not have permission to view workspace roles."
+      )
+    }
+
+    const membershipsSnap = await db
+      .collection(`teams/${teamId}/memberships`)
+      .select()
+      .get()
+
+    type Entry = {
+      userId: string
+      role: IMembershipRole | null
+      excluded: boolean
+    }
+    const roles = (
+      await Promise.all(
+        membershipsSnap.docs.map(async (memberDoc) => {
+          const overrideSnap = await db
+            .doc(
+              `teams/${teamId}/memberships/${memberDoc.id}/workspaces/${workspaceId}`
+            )
+            .get()
+          if (!overrideSnap.exists) return null
+          const data = overrideSnap.data() ?? {}
+          const role = isMembershipRole(data.role) ? data.role : null
+          const excluded = data.excluded === true
+          if (role === null && !excluded) return null
+          return { userId: memberDoc.id, role, excluded }
+        })
+      )
+    ).filter((entry): entry is Entry => Boolean(entry))
+
+    return { teamId, workspaceId, roles }
+  }
+)
+
 export const removeMember = onCall(CALLABLE_OPTS, async (request) => {
   assertAuthenticated(request)
 
@@ -3005,7 +3541,7 @@ export const removeMember = onCall(CALLABLE_OPTS, async (request) => {
   const actorEmail = request.auth.token.email ?? undefined
   const isRemovingSelf = actorId === targetUserId
 
-  return db.runTransaction(async (transaction) => {
+  const result = await db.runTransaction(async (transaction) => {
     const actorRole = await requireTeamRole(transaction, teamId, actorId)
 
     // If removing someone else, check permission
@@ -3115,6 +3651,11 @@ export const removeMember = onCall(CALLABLE_OPTS, async (request) => {
       logId: logRef.id,
     }
   })
+
+  // Drop the removed member from every workspace's participation list.
+  await removeMemberFromWorkspaces(teamId, targetUserId)
+
+  return result
 })
 
 export const removeMembers = onCall(CALLABLE_OPTS, async (request) => {
@@ -3141,7 +3682,7 @@ export const removeMembers = onCall(CALLABLE_OPTS, async (request) => {
   const actorEmail = request.auth.token.email ?? undefined
   const isRemovingSelf = userIds.includes(actorId)
 
-  return db.runTransaction(async (transaction) => {
+  const result = await db.runTransaction(async (transaction) => {
     const actorRole = await requireTeamRole(transaction, teamId, actorId)
 
     // Check permission (must have permission to remove others)
@@ -3282,6 +3823,15 @@ export const removeMembers = onCall(CALLABLE_OPTS, async (request) => {
       logIds,
     }
   })
+
+  // Drop every removed member from the workspaces' participation lists.
+  await Promise.all(
+    (userIds as string[]).map((userId) =>
+      removeMemberFromWorkspaces(teamId, userId)
+    )
+  )
+
+  return result
 })
 
 // =============================================================================

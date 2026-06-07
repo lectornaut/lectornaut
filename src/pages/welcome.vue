@@ -28,7 +28,7 @@ import { toast } from "vue-sonner"
 definePage({
   meta: {
     requiresUser: true,
-    layout: "app",
+    layout: "default",
     sidebar: "Welcome",
     breadcrumb: "Welcome",
   },

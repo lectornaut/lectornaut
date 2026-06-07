@@ -19,6 +19,7 @@ import type {
   botToolCallSchema,
   customToolActionSchema,
   customToolFieldSchema,
+  groupSchema,
   integrationSchema,
   integrationSourceSchema,
   integrationTypeSchema,
@@ -69,6 +70,7 @@ export type ITeamBilling = z.infer<typeof teamBillingSchema>
 
 export type ITeam = z.infer<typeof teamSchema>
 export type IWorkspace = z.infer<typeof workspaceSchema>
+export type IGroup = z.infer<typeof groupSchema>
 
 export type IUserProfile = z.infer<typeof userProfileSchema>
 export type IUser = z.infer<typeof userSchema>

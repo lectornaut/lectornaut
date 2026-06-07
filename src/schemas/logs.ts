@@ -15,6 +15,7 @@ export const logResourceTypeSchema = z.enum([
   "workspace",
   "content",
   "membership",
+  "group",
   "security",
 ])
 
@@ -37,10 +38,15 @@ export const logActionSchema = z.enum([
   "content.attachment.update",
   "content.attachment.delete",
   "membership.role.update",
+  "membership.workspace_role.update",
   "membership.leave",
   "membership.remove",
   "membership.agent.add",
   "membership.agent.remove",
+  "group.create",
+  "group.update",
+  "group.delete",
+  "group.grant.update",
   "invitation.create",
   "invitation.resend",
   "invitation.update",

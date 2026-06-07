@@ -330,6 +330,16 @@ export const acceptInvitation = onCall(CALLABLE_OPTS, async (request) => {
     const userPreferencesSnap = await transaction.get(userPreferencesRef)
     const currentTeamId = readSelectedTeamId(userPreferencesSnap) ?? null
 
+    // Read every workspace BEFORE any write so the new member can be seeded into
+    // each `memberUids` atomically with the membership create. Folding this into
+    // the transaction (rather than a post-commit fan-out) guarantees the member
+    // sees the team's workspaces the instant they join — a missed add would
+    // otherwise hide every workspace with no recovery path (the invitation is
+    // consumed in this same transaction).
+    const workspacesSnap = await transaction.get(
+      db.collection(`teams/${invitation.teamId}/workspaces`).select()
+    )
+
     transaction.set(membershipRef, {
       userId: uid,
       teamId: invitation.teamId,
@@ -339,6 +349,12 @@ export const acceptInvitation = onCall(CALLABLE_OPTS, async (request) => {
       createdAt: admin.firestore.FieldValue.serverTimestamp(),
       updatedAt: admin.firestore.FieldValue.serverTimestamp(),
     })
+
+    for (const ws of workspacesSnap.docs) {
+      transaction.update(ws.ref, {
+        memberUids: admin.firestore.FieldValue.arrayUnion(uid),
+      })
+    }
 
     transaction.delete(invRef)
 

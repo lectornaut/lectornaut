@@ -16,22 +16,30 @@ import { firestore, storage } from "@/modules/firebase"
 import { zodConverter } from "@/schemas/_utils"
 import {
   botSessionSchema,
+  groupSchema,
   membershipPreferencesSchema,
   teamSchema,
   userPreferencesSchema,
   userSchema,
   workspaceSchema,
 } from "@/schemas/domain"
-import { membershipDocDataSchema } from "@/schemas/membership"
+import {
+  membershipDocDataSchema,
+  membershipWorkspaceRecordSchema,
+} from "@/schemas/membership"
 import type {
   IBotSession,
+  IGroup,
   IMembershipPreferences,
   ITeam,
   IUser,
   IUserPreferences,
   IWorkspace,
 } from "@/types/domain"
-import type { IMembershipDocData } from "@/types/membership"
+import type {
+  IMembershipDocData,
+  IMembershipWorkspaceRecord,
+} from "@/types/membership"
 import {
   collection,
   collectionGroup,
@@ -71,9 +79,20 @@ const membershipConverter = zodConverter<IMembershipDocData>(
   membershipDocDataSchema,
   "membership"
 )
+const groupConverter = zodConverter<IGroup>(
+  groupSchema,
+  "group",
+  // `teams/{teamId}/groups/{groupId}` — inject teamId (index 1) from the path so
+  // a doc that never denormalized it into the body still satisfies the schema.
+  { teamId: 1 }
+)
 const membershipPreferencesConverter = zodConverter<IMembershipPreferences>(
   membershipPreferencesSchema,
   "membershipPreferences"
+)
+const membershipWorkspaceConverter = zodConverter<IMembershipWorkspaceRecord>(
+  membershipWorkspaceRecordSchema,
+  "membershipWorkspace"
 )
 const botSessionConverter = zodConverter<IBotSession>(
   botSessionSchema,
@@ -109,6 +128,26 @@ export const getMembershipRef = (teamId: string, userId: string) =>
   doc(firestore, "teams", teamId, "memberships", userId).withConverter(
     membershipConverter
   )
+
+/**
+ * Get the signed-in user's per-workspace override subcollection
+ * (`teams/{teamId}/memberships/{userId}/workspaces`), validated on read. Each
+ * doc id is a workspace id; the body carries the elevate-only `role` override
+ * and denormalized group-derived `groupRole`. Readable only for one's own
+ * membership (functions-only write) — see `firestore.rules`.
+ */
+export const getMembershipWorkspacesCollection = (
+  teamId: string,
+  userId: string
+) =>
+  collection(
+    firestore,
+    "teams",
+    teamId,
+    "memberships",
+    userId,
+    "workspaces"
+  ).withConverter(membershipWorkspaceConverter)
 
 /** Get a reference to the membership-scoped preferences document. */
 export const getMembershipPreferencesRef = (teamId: string, userId: string) =>
@@ -169,6 +208,16 @@ export const getTeamWorkspacesCollection = (teamId: string) =>
     workspaceConverter
   )
 
+/** Get the groups subcollection for a team (validated on read). */
+export const getTeamGroupsCollection = (teamId: string) =>
+  collection(firestore, "teams", teamId, "groups").withConverter(groupConverter)
+
+/** Get a reference to a single group document (validated on read). */
+export const getGroupRef = (teamId: string, groupId: string) =>
+  doc(firestore, "teams", teamId, "groups", groupId).withConverter(
+    groupConverter
+  )
+
 // ============================================================================
 // Storage Helpers
 // ============================================================================
@@ -192,6 +241,10 @@ export const getTeamPhotoPath = (teamId: string) =>
 /** Canonical storage path for workspace profile photos. */
 export const getWorkspacePhotoPath = (teamId: string, workspaceId: string) =>
   withImagesRoot(`teams/${teamId}/workspaces/${workspaceId}/profilePhoto`)
+
+/** Canonical storage path for group profile photos. */
+export const getGroupPhotoPath = (teamId: string, groupId: string) =>
+  withImagesRoot(`teams/${teamId}/groups/${groupId}/profilePhoto`)
 
 /** Create a typed storage reference for any storage path. */
 export const getStorageFileRef = (path: string): StorageReference =>
@@ -243,6 +296,17 @@ export async function uploadWorkspacePhoto(
 }
 
 /**
+ * Upload group profile photo
+ */
+export async function uploadGroupPhoto(
+  teamId: string,
+  groupId: string,
+  file: File
+): Promise<string> {
+  return uploadFile(getGroupPhotoPath(teamId, groupId), file)
+}
+
+/**
  * Best-effort storage delete helper.
  * No-op if the object is missing or cannot be deleted.
  */
@@ -262,6 +326,9 @@ export const deleteTeamPhotoFile = (teamId: string) =>
 
 export const deleteWorkspacePhotoFile = (teamId: string, workspaceId: string) =>
   deleteStorageFile(getWorkspacePhotoPath(teamId, workspaceId))
+
+export const deleteGroupPhotoFile = (teamId: string, groupId: string) =>
+  deleteStorageFile(getGroupPhotoPath(teamId, groupId))
 
 // ============================================================================
 // Query Helpers

@@ -130,6 +130,8 @@ const removedAgentIds = ref<string[]>([])
 const invitePickerOpen = ref(false)
 const removedMemberIds = ref<string[]>([])
 const originalMemberRoles = ref<Record<string, IMembershipRole>>({})
+/** Staged role edits for already-sent invitations (id → role), applied on Save. */
+const invitationRoleEdits = ref<Record<string, IMembershipRole>>({})
 const isCheckingTeamUsername = ref(false)
 const teamUsernameAvailable = ref<boolean | null>(null)
 const teamUsernameError = ref<string | null>(null)
@@ -255,6 +257,7 @@ const resetForm = () => {
   invitePickerOpen.value = false
   removedMemberIds.value = []
   originalMemberRoles.value = {}
+  invitationRoleEdits.value = {}
   photoFile.value = null
   photoPreview.value = null
   teamUsernameAvailable.value = null
@@ -577,25 +580,51 @@ const handleResendInvitation = async (invite: IInvitation) => {
   }
 }
 
-const handleInvitationRoleChange = async (
-  invitationId: string,
-  value: unknown
-) => {
+/** The displayed role for a sent invitation — its staged edit, else stored role. */
+const invitationRoleValue = (invite: IInvitation): IMembershipRole =>
+  (invite.id ? invitationRoleEdits.value[invite.id] : undefined) ?? invite.role
+
+/**
+ * Stage a sent-invitation role change locally (mirrors how active-member role
+ * edits work) — committed on Save via `applyStagedInvitationRoles`, discarded on
+ * Cancel. Cancel/resend of invitations stay immediate; only the role is staged.
+ */
+const stageInvitationRole = (invite: IInvitation, value: unknown) => {
   if (!isMembershipRole(value)) {
     toast.error(t("components.teamDialog.errors.invalidInvitationRole"))
     return
   }
-  const invitation = visibleTeamInvitations.value.find(
-    (invite) => invite.id === invitationId
-  )
   if (
     !canManageOwnerRoles.value &&
-    (value === "owner" || invitation?.role === "owner")
+    (value === "owner" || invite.role === "owner")
   ) {
     toast.error(t("components.teamDialog.errors.ownerRoleRequiresOwner"))
     return
   }
-  await invitationStore.updateInvitationRole(invitationId, value)
+  if (!invite.id) return
+  const next = { ...invitationRoleEdits.value }
+  // Reverting to the stored role drops the staged edit (keeps the diff clean).
+  if (value === invite.role) delete next[invite.id]
+  else next[invite.id] = value
+  invitationRoleEdits.value = next
+}
+
+/**
+ * Commit staged sent-invitation role changes. Skips any edit whose invitation
+ * was cancelled/resent (id no longer live) in the meantime; genuine failures
+ * bubble to `handleSubmit`'s catch, like the active-member role updates.
+ */
+const applyStagedInvitationRoles = async (): Promise<void> => {
+  const live = new Set(teamInvitations.value.map((invite) => invite.id))
+  const edits = Object.entries(invitationRoleEdits.value).filter(([id]) =>
+    live.has(id)
+  )
+  if (edits.length === 0) return
+  await Promise.all(
+    edits.map(([invitationId, role]) =>
+      invitationStore.updateInvitationRole(invitationId, role)
+    )
+  )
 }
 
 // Actions
@@ -870,6 +899,10 @@ const handleSubmit = async () => {
         )
         await Promise.all(updatePromises)
       }
+
+      // Commit staged role changes to already-sent invitations (mirrors the
+      // active-member role updates above).
+      await applyStagedInvitationRoles()
 
       // Invite new members (those without an id)
       if (newMembers.length > 0) {
@@ -1738,13 +1771,13 @@ const handleSubmit = async () => {
               <ButtonGroup>
                 <ButtonGroup>
                   <Select
-                    v-model="invite.role"
+                    :model-value="invitationRoleValue(invite)"
                     :disabled="
                       invite.status === 'declined' ||
                       (!canManageOwnerRoles && invite.role === 'owner')
                     "
                     @update:model-value="
-                      (val) => handleInvitationRoleChange(invite.id!, val)
+                      (val) => stageInvitationRole(invite, val)
                     "
                   >
                     <SelectTrigger>

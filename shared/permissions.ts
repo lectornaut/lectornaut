@@ -63,6 +63,41 @@ export const RoleGroups = {
   ],
 } as const
 
+/**
+ * Role precedence — higher rank means more privilege. The single source of
+ * truth for *comparing* two roles, used by `effectiveRole` to combine a team
+ * role with a per-workspace override. Keep aligned with `MEMBERSHIP_ROLES`.
+ */
+const ROLE_RANK: Record<IMembershipRole, number> = {
+  owner: 3,
+  admin: 2,
+  member: 1,
+  guest: 0,
+}
+
+/**
+ * Combine a team role with an optional per-workspace role override using
+ * **elevate-only** semantics: the effective role is whichever of the two is
+ * more privileged. A per-workspace grant can RAISE a member's access inside a
+ * single workspace but never lower it — so a team admin can't be accidentally
+ * demoted out of a workspace, and an override only ever adds power.
+ *
+ * Returns the team role unchanged when no override is set (the overwhelmingly
+ * common case), so every existing team-only call site is unaffected. When the
+ * caller has no team role but does have an override (e.g. a future
+ * workspace-only guest), the override stands on its own.
+ */
+export function effectiveRole(
+  teamRole: IMembershipRole | null | undefined,
+  workspaceRole?: IMembershipRole | null
+): IMembershipRole | null {
+  if (!workspaceRole) return teamRole ?? null
+  if (!teamRole) return workspaceRole
+  return ROLE_RANK[workspaceRole] > ROLE_RANK[teamRole]
+    ? workspaceRole
+    : teamRole
+}
+
 // ============================================================================
 // Capabilities
 // ============================================================================
@@ -180,6 +215,15 @@ const TEAM_SCOPED_PERMISSIONS: Readonly<
 export interface PermissionContext {
   scope: Scope
   teamRole?: IMembershipRole | null
+  /**
+   * The caller's role *within a specific workspace*, if a per-workspace
+   * override grant exists. Only consulted for `scope: "workspace"`, where it
+   * is combined with `teamRole` via `effectiveRole` (elevate-only). Ignored
+   * for `team`/`global` scopes. Omit (or pass `null`) when there is no
+   * override — the resolver then falls back to the plain team role, so
+   * existing call sites that pass only `teamRole` keep their exact behavior.
+   */
+  workspaceRole?: IMembershipRole | null
 }
 
 /**
@@ -210,8 +254,14 @@ export function can(
 
   // Team & Workspace scopes
   if (context.scope === "team" || context.scope === "workspace") {
-    if (!context.teamRole) return false
-    const allowed = TEAM_SCOPED_PERMISSIONS[context.teamRole]
+    // Workspace scope may elevate the team role via a per-workspace override
+    // (elevate-only). Team scope ignores any override entirely.
+    const role =
+      context.scope === "workspace"
+        ? effectiveRole(context.teamRole, context.workspaceRole)
+        : context.teamRole
+    if (!role) return false
+    const allowed = TEAM_SCOPED_PERMISSIONS[role]
     return allowed ? allowed.has(action) : false
   }
 

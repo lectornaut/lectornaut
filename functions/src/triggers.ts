@@ -3,6 +3,7 @@ import {
   onDocumentCreated,
   onDocumentDeleted,
   onDocumentUpdated,
+  onDocumentWritten,
 } from "firebase-functions/v2/firestore"
 import {
   beforeUserCreated,
@@ -23,6 +24,11 @@ import {
   RoleGroups,
   normalizeMembershipRole,
 } from "./types.js"
+import { addMemberToWorkspaces } from "./workspaceMembership.js"
+import {
+  listGrantingWorkspaceIdsForGroup,
+  recomputeGroupRoleForMembersInWorkspace,
+} from "./workspaceRoles.js"
 
 function getCloudEventId(event: unknown, fallback: string): string {
   if (
@@ -457,6 +463,137 @@ export const onMembershipDeleted = onDocumentDeleted(
         },
       })
     })
+  }
+)
+
+/**
+ * Trigger: Seed workspace participation (`memberUids`) for a new human member.
+ *
+ * `memberUids` is the SOLE gate on workspace visibility (the workspace read rule
+ * + the `memberUids array-contains` list query), so every membership-creation
+ * path must add the new member to every workspace's list. `acceptInvitation`
+ * does this atomically inside its transaction, but the SSO auto-provisioning
+ * path (`onUserSignedIn` below) writes the membership doc directly — without this
+ * trigger an auto-provisioned user would see ZERO workspaces. Firing on every
+ * membership create makes seeding uniform and, with `retry: true` + an
+ * idempotent `arrayUnion`, self-healing. Agents are never participants, so they
+ * are skipped. (Redundant with the invite-accept in-tx seed; the duplicate
+ * `arrayUnion` is a harmless no-op.)
+ */
+export const onMembershipCreatedSeedWorkspaces = onDocumentCreated(
+  {
+    document: "teams/{teamId}/memberships/{userId}",
+    region: REGION,
+    memory: TRIGGER_OPTS.memory,
+    timeoutSeconds: TRIGGER_OPTS.timeoutSeconds,
+    maxInstances: TRIGGER_OPTS.maxInstances,
+    concurrency: TRIGGER_OPTS.concurrency,
+    retry: true,
+  },
+  async (event) => {
+    const snapshot = event.data
+    if (!snapshot) return
+    if (snapshot.data()?.kind === "agent") return
+
+    const { teamId, userId } = event.params
+    // Let failures propagate so `retry: true` re-delivers — `arrayUnion` is
+    // idempotent, so re-running converges.
+    await addMemberToWorkspaces(teamId, userId)
+  }
+)
+
+// ============================================================================
+// Firestore Triggers — Group role denormalization (`groupRole`)
+// ============================================================================
+//
+// Groups grant an elevate-only per-workspace role. The functions read path
+// resolves a member's group role LIVE (authoritative), but firestore.rules
+// can't run that query, so each per-(member, workspace) override doc carries a
+// denormalized `groupRole` = the member's max group-derived role in that
+// workspace. These triggers keep that denorm in sync. Both are idempotent +
+// `retry: true` so a transient failure re-delivers and converges
+// (`recomputeGroupRoleForMembersInWorkspace` writes only on an actual change).
+
+/** Extract a doc's `memberIds` string array (empty when the doc is absent). */
+function readMemberIds(snap: {
+  exists: boolean
+  data: () => Record<string, unknown> | undefined
+}): string[] {
+  if (!snap.exists) return []
+  const ids = snap.data()?.memberIds
+  return Array.isArray(ids)
+    ? ids.filter((id): id is string => typeof id === "string")
+    : []
+}
+
+/**
+ * Trigger: a group's membership changed (create / update / delete) → recompute
+ * `groupRole` for the affected members (added ∪ removed) across every workspace
+ * that grants this group. A pure name change touches no member, so it no-ops.
+ *
+ * On a callable-driven delete the grants are already gone (no granting
+ * workspaces found → no-op; the delete callable recomputed synchronously). On a
+ * raw console delete the grants linger, so this is the self-healing backstop:
+ * the former members recompute and their `groupRole` drops (the group no longer
+ * matches the live `array-contains` query).
+ */
+export const onGroupWritten = onDocumentWritten(
+  {
+    document: "teams/{teamId}/groups/{groupId}",
+    region: REGION,
+    memory: TRIGGER_OPTS.memory,
+    timeoutSeconds: TRIGGER_OPTS.timeoutSeconds,
+    maxInstances: TRIGGER_OPTS.maxInstances,
+    concurrency: TRIGGER_OPTS.concurrency,
+    retry: true,
+  },
+  async (event) => {
+    if (!event.data) return
+    const { teamId, groupId } = event.params
+    const beforeIds = new Set(readMemberIds(event.data.before))
+    const afterIds = new Set(readMemberIds(event.data.after))
+
+    const affected = new Set<string>()
+    for (const id of beforeIds) if (!afterIds.has(id)) affected.add(id)
+    for (const id of afterIds) if (!beforeIds.has(id)) affected.add(id)
+    if (affected.size === 0) return
+
+    const workspaceIds = await listGrantingWorkspaceIdsForGroup(teamId, groupId)
+    for (const workspaceId of workspaceIds) {
+      await recomputeGroupRoleForMembersInWorkspace(teamId, workspaceId, [
+        ...affected,
+      ])
+    }
+  }
+)
+
+/**
+ * Trigger: a workspace's grant for a group changed (create / update / delete) →
+ * recompute `groupRole` for that group's members in that workspace. Reads the
+ * group's current memberIds; if the group is gone (the delete-group callable
+ * removed it + already recomputed), there are no members to touch and it
+ * no-ops.
+ */
+export const onGroupGrantWritten = onDocumentWritten(
+  {
+    document: "teams/{teamId}/workspaces/{workspaceId}/groupGrants/{groupId}",
+    region: REGION,
+    memory: TRIGGER_OPTS.memory,
+    timeoutSeconds: TRIGGER_OPTS.timeoutSeconds,
+    maxInstances: TRIGGER_OPTS.maxInstances,
+    concurrency: TRIGGER_OPTS.concurrency,
+    retry: true,
+  },
+  async (event) => {
+    const { teamId, workspaceId, groupId } = event.params
+    const groupSnap = await db.doc(`teams/${teamId}/groups/${groupId}`).get()
+    const memberIds = readMemberIds(groupSnap)
+    if (memberIds.length === 0) return
+    await recomputeGroupRoleForMembersInWorkspace(
+      teamId,
+      workspaceId,
+      memberIds
+    )
   }
 )
 

@@ -35,13 +35,20 @@ import {
   type IMembership,
   type IMembershipAgentSnapshot,
   type IMembershipRole,
+  type IMembershipWorkspaceRecord,
   type ITeamMember,
 } from "@/types/membership"
-import { can, Capabilities, hasExactRole } from "@/types/permissions"
+import {
+  can,
+  Capabilities,
+  effectiveRole,
+  hasExactRole,
+} from "@/types/permissions"
 import { getDocsCached } from "@/utils/firebase/firebase-cache"
 import {
   getAllMembershipsGroup,
   getMembershipRef,
+  getMembershipWorkspacesCollection,
   getTeamMembershipsCollection,
 } from "@/utils/firebase/firebase-helpers"
 import { useFirestoreMutation } from "@/utils/firebase/firebase-mutation"
@@ -127,6 +134,48 @@ export const useMembershipStore = defineStore("memberships", () => {
   })
   const firestoreTeamMembers = computed(() => teamMembersQuery.data.value ?? [])
 
+  // The signed-in user's OWN per-workspace role overrides for the current team
+  // (`teams/{teamId}/memberships/{uid}/workspaces`). Each doc carries the
+  // elevate-only direct `role` plus the denormalized group-derived `groupRole`;
+  // the doc id is the workspace id. Lets workspace-scoped affordances honor a
+  // per-workspace grant instead of collapsing to the team role. Guarded on
+  // confirmed membership (mirroring teamMembersQuery) to avoid a rules denial
+  // before we know the user belongs to the team. Most users have none, so this
+  // is typically an empty, cheap listener.
+  const myWorkspaceOverridesQuery =
+    useCollectionQuery<IMembershipWorkspaceRecord>(() => {
+      const teamId = currentTeamId.value
+      const uid = currentUser.value?.uid
+      if (!teamId || !uid) return null
+      const isMember = firestoreMemberships.value.some(
+        (m) => m.teamId === teamId
+      )
+      if (!isMember) return null
+      const collectionRef = getMembershipWorkspacesCollection(teamId, uid)
+      return { query: collectionRef, path: collectionRef.path }
+    })
+
+  // workspaceId → the user's elevate-only per-workspace role = max(direct
+  // override, group-derived role). Absent entry = no elevation (use team role).
+  const myWorkspaceRoleById = computed(() => {
+    const map = new Map<string, IMembershipRole>()
+    for (const rec of myWorkspaceOverridesQuery.data.value ?? []) {
+      const role = effectiveRole(rec.role ?? null, rec.groupRole ?? null)
+      if (role) map.set(rec.id, role)
+    }
+    return map
+  })
+
+  /**
+   * The signed-in user's per-workspace role override for one workspace in the
+   * current team (`null` = none). Feed into `can(…, { scope: "workspace",
+   * teamRole, workspaceRole })`, which folds it over the team role elevate-only.
+   */
+  const getWorkspaceRoleOverride = (
+    workspaceId: string
+  ): IMembershipRole | null =>
+    myWorkspaceRoleById.value.get(workspaceId) ?? null
+
   // ── Merged state ────────────────────────────────────────────────────────────
   const memberships = computed(() => firestoreMemberships.value)
   const teamMembers = computed(() =>
@@ -134,6 +183,14 @@ export const useMembershipStore = defineStore("memberships", () => {
   )
 
   const isLoading = computed(() => membershipsQuery.isLoading.value)
+  // Terminal failure of the collectionGroup read (e.g. token-warm-up
+  // permission-denied). When errored, `memberships` is an empty fallback that
+  // does NOT mean "the user has no teams" — consumers that act on absence
+  // (stale-selection cleanup) must treat this as "unknown", not "confirmed".
+  const isError = computed(() => membershipsQuery.isError.value)
+  // True while serving localStorage-restored cache a live snapshot hasn't
+  // reconfirmed — non-null but possibly behind the user's real membership set.
+  const isStale = computed(() => membershipsQuery.isStale.value)
   const isMembershipPending = computed(
     () => (id: string) => pendingMembershipIds.value.has(id)
   )
@@ -159,7 +216,9 @@ export const useMembershipStore = defineStore("memberships", () => {
 
   const currentUserRole = computed(() => {
     if (!currentUser.value || !currentTeamId.value) return null
-    return teamMembersByUserId.value.get(currentUser.value.uid)?.role ?? null
+    const member = teamMembersByUserId.value.get(currentUser.value.uid)
+    if (!member) return null
+    return member.role
   })
   const isOwner = computed(() => hasExactRole(currentUserRole.value, "owner"))
   const isAdmin = computed(() => hasExactRole(currentUserRole.value, "admin"))
@@ -852,6 +911,8 @@ export const useMembershipStore = defineStore("memberships", () => {
     currentTeamId,
     teamMemberCounts,
     isLoading,
+    isError,
+    isStale,
 
     // Pending
     pendingMembershipIds,
@@ -868,6 +929,7 @@ export const useMembershipStore = defineStore("memberships", () => {
     canManageMembers,
     ownerCount,
     getTeamMemberCount,
+    getWorkspaceRoleOverride,
 
     // Actions
     changeRole,

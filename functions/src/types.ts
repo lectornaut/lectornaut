@@ -248,6 +248,7 @@ export type LogResourceType =
   | "workspace"
   | "content"
   | "membership"
+  | "group"
   | "security"
 
 export interface Actor {

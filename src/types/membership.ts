@@ -6,6 +6,7 @@ import type {
   membershipSchema,
   membershipTeamSnapshotSchema,
   membershipUserSnapshotSchema,
+  membershipWorkspaceRecordSchema,
   teamMemberSchema,
 } from "@/schemas/membership"
 import type { z } from "zod"
@@ -49,6 +50,9 @@ export type IMembership = z.infer<typeof membershipSchema>
 export type IAgentMembership = z.infer<typeof agentMembershipSchema>
 export type ITeamMember = z.infer<typeof teamMemberSchema>
 export type IMembershipDocData = z.infer<typeof membershipDocDataSchema>
+export type IMembershipWorkspaceRecord = z.infer<
+  typeof membershipWorkspaceRecordSchema
+>
 
 /** Narrow a team member row to the agent variant. */
 export const isAgentMembership = (

@@ -16,6 +16,7 @@ import {
   WorkspaceNodeScope,
 } from "./types.js"
 import { generateRandomString } from "./utilities.js"
+import { getWorkspaceRoleOverride } from "./workspaceRoles.js"
 
 const JOIN_TOKEN_TTL_MS = 10 * 60 * 1000
 const STALE_SIGNAL_MAX_AGE_MS = 30 * 60 * 1000 // 30 minutes - signals are cleaned by clients, this is fallback
@@ -181,10 +182,24 @@ async function resolveRole(
   return role
 }
 
-function resolveCollabRole(userId: string, role: IMembershipRole): CollabRole {
+async function resolveCollabRole(
+  userId: string,
+  teamId: string,
+  workspaceId: string,
+  role: IMembershipRole
+): Promise<CollabRole> {
+  // Honor a per-workspace role override (elevate-only): a member granted
+  // content rights in THIS workspace edits live here even if their team role
+  // alone wouldn't allow it. `can` combines the two via `effectiveRole`.
+  const workspaceRole = await getWorkspaceRoleOverride(
+    teamId,
+    workspaceId,
+    userId
+  )
   return can(userId, Capabilities.MANAGE_WORKSPACE_CONTENT, {
     scope: "workspace",
     teamRole: role,
+    workspaceRole,
   })
     ? "editor"
     : "viewer"
@@ -387,7 +402,12 @@ export const joinCollabRoom = onCall(CALLABLE_OPTS, async (request) => {
   const membershipRole = await resolveRole(request.auth.uid, teamId)
   assertCanViewWorkspace(request.auth.uid, membershipRole)
 
-  const role = resolveCollabRole(request.auth.uid, membershipRole)
+  const role = await resolveCollabRole(
+    request.auth.uid,
+    teamId,
+    workspaceId,
+    membershipRole
+  )
   const joinToken = mintJoinToken()
   const expiresAt = Date.now() + JOIN_TOKEN_TTL_MS
   const displayName =
@@ -430,7 +450,12 @@ export const createPeer = onCall(CALLABLE_OPTS, async (request) => {
   const membershipRole = await resolveRole(request.auth.uid, room.teamId)
   assertCanViewWorkspace(request.auth.uid, membershipRole)
 
-  const role = resolveCollabRole(request.auth.uid, membershipRole)
+  const role = await resolveCollabRole(
+    request.auth.uid,
+    room.teamId,
+    room.workspaceId,
+    membershipRole
+  )
   const displayName = sanitizeDisplayName(
     request.data?.displayName,
     request.auth.token.name ?? request.auth.token.email ?? request.auth.uid

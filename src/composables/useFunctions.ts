@@ -320,6 +320,150 @@ export interface AssignRoleResponse {
   logId?: string
 }
 
+export interface AssignWorkspaceRoleRequest {
+  teamId: string
+  workspaceId: string
+  userId: string
+  /**
+   * Partial patch. Omit to leave unchanged; `null` clears the role override;
+   * a role sets it.
+   */
+  role?: IMembershipRole | null
+  /**
+   * Workspace participation. Omit to leave unchanged; `true` excludes the member
+   * (a non-member of this workspace), `false` re-includes them. Enforced
+   * everywhere: it drops the uid from `memberUids` (list query + read rule) and
+   * denies all content read/write for the member; deny beats every elevation.
+   */
+  excluded?: boolean
+}
+
+export interface AssignWorkspaceRoleResponse {
+  teamId: string
+  workspaceId: string
+  userId: string
+  role: IMembershipRole | null
+  excluded: boolean
+  updated: boolean
+  logId?: string
+}
+
+export interface ListWorkspaceMemberRolesRequest {
+  teamId: string
+  workspaceId: string
+}
+
+export interface WorkspaceMemberRole {
+  userId: string
+  /** Explicit per-workspace role override, or null when none is set. */
+  role: IMembershipRole | null
+  /** True = excluded (a non-member of this workspace); access is denied. */
+  excluded: boolean
+}
+
+export interface ListWorkspaceMemberRolesResponse {
+  teamId: string
+  workspaceId: string
+  /** Only members with a stored override (a role and/or an `excluded` flag). */
+  roles: WorkspaceMemberRole[]
+}
+
+// =============================================================================
+// Group Request/Response Types
+// =============================================================================
+
+export interface CreateGroupRequest {
+  teamId: string
+  name: string
+  /** Optional free-text description; empty/omitted is stored as null. */
+  description?: string | null
+  /** Human team-member uids; agents/unknown ids are dropped server-side. */
+  memberIds?: string[]
+}
+
+export interface CreateGroupResponse {
+  teamId: string
+  groupId: string
+  created: boolean
+  logId?: string
+}
+
+export interface UpdateGroupRequest {
+  teamId: string
+  groupId: string
+  /** Omit to leave unchanged. */
+  name?: string
+  /** Omit to leave unchanged; `null` clears the description; a string sets it. */
+  description?: string | null
+  /** Omit to leave unchanged; otherwise replaces the member set. */
+  memberIds?: string[]
+  /** Omit to leave unchanged; `null` clears the avatar; a string sets it. */
+  photoURL?: string | null
+}
+
+export interface UpdateGroupResponse {
+  teamId: string
+  groupId: string
+  updated: boolean
+  logId?: string
+}
+
+export interface DeleteGroupRequest {
+  teamId: string
+  groupId: string
+}
+
+export interface DeleteGroupResponse {
+  teamId: string
+  groupId: string
+  deleted: boolean
+  logId?: string
+}
+
+export interface AssignWorkspaceGroupRoleRequest {
+  teamId: string
+  workspaceId: string
+  groupId: string
+  /** A role grants/updates; `null` removes the grant. */
+  role: IMembershipRole | null
+}
+
+export interface AssignWorkspaceGroupRoleResponse {
+  teamId: string
+  workspaceId: string
+  groupId: string
+  role: IMembershipRole | null
+  updated: boolean
+  logId?: string
+}
+
+export interface ListWorkspaceGroupRolesRequest {
+  teamId: string
+  workspaceId: string
+}
+
+export interface WorkspaceGroupGrant {
+  groupId: string
+  role: IMembershipRole
+}
+
+export interface ListWorkspaceGroupRolesResponse {
+  teamId: string
+  workspaceId: string
+  /** Only groups granted a role in this workspace. */
+  grants: WorkspaceGroupGrant[]
+}
+
+export interface GetTeamGroupUsageRequest {
+  teamId: string
+}
+
+export interface GetTeamGroupUsageResponse {
+  teamId: string
+  /** Per-group count of workspaces that grant it a role. */
+  usage: Record<string, number>
+}
+
 export interface RemoveMemberRequest {
   teamId: string
   userId: string
@@ -1217,6 +1361,84 @@ export const assignRoleToUser = createTypedCallable<
   AssignRoleRequest,
   AssignRoleResponse
 >("assignRoleToUser")
+
+/**
+ * Grant (or clear, with `role: null`) a member's per-workspace role override.
+ * Combines with their team role under elevate-only semantics
+ * (`effectiveRole` in @lectornaut/shared/permissions), so it can only raise a
+ * member's access within that one workspace. Audit-logged.
+ */
+export const assignWorkspaceRole = createTypedCallable<
+  AssignWorkspaceRoleRequest,
+  AssignWorkspaceRoleResponse
+>("assignWorkspaceRole")
+
+/**
+ * List a workspace's per-workspace role overrides, keyed by member uid.
+ * Admin-gated; powers the workspace role-assignment UI. Members without an
+ * override are omitted (they inherit their team role).
+ */
+export const listWorkspaceMemberRoles = createTypedCallable<
+  ListWorkspaceMemberRolesRequest,
+  ListWorkspaceMemberRolesResponse
+>("listWorkspaceMemberRoles")
+
+// =============================================================================
+// Group Functions
+// =============================================================================
+
+/**
+ * Create a reusable group — a named bundle of human team members. Role-less:
+ * the role a group confers is granted per-workspace via
+ * {@link assignWorkspaceGroupRole}. Admin-gated; audit-logged.
+ */
+export const createGroup = createTypedCallable<
+  CreateGroupRequest,
+  CreateGroupResponse
+>("createGroup")
+
+/** Rename a group and/or replace its member set. Admin-gated; audit-logged. */
+export const updateGroup = createTypedCallable<
+  UpdateGroupRequest,
+  UpdateGroupResponse
+>("updateGroup")
+
+/**
+ * Delete a group, dropping every workspace grant that references it and
+ * recomputing affected members' elevation. Admin-gated; audit-logged.
+ */
+export const deleteGroup = createTypedCallable<
+  DeleteGroupRequest,
+  DeleteGroupResponse
+>("deleteGroup")
+
+/**
+ * Grant (or clear, with `role: null`) a group's elevate-only per-workspace
+ * role. Mirrors {@link assignWorkspaceRole}: admin-gated, owner-only for the
+ * `owner` role; audit-logged.
+ */
+export const assignWorkspaceGroupRole = createTypedCallable<
+  AssignWorkspaceGroupRoleRequest,
+  AssignWorkspaceGroupRoleResponse
+>("assignWorkspaceGroupRole")
+
+/**
+ * List a workspace's group grants (`[{ groupId, role }]`). Admin-gated; powers
+ * the WorkspaceDialog groups area.
+ */
+export const listWorkspaceGroupRoles = createTypedCallable<
+  ListWorkspaceGroupRolesRequest,
+  ListWorkspaceGroupRolesResponse
+>("listWorkspaceGroupRoles")
+
+/**
+ * Per-group count of workspaces that grant it a role — the "used in N
+ * workspaces" blast-radius cue. Admin-gated.
+ */
+export const getTeamGroupUsage = createTypedCallable<
+  GetTeamGroupUsageRequest,
+  GetTeamGroupUsageResponse
+>("getTeamGroupUsage")
 
 /**
  * Remove a single member from a team with automatic audit logging.
