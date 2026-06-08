@@ -1,5 +1,6 @@
 <script lang="ts" setup>
-import { ChevronRightIcon } from "@lucide/vue"
+import { ArrowRight01Icon } from "@hugeicons/core-free-icons"
+import { HugeiconsIcon } from "@hugeicons/vue"
 import type { CalendarNextProps } from "reka-ui"
 import type { HTMLAttributes } from "vue"
 import { reactiveOmit } from "@vueuse/core"
@@ -29,7 +30,11 @@ const forwardedProps = useForwardProps(delegatedProps)
     v-bind="forwardedProps"
   >
     <slot>
-      <ChevronRightIcon class="cn-rtl-flip size-4" />
+      <HugeiconsIcon
+        :stroke-width="2"
+        :icon="ArrowRight01Icon"
+        class="cn-rtl-flip size-4"
+      />
     </slot>
   </CalendarNext>
 </template>

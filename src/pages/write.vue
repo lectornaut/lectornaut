@@ -159,12 +159,7 @@ useHead(() => ({
         @baseline="adoptEditorBaseline"
       />
     </OverlayScrollbarsWrapper>
-    <div
-      v-else-if="teamId && workspaceId && selectedFile"
-      class="flex grow items-center justify-center"
-    >
-      <Spinner />
-    </div>
+    <LoadingState v-else-if="teamId && workspaceId && selectedFile" />
     <Empty v-else>
       <EmptyHeader>
         <EmptyMedia variant="icon">

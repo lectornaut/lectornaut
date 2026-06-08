@@ -17,7 +17,6 @@ import {
   IconUsersRound,
   IconX,
 } from "@/data/icons"
-import { getInitials } from "@/helpers/utilities"
 import type { ITeam } from "@/types/domain"
 import type { IMembership } from "@/types/membership"
 
@@ -163,9 +162,7 @@ const formatCreatedAt = (
         </Field>
         <Field orientation="horizontal">
           <FieldContent>
-            <div v-if="isLoading" class="flex justify-center py-8">
-              <Spinner />
-            </div>
+            <LoadingState v-if="isLoading" />
             <div v-else class="overflow-clip rounded-xl border">
               <Table>
                 <TableHeader>
@@ -226,34 +223,21 @@ const formatCreatedAt = (
                           <TooltipProvider>
                             <Tooltip>
                               <TooltipTrigger as-child>
-                                <Avatar
-                                  class="flex items-center justify-center"
+                                <AppAvatar
                                   :class="{
                                     'cursor-pointer': canEditTeam(membership),
                                     'cursor-not-allowed opacity-60':
                                       !canEditTeam(membership),
                                   }"
+                                  :loading="
+                                    teamLoading.team.isLoading(
+                                      `photo-${membership.teamId}`
+                                    )
+                                  "
+                                  :src="membership.team?.photoURL"
+                                  :name="membership.team?.name"
                                   @click="handleTeamAvatarClick(membership)"
-                                >
-                                  <template
-                                    v-if="
-                                      teamLoading.team.isLoading(
-                                        `photo-${membership.teamId}`
-                                      )
-                                    "
-                                  >
-                                    <Spinner />
-                                  </template>
-                                  <template v-else>
-                                    <AvatarImage
-                                      :src="membership.team?.photoURL!"
-                                      :alt="membership.team?.name"
-                                    />
-                                    <AvatarFallback>
-                                      {{ getInitials(membership.team?.name) }}
-                                    </AvatarFallback>
-                                  </template>
-                                </Avatar>
+                                />
                               </TooltipTrigger>
                               <TooltipContent>
                                 {{
@@ -293,11 +277,11 @@ const formatCreatedAt = (
                             </Tooltip>
                           </TooltipProvider>
                         </ItemMedia>
-                        <ItemContent class="gap-0.5 truncate">
-                          <ItemTitle class="truncate">
+                        <ItemContent>
+                          <ItemTitle>
                             {{ membership.team?.name }}
                           </ItemTitle>
-                          <ItemDescription class="truncate text-xs">
+                          <ItemDescription class="text-xs">
                             {{
                               t("settings.teams.memberCount", {
                                 count: getTeamMemberCount(membership.teamId),
@@ -349,7 +333,7 @@ const formatCreatedAt = (
                                       <IconMoreHorizontal />
                                     </Button>
                                   </DropdownMenuTrigger>
-                                  <DropdownMenuContent class="w-auto">
+                                  <DropdownMenuContent>
                                     <Tooltip>
                                       <TooltipTrigger as-child>
                                         <div>

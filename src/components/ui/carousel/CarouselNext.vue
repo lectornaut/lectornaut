@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { ChevronRightIcon } from "@lucide/vue"
+import { ArrowRight01Icon } from "@hugeicons/core-free-icons"
+import { HugeiconsIcon } from "@hugeicons/vue"
 import type { WithClassAsProps } from "./interface"
 import type { ButtonVariants } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
@@ -40,7 +41,11 @@ const { orientation, canScrollNext, scrollNext } = useCarousel()
     @click="scrollNext"
   >
     <slot>
-      <ChevronRightIcon class="cn-rtl-flip" />
+      <HugeiconsIcon
+        :stroke-width="2"
+        :icon="ArrowRight01Icon"
+        class="cn-rtl-flip"
+      />
       <span class="sr-only">Next slide</span>
     </slot>
   </Button>

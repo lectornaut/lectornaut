@@ -5,7 +5,6 @@ import { useTeamActions } from "@/composables/useTeamActions"
 import { useUsernameAvailability } from "@/composables/useUsernameAvailability"
 import { IconAtSign, IconCheck, IconPencil, IconX } from "@/data/icons"
 import { USERNAME_MAX_LENGTH, usernamesMatch } from "@/helpers/username"
-import { getInitials } from "@/helpers/utilities"
 import { toast } from "vue-sonner"
 
 const { t } = useI18n()
@@ -290,29 +289,18 @@ const discardChanges = () => {
                 <Tooltip>
                   <TooltipTrigger as-child>
                     <span class="inline-flex">
-                      <Avatar
+                      <AppAvatar
                         class="flex size-10 items-center justify-center"
                         :class="{
                           'cursor-pointer': canUpdateTeam,
                           'cursor-not-allowed opacity-60': !canUpdateTeam,
                         }"
+                        :loading="isTeamPhotoLoading"
+                        :src="currentTeam?.photoURL"
+                        :name="localTeamName || currentTeam?.name"
+                        :alt="currentTeam?.name || 'Team'"
                         @click="triggerTeamPhotoUpload"
-                      >
-                        <Spinner v-if="isTeamPhotoLoading" />
-                        <template v-else>
-                          <AvatarImage
-                            :src="currentTeam?.photoURL || ''"
-                            :alt="currentTeam?.name || 'Team'"
-                          />
-                          <AvatarFallback>
-                            {{
-                              getInitials(
-                                localTeamName || currentTeam?.name || ""
-                              )
-                            }}
-                          </AvatarFallback>
-                        </template>
-                      </Avatar>
+                      />
                     </span>
                   </TooltipTrigger>
                   <TooltipContent>
@@ -525,13 +513,20 @@ const discardChanges = () => {
         </FieldSet>
       </FieldGroup>
     </div>
-    <SettingsUnsavedBar
-      v-if="hasPendingChanges"
-      :saving="isSaving || isUpdatingOverview"
-      :save-disabled="!canSave"
-      @discard="discardChanges"
-      @save="saveChanges"
-    />
+    <Transition
+      enter-active-class="transition duration-200 ease-out"
+      leave-active-class="transition duration-150 ease-in"
+      enter-from-class="translate-y-2 opacity-0"
+      leave-to-class="translate-y-2 opacity-0"
+    >
+      <SettingsUnsavedBar
+        v-if="hasPendingChanges"
+        :saving="isSaving || isUpdatingOverview"
+        :save-disabled="!canSave"
+        @discard="discardChanges"
+        @save="saveChanges"
+      />
+    </Transition>
   </div>
   <SettingsRestricted v-else />
 </template>

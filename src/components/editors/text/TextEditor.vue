@@ -1028,7 +1028,7 @@ const scrollToTableOfContentsItem = (item: TableOfContentDataItem) => {
             <IconChevronDown />
           </Button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent class="w-auto">
+        <DropdownMenuContent>
           <DropdownMenuItem
             @click="editor?.chain().focus().setParagraph().run()"
           >
@@ -1222,7 +1222,7 @@ const scrollToTableOfContentsItem = (item: TableOfContentDataItem) => {
             <IconTable />
           </Button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent class="w-auto">
+        <DropdownMenuContent>
           <DropdownMenuLabel class="text-xs">{{
             t("components.textEditor.tableTitle")
           }}</DropdownMenuLabel>
@@ -1280,7 +1280,7 @@ const scrollToTableOfContentsItem = (item: TableOfContentDataItem) => {
           :model-value="String(editor.getAttributes('image').width || '100%')"
           @update:model-value="applyImageAttrs({ width: $event })"
         >
-          <SelectTrigger class="h-8 w-20">
+          <SelectTrigger>
             <SelectValue :placeholder="t('components.textEditor.widthLabel')" />
           </SelectTrigger>
           <SelectContent>

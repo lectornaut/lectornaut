@@ -239,28 +239,23 @@ useInfiniteScroll(
 <template>
   <div class="flex size-full min-h-0 grow flex-col">
     <OverlayScrollbarsWrapper ref="scrollableContainer">
-      <div class="space-y-3 p-2">
+      <div>
         <div v-if="!canViewLogs" class="text-muted-foreground text-xs">
           You do not have permission to view activity history.
         </div>
 
-        <Empty v-else-if="loading && logs.length === 0" class="p-6">
-          <EmptyHeader>
-            <EmptyMedia variant="icon">
-              <Spinner />
-            </EmptyMedia>
-            <EmptyTitle>Loading activity history...</EmptyTitle>
-          </EmptyHeader>
-        </Empty>
+        <LoadingState
+          v-else-if="loading && logs.length === 0"
+          class="p-6"
+          label="Loading activity history..."
+        />
 
         <div v-else-if="error" class="space-y-2">
           <div class="text-destructive flex items-start gap-2 text-xs">
             <IconAlertTriangle />
             <span>{{ error }}</span>
           </div>
-          <Button variant="secondary" class="w-full" @click="refreshLogs">
-            Retry
-          </Button>
+          <Button variant="secondary" @click="refreshLogs"> Retry </Button>
         </div>
 
         <Empty
@@ -334,9 +329,7 @@ useInfiniteScroll(
             </StepperItem>
           </Stepper>
 
-          <div v-if="loading" class="flex justify-center">
-            <Spinner />
-          </div>
+          <LoadingState v-if="loading" />
         </template>
       </div>
     </OverlayScrollbarsWrapper>

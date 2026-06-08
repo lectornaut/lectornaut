@@ -357,9 +357,9 @@ const getButtonLabel = (planId: BillingPlanKey) => {
                 <ItemMedia variant="icon">
                   <IconBadgeDollarSign />
                 </ItemMedia>
-                <ItemContent class="gap-0.5 truncate">
-                  <ItemTitle class="truncate"> No active plan </ItemTitle>
-                  <ItemDescription class="truncate text-xs">
+                <ItemContent>
+                  <ItemTitle> No active plan </ItemTitle>
+                  <ItemDescription class="text-xs">
                     Select a plan below to get started.
                   </ItemDescription>
                 </ItemContent>
@@ -607,14 +607,21 @@ const getButtonLabel = (planId: BillingPlanKey) => {
         </FieldSet>
       </FieldGroup>
     </div>
-    <SettingsUnsavedBar
-      v-if="canManageBilling && hasPendingChanges"
-      :saving="isSaving"
-      :save-disabled="!canSave"
-      :save-label="saveButtonLabel"
-      @discard="discardChanges"
-      @save="saveChanges"
-    />
+    <Transition
+      enter-active-class="transition duration-200 ease-out"
+      leave-active-class="transition duration-150 ease-in"
+      enter-from-class="translate-y-2 opacity-0"
+      leave-to-class="translate-y-2 opacity-0"
+    >
+      <SettingsUnsavedBar
+        v-if="canManageBilling && hasPendingChanges"
+        :saving="isSaving"
+        :save-disabled="!canSave"
+        :save-label="saveButtonLabel"
+        @discard="discardChanges"
+        @save="saveChanges"
+      />
+    </Transition>
   </div>
   <SettingsRestricted v-else />
 </template>

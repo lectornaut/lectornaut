@@ -28,7 +28,6 @@ import {
 import { getLocalTimeZone, today } from "@internationalized/date"
 import { VisAxis, VisGroupedBar, VisXYContainer } from "@unovis/vue"
 import type { DateRange } from "reka-ui"
-import Avatar from "vue-boring-avatars"
 
 definePage({
   meta: {
@@ -545,17 +544,7 @@ const expandedCard = ref<number | null>(null)
             <SidebarMenu>
               <SidebarMenuItem v-for="item in favorites" :key="item.name">
                 <SidebarMenuButton>
-                  <Avatar
-                    variant="beam"
-                    :name="item.name"
-                    :colors="[
-                      'var(--color-chart-1)',
-                      'var(--color-chart-2)',
-                      'var(--color-chart-3)',
-                      'var(--color-chart-4)',
-                      'var(--color-chart-5)',
-                    ]"
-                  />
+                  <AppAvatar variant="beam" :name="item.name" class="size-10" />
                   <span>{{ item.name }}</span>
                 </SidebarMenuButton>
                 <DropdownMenu>
@@ -568,7 +557,7 @@ const expandedCard = ref<number | null>(null)
                       <span class="sr-only">{{ t("actions.more") }}</span>
                     </SidebarMenuAction>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent class="w-auto">
+                  <DropdownMenuContent>
                     <DropdownMenuItem>
                       <IconStarOff class="text-muted-foreground" />
                       <span>{{
@@ -609,15 +598,10 @@ const expandedCard = ref<number | null>(null)
                 <Collapsible v-for="team in teams" :key="team.name">
                   <SidebarMenuItem>
                     <SidebarMenuButton>
-                      <Avatar
+                      <AppAvatar
+                        variant="marble"
                         :name="team.name"
-                        :colors="[
-                          'var(--color-chart-1)',
-                          'var(--color-chart-2)',
-                          'var(--color-chart-3)',
-                          'var(--color-chart-4)',
-                          'var(--color-chart-5)',
-                        ]"
+                        class="size-10"
                       />
                       <span>{{ team.name }}</span>
                     </SidebarMenuButton>
@@ -639,15 +623,10 @@ const expandedCard = ref<number | null>(null)
                           :key="page.name"
                         >
                           <SidebarMenuSubButton>
-                            <Avatar
+                            <AppAvatar
+                              variant="marble"
                               :name="page.name"
-                              :colors="[
-                                'var(--color-chart-1)',
-                                'var(--color-chart-2)',
-                                'var(--color-chart-3)',
-                                'var(--color-chart-4)',
-                                'var(--color-chart-5)',
-                              ]"
+                              class="size-10"
                             />
                             <span>{{ page.name }}</span>
                           </SidebarMenuSubButton>
@@ -701,7 +680,7 @@ const expandedCard = ref<number | null>(null)
                 <PopoverContent class="grid w-full">
                   <div class="px-2 pt-2">
                     <Select v-model="range">
-                      <SelectTrigger class="w-full">
+                      <SelectTrigger>
                         <SelectValue :placeholder="t('common.select')" />
                       </SelectTrigger>
                       <SelectContent>
@@ -835,7 +814,7 @@ const expandedCard = ref<number | null>(null)
                             t("actions.moreOptions")
                           }}</TooltipContent>
 
-                          <DropdownMenuContent class="w-auto">
+                          <DropdownMenuContent>
                             <DropdownMenuItem>
                               <IconStar />
                               <span>{{

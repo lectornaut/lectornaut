@@ -194,9 +194,7 @@ const handleRemoveAgent = async (agent: ITeamAgent): Promise<void> => {
 
 <template>
   <div v-if="canViewTeamSettings" class="p-6">
-    <div v-if="isLoading" class="flex justify-center py-8">
-      <Spinner />
-    </div>
+    <LoadingState v-if="isLoading" />
     <FieldGroup v-else>
       <!-- ── Built-in agents (per-preset toggles) ──────────────────── -->
       <!--
@@ -343,9 +341,7 @@ const handleRemoveAgent = async (agent: ITeamAgent): Promise<void> => {
             child spacing.
           -->
         <div class="flex flex-col gap-2">
-          <div v-if="isLoadingAgents" class="flex justify-center py-8">
-            <Spinner />
-          </div>
+          <LoadingState v-if="isLoadingAgents" />
 
           <template v-else>
             <!--

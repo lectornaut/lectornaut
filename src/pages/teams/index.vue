@@ -1,7 +1,6 @@
 <script lang="ts" setup>
 import { useTeamActions } from "@/composables/useTeamActions"
 import { IconCirclePlus, IconUsers } from "@/data/icons"
-import { getInitials } from "@/helpers/utilities"
 
 definePage({
   meta: {
@@ -69,9 +68,7 @@ const isCreatingTeamDialogOpen = ref(false)
       </Empty>
 
       <!-- Loading State -->
-      <div v-if="isLoading" class="flex justify-center p-12">
-        <Spinner />
-      </div>
+      <LoadingState v-if="isLoading" />
 
       <!-- Empty State -->
       <Empty v-else-if="memberships.length === 0">
@@ -115,22 +112,16 @@ const isCreatingTeamDialogOpen = ref(false)
         >
           <RouterLink :to="`/teams/${membership.teamId}`">
             <ItemMedia>
-              <Avatar>
-                <AvatarImage
-                  :src="membership.team.photoURL!"
-                  :alt="membership.team.name"
-                  referrerpolicy="no-referrer"
-                />
-                <AvatarFallback>
-                  {{ getInitials(membership.team.name) }}
-                </AvatarFallback>
-              </Avatar>
+              <AppAvatar
+                :src="membership.team.photoURL"
+                :name="membership.team.name"
+              />
             </ItemMedia>
-            <ItemContent class="gap-0.5 truncate">
-              <ItemTitle class="truncate">
+            <ItemContent>
+              <ItemTitle>
                 {{ membership.team.name }}
               </ItemTitle>
-              <ItemDescription class="truncate text-xs">
+              <ItemDescription class="text-xs">
                 {{
                   t("pages.teams.memberCount", {
                     count: getTeamMemberCount(membership.teamId),

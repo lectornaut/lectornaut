@@ -177,21 +177,17 @@ const teams = [
                 >
                   <div class="flex flex-col gap-2">
                     <div class="flex -space-x-2">
-                      <Avatar
+                      <AppAvatar
                         v-for="person in team.members"
                         :key="person.email"
                         class="ring-background ring-2"
+                        :src="person?.avatar"
+                        :name="person?.name"
                       >
-                        <AvatarImage
-                          class="inline-block size-8"
-                          :src="person?.avatar!"
-                          :alt="person?.name"
-                          referrerpolicy="no-referrer"
-                        />
-                        <AvatarFallback>
+                        <template #fallback>
                           {{ person.name[0] }}
-                        </AvatarFallback>
-                      </Avatar>
+                        </template>
+                      </AppAvatar>
                     </div>
                     <div>
                       <p class="font-medium">
@@ -224,17 +220,11 @@ const teams = [
                   class="flex justify-between space-x-4"
                 >
                   <div class="flex flex-col gap-2">
-                    <Avatar>
-                      <AvatarImage
-                        class="inline-block size-8"
-                        :src="person?.avatar!"
-                        :alt="person?.name"
-                        referrerpolicy="no-referrer"
-                      />
-                      <AvatarFallback>
+                    <AppAvatar :src="person?.avatar" :name="person?.name">
+                      <template #fallback>
                         {{ person.name[0] }}
-                      </AvatarFallback>
-                    </Avatar>
+                      </template>
+                    </AppAvatar>
                     <div>
                       <p class="font-medium">
                         {{ person.name }}

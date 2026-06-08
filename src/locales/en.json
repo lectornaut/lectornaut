@@ -176,15 +176,15 @@
     },
     "toolCall": {
       "needsInput": "Needs your input",
-      "running": "Running…",
+      "running": "Running...",
       "done": "Done",
       "answered": "Answered",
       "unanswered": "Left unanswered — the conversation moved on.",
       "failed": "Failed",
-      "customAnswer": "Or type your own answer…",
+      "customAnswer": "Or type your own answer...",
       "send": "Send",
       "malformedInterrupt": "The assistant tried to ask a question but didn't include valid choices. Send another message to continue.",
-      "waitingForReturn": "Waiting for tool to return…",
+      "waitingForReturn": "Waiting for tool to return...",
       "labels": {
         "request": "Request",
         "response": "Response",
@@ -263,18 +263,18 @@
     "untitledPlaceholder": "Untitled",
     "toast": {
       "moved": "Moved",
-      "moveFailed": "Failed to move",
+      "moveFailed": "Couldn't move",
       "folderCreated": "Folder created",
       "fileCreated": "File created",
-      "createFailed": "Failed to create",
+      "createFailed": "Couldn't create",
       "renamed": "Renamed",
-      "renameFailed": "Failed to rename",
+      "renameFailed": "Couldn't rename",
       "unarchived": "Unarchived",
-      "unarchiveFailed": "Failed to unarchive",
+      "unarchiveFailed": "Couldn't unarchive",
       "archived": "Archived",
-      "archiveFailed": "Failed to archive",
+      "archiveFailed": "Couldn't archive",
       "deleted": "Deleted",
-      "deleteFailed": "Failed to delete"
+      "deleteFailed": "Couldn't delete"
     }
   },
   "inspector": {
@@ -297,7 +297,7 @@
       "title": "Related",
       "empty": "No related nodes yet.",
       "emptyHint": "Add or edit content and we'll surface connections from across the workspace.",
-      "loading": "Finding related nodes…",
+      "loading": "Finding related nodes...",
       "errorTitle": "Couldn't load related nodes",
       "errorFallback": "Something went wrong while looking up related nodes.",
       "truncated": "More matches available — refine the source to narrow."
@@ -306,7 +306,7 @@
       "title": "AI summary",
       "generate": "Generate",
       "regenerate": "Regenerate",
-      "loading": "Summarizing…",
+      "loading": "Summarizing...",
       "empty": "Get an AI-generated summary, key points, and topic tags for this node.",
       "archivedHint": "Restore this node to generate a summary.",
       "keyPoints": "Key points",
@@ -635,14 +635,14 @@
         "noChangesToSave": "No changes to save.",
         "someErrors": "Some changes could not be saved",
         "reauthRequired": "Re-authentication required",
-        "reauthRequiredDesc": "For security reasons, you need to log in again before performing this action.",
-        "reauthLogoutAction": "Logout",
+        "reauthRequiredDesc": "For security reasons, you need to sign in again before performing this action.",
+        "reauthLogoutAction": "Log out",
         "verificationSent": "Verification email sent",
         "verificationSentDesc": "Please check your inbox for the verification email.",
-        "verificationFailed": "Failed to send verification email",
+        "verificationFailed": "Couldn't send verification email",
         "passwordUpdated": "Password updated",
         "passwordUpdatedDesc": "Your password has been successfully updated.",
-        "passwordUpdateFailed": "Failed to update password",
+        "passwordUpdateFailed": "Couldn't update password",
         "cannotDelete": "Cannot delete account",
         "accountDeleted": "Account deleted"
       },
@@ -670,9 +670,9 @@
         "failed": "Couldn't update profile photo",
         "failedUpload": "Couldn't upload profile photo",
         "removed": "Profile picture removed",
-        "removeFailed": "Failed to remove profile picture",
-        "uploadStartFailed": "Unable to start profile photo upload.",
-        "resolveUrlFailed": "Unable to resolve uploaded profile picture URL."
+        "removeFailed": "Couldn't remove profile picture",
+        "uploadStartFailed": "Couldn't start profile photo upload.",
+        "resolveUrlFailed": "Couldn't resolve uploaded profile picture URL."
       },
       "preferredName": {
         "label": "Preferred name",
@@ -690,7 +690,7 @@
         "cannotEnable": "Cannot enable public profile",
         "cannotEnableDescription": "Please set a username first before making your profile public.",
         "visibilityUpdated": "Profile visibility updated",
-        "visibilityUpdateFailed": "Failed to update profile visibility"
+        "visibilityUpdateFailed": "Couldn't update profile visibility"
       },
       "username": {
         "label": "Username",
@@ -755,7 +755,7 @@
         "originalSignIn": "Signed in {date}",
         "noSessions": "No active sessions found.",
         "logoutAllConfirmTitle": "Revoke all devices?",
-        "logoutAllConfirmDescription": "Ends all sessions except this one. You'll need to log in again elsewhere.",
+        "logoutAllConfirmDescription": "Ends all sessions except this one. You'll need to sign in again elsewhere.",
         "logoutDeviceConfirmTitle": "Revoke this device?",
         "logoutDeviceConfirmDescription": "Ends the session on {device}.",
         "loggedOutAll": "Revoked all devices",
@@ -765,8 +765,8 @@
         "failedLogoutAll": "Couldn't revoke all devices",
         "failedLogoutDevice": "Couldn't revoke device",
         "revokedTitle": "Session ended",
-        "revokedDescription": "Session ended from another device. Log in to continue.",
-        "revokedAction": "Log in again"
+        "revokedDescription": "Session ended from another device. Sign in to continue.",
+        "revokedAction": "Sign in again"
       },
       "mfa": {
         "label": "Multi-factor authentication",
@@ -797,18 +797,18 @@
         "totpEnrolled": "Authenticator app added",
         "smsEnrolled": "Phone number added",
         "factorRemoved": "{name} removed",
-        "failedTotpEnroll": "Failed to add authenticator app",
-        "failedSmsEnroll": "Failed to add phone number",
-        "failedSmsSend": "Failed to send verification code",
+        "failedTotpEnroll": "Couldn't add authenticator app",
+        "failedSmsEnroll": "Couldn't add phone number",
+        "failedSmsSend": "Couldn't send verification code",
         "invalidPhoneNumber": "Use international format (e.g. +1234567890)",
-        "failedUnenroll": "Failed to remove factor",
+        "failedUnenroll": "Couldn't remove factor",
         "mfaDialogTitle": "Multi-factor authentication required",
         "mfaDialogDescription": "Enter your verification code to continue.",
         "chooseMethod": "Choose a verification method",
         "enrollFirst": "Add an authenticator or phone to enable MFA.",
         "disable": "Disable MFA",
         "disabled": "Multi-factor authentication disabled",
-        "failedDisable": "Failed to disable MFA",
+        "failedDisable": "Couldn't disable MFA",
         "disableConfirmTitle": "Disable multi-factor authentication?",
         "disableConfirmDescription": "This removes all factors. You won't need a second step to sign in.",
         "unsupportedFactorType": "Unsupported factor type"
@@ -942,14 +942,14 @@
     },
     "notifications": {
       "categories": {
-        "label": "Notification Categories",
+        "label": "Notification categories",
         "description": "Choose which types of notifications you want to receive.",
         "communication": {
           "label": "Communication",
           "description": "Messages, mentions, and other team communication."
         },
         "marketing": {
-          "label": "Marketing and Promotions",
+          "label": "Marketing and promotions",
           "description": "Product news, feature launches, and promotional email."
         },
         "security": {
@@ -958,7 +958,7 @@
         }
       },
       "frequency": {
-        "label": "Notification Frequency",
+        "label": "Notification frequency",
         "description": "Choose how often we send notifications.",
         "immediate": "Immediately",
         "daily": "Daily",
@@ -966,7 +966,7 @@
         "none": "No notifications"
       },
       "channels": {
-        "label": "Notification Channels",
+        "label": "Notification channels",
         "description": "Pick how you want to receive notifications.",
         "email": {
           "label": "Email notifications",
@@ -1019,7 +1019,7 @@
         "description": "Cancel at the end of the billing period."
       },
       "noPermission": "Billing access required",
-      "noPermissionTitle": "No permission",
+      "noPermissionTitle": "Admin access required",
       "noPermissionDescription": "You do not have permission to manage billing.",
       "noActivePlan": "No active plan",
       "noActivePlanDescription": "Subscribe to a plan to get started.",
@@ -1056,16 +1056,16 @@
         "selectTeamBeforeRestoring": "Select a team before restoring.",
         "noPermission": "You do not have permission to manage billing for this team.",
         "noActiveSubscription": "No active subscription found for this team.",
-        "portalFailed": "Unable to open billing portal.",
+        "portalFailed": "Couldn't open billing portal.",
         "cancelSuccess": "Subscription will cancel at period end.",
-        "cancelFailed": "Unable to cancel subscription.",
+        "cancelFailed": "Couldn't cancel subscription.",
         "restoreSuccess": "Subscription restored. Auto-renewal is active.",
-        "restoreFailed": "Unable to restore subscription."
+        "restoreFailed": "Couldn't restore subscription."
       }
     },
     "plans": {
       "subscriptionPlan": {
-        "label": "Subscription Plan",
+        "label": "Subscription plan",
         "description": "Choose the plan that best matches how your team works.",
         "personal": {
           "title": "Personal",
@@ -1085,7 +1085,7 @@
         }
       },
       "subscriptionTerm": {
-        "label": "Subscription Term",
+        "label": "Subscription term",
         "description": "Choose monthly or annual billing for the selected plan.",
         "annually": "Annually (save 25%)",
         "monthly": "Monthly"
@@ -1100,10 +1100,10 @@
     },
     "logs": {
       "auditLogs": {
-        "label": "Audit Logs",
+        "label": "Audit logs",
         "description": "View system and activity logs for your team."
       },
-      "noPermissionTitle": "No permission",
+      "noPermissionTitle": "Admin access required",
       "noPermissionDescription": "You do not have permission to view audit logs.",
       "unknownActor": "Unknown",
       "agentActor": "Agent",
@@ -1118,7 +1118,7 @@
     "sessions": {
       "sessionsLabel": "Workspace chat sessions",
       "sessionsDescription": "Every bot chat created by any member in the selected workspace. Rename, archive, restore, and permanently delete in bulk — server-side rules grant this view to team owners and admins only.",
-      "noPermissionTitle": "No permission",
+      "noPermissionTitle": "Admin access required",
       "noPermissionDescription": "Only team owners and admins can manage workspace bot sessions.",
       "columnTitle": "Title",
       "columnPreview": "Preview",
@@ -1164,7 +1164,7 @@
       },
       "deleteAll": {
         "label": "Delete all my chats",
-        "description": "Permanently remove every chat you own — active and archived — along with all their messages. This cannot be undone.",
+        "description": "Permanently remove every chat you own — active and archived — along with all their messages. This action cannot be undone.",
         "action": "Delete all",
         "confirmTitle": "Permanently delete every chat you own?",
         "confirmBody": "{count} chat will be permanently deleted, including every message. This action cannot be undone. | {count} chat will be permanently deleted, including every message. This action cannot be undone. | {count} chats will be permanently deleted, including every message. This action cannot be undone.",
@@ -1175,7 +1175,7 @@
       "label": "Workspace chat data",
       "description": "Team-wide bulk actions on every bot chat in this workspace. Admin-only.",
       "totalCount": "No chats in this workspace yet | {count} chat across the workspace | {count} chats across the workspace",
-      "noPermissionTitle": "No permission",
+      "noPermissionTitle": "Admin access required",
       "noPermissionDescription": "Only team owners and admins can manage workspace chat data.",
       "archiveAll": {
         "label": "Archive all team chats",
@@ -1187,7 +1187,7 @@
       },
       "deleteAll": {
         "label": "Delete all team chats",
-        "description": "Permanently remove every chat in this workspace — active and archived — across every member. This cannot be undone.",
+        "description": "Permanently remove every chat in this workspace — active and archived — across every member. This action cannot be undone.",
         "action": "Delete all",
         "confirmTitle": "Permanently delete every chat in this workspace?",
         "confirmBody": "{count} chat will be permanently deleted across every member, including every message. This action cannot be undone. | {count} chat will be permanently deleted across every member, including every message. This action cannot be undone. | {count} chats will be permanently deleted across every member, including every message. This action cannot be undone.",
@@ -1197,7 +1197,7 @@
     "storage": {
       "label": "Workspace files",
       "description": "Delete cascades to every descendant; archive marks the top-level node only and can be restored later.",
-      "noPermissionTitle": "No permission",
+      "noPermissionTitle": "Admin access required",
       "noPermissionDescription": "Only team owners and admins can manage workspace storage.",
       "rootCount": "No top-level items | {count} top-level item | {count} top-level items",
       "activeRootCount": "No active top-level items | {count} active top-level item | {count} active top-level items",
@@ -1235,28 +1235,28 @@
       }
     },
     "security": {
-      "noPermissionTitle": "No permission",
+      "noPermissionTitle": "Admin access required",
       "noPermissionDescription": "Only team owners and admins can manage security settings.",
       "enterprise": {
-        "title": "Enterprise Security",
-        "description": "SSO and advanced login method controls are available on the Enterprise plan. Upgrade to configure SAML, OIDC, and per-team authentication policies.",
-        "viewPlans": "View Plans"
+        "title": "Enterprise security",
+        "description": "SSO and advanced sign-in method controls are available on the Enterprise plan. Upgrade to configure SAML, OIDC, and per-team authentication policies.",
+        "viewPlans": "View plans"
       },
       "approvedDomains": {
-        "label": "Approved Domains",
+        "label": "Approved domains",
         "description": "Anyone with an email address at these domains is allowed to sign up and join this team automatically.",
         "placeholder": "acme.com"
       },
       "authenticationMethods": {
-        "label": "Authentication Methods",
+        "label": "Authentication methods",
         "description": "Control which authentication methods are available for your team members."
       },
       "emailPassword": {
-        "label": "Email & Password",
+        "label": "Email & password",
         "description": "Traditional email and password sign-in."
       },
       "magicLink": {
-        "label": "Magic Link",
+        "label": "Magic link",
         "description": "Passwordless sign-in via email link."
       },
       "google": {
@@ -1275,21 +1275,21 @@
         "label": "SSO",
         "description": "Enable Single Sign-On with SAML or OIDC identity providers.",
         "configure": "Configure SSO",
-        "configuration": "SSO Configuration",
+        "configuration": "SSO configuration",
         "configurationDescription": "Configure SAML or OIDC single sign-on for your organization.",
         "active": "Active",
         "onlyEnabledTitle": "SSO-only access",
         "onlyEnabledDescription": "Only SSO is enabled. Users whose email domain is not configured for SSO will not be able to sign in. Enable at least one additional method to ensure all users retain access.",
-        "emailDomainsLabel": "Email Domains",
+        "emailDomainsLabel": "Email domains",
         "emailDomainsDescription": "Add email domains that should use SSO (e.g., acme.com).",
         "enforceLabel": "Enforce SSO",
-        "enforceDescription": "When enabled, users with matching email domains must use SSO. Password and social logins will be blocked for these users.",
-        "autoProvisionLabel": "Auto-provision Members",
+        "enforceDescription": "When enabled, users with matching email domains must use SSO. Password and social sign-ins will be blocked for these users.",
+        "autoProvisionLabel": "Auto-provision members",
         "autoProvisionDescription": "Automatically create a team membership when a user signs in via SSO for the first time.",
-        "defaultRoleLabel": "Default Role",
+        "defaultRoleLabel": "Default role",
         "defaultRoleDescription": "The role assigned to auto-provisioned members.",
         "removeLabel": "Remove SSO",
-        "removeDescription": "Remove SSO configuration. Users will fall back to other login methods.",
+        "removeDescription": "Remove SSO configuration. Users will fall back to other sign-in methods.",
         "protocolLabel": "Protocol",
         "protocolDescription": "Choose your identity provider protocol.",
         "samlIdpEntityIdLabel": "IdP Entity ID",
@@ -1306,11 +1306,11 @@
         "oidcClientSecretDescription": "The OIDC client secret. This is stored securely and never exposed to the client.",
         "oidcClientIdPlaceholder": "client-id",
         "oidcClientSecretPlaceholder": "client-secret",
-        "testConnection": "Test Connection",
+        "testConnection": "Test connection",
         "updateSso": "Update SSO",
         "enableSso": "Enable SSO",
-        "removeConfirmTitle": "Remove SSO Configuration",
-        "removeConfirmDescription": "Are you sure you want to remove SSO? Users with SSO-enforced domains will need to use other login methods. This action cannot be undone.",
+        "removeConfirmTitle": "Remove SSO configuration",
+        "removeConfirmDescription": "Are you sure you want to remove SSO? Users with SSO-enforced domains will need to use other sign-in methods. This action cannot be undone.",
         "invalidDomainFormat": "Invalid domain format",
         "invalidDomainExample": "Use e.g. acme.com"
       }
@@ -1337,7 +1337,7 @@
         "promptPlaceholder": "e.g. Every Monday at 9am UTC, review the past week's changes to our docs and draft a short digest. Stage the edits for review.",
         "generate": "Generate",
         "regenerate": "Regenerate",
-        "generating": "Generating…",
+        "generating": "Generating...",
         "generatedBy": "Drafted with {model}",
         "generateError": "Couldn't generate a configuration. Try again or rephrase your prompt.",
         "previewTitle": "Anticipated configuration",
@@ -1395,19 +1395,19 @@
       "scopeCode": "Code files",
       "cancel": "Cancel",
       "save": "Save",
-      "confirmDelete": "Delete workflow \"{name}\"? This can't be undone.",
+      "confirmDelete": "Delete workflow \"{name}\"? This action cannot be undone.",
       "createSuccess": "Workflow created.",
-      "createError": "Failed to create workflow.",
+      "createError": "Couldn't create workflow.",
       "updateSuccess": "Workflow updated.",
-      "updateError": "Failed to update workflow.",
+      "updateError": "Couldn't update workflow.",
       "enableSuccess": "Workflow enabled.",
       "disableSuccess": "Workflow disabled.",
       "archiveSuccess": "Workflow archived.",
       "restoreSuccess": "Workflow restored.",
       "deleteSuccess": "Workflow deleted.",
-      "deleteError": "Failed to delete workflow.",
+      "deleteError": "Couldn't delete workflow.",
       "runQueued": "Run queued.",
-      "runError": "Failed to start the run.",
+      "runError": "Couldn't start the run.",
       "catalogTitle": "Built-in workflows",
       "predefinedDescription": "Ready-made automations you can switch on for this workspace.",
       "noAvailablePresets": "No built-in workflows are available yet. Add them from the Features tab.",
@@ -1436,7 +1436,7 @@
       "reject": "Reject",
       "reviewApproved": "Changes applied.",
       "reviewRejected": "Changes rejected.",
-      "reviewError": "Failed to record your decision.",
+      "reviewError": "Couldn't record your decision.",
       "presetEnabled": "Predefined workflow enabled.",
       "adminOnly": "Only team owners and admins can view workflow runs.",
       "needsReview": "Needs review",
@@ -1448,10 +1448,10 @@
       "promptWord": "Prompt",
       "runAgain": "Run again",
       "deleteRun": "Delete run",
-      "confirmDeleteRun": "Delete this run from history? This can't be undone.",
-      "confirmDeleteRuns": "Delete {n} runs from history? This can't be undone.",
+      "confirmDeleteRun": "Delete this run from history? This action cannot be undone.",
+      "confirmDeleteRuns": "Delete {n} runs from history? This action cannot be undone.",
       "deleteRunSuccess": "Run deleted.",
-      "deleteRunError": "Failed to delete the run.",
+      "deleteRunError": "Couldn't delete the run.",
       "runTriggerManual": "Triggered manually",
       "runTriggerSchedule": "Triggered by schedule",
       "runTriggerEvent": "Triggered by a change to {id} ({scope})",
@@ -1491,8 +1491,8 @@
       },
       "customWorkflowsOff": "Custom workflows are turned off for this team. Enable them above to create one.",
       "gateSaveSuccess": "Workflow settings saved.",
-      "gateSaveError": "Failed to save workflow settings.",
-      "gateLoadError": "Failed to load workflow settings."
+      "gateSaveError": "Couldn't save workflow settings.",
+      "gateLoadError": "Couldn't load workflow settings."
     },
     "runs": {
       "dateRange": "Date range",
@@ -1504,7 +1504,7 @@
     "agents": {
       "permissionRequired": "Only team owners and admins can change agent settings.",
       "saveSuccess": "Agent settings saved.",
-      "saveError": "Failed to save agent settings.",
+      "saveError": "Couldn't save agent settings.",
       "loadError": "Couldn't load agent settings.",
       "resetDefaults": "Restore defaults",
       "resetDefaultsDescription": "Restore providers, model, generation parameters, prompts, and display limits to their default values. Tool toggles and custom agents are not affected.",
@@ -1643,7 +1643,7 @@
           "promptPlaceholder": "e.g. A research assistant that searches our workspace, cites its sources, and answers concisely in a neutral tone.",
           "generate": "Generate",
           "regenerate": "Regenerate",
-          "generating": "Generating…",
+          "generating": "Generating...",
           "generateError": "Couldn't generate a configuration. Try again or rephrase your prompt.",
           "generatedBy": "Drafted with {model}",
           "previewTitle": "Anticipated configuration",
@@ -1669,7 +1669,7 @@
         "actions": "Agent actions",
         "deleteForever": "Delete forever",
         "deleteConfirmTitle": "Delete this agent forever?",
-        "deleteConfirmBody": "Deleting \"{name}\" removes it permanently. Existing chats that reference it will fall back to the team default and show a \"Deleted\" badge. This cannot be undone.",
+        "deleteConfirmBody": "Deleting \"{name}\" removes it permanently. Existing chats that reference it will fall back to the team default and show a \"Deleted\" badge. This action cannot be undone.",
         "enabledTooltip": "Agent is enabled. Click to disable — chats will fall back to the team default.",
         "disabledTooltip": "Agent is disabled. Click to re-enable.",
         "empty": "No custom agents yet.",
@@ -1678,18 +1678,18 @@
         "archivedSection": "Archived ({count})",
         "disabledSection": "Disabled ({count})",
         "createSuccess": "Agent created.",
-        "createError": "Failed to create agent.",
+        "createError": "Couldn't create agent.",
         "updateSuccess": "Agent updated.",
-        "updateError": "Failed to update agent.",
+        "updateError": "Couldn't update agent.",
         "archiveSuccess": "Agent archived.",
-        "archiveError": "Failed to archive agent.",
+        "archiveError": "Couldn't archive agent.",
         "restoreSuccess": "Agent restored.",
-        "restoreError": "Failed to restore agent.",
+        "restoreError": "Couldn't restore agent.",
         "enableSuccess": "Agent enabled.",
         "disableSuccess": "Agent disabled.",
-        "setEnabledError": "Failed to update agent status.",
+        "setEnabledError": "Couldn't update agent status.",
         "deleteSuccess": "Agent deleted.",
-        "deleteError": "Failed to delete agent.",
+        "deleteError": "Couldn't delete agent.",
         "name": {
           "label": "Name",
           "description": "Shown in pickers, badges, and the sidebar avatar label.",
@@ -1753,7 +1753,7 @@
           "promptPlaceholder": "e.g. A tool that looks up a customer by email and returns their plan, signup date, and account status.",
           "generate": "Generate",
           "regenerate": "Regenerate",
-          "generating": "Generating…",
+          "generating": "Generating...",
           "generateError": "Couldn't generate a configuration. Try again or rephrase your prompt.",
           "generatedBy": "Drafted with {model}",
           "previewTitle": "Anticipated configuration",
@@ -1779,7 +1779,7 @@
         "actions": "Tool actions",
         "deleteForever": "Delete forever",
         "deleteConfirmTitle": "Delete this tool forever?",
-        "deleteConfirmBody": "Deleting \"{name}\" removes it permanently. Existing chats that reference it will lose access on their next turn. This cannot be undone.",
+        "deleteConfirmBody": "Deleting \"{name}\" removes it permanently. Existing chats that reference it will lose access on their next turn. This action cannot be undone.",
         "enabledTooltip": "Tool is enabled. Click to disable — the model will stop seeing it in its catalog.",
         "disabledTooltip": "Tool is disabled. Click to re-enable.",
         "empty": "No custom tools yet.",
@@ -1788,18 +1788,18 @@
         "archivedSection": "Archived ({count})",
         "disabledSection": "Disabled ({count})",
         "createSuccess": "Tool created.",
-        "createError": "Failed to create tool.",
+        "createError": "Couldn't create tool.",
         "updateSuccess": "Tool updated.",
-        "updateError": "Failed to update tool.",
+        "updateError": "Couldn't update tool.",
         "archiveSuccess": "Tool archived.",
-        "archiveError": "Failed to archive tool.",
+        "archiveError": "Couldn't archive tool.",
         "restoreSuccess": "Tool restored.",
-        "restoreError": "Failed to restore tool.",
+        "restoreError": "Couldn't restore tool.",
         "enableSuccess": "Tool enabled.",
         "disableSuccess": "Tool disabled.",
-        "setEnabledError": "Failed to update tool status.",
+        "setEnabledError": "Couldn't update tool status.",
         "deleteSuccess": "Tool deleted.",
-        "deleteError": "Failed to delete tool.",
+        "deleteError": "Couldn't delete tool.",
         "name": {
           "label": "Wire name",
           "description": "How the model calls this tool — must start with a lowercase letter and contain only letters, digits, or underscores.",
@@ -1813,7 +1813,7 @@
         "description": {
           "label": "Description",
           "description": "What the model sees in its tool catalog. The clearer you make this, the better the model decides when to invoke.",
-          "placeholder": "Use this tool when…"
+          "placeholder": "Use this tool when..."
         },
         "avatarSeed": {
           "label": "Avatar seed",
@@ -1914,8 +1914,8 @@
       "username": {
         "label": "Username",
         "description": "Public handle for your team.",
-        "checkingAvailability": "Checking availability",
-        "available": "Username is available",
+        "checkingAvailability": "Checking availability...",
+        "available": "Available",
         "usernameHint": "Use lowercase letters, numbers, and hyphens"
       },
       "publicTeam": {
@@ -1941,7 +1941,7 @@
     "teamsList": {
       "label": "Teams",
       "description": "Manage your teams and switch between them.",
-      "createTeam": "Create Team",
+      "createTeam": "Create team",
       "columnName": "Name",
       "columnRole": "Role",
       "columnCreated": "Created",
@@ -1958,7 +1958,7 @@
     "workspacesList": {
       "label": "Workspaces",
       "description": "Manage workspaces in your current team.",
-      "createWorkspace": "Create Workspace",
+      "createWorkspace": "Create workspace",
       "columnName": "Name",
       "columnDescription": "Description",
       "columnCreated": "Created",
@@ -1974,7 +1974,7 @@
     "members": {
       "title": "Members",
       "description": "Manage your team members and their roles.",
-      "inviteMember": "Invite Member",
+      "inviteMember": "Invite member",
       "name": "Name",
       "role": "Role",
       "joined": "Joined",
@@ -2000,7 +2000,7 @@
     "groups": {
       "title": "Groups",
       "description": "Manage groups to grant roles to multiple members at once.",
-      "createGroup": "Create Group",
+      "createGroup": "Create group",
       "uploadPhoto": "Upload group photo",
       "removePhoto": "Remove group photo",
       "name": "Name",
@@ -2016,10 +2016,10 @@
       "deleteGroup": "Delete Group",
       "deleteConfirm": "Delete the group {name}? It is removed from every workspace that grants it a role, and members lose any access it conferred. Members keep their team and direct roles.",
       "empty": "No groups yet. Create one to grant a role to several members at once.",
-      "loadError": "Failed to load groups",
-      "createError": "Failed to create group",
-      "updateError": "Failed to update group",
-      "deleteError": "Failed to delete group"
+      "loadError": "Couldn't load groups",
+      "createError": "Couldn't create group",
+      "updateError": "Couldn't update group",
+      "deleteError": "Couldn't delete group"
     },
     "unsavedChanges": "Unsaved changes"
   },
@@ -2643,7 +2643,7 @@
       "title": "Teams",
       "description": "Create, switch, and manage the teams you belong to.",
       "memberCount": "{count} member | {count} members",
-      "createTeam": "Create Team",
+      "createTeam": "Create team",
       "active": "Active",
       "you": "You",
       "empty": {
@@ -2774,7 +2774,7 @@
       "logout": "Log out",
       "dialog": {
         "title": "Log out?",
-        "description": "You'll be redirected to the login page.",
+        "description": "You'll be redirected to the sign-in page.",
         "cancel": "Cancel",
         "logout": "Log out"
       }
@@ -2788,7 +2788,7 @@
       "currentTeam": "Current Team",
       "id": "ID",
       "members": "Members",
-      "inviteMember": "Invite Member",
+      "inviteMember": "Invite member",
       "noTeamSelected": "No team selected.",
       "createNewTeam": "Create New Team",
       "create": "Create",
@@ -2979,8 +2979,8 @@
         "invite": "Invite people to this team and manage pending invitations."
       },
       "tooltips": {
-        "uploadPhoto": "Upload team photo",
-        "removePhoto": "Remove team photo",
+        "uploadPhoto": "Upload photo",
+        "removePhoto": "Remove photo",
         "removeMember": "Remove member",
         "addMember": "Add member",
         "cancelInvitation": "Cancel invitation",
@@ -2997,19 +2997,17 @@
         "addAgent": "Add an agent"
       },
       "labels": {
-        "clickToChange": "Click to change",
-        "clickToUpload": "Click to upload photo",
-        "teamName": "Team name",
+        "teamName": "Name",
         "inviteMembers": "Invite members",
         "emailAddress": "Email address",
         "members": "Members",
         "sendInvites": "Send invitations",
-        "teamPhoto": "Team photo",
+        "teamPhoto": "Photo",
         "invite": "Invite",
         "invitations": "Invitations",
         "noActiveMembers": "No active members yet.",
         "publicHandle": "Public handle",
-        "publicTeam": "Public team profile",
+        "publicTeam": "Publish profile",
         "agents": "Agents",
         "agentBadge": "Agent",
         "noAgentMatches": "No agents found"
@@ -3018,8 +3016,8 @@
         "teamName": "Acme Inc.",
         "email": "user{'@'}example.com",
         "publicHandle": "acme",
-        "inviteOrAgent": "Email address or search agents…",
-        "searchAgents": "Search agents…"
+        "inviteOrAgent": "Email or search agents...",
+        "searchAgents": "Search agents..."
       },
       "roles": {
         "owner": "Owner",
@@ -3030,9 +3028,9 @@
       "buttons": {
         "add": "Add",
         "cancel": "Cancel",
-        "createTeam": "Create Team",
+        "createTeam": "Create team",
         "saveChanges": "Save changes",
-        "inviteMembers": "Invite {count} Member | Invite {count} Members"
+        "inviteMembers": "Invite {count} member | Invite {count} members"
       },
       "errors": {
         "invalidEmail": "Please enter a valid email address",
@@ -3260,16 +3258,14 @@
       "editTitle": "Edit Workspace",
       "createDescription": "Create a new workspace to organize your content within this team.",
       "editDescription": "Update workspace details.",
-      "photoLabel": "Workspace Photo",
-      "uploadPhoto": "Upload workspace photo",
+      "photoLabel": "Photo",
+      "uploadPhoto": "Upload photo",
       "removePhoto": "Remove photo",
-      "clickToChange": "Click to change",
-      "clickToUpload": "Click to upload",
-      "nameLabel": "Workspace Name",
+      "nameLabel": "Name",
       "namePlaceholder": "My Workspace",
       "descriptionLabel": "Description",
       "descriptionPlaceholder": "A brief description of this workspace...",
-      "saveChanges": "Save Changes",
+      "saveChanges": "Save changes",
       "roles": {
         "label": "Members",
         "hint": "Choose who participates in this workspace and at what role. Unchecking a user excludes them.",
@@ -3277,8 +3273,8 @@
         "usersHeading": "Users",
         "you": "You",
         "empty": "No members to assign yet.",
-        "loadError": "Failed to load workspace roles",
-        "assignError": "Failed to update workspace role",
+        "loadError": "Couldn't load workspace roles",
+        "assignError": "Couldn't update workspace role",
         "selfLocked": "You can't remove yourself from a workspace.",
         "ownerLocked": "Owners can't be removed from a workspace. Change their role first.",
         "via": "{role} via {group}"
@@ -3290,8 +3286,8 @@
         "empty": "No groups in this team yet.",
         "noGroupsToAdd": "All groups already have access, or none exist yet.",
         "remove": "Remove group access",
-        "loadError": "Failed to load group access",
-        "assignError": "Failed to update group access"
+        "loadError": "Couldn't load group access",
+        "assignError": "Couldn't update group access"
       }
     },
     "groupDialog": {
@@ -3299,12 +3295,10 @@
       "editTitle": "Edit Group",
       "createDescription": "Bundle team members into a reusable group. Grant it a role per workspace later.",
       "editDescription": "Update the group's name, description, and members.",
-      "photoLabel": "Group Photo",
-      "uploadPhoto": "Upload group photo",
+      "photoLabel": "Photo",
+      "uploadPhoto": "Upload photo",
       "removePhoto": "Remove photo",
-      "clickToChange": "Click to change",
-      "clickToUpload": "Click to upload",
-      "nameLabel": "Group Name",
+      "nameLabel": "Name",
       "namePlaceholder": "Engineering",
       "descriptionLabel": "Description",
       "descriptionPlaceholder": "A brief description of this group...",
@@ -3313,9 +3307,9 @@
       "searchPlaceholder": "Search members...",
       "noMembers": "No team members to add.",
       "selectedCount": "{count} selected",
-      "usedInWorkspaces": "Granted a role in {count} workspace | Granted a role in {count} workspaces",
-      "create": "Create Group",
-      "saveChanges": "Save Changes"
+      "usedInWorkspaces": "{count} workspace | {count} workspaces",
+      "create": "Create group",
+      "saveChanges": "Save changes"
     },
     "nodeAttachments": {
       "title": "Attachments",
@@ -3347,10 +3341,10 @@
       "toasts": {
         "archived": "Archived nodes are read-only.",
         "noPermission": "You do not have permission to edit attachments.",
-        "uploadFailedTitle": "Failed to upload attachment",
-        "downloadFailedTitle": "Failed to download attachment",
-        "updateFailedTitle": "Failed to update attachment",
-        "deleteFailedTitle": "Failed to delete attachment",
+        "uploadFailedTitle": "Couldn't upload attachment",
+        "downloadFailedTitle": "Couldn't download attachment",
+        "updateFailedTitle": "Couldn't update attachment",
+        "deleteFailedTitle": "Couldn't delete attachment",
         "uploadedSingle": "Attachment uploaded",
         "uploadedMultiple": "{count} attachments uploaded",
         "uploadFailedSingle": "Attachment upload failed",
@@ -3444,7 +3438,7 @@
       "tableDeleteTable": "Delete table",
       "language": "Language",
       "auto": "Auto",
-      "searchLanguage": "Search language…",
+      "searchLanguage": "Search language...",
       "noLanguages": "No languages found.",
       "copyCode": "Copy code",
       "copied": "Copied",
@@ -3783,7 +3777,7 @@
     },
     "landing": {
       "cta": {
-        "tooltip": "Press {key} to login or sign up"
+        "tooltip": "Press {key} to sign in or sign up"
       },
       "faq": {
         "tooltip": "FAQ",

@@ -16,7 +16,6 @@ import {
   IconTrash,
   IconX,
 } from "@/data/icons"
-import { getInitials } from "@/helpers/utilities"
 import type { IWorkspace } from "@/types/domain"
 
 const { t } = useI18n()
@@ -161,9 +160,7 @@ const formatCreatedAt = (value: IWorkspace["createdAt"] | null | undefined) => {
         </Field>
         <Field orientation="horizontal">
           <FieldContent>
-            <div v-if="isLoading" class="flex justify-center py-8">
-              <Spinner />
-            </div>
+            <LoadingState v-if="isLoading" />
             <div v-else class="overflow-clip rounded-xl border">
               <Table>
                 <TableHeader>
@@ -227,8 +224,7 @@ const formatCreatedAt = (value: IWorkspace["createdAt"] | null | undefined) => {
                           <TooltipProvider>
                             <Tooltip>
                               <TooltipTrigger as-child>
-                                <Avatar
-                                  class="flex items-center justify-center"
+                                <AppAvatar
                                   :class="{
                                     'cursor-pointer': canUpdateWorkspace(
                                       workspace.id
@@ -236,27 +232,15 @@ const formatCreatedAt = (value: IWorkspace["createdAt"] | null | undefined) => {
                                     'cursor-not-allowed opacity-60':
                                       !canUpdateWorkspace(workspace.id),
                                   }"
+                                  :loading="
+                                    workspaceLoading.isLoading(
+                                      `photo-${workspace.id}`
+                                    )
+                                  "
+                                  :src="workspace.photoURL"
+                                  :name="workspace.name"
                                   @click="handleWorkspaceAvatarClick(workspace)"
-                                >
-                                  <template
-                                    v-if="
-                                      workspaceLoading.isLoading(
-                                        `photo-${workspace.id}`
-                                      )
-                                    "
-                                  >
-                                    <Spinner />
-                                  </template>
-                                  <template v-else>
-                                    <AvatarImage
-                                      :src="workspace.photoURL!"
-                                      :alt="workspace.name"
-                                    />
-                                    <AvatarFallback>
-                                      {{ getInitials(workspace.name) }}
-                                    </AvatarFallback>
-                                  </template>
-                                </Avatar>
+                                />
                               </TooltipTrigger>
                               <TooltipContent>
                                 {{
@@ -300,11 +284,11 @@ const formatCreatedAt = (value: IWorkspace["createdAt"] | null | undefined) => {
                             </Tooltip>
                           </TooltipProvider>
                         </ItemMedia>
-                        <ItemContent class="gap-0.5 truncate">
-                          <ItemTitle class="truncate">
+                        <ItemContent>
+                          <ItemTitle>
                             {{ workspace.name }}
                           </ItemTitle>
-                          <ItemDescription class="truncate text-xs">
+                          <ItemDescription class="text-xs">
                             {{
                               workspace.description ||
                               t("settings.workspacesList.noDescription")
@@ -351,7 +335,7 @@ const formatCreatedAt = (value: IWorkspace["createdAt"] | null | undefined) => {
                                       <IconMoreHorizontal />
                                     </Button>
                                   </DropdownMenuTrigger>
-                                  <DropdownMenuContent class="w-auto">
+                                  <DropdownMenuContent>
                                     <Tooltip>
                                       <TooltipTrigger as-child>
                                         <div>

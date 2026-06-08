@@ -206,7 +206,7 @@ const onNewNodeChat = () => {
                   >
                     <span class="flex min-w-0 grow flex-col gap-0.5">
                       <span class="flex items-baseline justify-between gap-2">
-                        <span class="truncate text-xs">
+                        <span>
                           {{ item.title || t("ai.newChat") }}
                         </span>
                         <span class="text-muted-foreground shrink-0 text-xs">

@@ -37,7 +37,7 @@ const filteredShortcuts = computed(() =>
           >
             <CommandGroup
               :heading="category.title"
-              class="**:data-[slot=command-group-heading]:text-muted-foreground **:data-[slot=command-group-heading]:p-2 **:data-[slot=command-group-heading]:text-xs **:data-[slot=command-group-heading]:font-medium"
+              class="**:data-[slot=command-group-heading]:text-muted-foreground **:data-[slot=command-group-heading]:py-2 **:data-[slot=command-group-heading]:pl-3 **:data-[slot=command-group-heading]:text-xs **:data-[slot=command-group-heading]:font-medium"
             >
               <CommandItem
                 v-for="shortcut in category.shortcuts"

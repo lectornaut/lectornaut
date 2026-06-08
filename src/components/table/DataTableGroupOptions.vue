@@ -26,7 +26,7 @@ const columns = computed(() =>
         {{ t("components.dataTable.groupBy") }}
       </Button>
     </DropdownMenuTrigger>
-    <DropdownMenuContent class="w-auto">
+    <DropdownMenuContent>
       <DropdownMenuLabel>{{
         t("components.dataTable.groupBy")
       }}</DropdownMenuLabel>

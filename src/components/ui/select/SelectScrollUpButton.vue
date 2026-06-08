@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { ChevronUpIcon } from "@lucide/vue"
+import { ArrowUp01Icon } from "@hugeicons/core-free-icons"
+import { HugeiconsIcon } from "@hugeicons/vue"
 import type { SelectScrollUpButtonProps } from "reka-ui"
 import type { HTMLAttributes } from "vue"
 import { reactiveOmit } from "@vueuse/core"
@@ -27,7 +28,7 @@ const forwardedProps = useForwardProps(delegatedProps)
     "
   >
     <slot>
-      <ChevronUpIcon />
+      <HugeiconsIcon :stroke-width="2" :icon="ArrowUp01Icon" />
     </slot>
   </SelectScrollUpButton>
 </template>

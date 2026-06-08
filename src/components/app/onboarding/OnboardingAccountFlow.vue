@@ -322,24 +322,19 @@ const handleRemoveProfilePicture = async () => {
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger as-child>
-                  <Avatar
-                    class="flex size-10 cursor-pointer items-center justify-center"
+                  <AppAvatar
+                    class="size-10 cursor-pointer"
+                    :src="uploadError ? null : displayPhotoURL"
+                    :name="user?.displayName"
                     @click="triggerProfilePhotoUpload"
                   >
-                    <template v-if="uploadError">
-                      <IconAlertTriangle />
+                    <template #fallback>
+                      <IconAlertTriangle v-if="uploadError" />
+                      <template v-else>{{
+                        getInitials(user?.displayName || "")
+                      }}</template>
                     </template>
-                    <template v-else>
-                      <AvatarImage
-                        :src="displayPhotoURL || ''"
-                        :alt="user?.displayName"
-                        referrerpolicy="no-referrer"
-                      />
-                      <AvatarFallback>
-                        {{ getInitials(user?.displayName || "") }}
-                      </AvatarFallback>
-                    </template>
-                  </Avatar>
+                  </AppAvatar>
                 </TooltipTrigger>
                 <TooltipContent>
                   {{

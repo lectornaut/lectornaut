@@ -17,7 +17,6 @@ import type {
 } from "@/types/domain"
 import { storeToRefs } from "pinia"
 import { onBeforeUnmount, onMounted } from "vue"
-import Avatar from "vue-boring-avatars"
 
 const { t } = useI18n()
 
@@ -572,19 +571,11 @@ const handleEditorSave = async (): Promise<void> => {
                 <div class="flex flex-col gap-4 p-4">
                   <!-- Identity (avatar + display name + wire name) -->
                   <div class="flex items-center gap-3">
-                    <div class="size-10 shrink-0 overflow-hidden rounded-full">
-                      <Avatar
-                        variant="marble"
-                        :name="effectiveAvatarSeed"
-                        :colors="[
-                          'var(--color-chart-1)',
-                          'var(--color-chart-2)',
-                          'var(--color-chart-3)',
-                          'var(--color-chart-4)',
-                          'var(--color-chart-5)',
-                        ]"
-                      />
-                    </div>
+                    <AppAvatar
+                      variant="marble"
+                      :name="effectiveAvatarSeed"
+                      class="size-10 shrink-0"
+                    />
                     <div class="min-w-0">
                       <p class="truncate text-sm font-medium">
                         {{ draft.displayName || draft.name || "—" }}
@@ -816,19 +807,11 @@ const handleEditorSave = async (): Promise<void> => {
                     </FieldDescription>
                   </FieldContent>
                   <div class="flex items-center gap-3">
-                    <div class="size-10 shrink-0 overflow-hidden rounded-full">
-                      <Avatar
-                        variant="marble"
-                        :name="effectiveAvatarSeed"
-                        :colors="[
-                          'var(--color-chart-1)',
-                          'var(--color-chart-2)',
-                          'var(--color-chart-3)',
-                          'var(--color-chart-4)',
-                          'var(--color-chart-5)',
-                        ]"
-                      />
-                    </div>
+                    <AppAvatar
+                      variant="marble"
+                      :name="effectiveAvatarSeed"
+                      class="size-10 shrink-0"
+                    />
                     <Input
                       :id="`tool-avatar-seed-${editingTool?.id ?? 'new'}`"
                       v-model="draft.avatarSeed"
@@ -881,7 +864,7 @@ const handleEditorSave = async (): Promise<void> => {
                       class="col-span-5 font-mono"
                     />
                     <Select v-model="field.type" :disabled="!canManage">
-                      <SelectTrigger class="col-span-3 w-full">
+                      <SelectTrigger>
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
@@ -976,7 +959,7 @@ const handleEditorSave = async (): Promise<void> => {
                       class="col-span-5 font-mono"
                     />
                     <Select v-model="field.type" :disabled="!canManage">
-                      <SelectTrigger class="col-span-3 w-full">
+                      <SelectTrigger>
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
@@ -1134,7 +1117,7 @@ const handleEditorSave = async (): Promise<void> => {
                       v-model="draft.action.method"
                       :disabled="!canManage"
                     >
-                      <SelectTrigger class="w-32">
+                      <SelectTrigger>
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
@@ -1422,7 +1405,7 @@ const handleEditorSave = async (): Promise<void> => {
                         }
                       "
                     >
-                      <SelectTrigger class="w-64">
+                      <SelectTrigger>
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
@@ -1470,7 +1453,6 @@ const handleEditorSave = async (): Promise<void> => {
                       :max="bounds.workspaceSearchLimit.max"
                       :step="bounds.workspaceSearchLimit.step"
                       :disabled="!canManage"
-                      class="w-32"
                     />
                   </Field>
 

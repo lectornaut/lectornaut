@@ -11,14 +11,12 @@ import {
   IconTrash,
   IconUsers,
 } from "@/data/icons"
-import { getInitials } from "@/helpers/utilities"
 import {
   isAgentMembership,
   type IAgentMembership,
   type IMembershipRole,
   type ITeamMember,
 } from "@/types/membership"
-import BoringAvatar from "vue-boring-avatars"
 import { useCurrentUser } from "vuefire"
 
 const { t } = useI18n()
@@ -163,9 +161,7 @@ const formatCreatedAt = (
         </Field>
         <Field orientation="horizontal">
           <FieldContent>
-            <div v-if="isLoading" class="flex justify-center py-8">
-              <Spinner />
-            </div>
+            <LoadingState v-if="isLoading" />
             <div v-else class="overflow-clip rounded-xl border">
               <Table>
                 <TableHeader>
@@ -222,36 +218,19 @@ const formatCreatedAt = (
                   >
                     <TableCell>
                       <Item class="group p-0" size="xs">
-                        <ItemMedia
-                          v-if="isAgentMembership(member)"
-                          variant="image"
-                          class="rounded-full"
-                        >
-                          <BoringAvatar
+                        <ItemMedia v-if="isAgentMembership(member)">
+                          <AppAvatar
                             variant="beam"
                             :name="agentAvatarSeed(member)"
-                            :colors="[
-                              'var(--color-chart-1)',
-                              'var(--color-chart-2)',
-                              'var(--color-chart-3)',
-                              'var(--color-chart-4)',
-                              'var(--color-chart-5)',
-                            ]"
                           />
                         </ItemMedia>
                         <ItemMedia v-else>
-                          <Avatar>
-                            <AvatarImage
-                              :src="member.user?.photoURL!"
-                              :alt="member.user?.displayName"
-                              referrerpolicy="no-referrer"
-                            />
-                            <AvatarFallback>
-                              {{ getInitials(member.user?.displayName!) }}
-                            </AvatarFallback>
-                          </Avatar>
+                          <AppAvatar
+                            :src="member.user?.photoURL"
+                            :name="member.user?.displayName"
+                          />
                         </ItemMedia>
-                        <ItemContent class="gap-0.5 truncate">
+                        <ItemContent>
                           <ItemTitle class="flex items-center gap-1.5 truncate">
                             {{ memberDisplayName(member) }}
                             <Badge
@@ -261,7 +240,7 @@ const formatCreatedAt = (
                               {{ t("settings.members.agentBadge") }}
                             </Badge>
                           </ItemTitle>
-                          <ItemDescription class="truncate text-xs">
+                          <ItemDescription class="text-xs">
                             <template v-if="isAgentMembership(member)">
                               {{
                                 member.agent.description ||
@@ -479,7 +458,7 @@ const formatCreatedAt = (
                                     <IconMoreHorizontal v-else />
                                   </Button>
                                 </DropdownMenuTrigger>
-                                <DropdownMenuContent class="w-auto">
+                                <DropdownMenuContent>
                                   <AlertDialog>
                                     <AlertDialogTrigger as-child>
                                       <DropdownMenuItem @select.prevent>

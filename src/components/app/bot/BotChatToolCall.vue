@@ -905,7 +905,7 @@ const showChevron = computed(
       <!-- ============================================================== -->
       <Item v-else-if="isLiveInterrupt" variant="muted" size="xs">
         <ItemContent>
-          <ItemDescription class="line-clamp-none">
+          <ItemDescription class="text-xs">
             {{ t("ai.toolCall.malformedInterrupt") }}
           </ItemDescription>
         </ItemContent>
@@ -1025,7 +1025,7 @@ const showChevron = computed(
               </ItemMedia>
               <ItemContent>
                 <ItemTitle class="break-all">{{ result.name }}</ItemTitle>
-                <ItemDescription v-if="result.snippet">
+                <ItemDescription v-if="result.snippet" class="text-xs">
                   {{ result.snippet }}
                 </ItemDescription>
               </ItemContent>
@@ -1134,7 +1134,7 @@ const showChevron = computed(
         <CardHeader v-if="compareInput?.focus">
           <CardTitle>{{ compareInput.focus }}</CardTitle>
         </CardHeader>
-        <CardContent class="flex flex-col gap-3">
+        <CardContent class="flex flex-col gap-2">
           <p v-if="compareOutput.overview" class="text-foreground">
             {{ compareOutput.overview }}
           </p>
@@ -1195,7 +1195,7 @@ const showChevron = computed(
                 </ItemMedia>
                 <ItemContent>
                   <ItemTitle class="break-all">{{ entry.name }}</ItemTitle>
-                  <ItemDescription v-if="entry.contribution">
+                  <ItemDescription v-if="entry.contribution" class="text-xs">
                     {{ entry.contribution }}
                   </ItemDescription>
                 </ItemContent>
@@ -1264,7 +1264,7 @@ const showChevron = computed(
               </ItemMedia>
               <ItemContent>
                 <ItemTitle class="break-all">{{ result.name }}</ItemTitle>
-                <ItemDescription v-if="result.snippet">
+                <ItemDescription v-if="result.snippet" class="text-xs">
                   {{ result.snippet }}
                 </ItemDescription>
               </ItemContent>

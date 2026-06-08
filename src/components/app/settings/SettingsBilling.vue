@@ -428,12 +428,12 @@ const handleSubscriptionAction = async (): Promise<void> => {
               <ItemMedia variant="icon">
                 <IconBadgeDollarSign />
               </ItemMedia>
-              <ItemContent class="gap-0.5 truncate">
-                <ItemTitle class="truncate">
+              <ItemContent>
+                <ItemTitle>
                   {{ planLabel }}
                   {{ intervalLabel }}
                 </ItemTitle>
-                <ItemDescription class="truncate text-xs">
+                <ItemDescription class="text-xs">
                   {{ billingLifecycleLabel }}
                   &middot;
                   {{ seatCountLabel }}
@@ -457,11 +457,11 @@ const handleSubscriptionAction = async (): Promise<void> => {
               <ItemMedia variant="icon">
                 <IconBadgeDollarSign />
               </ItemMedia>
-              <ItemContent class="gap-0.5 truncate">
-                <ItemTitle class="truncate">
+              <ItemContent>
+                <ItemTitle>
                   {{ t("settings.billing.noActivePlan") }}
                 </ItemTitle>
-                <ItemDescription class="truncate text-xs">
+                <ItemDescription class="text-xs">
                   {{ t("settings.billing.noActivePlanDescription") }}
                 </ItemDescription>
               </ItemContent>

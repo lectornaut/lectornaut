@@ -708,3 +708,7 @@
 [data-slot="sidebar-inner"] {
   @apply bg-transparent!;
 }
+
+[data-hg] path {
+  @apply stroke-2;
+}

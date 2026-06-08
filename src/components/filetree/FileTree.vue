@@ -502,7 +502,7 @@ onBeforeUnmount(() => {
   <SidebarGroup>
     <Collapsible default-open class="group/collapsible">
       <SidebarGroupLabel as-child>
-        <CollapsibleTrigger class="w-full">
+        <CollapsibleTrigger>
           {{ t("fileTree.documents") }}
           <IconChevronRight
             class="mr-auto ml-1 size-3! transition-transform group-data-[state=open]/collapsible:rotate-90"

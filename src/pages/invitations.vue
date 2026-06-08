@@ -203,7 +203,7 @@ const formatInvitationTimestamp = (
             :placeholder="$t('pages.join.placeholders.selectInvitation')"
           />
         </SelectTrigger>
-        <SelectContent class="w-full">
+        <SelectContent>
           <template v-if="isAuthenticated">
             <SelectGroup v-if="pendingInvitations.length > 0">
               <SelectLabel>{{ $t("pages.join.labels.pending") }}</SelectLabel>
@@ -272,14 +272,10 @@ const formatInvitationTimestamp = (
         class="bg-sidebar flex size-full flex-col items-center justify-between p-2"
       >
         <div class="m-auto grid grow flex-col items-center justify-center">
-          <Empty v-if="isLoading">
-            <EmptyHeader>
-              <EmptyMedia variant="icon">
-                <Spinner />
-              </EmptyMedia>
-              <EmptyTitle>{{ $t("pages.join.states.loading") }}</EmptyTitle>
-            </EmptyHeader>
-          </Empty>
+          <LoadingState
+            v-if="isLoading"
+            :label="$t('pages.join.states.loading')"
+          />
           <Empty v-else-if="error">
             <EmptyHeader>
               <EmptyMedia variant="icon">

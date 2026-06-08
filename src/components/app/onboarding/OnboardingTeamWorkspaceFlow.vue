@@ -123,7 +123,7 @@ const handleCreateWorkspace = async () => {
         </Field>
 
         <Field orientation="horizontal">
-          <FieldContent class="w-full">
+          <FieldContent>
             <FieldLabel>{{
               t("pages.welcome.onboarding.teamWorkspaceFlow.switchTeam")
             }}</FieldLabel>
@@ -135,9 +135,7 @@ const handleCreateWorkspace = async () => {
               }}
             </FieldDescription>
 
-            <div v-if="isTeamLoading" class="flex justify-center py-6">
-              <Spinner />
-            </div>
+            <LoadingState v-if="isTeamLoading" />
             <div v-else class="mt-3 space-y-2">
               <div
                 v-for="membership in memberships"
@@ -265,7 +263,7 @@ const handleCreateWorkspace = async () => {
         </Field>
 
         <Field orientation="horizontal">
-          <FieldContent class="w-full">
+          <FieldContent>
             <FieldLabel>{{
               t("pages.welcome.onboarding.teamWorkspaceFlow.switchWorkspace")
             }}</FieldLabel>
@@ -277,9 +275,7 @@ const handleCreateWorkspace = async () => {
               }}
             </FieldDescription>
 
-            <div v-if="isWorkspaceLoading" class="flex justify-center py-6">
-              <Spinner />
-            </div>
+            <LoadingState v-if="isWorkspaceLoading" />
             <div v-else class="mt-3 space-y-2">
               <div
                 v-for="workspace in workspaces"

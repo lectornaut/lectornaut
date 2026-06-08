@@ -6,13 +6,13 @@ definePage({
   meta: {
     requiresUser: true,
     layout: "app",
-    sidebar: "Welcome",
-    breadcrumb: "Welcome",
+    sidebar: "Start",
+    breadcrumb: "Start",
   },
 })
 
 useHead({
-  title: "Welcome",
+  title: "Start",
 })
 
 const { t } = useI18n()

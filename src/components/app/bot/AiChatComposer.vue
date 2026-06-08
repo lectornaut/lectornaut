@@ -49,7 +49,6 @@ import { can, Capabilities } from "@/types/permissions"
 import { storeToRefs } from "pinia"
 import { computed, inject, nextTick, ref, watch, watchEffect } from "vue"
 import type { Component } from "vue"
-import Avatar from "vue-boring-avatars"
 import { toast } from "vue-sonner"
 
 const { t } = useI18n()
@@ -594,17 +593,6 @@ const onAgentChange = (next: unknown): void => {
 const agentAvatarSeed = (agent: ITeamAgent): string =>
   agent.avatarSeed.trim() || agent.name.trim() || agent.id
 
-// Shared palette so each agent's generated `vue-boring-avatars` "beam"
-// avatar uses the app's chart tokens. Hoisted to a const because the
-// trigger and every dropdown item reference the same array.
-const agentAvatarColors = [
-  "var(--color-chart-1)",
-  "var(--color-chart-2)",
-  "var(--color-chart-3)",
-  "var(--color-chart-4)",
-  "var(--color-chart-5)",
-]
-
 const inputPlaceholder = computed(() => {
   if (isActiveArchived.value) return t("ai.placeholderArchived")
   if (isReadOnly.value) return t("ai.placeholderReadOnly")
@@ -971,7 +959,7 @@ const onToolMenuCloseAutoFocus = (event: Event) => {
 
 <template>
   <div class="mx-2 mb-2 grid gap-2">
-    <InputGroup class="bg-background">
+    <InputGroup>
       <InputGroupTextarea
         ref="textareaRef"
         v-model="userInput"
@@ -1004,11 +992,11 @@ const onToolMenuCloseAutoFocus = (event: Event) => {
                   <ItemTitle>{{ node.name }}</ItemTitle>
                   <ItemDescription
                     v-if="node.status === 'archived'"
-                    class="uppercase"
+                    class="text-xs"
                   >
                     {{ t("ai.attachedNodeArchived") }}
                   </ItemDescription>
-                  <ItemDescription v-else class="uppercase">
+                  <ItemDescription v-else class="text-xs">
                     {{ node.scope }}
                   </ItemDescription>
                 </template>
@@ -1056,7 +1044,7 @@ const onToolMenuCloseAutoFocus = (event: Event) => {
               </ItemMedia>
               <ItemContent>
                 <ItemTitle>{{ att.name }}</ItemTitle>
-                <ItemDescription class="uppercase">file</ItemDescription>
+                <ItemDescription class="text-xs">File</ItemDescription>
               </ItemContent>
               <ItemActions>
                 <TooltipProvider>
@@ -1092,7 +1080,7 @@ const onToolMenuCloseAutoFocus = (event: Event) => {
               </ItemMedia>
               <ItemContent>
                 <ItemTitle>{{ file.name }}</ItemTitle>
-                <ItemDescription class="uppercase">pending</ItemDescription>
+                <ItemDescription class="text-xs">Pending</ItemDescription>
               </ItemContent>
               <ItemActions>
                 <TooltipProvider>
@@ -1241,7 +1229,6 @@ const onToolMenuCloseAutoFocus = (event: Event) => {
                 </DropdownMenuTrigger>
                 <DropdownMenuContent
                   v-if="availableTools.length > 0"
-                  class="w-auto"
                   @close-auto-focus="onToolMenuCloseAutoFocus"
                 >
                   <DropdownMenuGroup v-if="builtInTools.length > 0">
@@ -1335,15 +1322,11 @@ const onToolMenuCloseAutoFocus = (event: Event) => {
                         <!-- Active agent we still have a record for (selectable
                          or phantom): avatar + name + optional status suffix. -->
                         <template v-else-if="activeAgent">
-                          <span
-                            class="size-4 shrink-0 overflow-hidden rounded-full"
-                          >
-                            <Avatar
-                              variant="beam"
-                              :name="agentAvatarSeed(activeAgent)"
-                              :colors="agentAvatarColors"
-                            />
-                          </span>
+                          <AppAvatar
+                            variant="beam"
+                            :name="agentAvatarSeed(activeAgent)"
+                            class="size-4 shrink-0"
+                          />
                           {{ activeAgent.name }}
                           <span
                             v-if="activeStatusLabel"
@@ -1382,7 +1365,7 @@ const onToolMenuCloseAutoFocus = (event: Event) => {
                   </ItemMedia>
                   <ItemContent>
                     <ItemTitle>{{ t("ai.agents.default") }}</ItemTitle>
-                    <ItemDescription>
+                    <ItemDescription class="text-xs">
                       {{ t("ai.agents.defaultTooltip") }}
                     </ItemDescription>
                   </ItemContent>
@@ -1395,17 +1378,15 @@ const onToolMenuCloseAutoFocus = (event: Event) => {
               >
                 <Item size="xs" class="border-0 p-0">
                   <ItemMedia variant="icon">
-                    <span class="size-4 shrink-0 overflow-hidden rounded-full">
-                      <Avatar
-                        variant="beam"
-                        :name="agentAvatarSeed(agent)"
-                        :colors="agentAvatarColors"
-                      />
-                    </span>
+                    <AppAvatar
+                      variant="beam"
+                      :name="agentAvatarSeed(agent)"
+                      class="size-4 shrink-0"
+                    />
                   </ItemMedia>
                   <ItemContent>
                     <ItemTitle>{{ agent.name }}</ItemTitle>
-                    <ItemDescription v-if="agent.description">
+                    <ItemDescription v-if="agent.description" class="text-xs">
                       {{ agent.description }}
                     </ItemDescription>
                   </ItemContent>
@@ -1437,19 +1418,15 @@ const onToolMenuCloseAutoFocus = (event: Event) => {
                 >
                   <Item size="xs" class="border-0 p-0">
                     <ItemMedia variant="icon">
-                      <span
-                        class="size-4 shrink-0 overflow-hidden rounded-full"
-                      >
-                        <Avatar
-                          variant="beam"
-                          :name="agentAvatarSeed(agent)"
-                          :colors="agentAvatarColors"
-                        />
-                      </span>
+                      <AppAvatar
+                        variant="beam"
+                        :name="agentAvatarSeed(agent)"
+                        class="size-4 shrink-0"
+                      />
                     </ItemMedia>
                     <ItemContent>
                       <ItemTitle>{{ agent.name }}</ItemTitle>
-                      <ItemDescription v-if="agent.description">
+                      <ItemDescription v-if="agent.description" class="text-xs">
                         {{ agent.description }}
                       </ItemDescription>
                     </ItemContent>

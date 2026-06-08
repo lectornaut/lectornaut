@@ -216,7 +216,7 @@ const nodeStatusLabel = computed(() =>
           {{ summaryError }}
         </div>
 
-        <div v-if="summary" class="flex flex-col gap-3">
+        <div v-if="summary" class="flex flex-col gap-2">
           <p class="text-foreground leading-relaxed">
             {{ summary.summary }}
           </p>
@@ -264,7 +264,7 @@ const nodeStatusLabel = computed(() =>
       </CardFooter>
     </Card>
     <OverlayScrollbarsWrapper>
-      <dl class="space-y-2 p-2">
+      <dl>
         <div class="flex items-start justify-between gap-2">
           <dt class="text-muted-foreground flex items-center gap-2">
             <IconUserRound />

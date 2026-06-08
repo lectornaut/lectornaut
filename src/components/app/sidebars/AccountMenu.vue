@@ -6,7 +6,6 @@ import {
   IconUserRound,
   IconUserRoundPlus,
 } from "@/data/icons"
-import { getInitials } from "@/helpers/utilities"
 import { emitter } from "@/modules/mitt"
 import { useCurrentUser } from "vuefire"
 
@@ -26,16 +25,7 @@ const { t } = useI18n()
                 size="lg"
                 class="data-[state=open]:bg-accent"
               >
-                <Avatar>
-                  <AvatarImage
-                    :src="user?.photoURL!"
-                    :alt="user?.displayName"
-                    referrerpolicy="no-referrer"
-                  />
-                  <AvatarFallback>
-                    {{ getInitials(user?.displayName!) }}
-                  </AvatarFallback>
-                </Avatar>
+                <AppAvatar :src="user?.photoURL" :name="user?.displayName" />
                 <div class="flex grow flex-col">
                   <span
                     class="truncate text-base leading-tight font-semibold tracking-tight"
@@ -55,22 +45,16 @@ const { t } = useI18n()
               <DropdownMenuLabel>
                 <Item class="group" size="xs">
                   <ItemMedia>
-                    <Avatar>
-                      <AvatarImage
-                        :src="user?.photoURL!"
-                        :alt="user?.displayName"
-                        referrerpolicy="no-referrer"
-                      />
-                      <AvatarFallback>
-                        {{ getInitials(user?.displayName!) }}
-                      </AvatarFallback>
-                    </Avatar>
+                    <AppAvatar
+                      :src="user?.photoURL"
+                      :name="user?.displayName"
+                    />
                   </ItemMedia>
-                  <ItemContent class="gap-0.5 truncate">
-                    <ItemTitle class="truncate">
+                  <ItemContent>
+                    <ItemTitle>
                       {{ user?.displayName }}
                     </ItemTitle>
-                    <ItemDescription class="truncate text-xs">
+                    <ItemDescription class="text-xs">
                       {{ user?.email }}
                     </ItemDescription>
                   </ItemContent>
@@ -108,7 +92,7 @@ const { t } = useI18n()
             </DropdownMenuContent>
           </DropdownMenu>
         </ContextMenuTrigger>
-        <ContextMenuContent class="w-auto">
+        <ContextMenuContent>
           <ContextMenuGroup>
             <ContextMenuItem as-child>
               <RouterLink to="/profile">

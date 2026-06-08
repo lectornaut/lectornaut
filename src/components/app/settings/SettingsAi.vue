@@ -301,9 +301,7 @@ const keepMenuOpen = (event: Event) => {
 <template>
   <div v-if="canViewTeamSettings" class="flex grow flex-col justify-between">
     <div class="p-6">
-      <div v-if="isLoading" class="flex justify-center py-8">
-        <Spinner />
-      </div>
+      <LoadingState v-if="isLoading" />
       <FieldGroup v-else>
         <!-- Providers -->
         <FieldSet>
@@ -360,7 +358,7 @@ const keepMenuOpen = (event: Event) => {
                   <TooltipContent>
                     {{ t("settings.agents.providers.configureModels") }}
                   </TooltipContent>
-                  <DropdownMenuContent align="end" class="w-72">
+                  <DropdownMenuContent align="end">
                     <DropdownMenuLabel>
                       {{ t("settings.agents.providers.modelsLabel") }} ·
                       {{ provider.name }}
@@ -437,13 +435,13 @@ const keepMenuOpen = (event: Event) => {
                 {{ t("settings.agents.model.description") }}
               </FieldDescription>
             </FieldContent>
-            <div class="w-72">
+            <div>
               <Select
                 id="agent-model"
                 v-model="draft.model"
                 :disabled="!canEdit"
               >
-                <SelectTrigger class="w-full">
+                <SelectTrigger>
                   <SelectValue
                     :placeholder="t('settings.agents.model.placeholder')"
                   >
@@ -509,13 +507,13 @@ const keepMenuOpen = (event: Event) => {
                 {{ t("settings.agents.defaultMode.description") }}
               </FieldDescription>
             </FieldContent>
-            <div class="w-72">
+            <div>
               <Select
                 id="agent-default-mode"
                 v-model="draft.defaultMode"
                 :disabled="!canEdit"
               >
-                <SelectTrigger class="w-full">
+                <SelectTrigger>
                   <SelectValue>
                     <span v-if="selectedMode">{{ selectedMode.name }}</span>
                   </SelectValue>
@@ -891,12 +889,19 @@ const keepMenuOpen = (event: Event) => {
         </FieldSet>
       </FieldGroup>
     </div>
-    <SettingsUnsavedBar
-      v-if="!isLoading && isDirty && canEdit"
-      :saving="isSaving"
-      @discard="handleDiscard"
-      @save="handleSave"
-    />
+    <Transition
+      enter-active-class="transition duration-200 ease-out"
+      leave-active-class="transition duration-150 ease-in"
+      enter-from-class="translate-y-2 opacity-0"
+      leave-to-class="translate-y-2 opacity-0"
+    >
+      <SettingsUnsavedBar
+        v-if="!isLoading && isDirty && canEdit"
+        :saving="isSaving"
+        @discard="handleDiscard"
+        @save="handleSave"
+      />
+    </Transition>
   </div>
   <SettingsRestricted v-else />
 </template>

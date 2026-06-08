@@ -24,7 +24,6 @@ import type { IWorkflow } from "@/types/domain"
 import { isAgentMembership } from "@/types/membership"
 import { storeToRefs } from "pinia"
 import { computed, ref, watch } from "vue"
-import Avatar from "vue-boring-avatars"
 
 const props = defineProps<{
   open: boolean
@@ -80,15 +79,6 @@ const agentAvatarSeed = (agent: {
   name: string
   id: string
 }): string => agent.avatarSeed.trim() || agent.name.trim() || agent.id
-// Shared chart-N palette for every boring-avatar in this editor — the agent
-// picker's `beam` portraits and the workflow's own `bauhaus` identity avatar.
-const avatarColors = [
-  "var(--color-chart-1)",
-  "var(--color-chart-2)",
-  "var(--color-chart-3)",
-  "var(--color-chart-4)",
-  "var(--color-chart-5)",
-]
 
 const authStore = useAuthStore()
 const { currentTeamId, currentWorkspaceId } = storeToRefs(authStore)
@@ -564,13 +554,11 @@ const handleSave = async (): Promise<void> => {
                 <div class="flex flex-col gap-4 p-4">
                   <!-- Identity (avatar + name + description) -->
                   <div class="flex items-center gap-3">
-                    <div class="size-10 shrink-0 overflow-hidden rounded-full">
-                      <Avatar
-                        variant="bauhaus"
-                        :name="effectiveAvatarSeed"
-                        :colors="avatarColors"
-                      />
-                    </div>
+                    <AppAvatar
+                      variant="bauhaus"
+                      :name="effectiveAvatarSeed"
+                      class="size-10 shrink-0"
+                    />
                     <div class="min-w-0">
                       <p class="truncate text-sm font-medium">
                         {{ draft.name || t("settings.workflows.newTitle") }}
@@ -599,16 +587,12 @@ const handleSave = async (): Promise<void> => {
                         "
                         class="size-4 shrink-0"
                       />
-                      <span
+                      <AppAvatar
                         v-else
-                        class="size-4 shrink-0 overflow-hidden rounded-full"
-                      >
-                        <Avatar
-                          variant="beam"
-                          :name="agentAvatarSeed(selectedAgent)"
-                          :colors="avatarColors"
-                        />
-                      </span>
+                        variant="beam"
+                        :name="agentAvatarSeed(selectedAgent)"
+                        class="size-4 shrink-0"
+                      />
                       <span class="truncate text-sm">
                         {{
                           selectedAgent
@@ -713,13 +697,11 @@ const handleSave = async (): Promise<void> => {
                   t("settings.workflows.avatarSeed.label")
                 }}</Label>
                 <div class="flex items-center gap-3">
-                  <span class="size-10 shrink-0 overflow-hidden rounded-full">
-                    <Avatar
-                      variant="bauhaus"
-                      :name="effectiveAvatarSeed"
-                      :colors="avatarColors"
-                    />
-                  </span>
+                  <AppAvatar
+                    variant="bauhaus"
+                    :name="effectiveAvatarSeed"
+                    class="size-10 shrink-0"
+                  />
                   <Input
                     id="wf-avatar-seed"
                     v-model="draft.avatarSeed"
@@ -760,7 +742,7 @@ const handleSave = async (): Promise<void> => {
 
                 <!-- Toggle ON → composer-style grouped picker, Default first. -->
                 <Select v-else v-model="draft.agentId" :disabled="!!editingId">
-                  <SelectTrigger id="wf-agent" class="w-full">
+                  <SelectTrigger id="wf-agent">
                     <SelectValue
                       :placeholder="t('settings.workflows.agentPlaceholder')"
                     >
@@ -772,16 +754,12 @@ const handleSave = async (): Promise<void> => {
                           v-if="selectedAgent.id === DEFAULT_AGENT_ID"
                           class="size-4 shrink-0"
                         />
-                        <span
+                        <AppAvatar
                           v-else
-                          class="size-4 shrink-0 overflow-hidden rounded-full"
-                        >
-                          <Avatar
-                            variant="beam"
-                            :name="agentAvatarSeed(selectedAgent)"
-                            :colors="avatarColors"
-                          />
-                        </span>
+                          variant="beam"
+                          :name="agentAvatarSeed(selectedAgent)"
+                          class="size-4 shrink-0"
+                        />
                         {{ selectedAgent.name }}
                       </span>
                     </SelectValue>
@@ -801,7 +779,7 @@ const handleSave = async (): Promise<void> => {
                             <ItemTitle>{{
                               DEFAULT_AGENT_DEFINITION.name
                             }}</ItemTitle>
-                            <ItemDescription>
+                            <ItemDescription class="text-xs">
                               {{
                                 t("settings.workflows.defaultAgentDescription")
                               }}
@@ -829,19 +807,18 @@ const handleSave = async (): Promise<void> => {
                       >
                         <Item size="xs" class="border-0 p-0">
                           <ItemMedia variant="icon">
-                            <span
-                              class="size-4 shrink-0 overflow-hidden rounded-full"
-                            >
-                              <Avatar
-                                variant="beam"
-                                :name="agentAvatarSeed(agent)"
-                                :colors="avatarColors"
-                              />
-                            </span>
+                            <AppAvatar
+                              variant="beam"
+                              :name="agentAvatarSeed(agent)"
+                              class="size-4 shrink-0"
+                            />
                           </ItemMedia>
                           <ItemContent>
                             <ItemTitle>{{ agent.name }}</ItemTitle>
-                            <ItemDescription v-if="agent.description">
+                            <ItemDescription
+                              v-if="agent.description"
+                              class="text-xs"
+                            >
                               {{ agent.description }}
                             </ItemDescription>
                           </ItemContent>
@@ -873,19 +850,18 @@ const handleSave = async (): Promise<void> => {
                         >
                           <Item size="xs" class="border-0 p-0">
                             <ItemMedia variant="icon">
-                              <span
-                                class="size-4 shrink-0 overflow-hidden rounded-full"
-                              >
-                                <Avatar
-                                  variant="beam"
-                                  :name="agentAvatarSeed(agent)"
-                                  :colors="avatarColors"
-                                />
-                              </span>
+                              <AppAvatar
+                                variant="beam"
+                                :name="agentAvatarSeed(agent)"
+                                class="size-4 shrink-0"
+                              />
                             </ItemMedia>
                             <ItemContent>
                               <ItemTitle>{{ agent.name }}</ItemTitle>
-                              <ItemDescription v-if="agent.description">
+                              <ItemDescription
+                                v-if="agent.description"
+                                class="text-xs"
+                              >
                                 {{ agent.description }}
                               </ItemDescription>
                             </ItemContent>
@@ -943,7 +919,7 @@ const handleSave = async (): Promise<void> => {
                   t("settings.workflows.trigger")
                 }}</Label>
                 <Select v-model="draft.triggerType">
-                  <SelectTrigger id="wf-trigger" class="w-full">
+                  <SelectTrigger id="wf-trigger">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -967,7 +943,7 @@ const handleSave = async (): Promise<void> => {
                 class="flex flex-col gap-3 rounded-md border p-3"
               >
                 <Select v-model="draft.scheduleType">
-                  <SelectTrigger class="w-full">
+                  <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -1009,7 +985,7 @@ const handleSave = async (): Promise<void> => {
                   class="flex items-center gap-2"
                 >
                   <Select v-model="draft.dayOfWeek">
-                    <SelectTrigger class="w-full">
+                    <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -1033,7 +1009,7 @@ const handleSave = async (): Promise<void> => {
                   <span class="text-sm">{{
                     t("settings.workflows.atUTC")
                   }}</span>
-                  <Input v-model="draft.timeUTC" type="time" class="w-32" />
+                  <Input v-model="draft.timeUTC" type="time" />
                 </div>
               </div>
 
@@ -1044,7 +1020,7 @@ const handleSave = async (): Promise<void> => {
                 <div class="flex flex-col gap-1.5">
                   <Label>{{ t("settings.workflows.eventScope") }}</Label>
                   <Select v-model="draft.eventScope">
-                    <SelectTrigger class="w-full">
+                    <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -1081,7 +1057,7 @@ const handleSave = async (): Promise<void> => {
                   t("settings.workflows.targetScope")
                 }}</Label>
                 <Select v-model="draft.targetScope">
-                  <SelectTrigger id="wf-target" class="w-full">
+                  <SelectTrigger id="wf-target">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -1118,7 +1094,7 @@ const handleSave = async (): Promise<void> => {
                 </div>
                 <div class="flex items-center gap-2">
                   <Select v-model="ctxScope">
-                    <SelectTrigger class="w-28">
+                    <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -1147,7 +1123,7 @@ const handleSave = async (): Promise<void> => {
                   t("settings.workflows.updateMode")
                 }}</Label>
                 <Select v-model="draft.updateMode">
-                  <SelectTrigger id="wf-mode" class="w-full">
+                  <SelectTrigger id="wf-mode">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>

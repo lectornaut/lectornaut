@@ -1,6 +1,6 @@
 {
   "$schema": "https://shadcn-vue.com/schema.json",
-  "style": "reka-vega",
+  "style": "reka-luma",
   "typescript": true,
   "tailwind": {
     "config": "",
@@ -9,7 +9,7 @@
     "cssVariables": true,
     "prefix": ""
   },
-  "iconLibrary": "lucide",
+  "iconLibrary": "hugeicons",
   "rtl": false,
   "pointer": true,
   "aliases": {

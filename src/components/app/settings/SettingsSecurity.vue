@@ -315,9 +315,7 @@ const handleDeleteSso = () => deleteSsoDialog.confirm(() => deleteSsoConfig())
       </FieldSet>
     </FieldGroup>
     <template v-else>
-      <div v-if="loading" class="flex justify-center py-8">
-        <Spinner />
-      </div>
+      <LoadingState v-if="loading" />
       <FieldGroup v-else>
         <!-- Section: Approved Domains -->
         <FieldSet>

@@ -117,7 +117,7 @@ function togglePinned() {
         </SidebarFooter>
       </Sidebar>
     </ContextMenuTrigger>
-    <ContextMenuContent class="w-auto">
+    <ContextMenuContent>
       <template v-if="!isMobile">
         <ContextMenuItem @click="togglePinned">
           <IconPinOff v-if="sidebarPinned" />

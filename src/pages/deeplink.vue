@@ -40,13 +40,7 @@ onMounted(() => {
           </EmptyDescription>
         </EmptyHeader>
       </Empty>
-      <Empty v-else>
-        <EmptyHeader>
-          <EmptyMedia variant="icon">
-            <Spinner />
-          </EmptyMedia>
-        </EmptyHeader>
-      </Empty>
+      <LoadingState v-else />
     </div>
   </OverlayScrollbarsWrapper>
 </template>

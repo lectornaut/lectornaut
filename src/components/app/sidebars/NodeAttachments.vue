@@ -591,16 +591,10 @@ watch(selectedCreateFiles, async (files) => {
           </div>
         </div>
 
-        <Empty v-if="loading && attachments.length === 0" class="p-6">
-          <EmptyHeader>
-            <EmptyMedia variant="icon">
-              <Spinner />
-            </EmptyMedia>
-            <EmptyTitle>
-              {{ t("components.nodeAttachments.loadingAttachments") }}
-            </EmptyTitle>
-          </EmptyHeader>
-        </Empty>
+        <LoadingState
+          v-if="loading && attachments.length === 0"
+          :label="t('components.nodeAttachments.loadingAttachments')"
+        />
 
         <div v-else-if="error" class="space-y-2 rounded-xl border p-2">
           <div class="text-destructive flex items-start gap-2 text-xs">
@@ -608,12 +602,7 @@ watch(selectedCreateFiles, async (files) => {
             <span>{{ error }}</span>
           </div>
 
-          <Button
-            variant="secondary"
-            size="sm"
-            class="w-full"
-            @click="refreshAttachments"
-          >
+          <Button variant="secondary" size="sm" @click="refreshAttachments">
             <IconRefreshCcw />
             {{ t("components.nodeAttachments.retry") }}
           </Button>

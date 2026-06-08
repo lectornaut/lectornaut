@@ -6,7 +6,6 @@ import {
   IconSettings,
   IconUsers,
 } from "@/data/icons"
-import { getInitials } from "@/helpers/utilities"
 import { emitter } from "@/modules/mitt"
 import { useMembershipStore } from "@/stores/membershipStore"
 import { isUserMembership, type IMembership } from "@/types/membership"
@@ -122,9 +121,7 @@ watch(
 
 <template>
   <!-- Loading State -->
-  <div v-if="isLoading" class="flex justify-center p-12">
-    <Spinner />
-  </div>
+  <LoadingState v-if="isLoading" />
 
   <!-- Team Profile -->
   <div v-else-if="team && isMember">
@@ -134,17 +131,7 @@ watch(
         class="aspect-video max-h-40 w-full border bg-[repeating-linear-gradient(45deg,var(--color-muted)_0,var(--color-muted)_1px,transparent_0,transparent_50%)] bg-size-[8px_8px]"
       ></div>
       <div class="bg-background -mt-10border mx-auto p-1">
-        <Avatar class="size-20">
-          <AvatarImage
-            class="size-20"
-            :src="team.photoURL!"
-            :alt="team.name"
-            referrerpolicy="no-referrer"
-          />
-          <AvatarFallback class="size-20">
-            {{ getInitials(team.name) }}
-          </AvatarFallback>
-        </Avatar>
+        <AppAvatar class="size-20" :src="team.photoURL" :name="team.name" />
       </div>
     </div>
 
@@ -198,22 +185,16 @@ watch(
           variant="muted"
         >
           <ItemMedia>
-            <Avatar>
-              <AvatarImage
-                :src="membership.user.photoURL!"
-                :alt="membership.user.displayName"
-                referrerpolicy="no-referrer"
-              />
-              <AvatarFallback>
-                {{ getInitials(membership.user.displayName!) }}
-              </AvatarFallback>
-            </Avatar>
+            <AppAvatar
+              :src="membership.user.photoURL"
+              :name="membership.user.displayName"
+            />
           </ItemMedia>
-          <ItemContent class="gap-0.5 truncate">
-            <ItemTitle class="truncate">
+          <ItemContent>
+            <ItemTitle>
               {{ membership.user.displayName }}
             </ItemTitle>
-            <ItemDescription class="truncate text-xs">
+            <ItemDescription class="text-xs">
               {{ membership.user.email }}
             </ItemDescription>
           </ItemContent>

@@ -4,14 +4,12 @@ import { useTeamActions } from "@/composables/useTeamActions"
 import { BUILT_IN_AGENTS, isBuiltInAgentId } from "@/data/builtInAgents"
 import {
   IconAtSign,
-  IconBan,
   IconBot,
   IconCheck,
-  IconCircle,
-  IconCircleDashed,
   IconForward,
   IconPlus,
   IconTrash,
+  IconUsers,
   IconX,
 } from "@/data/icons"
 import { defaultTeamRole } from "@/helpers/defaults"
@@ -21,7 +19,6 @@ import {
   usernamesMatch,
   validateUsername,
 } from "@/helpers/username"
-import { getInitials } from "@/helpers/utilities"
 import { checkUsernameAvailability } from "@/queries/username"
 import {
   useInvitationStore,
@@ -39,7 +36,6 @@ import {
   type IMembershipRole,
 } from "@/types/membership"
 import { Capabilities, roleCan } from "@/types/permissions"
-import BoringAvatar from "vue-boring-avatars"
 import { toast } from "vue-sonner"
 import { useCurrentUser } from "vuefire"
 
@@ -49,6 +45,10 @@ interface PendingMember {
   role: IMembershipRole
   id?: string
   originalRole?: IMembershipRole
+  /** Display name of an existing member (drives the avatar + row title). */
+  name?: string
+  /** Avatar photo of an existing member (`null`/absent ⇒ generative fallback). */
+  photoURL?: string | null
 }
 
 /**
@@ -364,6 +364,8 @@ watch(isOpen, async (val) => {
           role: membership.role,
           id: membership.userId,
           originalRole: membership.role,
+          name: membership.user.displayName ?? undefined,
+          photoURL: membership.user.photoURL ?? null,
         }))
         agentMembers.value = agentMemberRecords.map((membership) => ({
           agentId: membership.agentId,
@@ -387,6 +389,15 @@ watch(isOpen, async (val) => {
 
 /** Validate email format */
 const isValidEmail = (email: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
+
+/** Best label for a member row: their display name when known, else email. */
+const memberLabel = (member: PendingMember) => member.name || member.email
+
+/**
+ * Team role options ordered most→least privileged. `owner` is gated to owners
+ * at the call site (`canManageOwnerRoles`); the rest are always assignable.
+ */
+const teamRoleOptions = ["owner", "admin", "member", "guest"] as const
 
 // ── Agent invite combobox ────────────────────────────────────────────────────
 
@@ -990,7 +1001,7 @@ const handleSubmit = async () => {
     <DialogTrigger as-child>
       <slot name="trigger" />
     </DialogTrigger>
-    <DialogContent class="w-md max-w-fit">
+    <DialogContent class="w-2xl max-w-fit">
       <DialogHeader>
         <DialogTitle>
           {{
@@ -1024,27 +1035,23 @@ const handleSubmit = async () => {
                 <Tooltip>
                   <TooltipTrigger as-child>
                     <div
-                      :class="{
-                        'cursor-not-allowed opacity-50':
-                          !canUpdateTeam && mode === 'edit',
-                      }"
+                      :class="[
+                        'bg-secondary rounded-full p-3',
+                        {
+                          'cursor-not-allowed opacity-50':
+                            !canUpdateTeam && mode === 'edit',
+                        },
+                      ]"
                     >
-                      <Avatar
+                      <AppAvatar
                         class="size-16"
                         :class="{
                           'cursor-pointer': canUpdateTeam || mode === 'create',
                         }"
+                        :src="photoPreview"
+                        :name="teamName"
                         @click="triggerTeamPhotoSelection"
-                      >
-                        <AvatarImage
-                          class="size-16"
-                          :src="photoPreview!"
-                          referrerpolicy="no-referrer"
-                        />
-                        <AvatarFallback class="size-16">
-                          {{ getInitials(teamName) }}
-                        </AvatarFallback>
-                      </Avatar>
+                      />
                     </div>
                   </TooltipTrigger>
                   <TooltipContent v-if="!canUpdateTeam && mode === 'edit'">
@@ -1060,7 +1067,7 @@ const handleSubmit = async () => {
                   <TooltipTrigger as-child>
                     <Button
                       variant="secondary"
-                      class="ring-background absolute -top-2 -right-2 size-4 opacity-0 ring-2 transition group-hover:opacity-100"
+                      class="ring-background absolute top-1 right-1 size-4 opacity-0 ring-2 transition group-hover:opacity-100"
                       size="icon"
                       @click.stop="removePhoto"
                     >
@@ -1073,13 +1080,6 @@ const handleSubmit = async () => {
                 </Tooltip>
               </TooltipProvider>
             </div>
-            <p>
-              {{
-                photoPreview
-                  ? t("components.teamDialog.labels.clickToChange")
-                  : t("components.teamDialog.labels.clickToUpload")
-              }}
-            </p>
           </div>
         </Field>
 
@@ -1235,574 +1235,264 @@ const handleSubmit = async () => {
           </TooltipProvider>
         </Field>
 
-        <!-- 1. MEMBERS SECTION (Active) -->
-        <Field v-if="mode === 'edit'" class="grid gap-2">
-          <FieldLabel class="text-secondary-foreground text-xs">
-            {{ t("components.teamDialog.labels.members") }}
-          </FieldLabel>
-          <ButtonGroup
-            v-for="member in activeMembers"
-            :key="member.id"
-            class="grow"
-          >
-            <ButtonGroup class="grow">
-              <InputGroup>
-                <InputGroupInput :model-value="member.email" disabled />
-              </InputGroup>
-            </ButtonGroup>
-            <ButtonGroup>
-              <ButtonGroup>
-                <TooltipProvider v-if="isMemberRoleUpdateDisabled(member)">
-                  <Tooltip>
-                    <TooltipTrigger as-child>
-                      <div>
-                        <Select v-model="member.role" disabled>
-                          <SelectTrigger>
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectGroup>
-                              <SelectItem value="owner">{{
-                                t("components.teamDialog.roles.owner")
-                              }}</SelectItem>
-                              <SelectItem value="admin">{{
-                                t("components.teamDialog.roles.admin")
-                              }}</SelectItem>
-                              <SelectItem value="member">{{
-                                t("components.teamDialog.roles.member")
-                              }}</SelectItem>
-                              <SelectItem value="guest">{{
-                                t("components.teamDialog.roles.guest")
-                              }}</SelectItem>
-                            </SelectGroup>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      {{ ownerRoleManagementReason }}
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
-                <Select v-else v-model="member.role">
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectGroup>
-                      <SelectItem
-                        value="owner"
-                        :disabled="!canManageOwnerRoles"
-                        >{{
-                          t("components.teamDialog.roles.owner")
-                        }}</SelectItem
-                      >
-                      <SelectItem value="admin">{{
-                        t("components.teamDialog.roles.admin")
-                      }}</SelectItem>
-                      <SelectItem value="member">{{
-                        t("components.teamDialog.roles.member")
-                      }}</SelectItem>
-                      <SelectItem value="guest">{{
-                        t("components.teamDialog.roles.guest")
-                      }}</SelectItem>
-                    </SelectGroup>
-                  </SelectContent>
-                </Select>
-              </ButtonGroup>
-              <ButtonGroup>
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger as-child>
-                      <Button
-                        variant="outline"
-                        size="icon"
-                        :disabled="isMemberRemovalDisabled(member)"
-                        @click="removeMember(member.email, member.id)"
-                      >
-                        <IconTrash />
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      {{
-                        isMemberRemovalDisabled(member)
-                          ? ownerRoleManagementReason
-                          : t("components.teamDialog.tooltips.removeMember")
-                      }}
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
-              </ButtonGroup>
-            </ButtonGroup>
-          </ButtonGroup>
-          <p v-if="activeMembers.length === 0">
-            {{ t("components.teamDialog.labels.noActiveMembers") }}
-          </p>
-        </Field>
-
-        <!-- 2. INVITATIONS SECTION -->
-        <!-- Invite -->
-        <Field class="grid gap-2">
-          <!-- 2a. Invite Input + Staged List -->
-          <FieldLabel class="text-secondary-foreground text-xs">
-            {{ t("components.teamDialog.labels.invite") }}
-          </FieldLabel>
-          <!-- Input Form -->
-          <ButtonGroup class="grow">
-            <ButtonGroup class="grow">
-              <Popover v-model:open="invitePickerOpen">
-                <PopoverAnchor as-child>
-                  <div class="w-full">
-                    <TooltipProvider>
-                      <Tooltip>
-                        <TooltipTrigger as-child>
-                          <InputGroup>
-                            <InputGroupInput
-                              id="invite"
-                              v-model="inviteEmail"
-                              :placeholder="
-                                $t(
-                                  'components.teamDialog.placeholders.inviteOrAgent'
-                                )
-                              "
-                              autocomplete="off"
-                              :disabled="!canInviteMembers && mode !== 'create'"
-                              @keydown.enter.prevent="addMember"
-                            />
-                            <InputGroupAddon align="inline-end">
-                              <PopoverTrigger as-child>
-                                <InputGroupButton
-                                  size="icon-xs"
-                                  :disabled="
-                                    !canInviteMembers && mode !== 'create'
-                                  "
-                                  :aria-label="
-                                    t('components.teamDialog.tooltips.addAgent')
-                                  "
-                                >
-                                  <IconBot />
-                                </InputGroupButton>
-                              </PopoverTrigger>
-                            </InputGroupAddon>
-                          </InputGroup>
-                        </TooltipTrigger>
-                        <TooltipContent
-                          v-if="!canInviteMembers && mode !== 'create'"
-                        >
-                          {{ t(getCannotInviteMembersReason || "") }}
-                        </TooltipContent>
-                        <TooltipContent v-else>
-                          {{ t("components.teamDialog.tooltips.addAgent") }}
-                        </TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
-                  </div>
-                </PopoverAnchor>
-                <PopoverContent
-                  align="start"
-                  class="w-(--reka-popover-trigger-width) p-0"
-                >
-                  <Command>
-                    <CommandInput
-                      :placeholder="
-                        $t('components.teamDialog.placeholders.searchAgents')
-                      "
-                      class="placeholder:text-muted-foreground border-none bg-transparent focus:border-inherit focus:ring-0"
-                    />
-                    <CommandList>
-                      <CommandEmpty v-if="pickableAgents.length > 0">
-                        {{ t("components.teamDialog.labels.noAgentMatches") }}
-                      </CommandEmpty>
-                      <p
-                        v-else
-                        class="text-muted-foreground p-3 text-center text-xs"
-                      >
-                        {{ t("components.teamDialog.labels.noAgentMatches") }}
-                      </p>
-                      <CommandGroup>
-                        <CommandItem
-                          v-for="agent in pickableAgents"
-                          :key="agent.id"
-                          :value="agent.id"
-                          @select="stageAgent(agent)"
-                        >
-                          <span
-                            class="size-6 shrink-0 overflow-hidden rounded-full"
-                          >
-                            <BoringAvatar
-                              variant="beam"
-                              :size="24"
-                              :name="agentAvatarSeed(agent)"
-                              :colors="[
-                                'var(--color-chart-1)',
-                                'var(--color-chart-2)',
-                                'var(--color-chart-3)',
-                                'var(--color-chart-4)',
-                                'var(--color-chart-5)',
-                              ]"
-                            />
-                          </span>
-                          <span class="flex min-w-0 flex-col">
-                            <span
-                              class="flex items-center gap-1.5 truncate text-sm"
-                            >
-                              {{ agent.name }}
-                              <Badge variant="secondary">
-                                {{
-                                  t("components.teamDialog.labels.agentBadge")
-                                }}
-                              </Badge>
-                            </span>
-                            <span
-                              v-if="agent.description"
-                              class="text-muted-foreground truncate text-xs"
-                            >
-                              {{ agent.description }}
-                            </span>
-                          </span>
-                        </CommandItem>
-                      </CommandGroup>
-                    </CommandList>
-                  </Command>
-                </PopoverContent>
-              </Popover>
-            </ButtonGroup>
-            <ButtonGroup>
-              <ButtonGroup>
-                <Select
-                  v-model="inviteRole"
-                  :disabled="!canInviteMembers && mode !== 'create'"
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectGroup>
-                      <SelectItem
-                        value="owner"
-                        :disabled="!canManageOwnerRoles"
-                        >{{
-                          t("components.teamDialog.roles.owner")
-                        }}</SelectItem
-                      >
-                      <SelectItem value="admin">{{
-                        t("components.teamDialog.roles.admin")
-                      }}</SelectItem>
-                      <SelectItem value="member">{{
-                        t("components.teamDialog.roles.member")
-                      }}</SelectItem>
-                      <SelectItem value="guest">{{
-                        t("components.teamDialog.roles.guest")
-                      }}</SelectItem>
-                    </SelectGroup>
-                  </SelectContent>
-                </Select>
-              </ButtonGroup>
-              <ButtonGroup>
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger as-child>
-                      <Button
-                        variant="outline"
-                        size="icon"
-                        :disabled="
-                          (!canInviteMembers && mode !== 'create') ||
-                          isAddMemberBlockedByOwnerPolicy
-                        "
-                        @click="addMember"
-                      >
-                        <IconPlus />
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      {{
-                        addMemberDisabledReason ||
-                        t("components.teamDialog.tooltips.addMember")
-                      }}
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
-              </ButtonGroup>
-            </ButtonGroup>
-          </ButtonGroup>
-        </Field>
-
-        <!-- Agent Members (added directly, role locked to member) -->
-        <Field v-if="agentMembers.length > 0" class="grid gap-2">
-          <FieldLabel class="text-secondary-foreground text-xs">
-            {{ t("components.teamDialog.labels.agents") }}
-          </FieldLabel>
-          <ButtonGroup
-            v-for="agent in agentMembers"
-            :key="agent.agentId"
-            class="grow"
-          >
-            <ButtonGroup class="grow">
-              <InputGroup>
-                <InputGroupAddon>
-                  <span class="size-5 shrink-0 overflow-hidden rounded-full">
-                    <BoringAvatar
-                      variant="beam"
-                      :size="20"
-                      :name="agentAvatarSeed(agent)"
-                      :colors="[
-                        'var(--color-chart-1)',
-                        'var(--color-chart-2)',
-                        'var(--color-chart-3)',
-                        'var(--color-chart-4)',
-                        'var(--color-chart-5)',
-                      ]"
-                    />
-                  </span>
-                </InputGroupAddon>
-                <InputGroupInput :model-value="agent.name" disabled />
-                <InputGroupAddon align="inline-end">
-                  <Badge variant="secondary">
-                    {{ t("components.teamDialog.labels.agentBadge") }}
-                  </Badge>
-                </InputGroupAddon>
-              </InputGroup>
-            </ButtonGroup>
-            <ButtonGroup>
-              <ButtonGroup>
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger as-child>
-                      <div>
-                        <Select model-value="member" disabled>
-                          <SelectTrigger>
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectGroup>
-                              <SelectItem value="member">{{
-                                t("components.teamDialog.roles.member")
-                              }}</SelectItem>
-                            </SelectGroup>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      {{ t("components.teamDialog.tooltips.agentRoleLocked") }}
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
-              </ButtonGroup>
-              <ButtonGroup>
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger as-child>
-                      <Button
-                        variant="outline"
-                        size="icon"
-                        @click="removeAgent(agent.agentId)"
-                      >
-                        <IconTrash />
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      {{ t("components.teamDialog.tooltips.removeAgent") }}
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
-              </ButtonGroup>
-            </ButtonGroup>
-          </ButtonGroup>
-        </Field>
-
-        <!-- Invitations -->
-        <Field
-          v-if="
-            stagedInvites.length > 0 ||
-            (canShowTeamInvitations && visibleTeamInvitations.length > 0)
-          "
-          class="grid gap-2"
-        >
-          <!-- 2b. Invitations List (Drafts + Sent) -->
-          <FieldLabel class="text-secondary-foreground text-xs">
-            {{ t("components.teamDialog.labels.invitations") }}
-          </FieldLabel>
-          <!-- Staged Invites (Drafts) -->
-          <ButtonGroup
-            v-for="(member, index) in stagedInvites"
-            :key="`staged-${index}`"
-            class="grow"
-          >
-            <ButtonGroup class="grow">
-              <InputGroup>
-                <InputGroupInput
-                  v-model="member.email"
-                  :placeholder="$t('components.teamDialog.placeholders.email')"
-                  type="email"
-                />
-                <InputGroupAddon align="inline-end">
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger as-child>
-                        <InputGroupButton
-                          variant="secondary"
-                          size="icon-xs"
-                          class="text-xs"
-                        >
-                          <IconCircleDashed />
-                        </InputGroupButton>
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        {{ t("components.teamDialog.tooltips.draft") }}
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
-                </InputGroupAddon>
-              </InputGroup>
-            </ButtonGroup>
-            <ButtonGroup>
-              <ButtonGroup>
-                <Select v-model="member.role">
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectGroup>
-                      <SelectItem
-                        value="owner"
-                        :disabled="!canManageOwnerRoles"
-                        >{{
-                          t("components.teamDialog.roles.owner")
-                        }}</SelectItem
-                      >
-                      <SelectItem value="admin">{{
-                        t("components.teamDialog.roles.admin")
-                      }}</SelectItem>
-                      <SelectItem value="member">{{
-                        t("components.teamDialog.roles.member")
-                      }}</SelectItem>
-                      <SelectItem value="guest">{{
-                        t("components.teamDialog.roles.guest")
-                      }}</SelectItem>
-                    </SelectGroup>
-                  </SelectContent>
-                </Select>
-              </ButtonGroup>
-              <ButtonGroup>
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger as-child>
-                      <Button
-                        variant="outline"
-                        size="icon"
-                        :disabled="isMemberRemovalDisabled(member)"
-                        @click="removeMember(member.email)"
-                      >
-                        <IconTrash />
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      {{
-                        isMemberRemovalDisabled(member)
-                          ? ownerRoleManagementReason
-                          : t("components.teamDialog.tooltips.cancelInvitation")
-                      }}
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
-              </ButtonGroup>
-            </ButtonGroup>
-          </ButtonGroup>
-          <!-- Sent Invitations -->
-          <template v-if="canShowTeamInvitations">
-            <ButtonGroup
-              v-for="invite in visibleTeamInvitations"
-              :key="invite.id"
-              class="grow"
+        <Tabs :default-value="mode === 'edit' ? 'members' : 'invite'">
+          <TabsList class="m-0 h-auto! gap-2 bg-transparent p-0">
+            <TabsTrigger
+              v-if="mode === 'edit'"
+              value="members"
+              class="text-secondary-foreground data-[state=inactive]:text-secondary-foreground/50 h-auto p-0 text-xs data-[state=active]:shadow-none!"
             >
-              <ButtonGroup class="grow">
-                <InputGroup>
-                  <InputGroupInput
-                    :model-value="invite.email"
-                    :placeholder="
-                      $t('components.teamDialog.placeholders.email')
-                    "
-                    type="email"
-                    disabled
-                  />
-                  <InputGroupAddon align="inline-end">
-                    <TooltipProvider>
-                      <Tooltip v-if="invite.status !== 'declined'">
-                        <TooltipTrigger as-child>
-                          <InputGroupButton
-                            size="icon-xs"
-                            :disabled="isResending(invite.id!)"
-                            @click="handleResendInvitation(invite)"
+              {{ t("components.teamDialog.labels.members") }}
+            </TabsTrigger>
+            <TabsTrigger
+              value="invite"
+              class="text-secondary-foreground data-[state=inactive]:text-secondary-foreground/50 h-auto p-0 text-xs data-[state=active]:shadow-none!"
+            >
+              {{ t("components.teamDialog.labels.invite") }}
+            </TabsTrigger>
+          </TabsList>
+
+          <!-- ── Current members (Edit mode) ────────────────────────────────
+             Existing team members with avatar + editable role. Owner rows are
+             locked (role + removal) unless the actor is an owner. -->
+          <Field class="grid gap-2">
+            <TabsContent v-if="mode === 'edit'" value="members" class="p-0">
+              <Empty
+                v-if="activeMembers.length === 0"
+                class="border border-dashed p-6"
+              >
+                <EmptyHeader>
+                  <EmptyMedia variant="icon">
+                    <IconUsers />
+                  </EmptyMedia>
+                  <EmptyTitle>
+                    {{ t("components.teamDialog.labels.noActiveMembers") }}
+                  </EmptyTitle>
+                </EmptyHeader>
+              </Empty>
+              <ItemGroup v-else class="bg-secondary rounded-2xl p-3">
+                <Item
+                  v-for="member in activeMembers"
+                  :key="member.id"
+                  size="sm"
+                  class="p-0"
+                >
+                  <ItemMedia>
+                    <AppAvatar
+                      :src="member.photoURL"
+                      :name="memberLabel(member)"
+                    />
+                  </ItemMedia>
+                  <ItemContent class="truncate">
+                    <ItemTitle>
+                      <span class="truncate">{{ memberLabel(member) }}</span>
+                    </ItemTitle>
+                    <ItemDescription
+                      v-if="
+                        member.email && member.email !== memberLabel(member)
+                      "
+                      class="text-xs"
+                    >
+                      {{ member.email }}
+                    </ItemDescription>
+                  </ItemContent>
+                  <ItemActions>
+                    <!-- Role select; disabled on owner rows the actor can't manage
+                     (the remove button's tooltip explains why). -->
+                    <Select
+                      v-model="member.role"
+                      :disabled="isMemberRoleUpdateDisabled(member)"
+                    >
+                      <Button variant="outline" as-child>
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                      </Button>
+                      <SelectContent>
+                        <SelectGroup>
+                          <SelectItem
+                            v-for="role in teamRoleOptions"
+                            :key="role"
+                            :value="role"
+                            :disabled="role === 'owner' && !canManageOwnerRoles"
                           >
-                            <Spinner v-if="isResending(invite.id!)" />
-                            <IconForward v-else />
-                          </InputGroupButton>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          {{
-                            t("components.teamDialog.tooltips.resendInvitation")
-                          }}
-                        </TooltipContent>
-                      </Tooltip>
+                            {{ t(`components.teamDialog.roles.${role}`) }}
+                          </SelectItem>
+                        </SelectGroup>
+                      </SelectContent>
+                    </Select>
+                    <!-- Remove member -->
+                    <TooltipProvider>
                       <Tooltip>
                         <TooltipTrigger as-child>
-                          <InputGroupButton
-                            variant="secondary"
-                            size="icon-xs"
-                            class="text-xs capitalize"
+                          <Button
+                            variant="outline"
+                            size="icon"
+                            :disabled="isMemberRemovalDisabled(member)"
+                            @click="removeMember(member.email, member.id)"
                           >
-                            <IconBan v-if="invite.status === 'declined'" />
-                            <IconCircle v-else />
-                          </InputGroupButton>
+                            <IconTrash />
+                          </Button>
                         </TooltipTrigger>
                         <TooltipContent>
                           {{
-                            invite.status === "declined"
-                              ? t("components.teamDialog.tooltips.declined")
-                              : t("components.teamDialog.tooltips.pending")
+                            isMemberRemovalDisabled(member)
+                              ? ownerRoleManagementReason
+                              : t("components.teamDialog.tooltips.removeMember")
                           }}
                         </TooltipContent>
                       </Tooltip>
                     </TooltipProvider>
-                  </InputGroupAddon>
-                </InputGroup>
-              </ButtonGroup>
+                  </ItemActions>
+                </Item>
+              </ItemGroup>
+            </TabsContent>
+
+            <!-- ── Invite (all modes) ─────────────────────────────────────────
+             Entry form: invite a person by email, or add an agent via the
+             picker, with the role to grant. Staged rows appear under
+             "Invitations" below until Save. -->
+            <TabsContent value="invite" class="grid gap-2 p-0">
+              <!-- Email input + agent picker -->
               <ButtonGroup>
                 <ButtonGroup>
+                  <Popover v-model:open="invitePickerOpen">
+                    <PopoverAnchor as-child>
+                      <InputGroup>
+                        <InputGroupInput
+                          id="invite"
+                          v-model="inviteEmail"
+                          :placeholder="
+                            $t(
+                              'components.teamDialog.placeholders.inviteOrAgent'
+                            )
+                          "
+                          autocomplete="off"
+                          :disabled="!canInviteMembers && mode !== 'create'"
+                          @keydown.enter.prevent="addMember"
+                        />
+                        <InputGroupAddon align="inline-end">
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger as-child>
+                                <PopoverTrigger as-child>
+                                  <InputGroupButton
+                                    size="icon-xs"
+                                    :disabled="
+                                      !canInviteMembers && mode !== 'create'
+                                    "
+                                    :aria-label="
+                                      t(
+                                        'components.teamDialog.tooltips.addAgent'
+                                      )
+                                    "
+                                  >
+                                    <IconBot />
+                                  </InputGroupButton>
+                                </PopoverTrigger>
+                              </TooltipTrigger>
+                              <TooltipContent
+                                v-if="!canInviteMembers && mode !== 'create'"
+                              >
+                                {{ t(getCannotInviteMembersReason || "") }}
+                              </TooltipContent>
+                              <TooltipContent v-else>
+                                {{
+                                  t("components.teamDialog.tooltips.addAgent")
+                                }}
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                        </InputGroupAddon>
+                      </InputGroup>
+                    </PopoverAnchor>
+                    <PopoverContent
+                      align="start"
+                      class="w-(--reka-popover-trigger-width) p-0"
+                    >
+                      <Command>
+                        <CommandInput
+                          :placeholder="
+                            $t(
+                              'components.teamDialog.placeholders.searchAgents'
+                            )
+                          "
+                          class="placeholder:text-muted-foreground border-none bg-transparent focus:border-inherit focus:ring-0"
+                        />
+                        <CommandList>
+                          <CommandEmpty v-if="pickableAgents.length > 0">
+                            {{
+                              t("components.teamDialog.labels.noAgentMatches")
+                            }}
+                          </CommandEmpty>
+                          <p
+                            v-else
+                            class="text-muted-foreground p-3 text-center text-xs"
+                          >
+                            {{
+                              t("components.teamDialog.labels.noAgentMatches")
+                            }}
+                          </p>
+                          <CommandGroup>
+                            <CommandItem
+                              v-for="agent in pickableAgents"
+                              :key="agent.id"
+                              :value="agent.id"
+                              @select="stageAgent(agent)"
+                            >
+                              <AppAvatar
+                                class="size-7"
+                                variant="beam"
+                                :name="agentAvatarSeed(agent)"
+                              />
+                              <span class="flex min-w-0 flex-col">
+                                <span
+                                  class="flex items-center gap-1.5 truncate text-sm"
+                                >
+                                  {{ agent.name }}
+                                  <Badge variant="secondary">
+                                    {{
+                                      t(
+                                        "components.teamDialog.labels.agentBadge"
+                                      )
+                                    }}
+                                  </Badge>
+                                </span>
+                                <span
+                                  v-if="agent.description"
+                                  class="text-muted-foreground truncate text-xs"
+                                >
+                                  {{ agent.description }}
+                                </span>
+                              </span>
+                            </CommandItem>
+                          </CommandGroup>
+                        </CommandList>
+                      </Command>
+                    </PopoverContent>
+                  </Popover>
+                </ButtonGroup>
+                <ButtonGroup>
+                  <!-- Role to grant + add button -->
                   <Select
-                    :model-value="invitationRoleValue(invite)"
-                    :disabled="
-                      invite.status === 'declined' ||
-                      (!canManageOwnerRoles && invite.role === 'owner')
-                    "
-                    @update:model-value="
-                      (val) => stageInvitationRole(invite, val)
-                    "
+                    v-model="inviteRole"
+                    :disabled="!canInviteMembers && mode !== 'create'"
                   >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
+                    <Button variant="outline" as-child>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                    </Button>
                     <SelectContent>
                       <SelectGroup>
                         <SelectItem
-                          value="owner"
-                          :disabled="
-                            !canManageOwnerRoles && invite.role !== 'owner'
-                          "
-                          >{{
-                            t("components.teamDialog.roles.owner")
-                          }}</SelectItem
+                          v-for="role in teamRoleOptions"
+                          :key="role"
+                          :value="role"
+                          :disabled="role === 'owner' && !canManageOwnerRoles"
                         >
-                        <SelectItem value="admin">{{
-                          t("components.teamDialog.roles.admin")
-                        }}</SelectItem>
-                        <SelectItem value="member">{{
-                          t("components.teamDialog.roles.member")
-                        }}</SelectItem>
-                        <SelectItem value="guest">{{
-                          t("components.teamDialog.roles.guest")
-                        }}</SelectItem>
+                          {{ t(`components.teamDialog.roles.${role}`) }}
+                        </SelectItem>
                       </SelectGroup>
                     </SelectContent>
                   </Select>
@@ -1814,23 +1504,309 @@ const handleSubmit = async () => {
                         <Button
                           variant="outline"
                           size="icon"
-                          @click="invitationStore.cancelInvitation(invite.id!)"
+                          :disabled="
+                            (!canInviteMembers && mode !== 'create') ||
+                            isAddMemberBlockedByOwnerPolicy
+                          "
+                          @click="addMember"
                         >
-                          <IconTrash />
+                          <IconPlus />
                         </Button>
                       </TooltipTrigger>
                       <TooltipContent>
                         {{
-                          t("components.teamDialog.tooltips.cancelInvitation")
+                          addMemberDisabledReason ||
+                          t("components.teamDialog.tooltips.addMember")
                         }}
                       </TooltipContent>
                     </Tooltip>
                   </TooltipProvider>
                 </ButtonGroup>
               </ButtonGroup>
-            </ButtonGroup>
-          </template>
-        </Field>
+
+              <!-- ── Invitations (staged drafts + already-sent) ──────────────────
+             Drafts live only until Save (editable email, removed on cancel);
+             sent invitations support staged role edits, resend, and cancel. -->
+              <ItemGroup
+                v-if="
+                  stagedInvites.length > 0 ||
+                  (canShowTeamInvitations && visibleTeamInvitations.length > 0)
+                "
+                class="bg-secondary rounded-2xl p-3"
+              >
+                <!-- Staged drafts (not yet sent) -->
+                <Item
+                  v-for="(member, index) in stagedInvites"
+                  :key="`staged-${index}`"
+                  size="sm"
+                  class="p-0"
+                >
+                  <ItemMedia>
+                    <AppAvatar :name="member.email || 'draft'" />
+                  </ItemMedia>
+                  <ItemContent class="truncate">
+                    <ItemTitle>
+                      <Input
+                        v-model="member.email"
+                        type="email"
+                        :placeholder="
+                          $t('components.teamDialog.placeholders.email')
+                        "
+                        class="h-auto border-0 bg-transparent p-0 shadow-none focus-visible:ring-0"
+                      />
+                    </ItemTitle>
+                    <ItemDescription class="text-xs">
+                      {{ t("components.teamDialog.tooltips.draft") }}
+                    </ItemDescription>
+                  </ItemContent>
+                  <ItemActions>
+                    <Select v-model="member.role">
+                      <Button variant="outline" as-child>
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                      </Button>
+                      <SelectContent>
+                        <SelectGroup>
+                          <SelectItem
+                            v-for="role in teamRoleOptions"
+                            :key="role"
+                            :value="role"
+                            :disabled="role === 'owner' && !canManageOwnerRoles"
+                          >
+                            {{ t(`components.teamDialog.roles.${role}`) }}
+                          </SelectItem>
+                        </SelectGroup>
+                      </SelectContent>
+                    </Select>
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger as-child>
+                          <Button
+                            variant="outline"
+                            size="icon"
+                            :disabled="isMemberRemovalDisabled(member)"
+                            @click="removeMember(member.email)"
+                          >
+                            <IconTrash />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          {{
+                            isMemberRemovalDisabled(member)
+                              ? ownerRoleManagementReason
+                              : t(
+                                  "components.teamDialog.tooltips.cancelInvitation"
+                                )
+                          }}
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  </ItemActions>
+                </Item>
+
+                <!-- Already-sent invitations (resend / change role / cancel) -->
+                <template v-if="canShowTeamInvitations">
+                  <Item
+                    v-for="invite in visibleTeamInvitations"
+                    :key="invite.id"
+                    size="sm"
+                    class="p-0"
+                  >
+                    <ItemMedia>
+                      <AppAvatar :name="invite.email" />
+                    </ItemMedia>
+                    <ItemContent class="truncate">
+                      <ItemTitle>
+                        <span class="truncate">{{ invite.email }}</span>
+                      </ItemTitle>
+                      <ItemDescription class="text-xs capitalize">
+                        {{
+                          invite.status === "declined"
+                            ? t("components.teamDialog.tooltips.declined")
+                            : t("components.teamDialog.tooltips.pending")
+                        }}
+                      </ItemDescription>
+                    </ItemContent>
+                    <ItemActions>
+                      <!-- Resend (hidden once declined) -->
+                      <TooltipProvider v-if="invite.status !== 'declined'">
+                        <Tooltip>
+                          <TooltipTrigger as-child>
+                            <Button
+                              variant="outline"
+                              size="icon"
+                              :disabled="isResending(invite.id!)"
+                              @click="handleResendInvitation(invite)"
+                            >
+                              <Spinner v-if="isResending(invite.id!)" />
+                              <IconForward v-else />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            {{
+                              t(
+                                "components.teamDialog.tooltips.resendInvitation"
+                              )
+                            }}
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                      <!-- Staged role change -->
+                      <Select
+                        :model-value="invitationRoleValue(invite)"
+                        :disabled="
+                          invite.status === 'declined' ||
+                          (!canManageOwnerRoles && invite.role === 'owner')
+                        "
+                        @update:model-value="
+                          (val) => stageInvitationRole(invite, val)
+                        "
+                      >
+                        <Button variant="outline" as-child>
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                        </Button>
+                        <SelectContent>
+                          <SelectGroup>
+                            <SelectItem
+                              value="owner"
+                              :disabled="
+                                !canManageOwnerRoles && invite.role !== 'owner'
+                              "
+                            >
+                              {{ t("components.teamDialog.roles.owner") }}
+                            </SelectItem>
+                            <SelectItem value="admin">
+                              {{ t("components.teamDialog.roles.admin") }}
+                            </SelectItem>
+                            <SelectItem value="member">
+                              {{ t("components.teamDialog.roles.member") }}
+                            </SelectItem>
+                            <SelectItem value="guest">
+                              {{ t("components.teamDialog.roles.guest") }}
+                            </SelectItem>
+                          </SelectGroup>
+                        </SelectContent>
+                      </Select>
+                      <!-- Cancel invitation -->
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger as-child>
+                            <Button
+                              variant="outline"
+                              size="icon"
+                              @click="
+                                invitationStore.cancelInvitation(invite.id!)
+                              "
+                            >
+                              <IconTrash />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            {{
+                              t(
+                                "components.teamDialog.tooltips.cancelInvitation"
+                              )
+                            }}
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    </ItemActions>
+                  </Item>
+                </template>
+
+                <!-- ── Agent members (staged + existing) ───────────────────────────
+                 Agents join directly (no invite handshake); their role is always
+                "member" and is shown locked. -->
+                <template v-if="agentMembers.length > 0">
+                  <Item
+                    v-for="agent in agentMembers"
+                    :key="agent.agentId"
+                    size="sm"
+                    class="p-0"
+                  >
+                    <ItemMedia>
+                      <AppAvatar
+                        class="size-8"
+                        variant="beam"
+                        :name="agentAvatarSeed(agent)"
+                      />
+                    </ItemMedia>
+                    <ItemContent class="truncate">
+                      <ItemTitle class="flex items-center gap-1.5">
+                        <span class="truncate">{{ agent.name }}</span>
+                        <Badge variant="secondary">
+                          {{ t("components.teamDialog.labels.agentBadge") }}
+                        </Badge>
+                      </ItemTitle>
+                      <ItemDescription
+                        v-if="agent.description"
+                        class="truncate text-xs"
+                      >
+                        {{ agent.description }}
+                      </ItemDescription>
+                    </ItemContent>
+                    <ItemActions>
+                      <!-- Role is locked to "member" for agents -->
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger as-child>
+                            <div>
+                              <Select model-value="member" disabled>
+                                <Button variant="outline" as-child>
+                                  <SelectTrigger>
+                                    <SelectValue />
+                                  </SelectTrigger>
+                                </Button>
+                                <SelectContent>
+                                  <SelectGroup>
+                                    <SelectItem value="member">
+                                      {{
+                                        t("components.teamDialog.roles.member")
+                                      }}
+                                    </SelectItem>
+                                  </SelectGroup>
+                                </SelectContent>
+                              </Select>
+                            </div>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            {{
+                              t(
+                                "components.teamDialog.tooltips.agentRoleLocked"
+                              )
+                            }}
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                      <!-- Remove agent -->
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger as-child>
+                            <Button
+                              variant="outline"
+                              size="icon"
+                              @click="removeAgent(agent.agentId)"
+                            >
+                              <IconTrash />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            {{
+                              t("components.teamDialog.tooltips.removeAgent")
+                            }}
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    </ItemActions>
+                  </Item>
+                </template>
+              </ItemGroup>
+            </TabsContent>
+          </Field>
+        </Tabs>
       </div>
 
       <DialogFooter>

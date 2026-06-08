@@ -199,9 +199,7 @@ const handleRemoveTool = async (tool: ITeamCustomTool): Promise<void> => {
 
 <template>
   <div v-if="canViewTeamSettings" class="p-6">
-    <div v-if="isLoading" class="flex justify-center py-8">
-      <Spinner />
-    </div>
+    <LoadingState v-if="isLoading" />
     <FieldGroup v-else>
       <!-- ── Built-in tools ─────────────────────────────────────────── -->
       <FieldSet>
@@ -401,9 +399,7 @@ const handleRemoveTool = async (tool: ITeamCustomTool): Promise<void> => {
             EVERY bucket is empty.
           -->
         <div class="flex flex-col gap-2">
-          <div v-if="isLoadingTools" class="flex justify-center py-8">
-            <Spinner />
-          </div>
+          <LoadingState v-if="isLoadingTools" />
 
           <template v-else>
             <Empty

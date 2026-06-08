@@ -1,7 +1,6 @@
 <script lang="ts" setup>
 import { isTauri, useIsFullscreen } from "@/composables/usePlatform"
 import { IconArrowLeft, IconLogOut } from "@/data/icons"
-import { getInitials } from "@/helpers/utilities"
 import { emitter } from "@/modules/mitt"
 import { useCurrentUser } from "vuefire"
 
@@ -26,40 +25,28 @@ const currentUser = useCurrentUser()
       <DropdownMenu v-if="currentUser">
         <DropdownMenuTrigger as-child>
           <Button variant="ghost" size="sm">
-            <Avatar class="size-4">
-              <AvatarImage
-                class="size-4"
-                :src="currentUser.photoURL || ''"
-                :alt="currentUser.displayName || ''"
-                referrerpolicy="no-referrer"
-              />
-              <AvatarFallback class="size-4">
-                {{ getInitials(currentUser.displayName || "") }}
-              </AvatarFallback>
-            </Avatar>
+            <AppAvatar
+              class="size-4"
+              :src="currentUser.photoURL"
+              :name="currentUser.displayName"
+            />
             {{ currentUser.displayName }}
           </Button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent class="w-auto">
+        <DropdownMenuContent>
           <DropdownMenuLabel>
             <Item class="group" size="xs">
               <ItemMedia>
-                <Avatar>
-                  <AvatarImage
-                    :src="currentUser.photoURL || ''"
-                    :alt="currentUser.displayName || ''"
-                    referrerpolicy="no-referrer"
-                  />
-                  <AvatarFallback>
-                    {{ getInitials(currentUser.displayName || "") }}
-                  </AvatarFallback>
-                </Avatar>
+                <AppAvatar
+                  :src="currentUser.photoURL"
+                  :name="currentUser.displayName"
+                />
               </ItemMedia>
-              <ItemContent class="gap-0.5 truncate">
-                <ItemTitle class="truncate">
+              <ItemContent>
+                <ItemTitle>
                   {{ currentUser.displayName }}
                 </ItemTitle>
-                <ItemDescription class="truncate text-xs">
+                <ItemDescription class="text-xs">
                   {{ currentUser.email }}
                 </ItemDescription>
               </ItemContent>

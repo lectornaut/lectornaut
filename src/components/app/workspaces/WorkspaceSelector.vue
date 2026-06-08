@@ -2,7 +2,6 @@
 import { useTeamActions } from "@/composables/useTeamActions"
 import { useWorkspaceActions } from "@/composables/useWorkspaceActions"
 import { IconCirclePlus, IconFolder, IconUsers } from "@/data/icons"
-import { getInitials } from "@/helpers/utilities"
 import type { AcceptableValue } from "reka-ui"
 import { toast } from "vue-sonner"
 
@@ -57,16 +56,14 @@ const deselectTeam = async () => {
     <EmptyContent
       class="bg-background flex max-w-xs flex-col items-stretch gap-2 rounded-xl border p-2"
     >
-      <div v-if="isLoading" class="flex justify-center p-4">
-        <Spinner />
-      </div>
+      <LoadingState v-if="isLoading" />
       <Select
         v-else
         :model-value="currentWorkspace?.id"
         :disabled="!currentTeam"
         @update:model-value="onSelectWorkspace"
       >
-        <SelectTrigger class="w-full">
+        <SelectTrigger>
           <SelectValue
             :placeholder="t('components.workspaceSelector.placeholder')"
           />
@@ -82,17 +79,11 @@ const deselectTeam = async () => {
               :value="workspace.value"
             >
               <div class="flex items-center gap-2">
-                <Avatar class="size-4">
-                  <AvatarImage
-                    :src="workspace.original?.photoURL!"
-                    :alt="workspace.label"
-                    class="size-4"
-                    referrerpolicy="no-referrer"
-                  />
-                  <AvatarFallback class="size-4">
-                    {{ getInitials(workspace.label) }}
-                  </AvatarFallback>
-                </Avatar>
+                <AppAvatar
+                  class="size-4"
+                  :src="workspace.original?.photoURL"
+                  :name="workspace.label"
+                />
                 {{ workspace.label }}
               </div>
             </SelectItem>

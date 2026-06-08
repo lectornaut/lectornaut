@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { SearchIcon } from "@lucide/vue"
+import { Search01Icon } from "@hugeicons/core-free-icons"
+import { HugeiconsIcon } from "@hugeicons/vue"
 import type { ListboxFilterProps } from "reka-ui"
 import type { HTMLAttributes } from "vue"
 import { reactiveOmit } from "@vueuse/core"
@@ -27,9 +28,7 @@ const { filterState } = useCommand()
 
 <template>
   <div data-slot="command-input-wrapper" class="p-1 pb-0">
-    <InputGroup
-      class="bg-input/30 border-input/30 h-8! rounded-lg! shadow-none! *:data-[slot=input-group-addon]:pl-2!"
-    >
+    <InputGroup class="bg-input/50 h-9">
       <ListboxFilter
         v-bind="{ ...forwardedProps, ...$attrs }"
         v-model="filterState.search"
@@ -43,7 +42,11 @@ const { filterState } = useCommand()
         "
       />
       <InputGroupAddon>
-        <SearchIcon class="size-4 shrink-0 opacity-50" />
+        <HugeiconsIcon
+          :stroke-width="2"
+          :icon="Search01Icon"
+          class="size-4 shrink-0 opacity-50"
+        />
       </InputGroupAddon>
     </InputGroup>
   </div>

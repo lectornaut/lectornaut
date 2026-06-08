@@ -208,7 +208,7 @@ useInfiniteScroll(
                     <IconMoreHorizontal />
                   </Button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent class="w-auto">
+                <DropdownMenuContent>
                   <DropdownMenuSub>
                     <DropdownMenuItem as-child>
                       <DropdownMenuSubTrigger>
@@ -216,7 +216,7 @@ useInfiniteScroll(
                         {{ t("components.notifications.moveAllTo") }}
                       </DropdownMenuSubTrigger>
                     </DropdownMenuItem>
-                    <DropdownMenuSubContent class="w-auto">
+                    <DropdownMenuSubContent>
                       <DropdownMenuItem @click="markAllInbox(activeTab)">
                         <IconInbox />
                         {{ t("components.notifications.inbox") }}
@@ -238,7 +238,7 @@ useInfiniteScroll(
                         {{ t("components.notifications.markAllAs") }}
                       </DropdownMenuSubTrigger>
                     </DropdownMenuItem>
-                    <DropdownMenuSubContent class="w-auto">
+                    <DropdownMenuSubContent>
                       <DropdownMenuItem @click="markAllRead(activeTab)">
                         <IconEye />
                         {{ t("components.notifications.read") }}

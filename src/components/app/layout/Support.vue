@@ -223,7 +223,7 @@ const startOnboarding = () => {
               {{ $t("components.support.help") }}
             </SidebarMenuButton>
           </DropdownMenuTrigger>
-          <DropdownMenuContent class="w-auto">
+          <DropdownMenuContent>
             <DropdownMenuGroup>
               <DropdownMenuItem>
                 <IconMessageCircle />
@@ -260,7 +260,7 @@ const startOnboarding = () => {
                     {{ $t("components.support.more") }}
                   </DropdownMenuSubTrigger>
                 </DropdownMenuItem>
-                <DropdownMenuSubContent class="w-auto">
+                <DropdownMenuSubContent>
                   <DropdownMenuGroup>
                     <DropdownMenuItem>
                       {{ $t("components.support.status") }} <IconArrowUpRight />
@@ -362,7 +362,7 @@ const startOnboarding = () => {
                   {{ $t("components.support.companySize") }}
                 </Label>
                 <Select v-model="selectedCompanySize">
-                  <SelectTrigger class="w-full">
+                  <SelectTrigger>
                     <SelectValue
                       :placeholder="
                         $t('components.support.placeholders.employees')
@@ -387,7 +387,7 @@ const startOnboarding = () => {
                   {{ $t("components.support.category") }}
                 </Label>
                 <Select v-model="selectedCategory">
-                  <SelectTrigger class="w-full">
+                  <SelectTrigger>
                     <SelectValue
                       :placeholder="
                         $t('components.support.placeholders.category')

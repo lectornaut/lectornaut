@@ -186,14 +186,7 @@ onMounted(() => {
           </Field>
           <Field orientation="horizontal">
             <FieldContent>
-              <Empty v-if="loading">
-                <EmptyHeader>
-                  <EmptyMedia variant="icon">
-                    <Spinner />
-                  </EmptyMedia>
-                  <EmptyTitle>{{ $t("common.loading") }}</EmptyTitle>
-                </EmptyHeader>
-              </Empty>
+              <LoadingState v-if="loading" :label="$t('common.loading')" />
               <Empty v-else-if="error">
                 <EmptyHeader>
                   <EmptyMedia variant="icon">

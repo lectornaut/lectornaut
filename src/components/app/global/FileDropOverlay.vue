@@ -1247,11 +1247,11 @@ const isFullscreen = useIsFullscreen()
             <ItemMedia v-else variant="icon">
               <Component :is="file.icon" />
             </ItemMedia>
-            <ItemContent class="gap-0.5 truncate">
-              <ItemTitle class="truncate">
+            <ItemContent>
+              <ItemTitle>
                 {{ file.name }}
               </ItemTitle>
-              <ItemDescription class="truncate text-xs">
+              <ItemDescription class="text-xs">
                 {{ file.description }}
               </ItemDescription>
             </ItemContent>
@@ -1334,11 +1334,11 @@ const isFullscreen = useIsFullscreen()
                 <Component :is="file.icon" class="size-16" />
               </ItemMedia>
             </ItemHeader>
-            <ItemContent class="gap-0.5 truncate">
-              <ItemTitle class="truncate">
+            <ItemContent>
+              <ItemTitle>
                 {{ file.name }}
               </ItemTitle>
-              <ItemDescription class="truncate text-xs">
+              <ItemDescription class="text-xs">
                 {{ file.description }}
               </ItemDescription>
             </ItemContent>
@@ -1428,7 +1428,7 @@ const isFullscreen = useIsFullscreen()
                 <TooltipContent>
                   {{ t("components.fileDropOverlay.tooltips.more") }}
                 </TooltipContent>
-                <DropdownMenuContent class="w-auto">
+                <DropdownMenuContent>
                   <DropdownMenuItem
                     :disabled="!hasQueuedFiles || isMoving"
                     @click="clearQueuedFiles()"

@@ -66,7 +66,7 @@ const actionItems: ActionItem[] = [
           <ItemMedia class="text-muted-foreground">
             <Component :is="item.icon" />
           </ItemMedia>
-          <ItemContent class="gap-0.5 truncate">
+          <ItemContent>
             <ItemTitle class="text-secondary-foreground">
               {{ item.title }}
             </ItemTitle>

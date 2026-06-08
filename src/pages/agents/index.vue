@@ -13,7 +13,6 @@ import {
   IconStar,
   IconUserRoundPlus,
 } from "@/data/icons"
-import Avatar from "vue-boring-avatars"
 
 // Meta (`requiresUser`, `layout: "app"`, `sidebar`, `breadcrumb`) is inherited
 // from the parent route via vue-router's meta merging. Adding `layout: "app"`
@@ -339,16 +338,10 @@ const route = useRoute()
                       <CardHeader class="flex items-start gap-4">
                         <div class="flex flex-col gap-2">
                           <CardTitle class="flex items-center gap-3 text-base">
-                            <Avatar
+                            <AppAvatar
                               variant="beam"
                               :name="`Agent ${index + 1}`"
-                              :colors="[
-                                'var(--color-chart-1)',
-                                'var(--color-chart-2)',
-                                'var(--color-chart-3)',
-                                'var(--color-chart-4)',
-                                'var(--color-chart-5)',
-                              ]"
+                              class="size-10"
                             />
                             Agent {{ index + 1 }}
                           </CardTitle>
@@ -437,15 +430,10 @@ const route = useRoute()
                 <CardHeader class="flex items-start gap-4">
                   <div class="flex flex-col gap-2">
                     <CardTitle class="flex items-center gap-3 text-base">
-                      <Avatar
+                      <AppAvatar
+                        variant="marble"
                         :name="`Agent ${index + 1}`"
-                        :colors="[
-                          'var(--color-chart-1)',
-                          'var(--color-chart-2)',
-                          'var(--color-chart-3)',
-                          'var(--color-chart-4)',
-                          'var(--color-chart-5)',
-                        ]"
+                        class="size-10"
                       />
                       Agent {{ index + 1 }}
                     </CardTitle>
@@ -490,15 +478,10 @@ const route = useRoute()
                 <CardHeader class="flex items-start gap-4">
                   <div class="flex flex-col gap-2">
                     <CardTitle class="flex items-center gap-3 text-base">
-                      <Avatar
+                      <AppAvatar
+                        variant="marble"
                         :name="`Agent ${index + 1}`"
-                        :colors="[
-                          'var(--color-chart-1)',
-                          'var(--color-chart-2)',
-                          'var(--color-chart-3)',
-                          'var(--color-chart-4)',
-                          'var(--color-chart-5)',
-                        ]"
+                        class="size-10"
                       />
                       Agent {{ index + 1 }}
                     </CardTitle>

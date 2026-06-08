@@ -1,7 +1,6 @@
 <script lang="ts" setup>
 import { useTeamActions } from "@/composables/useTeamActions"
 import { IconCirclePlus, IconLogOut, IconUsers } from "@/data/icons"
-import { getInitials } from "@/helpers/utilities"
 import { emitter } from "@/modules/mitt"
 import type { AcceptableValue } from "reka-ui"
 
@@ -46,15 +45,13 @@ const onSelectTeam = (value: AcceptableValue) => {
     <EmptyContent
       class="bg-background flex max-w-xs flex-col items-stretch gap-2 rounded-xl border p-2"
     >
-      <div v-if="isLoading" class="flex justify-center p-4">
-        <Spinner />
-      </div>
+      <LoadingState v-if="isLoading" />
       <Select
         v-else
         :model-value="currentTeam?.id"
         @update:model-value="onSelectTeam"
       >
-        <SelectTrigger class="w-full">
+        <SelectTrigger>
           <SelectValue
             :placeholder="t('components.teamSelector.placeholder')"
           />
@@ -70,17 +67,11 @@ const onSelectTeam = (value: AcceptableValue) => {
               :value="team.value"
             >
               <div class="flex items-center gap-2">
-                <Avatar class="size-4">
-                  <AvatarImage
-                    :src="team.original?.photoURL!"
-                    :alt="team.label"
-                    class="size-4"
-                    referrerpolicy="no-referrer"
-                  />
-                  <AvatarFallback class="size-4">
-                    {{ getInitials(team.label) }}
-                  </AvatarFallback>
-                </Avatar>
+                <AppAvatar
+                  class="size-4"
+                  :src="team.original?.photoURL"
+                  :name="team.label"
+                />
                 {{ team.label }}
               </div>
             </SelectItem>

@@ -9,7 +9,6 @@ import {
   IconUsersRound,
 } from "@/data/icons"
 import { isTeamBillingEntitled } from "@/helpers/billing"
-import { getInitials } from "@/helpers/utilities"
 import { emitter } from "@/modules/mitt"
 import { isUserMembership } from "@/types/membership"
 
@@ -80,17 +79,11 @@ const currentPlanLabel = computed(() => {
                 size="lg"
                 :tooltip="t('components.teamSwitcher.switchTeam')"
               >
-                <Avatar class="size-8 rounded-md">
-                  <AvatarImage
-                    class="size-8 rounded-md"
-                    :src="currentTeam?.photoURL!"
-                    :alt="currentTeam?.name!"
-                    referrerpolicy="no-referrer"
-                  />
-                  <AvatarFallback class="size-8 rounded-md">
-                    {{ getInitials(currentTeam?.name!) }}
-                  </AvatarFallback>
-                </Avatar>
+                <AppAvatar
+                  class="size-8 rounded-md"
+                  :src="currentTeam?.photoURL"
+                  :name="currentTeam?.name"
+                />
                 <div class="flex grow flex-col">
                   <span
                     class="truncate text-base leading-tight font-semibold tracking-tight"
@@ -110,26 +103,15 @@ const currentPlanLabel = computed(() => {
                           :key="member.userId"
                         >
                           <TooltipTrigger as-child>
-                            <Avatar class="ring-sidebar size-4 ring-2">
-                              <AvatarImage
-                                :src="member.user?.photoURL!"
-                                :alt="
-                                  member.user?.displayName ||
-                                  member.user?.email ||
-                                  member.userId
-                                "
-                                referrerpolicy="no-referrer"
-                              />
-                              <AvatarFallback>
-                                {{
-                                  getInitials(
-                                    member.user?.displayName ||
-                                      member.user?.email ||
-                                      member.userId
-                                  )
-                                }}
-                              </AvatarFallback>
-                            </Avatar>
+                            <AppAvatar
+                              class="ring-sidebar size-4 ring-2"
+                              :src="member.user?.photoURL"
+                              :name="
+                                member.user?.displayName ||
+                                member.user?.email ||
+                                member.userId
+                              "
+                            />
                           </TooltipTrigger>
                           <TooltipContent>
                             {{
@@ -142,11 +124,11 @@ const currentPlanLabel = computed(() => {
                       </div>
                       <Tooltip v-if="humanTeamMembers.length > 3">
                         <TooltipTrigger as-child>
-                          <Avatar class="ring-sidebar size-4 ring-2">
-                            <AvatarFallback class="size-4">
+                          <AppAvatar class="ring-sidebar size-4 ring-2">
+                            <template #fallback>
                               +{{ humanTeamMembers.length - 3 }}
-                            </AvatarFallback>
-                          </Avatar>
+                            </template>
+                          </AppAvatar>
                         </TooltipTrigger>
                         <TooltipContent class="max-w-56 text-xs">
                           {{ hiddenTeamMemberNames.join(", ") }}
@@ -162,24 +144,17 @@ const currentPlanLabel = computed(() => {
               <DropdownMenuLabel>
                 <Item class="group" size="xs">
                   <ItemMedia>
-                    <Avatar class="rounded-md">
-                      <AvatarImage
-                        v-if="currentTeam?.photoURL"
-                        :src="currentTeam.photoURL"
-                        :alt="currentTeam?.name"
-                        class="rounded-md"
-                        referrerpolicy="no-referrer"
-                      />
-                      <AvatarFallback class="rounded-md">
-                        {{ getInitials(currentTeam?.name!) }}
-                      </AvatarFallback>
-                    </Avatar>
+                    <AppAvatar
+                      class="rounded-md"
+                      :src="currentTeam?.photoURL"
+                      :name="currentTeam?.name"
+                    />
                   </ItemMedia>
-                  <ItemContent class="gap-0.5 truncate">
-                    <ItemTitle class="truncate">
+                  <ItemContent>
+                    <ItemTitle>
                       {{ currentTeam?.name }}
                     </ItemTitle>
-                    <ItemDescription class="truncate text-xs">
+                    <ItemDescription class="text-xs">
                       {{
                         t("components.teamSwitcher.members", {
                           count: getTeamMemberCount(currentTeam?.id!),
@@ -215,13 +190,8 @@ const currentPlanLabel = computed(() => {
                       {{ t("components.teamSwitcher.menu.switchTeam") }}
                     </DropdownMenuSubTrigger>
                   </DropdownMenuItem>
-                  <DropdownMenuSubContent class="w-auto">
-                    <DropdownMenuGroup
-                      v-if="isLoading"
-                      class="flex justify-center py-2"
-                    >
-                      <Spinner />
-                    </DropdownMenuGroup>
+                  <DropdownMenuSubContent>
+                    <LoadingState v-if="isLoading" />
                     <DropdownMenuGroup v-else>
                       <DropdownMenuLabel>
                         {{
@@ -237,23 +207,17 @@ const currentPlanLabel = computed(() => {
                       >
                         <Item class="group" size="xs">
                           <ItemMedia>
-                            <Avatar class="rounded-md">
-                              <AvatarImage
-                                :src="team.original?.photoURL!"
-                                :alt="team.label"
-                                class="rounded-md"
-                                referrerpolicy="no-referrer"
-                              />
-                              <AvatarFallback class="rounded-md">
-                                {{ getInitials(team.label) }}
-                              </AvatarFallback>
-                            </Avatar>
+                            <AppAvatar
+                              class="rounded-md"
+                              :src="team.original?.photoURL"
+                              :name="team.label"
+                            />
                           </ItemMedia>
-                          <ItemContent class="gap-0.5 truncate">
-                            <ItemTitle class="truncate">
+                          <ItemContent>
+                            <ItemTitle>
                               {{ team.label }}
                             </ItemTitle>
-                            <ItemDescription class="truncate text-xs">
+                            <ItemDescription class="text-xs">
                               {{
                                 t("components.teamSwitcher.members", {
                                   count: getTeamMemberCount(team.value),
@@ -298,7 +262,7 @@ const currentPlanLabel = computed(() => {
             </DropdownMenuContent>
           </DropdownMenu>
         </ContextMenuTrigger>
-        <ContextMenuContent class="w-auto">
+        <ContextMenuContent>
           <ContextMenuGroup>
             <ContextMenuItem
               @click="emitter.emit('Dialog.Settings.Open', 'members')"

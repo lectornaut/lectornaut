@@ -22,8 +22,8 @@ import { defaultMenu } from "@/helpers/defaults"
           <Component :is="item.icon" :class="item.style.text" />
         </Button>
       </ItemMedia>
-      <ItemContent class="gap-0.5 truncate">
-        <ItemTitle class="truncate">{{ item.action }}</ItemTitle>
+      <ItemContent>
+        <ItemTitle>{{ item.action }}</ItemTitle>
       </ItemContent>
       <ItemActions>
         <Button variant="outline" size="icon" as-child>

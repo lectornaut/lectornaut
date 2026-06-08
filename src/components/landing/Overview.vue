@@ -209,7 +209,7 @@ const { t } = useI18n()
             <HoverCardTrigger class="cursor-help underline">
               {{ t("landing.overview.users") }}</HoverCardTrigger
             >
-            <HoverCardContent class="w-auto">
+            <HoverCardContent>
               <WallOfLove />
             </HoverCardContent>
           </HoverCard>

@@ -17,7 +17,6 @@ import {
 } from "@/data/icons"
 import { toast } from "vue-sonner"
 import { useAuthStore } from "@/stores/authStore"
-import Avatar from "vue-boring-avatars"
 import { inject } from "vue"
 
 const { t } = useI18n()
@@ -300,17 +299,10 @@ const renderedMessages = computed(() =>
               { 'flex-row-reverse': isOwnMessage(message) },
             ]"
           >
-            <Avatar
+            <AppAvatar
               v-if="message.role === 'user' && !isOwnMessage(message)"
               variant="beam"
               :name="messageAvatarSeed(message)"
-              :colors="[
-                'var(--color-chart-1)',
-                'var(--color-chart-2)',
-                'var(--color-chart-3)',
-                'var(--color-chart-4)',
-                'var(--color-chart-5)',
-              ]"
               class="sticky bottom-0 size-5 shrink-0"
             />
             <div

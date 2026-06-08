@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { MinusIcon } from "@lucide/vue"
+import { MinusSignIcon } from "@hugeicons/core-free-icons"
+import { HugeiconsIcon } from "@hugeicons/vue"
 import type { HTMLAttributes } from "vue"
 import { reactiveOmit } from "@vueuse/core"
 import { useForwardProps } from "reka-ui"
@@ -21,7 +22,7 @@ const forwarded = useForwardProps(delegatedProps)
     "
   >
     <slot>
-      <MinusIcon />
+      <HugeiconsIcon :stroke-width="2" :icon="MinusSignIcon" />
     </slot>
   </div>
 </template>

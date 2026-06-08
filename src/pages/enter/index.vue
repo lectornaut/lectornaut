@@ -58,9 +58,7 @@ onMounted(async () => {
       v-if="user || authenticateInProgress"
       class="grid size-full grow place-items-center"
     >
-      <div class="mx-auto flex flex-col justify-center">
-        <Spinner />
-      </div>
+      <LoadingState />
     </div>
     <div
       v-else-if="authenticateError"

@@ -230,7 +230,6 @@ const authenticateApple = () =>
           </InputGroup>
           <Button
             :disabled="!email || continueWithEmailInProgress"
-            class="w-full"
             @click="continueWithEmail"
           >
             <Spinner v-if="continueWithEmailInProgress" />
@@ -546,7 +545,6 @@ const authenticateApple = () =>
             <TabsContent value="sign-up" tabindex="-1">
               <Button
                 :disabled="signupViaEmailPasswordInProgress"
-                class="w-full"
                 @click="signupViaEmailPassword"
               >
                 <template v-if="signupViaEmailPasswordInProgress">

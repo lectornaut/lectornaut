@@ -7,8 +7,6 @@ import {
 import {
   IconAlertTriangle,
   IconBot,
-  IconCirclePlus,
-  IconTrash,
   IconWorkflow,
   IconWrench,
 } from "@/data/icons"
@@ -97,22 +95,15 @@ const toggle = async (item: RegistryItem): Promise<void> => {
 
         <Field v-for="item in agents" :key="item.key" orientation="horizontal">
           <FieldContent>
-            <FieldLabel>{{ item.name }}</FieldLabel>
+            <FieldLabel :for="rowId(item)">{{ item.name }}</FieldLabel>
             <FieldDescription>{{ item.description }}</FieldDescription>
           </FieldContent>
-          <Button
-            :variant="item.installed ? 'outline' : 'default'"
-            size="sm"
+          <Switch
+            :id="rowId(item)"
+            :model-value="item.installed"
             :disabled="isPending(item)"
-            @click="toggle(item)"
-          >
-            <component :is="item.installed ? IconTrash : IconCirclePlus" />
-            {{
-              item.installed
-                ? t("settings.integrations.remove")
-                : t("settings.integrations.add")
-            }}
-          </Button>
+            @update:model-value="toggle(item)"
+          />
         </Field>
 
         <Empty v-if="agents.length === 0" class="border border-dashed">
@@ -144,22 +135,15 @@ const toggle = async (item: RegistryItem): Promise<void> => {
 
         <Field v-for="item in tools" :key="item.key" orientation="horizontal">
           <FieldContent>
-            <FieldLabel>{{ item.name }}</FieldLabel>
+            <FieldLabel :for="rowId(item)">{{ item.name }}</FieldLabel>
             <FieldDescription>{{ item.description }}</FieldDescription>
           </FieldContent>
-          <Button
-            :variant="item.installed ? 'outline' : 'default'"
-            size="sm"
+          <Switch
+            :id="rowId(item)"
+            :model-value="item.installed"
             :disabled="isPending(item)"
-            @click="toggle(item)"
-          >
-            <component :is="item.installed ? IconTrash : IconCirclePlus" />
-            {{
-              item.installed
-                ? t("settings.integrations.remove")
-                : t("settings.integrations.add")
-            }}
-          </Button>
+            @update:model-value="toggle(item)"
+          />
         </Field>
 
         <Empty v-if="tools.length === 0" class="border border-dashed">
@@ -195,22 +179,15 @@ const toggle = async (item: RegistryItem): Promise<void> => {
           orientation="horizontal"
         >
           <FieldContent>
-            <FieldLabel>{{ item.name }}</FieldLabel>
+            <FieldLabel :for="rowId(item)">{{ item.name }}</FieldLabel>
             <FieldDescription>{{ item.description }}</FieldDescription>
           </FieldContent>
-          <Button
-            :variant="item.installed ? 'outline' : 'default'"
-            size="sm"
+          <Switch
+            :id="rowId(item)"
+            :model-value="item.installed"
             :disabled="isPending(item)"
-            @click="toggle(item)"
-          >
-            <component :is="item.installed ? IconTrash : IconCirclePlus" />
-            {{
-              item.installed
-                ? t("settings.integrations.remove")
-                : t("settings.integrations.add")
-            }}
-          </Button>
+            @update:model-value="toggle(item)"
+          />
         </Field>
 
         <Empty v-if="workflows.length === 0" class="border border-dashed">

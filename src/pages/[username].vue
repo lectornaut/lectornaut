@@ -7,7 +7,6 @@ import {
 } from "@/composables/useFunctions"
 import { useTeamActions } from "@/composables/useTeamActions"
 import { IconAtSign, IconGlobe, IconLock, IconSettings } from "@/data/icons"
-import { getInitials } from "@/helpers/utilities"
 import { firestore } from "@/modules/firebase"
 import {
   getTeamByUsername,
@@ -322,9 +321,7 @@ useHead(() => ({
     <div class="w-full max-w-2xl px-2">
       <!-- Loading State -->
       <template v-if="loading">
-        <div class="flex h-screen flex-col items-center justify-center p-2">
-          <Spinner />
-        </div>
+        <LoadingState class="h-screen" />
       </template>
       <!-- Shared profile header -->
       <template v-else>
@@ -386,16 +383,11 @@ useHead(() => ({
                           :key="avatar.id"
                         >
                           <TooltipTrigger as-child>
-                            <Avatar class="ring-background size-4 ring-2">
-                              <AvatarImage
-                                :src="avatar.photoURL!"
-                                :alt="avatar.name || avatar.id"
-                                referrerpolicy="no-referrer"
-                              />
-                              <AvatarFallback>
-                                {{ getInitials(avatar.name || avatar.id) }}
-                              </AvatarFallback>
-                            </Avatar>
+                            <AppAvatar
+                              class="ring-background size-4 ring-2"
+                              :src="avatar.photoURL"
+                              :name="avatar.name || avatar.id"
+                            />
                           </TooltipTrigger>
                           <TooltipContent>
                             {{ avatar.name || avatar.id }}
@@ -404,11 +396,11 @@ useHead(() => ({
                       </div>
                       <Tooltip v-if="hiddenHeaderAvatarCount > 0">
                         <TooltipTrigger as-child>
-                          <Avatar class="ring-background size-4 ring-2">
-                            <AvatarFallback class="size-4">
+                          <AppAvatar class="ring-background size-4 ring-2">
+                            <template #fallback>
                               +{{ hiddenHeaderAvatarCount }}
-                            </AvatarFallback>
-                          </Avatar>
+                            </template>
+                          </AppAvatar>
                         </TooltipTrigger>
                         <TooltipContent class="max-w-56 text-xs">
                           {{ hiddenHeaderAvatarNames.join(", ") }}
@@ -422,17 +414,11 @@ useHead(() => ({
           </div>
           <div class="bg-background mx-auto -mt-10 border p-1.5 shadow-xs">
             <div v-if="user || team">
-              <Avatar class="size-20">
-                <AvatarImage
-                  class="size-20"
-                  :src="(user?.photoURL || team?.photoURL) ?? ''"
-                  :alt="user?.displayName || team?.name"
-                  referrerpolicy="no-referrer"
-                />
-                <AvatarFallback class="size-20">
-                  {{ getInitials(user?.displayName || team?.name) }}
-                </AvatarFallback>
-              </Avatar>
+              <AppAvatar
+                class="size-20"
+                :src="user?.photoURL || team?.photoURL"
+                :name="user?.displayName || team?.name"
+              />
             </div>
             <div
               v-else

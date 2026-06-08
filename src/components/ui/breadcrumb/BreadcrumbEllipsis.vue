@@ -1,5 +1,6 @@
 <script lang="ts" setup>
-import { MoreHorizontalIcon } from "@lucide/vue"
+import { MoreHorizontalIcon } from "@hugeicons/core-free-icons"
+import { HugeiconsIcon } from "@hugeicons/vue"
 import type { HTMLAttributes } from "vue"
 import { cn } from "@/lib/utils"
 
@@ -18,7 +19,7 @@ const props = defineProps<{
     "
   >
     <slot>
-      <MoreHorizontalIcon />
+      <HugeiconsIcon :stroke-width="2" :icon="MoreHorizontalIcon" />
     </slot>
     <span class="sr-only">More</span>
   </span>

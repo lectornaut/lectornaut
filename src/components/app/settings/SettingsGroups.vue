@@ -11,7 +11,6 @@ import {
   IconTrash,
   IconX,
 } from "@/data/icons"
-import { getInitials } from "@/helpers/utilities"
 import { useMembershipStore } from "@/stores/membershipStore"
 import { useTeamGroupsStore } from "@/stores/teamGroupsStore"
 import type { IGroup } from "@/types/domain"
@@ -192,9 +191,7 @@ onMounted(() => {
         </Field>
         <Field orientation="horizontal">
           <FieldContent>
-            <div v-if="isLoading" class="flex justify-center py-8">
-              <Spinner />
-            </div>
+            <LoadingState v-if="isLoading" />
             <div v-else class="overflow-clip rounded-xl border">
               <Table>
                 <TableHeader>
@@ -291,28 +288,15 @@ onMounted(() => {
                           <TooltipProvider>
                             <Tooltip>
                               <TooltipTrigger as-child>
-                                <Avatar
-                                  class="flex items-center justify-center"
+                                <AppAvatar
                                   :class="{
                                     'cursor-pointer': canManageMembers,
                                   }"
+                                  :loading="isUploadingPhoto(group.id)"
+                                  :src="group.photoURL"
+                                  :name="group.name"
                                   @click="handleGroupAvatarClick(group)"
-                                >
-                                  <template v-if="isUploadingPhoto(group.id)">
-                                    <Spinner />
-                                  </template>
-                                  <template v-else>
-                                    <AvatarImage
-                                      v-if="group.photoURL"
-                                      :src="group.photoURL"
-                                      :alt="group.name"
-                                      referrerpolicy="no-referrer"
-                                    />
-                                    <AvatarFallback>
-                                      {{ getInitials(group.name) }}
-                                    </AvatarFallback>
-                                  </template>
-                                </Avatar>
+                                />
                               </TooltipTrigger>
                               <TooltipContent>
                                 {{
@@ -339,11 +323,11 @@ onMounted(() => {
                             </Tooltip>
                           </TooltipProvider>
                         </ItemMedia>
-                        <ItemContent class="gap-0.5 truncate">
-                          <ItemTitle class="truncate">
+                        <ItemContent>
+                          <ItemTitle>
                             {{ group.name }}
                           </ItemTitle>
-                          <ItemDescription class="truncate text-xs">
+                          <ItemDescription class="text-xs">
                             {{
                               group.description ||
                               t("settings.groups.noDescription")
@@ -355,23 +339,16 @@ onMounted(() => {
                     <TableCell>
                       <div class="flex items-center gap-2">
                         <AvatarGroup v-if="group.memberIds.length > 0">
-                          <Avatar
+                          <AppAvatar
                             v-for="member in groupMembers(group).slice(
                               0,
                               AVATAR_LIMIT
                             )"
                             :key="member.userId"
                             class="size-8"
-                          >
-                            <AvatarImage
-                              v-if="member.user?.photoURL"
-                              :src="member.user.photoURL"
-                              referrerpolicy="no-referrer"
-                            />
-                            <AvatarFallback class="text-xs">
-                              {{ getInitials(memberLabel(member)) }}
-                            </AvatarFallback>
-                          </Avatar>
+                            :src="member.user?.photoURL"
+                            :name="memberLabel(member)"
+                          />
                           <AvatarGroupCount
                             v-if="group.memberIds.length > AVATAR_LIMIT"
                           >
@@ -413,7 +390,7 @@ onMounted(() => {
                                 </Button>
                               </DropdownMenuTrigger>
                             </TooltipTrigger>
-                            <DropdownMenuContent class="w-auto">
+                            <DropdownMenuContent>
                               <DropdownMenuItem @click="openEdit(group)">
                                 <IconPencil />
                                 {{ t("settings.groups.edit") }}

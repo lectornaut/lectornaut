@@ -87,7 +87,7 @@ const keepMenuOpen = (event: Event) => {
           </DropdownMenuTrigger>
         </TooltipTrigger>
         <TooltipContent>{{ t("ai.filterSessions") }}</TooltipContent>
-        <DropdownMenuContent align="end" class="w-auto">
+        <DropdownMenuContent align="end">
           <DropdownMenuLabel class="flex items-center justify-between gap-2">
             {{ t("ai.filterSessions") }}
             <Badge
@@ -126,7 +126,7 @@ const keepMenuOpen = (event: Event) => {
             <DropdownMenuSubTrigger>{{
               t("ai.filterMode")
             }}</DropdownMenuSubTrigger>
-            <DropdownMenuSubContent class="w-44">
+            <DropdownMenuSubContent>
               <DropdownMenuCheckboxItem
                 v-for="m in BOT_CHAT_MODE_VALUES"
                 :key="m"
@@ -143,7 +143,7 @@ const keepMenuOpen = (event: Event) => {
             <DropdownMenuSubTrigger>
               {{ t("ai.filterVisibility") }}
             </DropdownMenuSubTrigger>
-            <DropdownMenuSubContent class="w-44">
+            <DropdownMenuSubContent>
               <DropdownMenuCheckboxItem
                 v-for="v in BOT_CHAT_VISIBILITY_VALUES"
                 :key="v"
@@ -167,7 +167,7 @@ const keepMenuOpen = (event: Event) => {
             <DropdownMenuSubTrigger>
               {{ t("ai.groupBy") }}
             </DropdownMenuSubTrigger>
-            <DropdownMenuSubContent class="w-44">
+            <DropdownMenuSubContent>
               <DropdownMenuRadioGroup
                 :model-value="filter.state.groupBy"
                 @update:model-value="
@@ -189,7 +189,7 @@ const keepMenuOpen = (event: Event) => {
             <DropdownMenuSubTrigger>
               {{ t("ai.sortBy") }}
             </DropdownMenuSubTrigger>
-            <DropdownMenuSubContent class="w-44">
+            <DropdownMenuSubContent>
               <DropdownMenuRadioGroup
                 :model-value="filter.state.sortBy"
                 @update:model-value="

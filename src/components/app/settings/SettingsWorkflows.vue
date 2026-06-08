@@ -243,9 +243,7 @@ const rowDescription = (wf: IWorkflow): string =>
 
 <template>
   <div v-if="canViewTeamSettings" class="p-6">
-    <div v-if="isLoading" class="flex justify-center py-8">
-      <Spinner />
-    </div>
+    <LoadingState v-if="isLoading" />
     <!-- Surfaces a failed/denied live read (e.g. the workflows Firestore
            rules aren't deployed) instead of silently rendering an empty list —
            an empty `activeWorkflows` otherwise hides custom workflows AND makes

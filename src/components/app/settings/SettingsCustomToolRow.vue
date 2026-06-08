@@ -7,7 +7,6 @@ import {
   IconTrash,
 } from "@/data/icons"
 import type { ITeamCustomTool } from "@/types/domain"
-import Avatar from "vue-boring-avatars"
 
 const { t } = useI18n()
 
@@ -89,20 +88,14 @@ const onToggleEnabled = (value: boolean | string): void => {
 <template>
   <Item variant="outline" :class="{ 'opacity-70': statusBadgeKey !== null }">
     <ItemMedia variant="image" class="rounded-full">
-      <Avatar
+      <AppAvatar
         variant="marble"
         :name="avatarSeedEffective"
-        :colors="[
-          'var(--color-chart-1)',
-          'var(--color-chart-2)',
-          'var(--color-chart-3)',
-          'var(--color-chart-4)',
-          'var(--color-chart-5)',
-        ]"
+        class="size-full"
       />
     </ItemMedia>
 
-    <ItemContent class="truncate">
+    <ItemContent>
       <ItemTitle class="flex items-center gap-2 truncate">
         <span class="truncate font-mono text-sm">
           {{ titleText }}
@@ -117,7 +110,7 @@ const onToggleEnabled = (value: boolean | string): void => {
           {{ t("settings.agents.customTools.archivedBadge") }}
         </Badge>
       </ItemTitle>
-      <ItemDescription v-if="description" class="truncate text-xs">
+      <ItemDescription v-if="description" class="text-xs">
         {{ description }}
       </ItemDescription>
     </ItemContent>

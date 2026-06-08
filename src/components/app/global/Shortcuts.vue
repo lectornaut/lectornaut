@@ -295,7 +295,7 @@ const isEditing = (shortcut: Shortcut): boolean =>
                   size="xs"
                 >
                   <ItemContent>
-                    <ItemDescription>
+                    <ItemDescription class="text-xs">
                       <span class="grid grid-cols-1">
                         <span class="truncate">
                           <span

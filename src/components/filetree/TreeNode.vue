@@ -416,7 +416,7 @@ useHotkeys(
                 <IconMoreHorizontal />
               </SidebarMenuAction>
             </DropdownMenuTrigger>
-            <DropdownMenuContent class="w-auto">
+            <DropdownMenuContent>
               <template v-if="!node.isArchived">
                 <DropdownMenuItem @click="emit('create-folder', node)">
                   <IconFolderPlus />
@@ -551,7 +551,7 @@ useHotkeys(
               <IconMoreHorizontal />
             </SidebarMenuAction>
           </DropdownMenuTrigger>
-          <DropdownMenuContent class="w-auto">
+          <DropdownMenuContent>
             <DropdownMenuItem
               :disabled="node.isArchived"
               @click="emit('rename', node)"

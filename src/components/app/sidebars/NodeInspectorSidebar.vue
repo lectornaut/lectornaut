@@ -12,7 +12,7 @@ const { t } = useI18n()
 </script>
 
 <template>
-  <Sidebar collapsible="none" class="size-full">
+  <Sidebar collapsible="none" class="w-full">
     <Tabs default-value="bot" class="min-h-0 min-w-0 grow gap-0">
       <TabsList
         class="no-scrollbar m-2 w-[-webkit-fill-available] shrink-0 justify-start overflow-x-auto"

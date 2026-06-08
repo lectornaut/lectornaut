@@ -78,7 +78,7 @@ const {
           </Field>
 
           <Field orientation="horizontal">
-            <FieldContent class="min-w-0">
+            <FieldContent>
               <div class="flex flex-wrap items-center gap-2">
                 <Popover>
                   <PopoverTrigger as-child>
@@ -115,7 +115,7 @@ const {
                       </template>
                     </Button>
                   </PopoverTrigger>
-                  <PopoverContent align="start" class="w-72">
+                  <PopoverContent align="start">
                     <WorkflowRunFilter
                       :groups="workflowGroups"
                       :selected-ids="selectedWorkflowIds"
@@ -133,7 +133,7 @@ const {
           </Field>
 
           <Field orientation="horizontal">
-            <FieldContent class="min-w-0">
+            <FieldContent>
               <DataTable
                 ref="tableRef"
                 :data="allRows"

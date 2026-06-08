@@ -421,7 +421,7 @@ const closeTab = (id: string) => {
                     </div>
                   </ResizablePanel>
                 </ContextMenuTrigger>
-                <ContextMenuContent class="w-auto">
+                <ContextMenuContent>
                   <ContextMenuItem @click="leftPanel?.collapse()">
                     <IconX /> {{ t("tooltips.closePanel") }}
                   </ContextMenuItem>
@@ -506,7 +506,7 @@ const closeTab = (id: string) => {
                         </div>
                       </ResizablePanel>
                     </ContextMenuTrigger>
-                    <ContextMenuContent class="w-auto">
+                    <ContextMenuContent>
                       <ContextMenuItem @click="router.go(0)">
                         <IconRefreshCcw /> {{ t("actions.refresh") }}
                       </ContextMenuItem>
@@ -710,7 +710,6 @@ const closeTab = (id: string) => {
                                   v-for="tab in source"
                                   :key="tab.id"
                                   :value="tab.id"
-                                  class="size-full"
                                 >
                                   <Terminal />
                                 </TabsContent>
@@ -744,7 +743,7 @@ const closeTab = (id: string) => {
                         </Tabs>
                       </ResizablePanel>
                     </ContextMenuTrigger>
-                    <ContextMenuContent class="w-auto">
+                    <ContextMenuContent>
                       <ContextMenuItem
                         @click="
                           topPanel?.isCollapsed
@@ -835,7 +834,7 @@ const closeTab = (id: string) => {
                     </div>
                   </ResizablePanel>
                 </ContextMenuTrigger>
-                <ContextMenuContent class="w-auto">
+                <ContextMenuContent>
                   <ContextMenuItem @click="rightPanel?.collapse()">
                     <IconX /> {{ t("layouts.app.panel.close") }}
                   </ContextMenuItem>
@@ -954,7 +953,7 @@ const closeTab = (id: string) => {
                       </div>
                     </Draggable>
                   </ContextMenuTrigger>
-                  <ContextMenuContent class="w-auto">
+                  <ContextMenuContent>
                     <ContextMenuItem
                       @click="isPoppedOutMinimized = !isPoppedOutMinimized"
                     >

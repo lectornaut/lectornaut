@@ -7,7 +7,6 @@ import {
   IconSettings,
   IconUsers,
 } from "@/data/icons"
-import { getInitials } from "@/helpers/utilities"
 import { firestore } from "@/modules/firebase"
 import { emitter } from "@/modules/mitt"
 import { doc } from "firebase/firestore"
@@ -50,17 +49,11 @@ const {
       class="aspect-video max-h-40 w-full border bg-[repeating-linear-gradient(45deg,var(--color-muted)_0,var(--color-muted)_1px,transparent_0,transparent_50%)] bg-size-[8px_8px]"
     ></div>
     <div class="bg-background -mt-10border mx-auto p-1">
-      <Avatar class="size-20">
-        <AvatarImage
-          class="size-20"
-          :src="user?.photoURL!"
-          :alt="user?.displayName"
-          referrerpolicy="no-referrer"
-        />
-        <AvatarFallback class="size-20">
-          {{ getInitials(user?.displayName!) }}
-        </AvatarFallback>
-      </Avatar>
+      <AppAvatar
+        class="size-20"
+        :src="user?.photoURL"
+        :name="user?.displayName"
+      />
     </div>
   </div>
   <div
@@ -103,9 +96,7 @@ const {
     </div>
   </div>
   <div class="mx-auto flex w-full max-w-md flex-col gap-2 p-2">
-    <div v-if="isTeamsLoading" class="flex justify-center p-4">
-      <Spinner />
-    </div>
+    <LoadingState v-if="isTeamsLoading" />
     <ItemGroup
       v-else-if="memberships.length > 0"
       class="grid grid-cols-1 gap-2"
@@ -113,22 +104,16 @@ const {
       <Item v-for="membership in memberships" :key="membership.teamId" as-child>
         <RouterLink :to="`/teams/${membership.teamId}`">
           <ItemMedia>
-            <Avatar>
-              <AvatarImage
-                :src="membership.team.photoURL!"
-                :alt="membership.team.name"
-                referrerpolicy="no-referrer"
-              />
-              <AvatarFallback>
-                {{ getInitials(membership.team.name) }}
-              </AvatarFallback>
-            </Avatar>
+            <AppAvatar
+              :src="membership.team.photoURL"
+              :name="membership.team.name"
+            />
           </ItemMedia>
-          <ItemContent class="gap-0.5 truncate">
-            <ItemTitle class="truncate">
+          <ItemContent>
+            <ItemTitle>
               {{ membership.team.name }}
             </ItemTitle>
-            <ItemDescription class="truncate text-xs">
+            <ItemDescription class="text-xs">
               {{
                 t("pages.teams.memberCount", {
                   count: getTeamMemberCount(membership.teamId),

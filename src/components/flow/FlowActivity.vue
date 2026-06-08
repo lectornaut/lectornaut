@@ -252,7 +252,7 @@ const formatDate = (
               <PopoverContent class="grid w-full">
                 <div class="p-2">
                   <Select v-model="range">
-                    <SelectTrigger class="w-full">
+                    <SelectTrigger>
                       <SelectValue
                         :placeholder="t('components.flow.activity.select')"
                       />

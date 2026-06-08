@@ -58,8 +58,8 @@ const accordionItems = computed(() => [
             </AccordionItem>
           </Accordion>
           <DrawerFooter class="mb-safe-bottom">
-            <Button class="w-full" as-child>
-              <RouterLink to="/enter" class="w-full">
+            <Button as-child>
+              <RouterLink to="/enter">
                 {{ t("landing.faq.enter") }}
               </RouterLink>
             </Button>

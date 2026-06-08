@@ -8,7 +8,6 @@ import {
 import { usePhotoUpload } from "@/composables/usePhotoUpload"
 import { useWorkspaceActions } from "@/composables/useWorkspaceActions"
 import { IconGroup, IconUsers, IconX, IconUsersRound } from "@/data/icons"
-import { getInitials } from "@/helpers/utilities"
 import { useMembershipStore } from "@/stores/membershipStore"
 import { useTeamGroupsStore } from "@/stores/teamGroupsStore"
 import type { IWorkspace } from "@/types/domain"
@@ -494,7 +493,7 @@ const handleSubmit = async () => {
     <DialogTrigger as-child>
       <slot name="trigger" />
     </DialogTrigger>
-    <DialogContent class="w-md max-w-fit">
+    <DialogContent class="w-2xl max-w-fit">
       <DialogHeader>
         <DialogTitle>
           {{
@@ -524,30 +523,26 @@ const handleSubmit = async () => {
                 <Tooltip>
                   <TooltipTrigger as-child>
                     <div
-                      :class="{
-                        'cursor-not-allowed opacity-50':
-                          (!canCreateWorkspace && mode === 'create') ||
-                          (!canEditThisWorkspace && mode === 'edit'),
-                      }"
+                      :class="[
+                        'bg-secondary rounded-full p-3',
+                        {
+                          'cursor-not-allowed opacity-50':
+                            (!canCreateWorkspace && mode === 'create') ||
+                            (!canEditThisWorkspace && mode === 'edit'),
+                        },
+                      ]"
                     >
-                      <Avatar
+                      <AppAvatar
                         class="size-16"
                         :class="{
                           'cursor-pointer':
                             (canCreateWorkspace && mode === 'create') ||
                             (canEditThisWorkspace && mode === 'edit'),
                         }"
+                        :src="photoPreview"
+                        :name="workspaceName"
                         @click="triggerWorkspacePhotoSelection"
-                      >
-                        <AvatarImage
-                          class="size-16"
-                          :src="photoPreview!"
-                          referrerpolicy="no-referrer"
-                        />
-                        <AvatarFallback class="size-16">
-                          {{ getInitials(workspaceName) }}
-                        </AvatarFallback>
-                      </Avatar>
+                      />
                     </div>
                   </TooltipTrigger>
                   <TooltipContent
@@ -576,7 +571,7 @@ const handleSubmit = async () => {
                   <TooltipTrigger as-child>
                     <Button
                       variant="secondary"
-                      class="ring-background absolute -top-2 -right-2 size-4 opacity-0 ring-2 transition group-hover:opacity-100"
+                      class="ring-background absolute top-1 right-1 size-4 opacity-0 ring-2 transition group-hover:opacity-100"
                       size="icon"
                       @click.stop="removePhoto"
                     >
@@ -589,13 +584,6 @@ const handleSubmit = async () => {
                 </Tooltip>
               </TooltipProvider>
             </div>
-            <p>
-              {{
-                photoPreview
-                  ? t("components.workspaceDialog.clickToChange")
-                  : t("components.workspaceDialog.clickToUpload")
-              }}
-            </p>
           </div>
         </Field>
 
@@ -698,10 +686,8 @@ const handleSubmit = async () => {
             </TabsList>
 
             <!-- Member access -->
-            <TabsContent value="members">
-              <div v-if="rolesLoading" class="flex justify-center py-4">
-                <Spinner />
-              </div>
+            <TabsContent value="members" class="bg-secondary rounded-2xl p-3">
+              <LoadingState v-if="rolesLoading" />
               <template v-else>
                 <Empty
                   v-if="humanMembers.length === 0"
@@ -724,23 +710,17 @@ const handleSubmit = async () => {
                     class="p-0"
                   >
                     <ItemMedia>
-                      <Avatar>
-                        <AvatarImage
-                          v-if="member.user?.photoURL"
-                          :src="member.user.photoURL"
-                          referrerpolicy="no-referrer"
-                        />
-                        <AvatarFallback>
-                          {{ getInitials(memberLabel(member)) }}
-                        </AvatarFallback>
-                      </Avatar>
+                      <AppAvatar
+                        :src="member.user?.photoURL"
+                        :name="memberLabel(member)"
+                      />
                     </ItemMedia>
-                    <ItemContent class="gap-0.5">
+                    <ItemContent class="truncate">
                       <ItemTitle>
                         <span class="truncate">{{ memberLabel(member) }}</span>
                         <span
                           v-if="currentAuthUser?.uid === member.userId"
-                          class="text-muted-foreground font-normal"
+                          class="text-muted-foreground"
                         >
                           ({{ t("components.workspaceDialog.roles.you") }})
                         </span>
@@ -750,27 +730,24 @@ const handleSubmit = async () => {
                           member.user?.email &&
                           member.user.email !== memberLabel(member)
                         "
-                        class="truncate text-xs"
+                        class="text-xs"
                       >
                         {{ member.user.email }}
                       </ItemDescription>
                     </ItemContent>
                     <ItemActions>
-                      <ButtonGroup>
-                        <Select
-                          v-if="isWorkspaceMember(member.userId)"
-                          :model-value="memberRoleValue(member)"
-                          :disabled="isLoading"
-                          @update:model-value="
-                            (value) =>
-                              handleUserRoleChange(
-                                member.userId,
-                                value as string
-                              )
-                          "
-                        >
-                          <SelectTrigger class="w-28">
-                            <SelectValue placeholder="—" />
+                      <Select
+                        v-if="isWorkspaceMember(member.userId)"
+                        :model-value="memberRoleValue(member)"
+                        :disabled="isLoading"
+                        @update:model-value="
+                          (value) =>
+                            handleUserRoleChange(member.userId, value as string)
+                        "
+                      >
+                        <Button variant="outline" as-child>
+                          <SelectTrigger>
+                            <SelectValue />
                             <TooltipProvider
                               v-if="
                                 isWorkspaceMember(member.userId) &&
@@ -779,10 +756,7 @@ const handleSubmit = async () => {
                             >
                               <Tooltip>
                                 <TooltipTrigger as-child>
-                                  <InputGroupButton
-                                    size="icon-xs"
-                                    class="-mr-2"
-                                  >
+                                  <InputGroupButton size="icon-xs">
                                     <IconUsersRound />
                                   </InputGroupButton>
                                 </TooltipTrigger>
@@ -803,46 +777,47 @@ const handleSubmit = async () => {
                               </Tooltip>
                             </TooltipProvider>
                           </SelectTrigger>
-                          <SelectContent>
-                            <SelectGroup>
-                              <SelectItem
-                                v-for="role in assignableRoles"
-                                :key="role"
-                                :value="role"
-                              >
-                                {{ t(`settings.members.roles.${role}`) }}
-                              </SelectItem>
-                            </SelectGroup>
-                          </SelectContent>
-                        </Select>
-                        <TooltipProvider>
-                          <!-- Workspace access toggle. Off = excluded (no access),
-                         which hides the role select + provenance tag. -->
-                          <Tooltip>
-                            <TooltipTrigger as-child>
-                              <Button variant="outline">
-                                <Switch
-                                  :model-value="
-                                    isWorkspaceMember(member.userId)
-                                  "
-                                  :disabled="
-                                    isLoading || isParticipationLocked(member)
-                                  "
-                                  @update:model-value="
-                                    (value) =>
-                                      handleMemberToggle(member, value === true)
-                                  "
-                                />
-                              </Button>
-                            </TooltipTrigger>
-                            <TooltipContent
-                              v-if="isParticipationLocked(member)"
+                        </Button>
+                        <SelectContent>
+                          <SelectGroup>
+                            <SelectItem
+                              v-for="role in assignableRoles"
+                              :key="role"
+                              :value="role"
                             >
-                              {{ t(participationLockReason(member)) }}
-                            </TooltipContent>
-                          </Tooltip>
-                        </TooltipProvider>
-                      </ButtonGroup>
+                              {{ t(`settings.members.roles.${role}`) }}
+                            </SelectItem>
+                          </SelectGroup>
+                        </SelectContent>
+                      </Select>
+                      <TooltipProvider>
+                        <!-- Workspace access toggle. Off = excluded (no access),
+                         which hides the role select + provenance tag. -->
+                        <Tooltip>
+                          <TooltipTrigger as-child>
+                            <Button
+                              variant="outline"
+                              size="icon"
+                              :disabled="isLoading"
+                            >
+                              <Checkbox
+                                :model-value="isWorkspaceMember(member.userId)"
+                                :disabled="
+                                  isLoading || isParticipationLocked(member)
+                                "
+                                class="rounded-full border-none opacity-100! disabled:opacity-25! data-[state=checked]:bg-transparent"
+                                @update:model-value="
+                                  (value) =>
+                                    handleMemberToggle(member, value === true)
+                                "
+                              />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent v-if="isParticipationLocked(member)">
+                            {{ t(participationLockReason(member)) }}
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
                     </ItemActions>
                   </Item>
                 </ItemGroup>
@@ -850,10 +825,8 @@ const handleSubmit = async () => {
             </TabsContent>
 
             <!-- Group access -->
-            <TabsContent value="groups">
-              <div v-if="groupRolesLoading" class="flex justify-center py-4">
-                <Spinner />
-              </div>
+            <TabsContent value="groups" class="bg-secondary rounded-2xl p-3">
+              <LoadingState v-if="groupRolesLoading" />
               <template v-else>
                 <Empty
                   v-if="teamGroups.length === 0"
@@ -876,23 +849,13 @@ const handleSubmit = async () => {
                     class="p-0"
                   >
                     <ItemMedia>
-                      <Avatar>
-                        <AvatarImage
-                          v-if="group.photoURL"
-                          :src="group.photoURL"
-                          :alt="group.name"
-                          referrerpolicy="no-referrer"
-                        />
-                        <AvatarFallback>
-                          {{ getInitials(group.name) }}
-                        </AvatarFallback>
-                      </Avatar>
+                      <AppAvatar :src="group.photoURL" :name="group.name" />
                     </ItemMedia>
-                    <ItemContent class="gap-0.5">
+                    <ItemContent>
                       <ItemTitle>
                         <span class="truncate">{{ group.name }}</span>
                       </ItemTitle>
-                      <ItemDescription class="truncate text-xs">
+                      <ItemDescription class="text-xs">
                         {{
                           t("settings.groups.memberCount", {
                             count: group.memberIds.length,
@@ -901,45 +864,50 @@ const handleSubmit = async () => {
                       </ItemDescription>
                     </ItemContent>
                     <ItemActions>
-                      <ButtonGroup>
-                        <!-- Role select only matters while access is granted, so
+                      <!-- Role select only matters while access is granted, so
                              it hides when the switch is off. -->
-                        <Select
-                          v-if="workspaceGroupGrants[group.id]"
-                          :model-value="workspaceGroupGrants[group.id]"
+                      <Select
+                        v-if="workspaceGroupGrants[group.id]"
+                        :model-value="workspaceGroupGrants[group.id]"
+                        :disabled="isLoading"
+                        @update:model-value="
+                          (value) =>
+                            handleGroupRoleChange(group.id, value as string)
+                        "
+                      >
+                        <Button variant="outline" as-child>
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                        </Button>
+                        <SelectContent>
+                          <SelectGroup>
+                            <SelectItem
+                              v-for="role in assignableRoles"
+                              :key="role"
+                              :value="role"
+                            >
+                              {{ t(`settings.members.roles.${role}`) }}
+                            </SelectItem>
+                          </SelectGroup>
+                        </SelectContent>
+                      </Select>
+                      <!-- Access grant toggle. Off = no access (hides role). -->
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        :disabled="isLoading"
+                      >
+                        <Checkbox
+                          :model-value="!!workspaceGroupGrants[group.id]"
                           :disabled="isLoading"
+                          class="rounded-full border-none opacity-100! disabled:opacity-25! data-[state=checked]:bg-transparent"
                           @update:model-value="
                             (value) =>
-                              handleGroupRoleChange(group.id, value as string)
+                              handleGroupGrantToggle(group.id, value === true)
                           "
-                        >
-                          <SelectTrigger class="w-28">
-                            <SelectValue placeholder="—" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectGroup>
-                              <SelectItem
-                                v-for="role in assignableRoles"
-                                :key="role"
-                                :value="role"
-                              >
-                                {{ t(`settings.members.roles.${role}`) }}
-                              </SelectItem>
-                            </SelectGroup>
-                          </SelectContent>
-                        </Select>
-                        <!-- Access grant toggle. Off = no access (hides role). -->
-                        <Button variant="outline">
-                          <Switch
-                            :model-value="!!workspaceGroupGrants[group.id]"
-                            :disabled="isLoading"
-                            @update:model-value="
-                              (value) =>
-                                handleGroupGrantToggle(group.id, value === true)
-                            "
-                          />
-                        </Button>
-                      </ButtonGroup>
+                        />
+                      </Button>
                     </ItemActions>
                   </Item>
                 </ItemGroup>

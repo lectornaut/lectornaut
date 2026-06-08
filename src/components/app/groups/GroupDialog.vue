@@ -1,7 +1,6 @@
 <script lang="ts" setup>
 import { usePhotoUpload } from "@/composables/usePhotoUpload"
 import { IconUsers, IconX } from "@/data/icons"
-import { getInitials } from "@/helpers/utilities"
 import { useMembershipStore } from "@/stores/membershipStore"
 import { useTeamGroupsStore } from "@/stores/teamGroupsStore"
 import type { IGroup } from "@/types/domain"
@@ -166,7 +165,7 @@ const handleSubmit = async () => {
 
 <template>
   <Dialog v-model:open="isOpen">
-    <DialogContent class="w-md max-w-fit">
+    <DialogContent class="w-2xl max-w-fit">
       <DialogHeader>
         <DialogTitle>
           {{
@@ -195,19 +194,14 @@ const handleSubmit = async () => {
               <TooltipProvider>
                 <Tooltip>
                   <TooltipTrigger as-child>
-                    <Avatar
-                      class="size-16 cursor-pointer"
-                      @click="triggerGroupPhotoSelection"
-                    >
-                      <AvatarImage
+                    <div class="bg-secondary cursor-pointer rounded-full p-3">
+                      <AppAvatar
                         class="size-16"
-                        :src="photoPreview!"
-                        referrerpolicy="no-referrer"
+                        :src="photoPreview"
+                        :name="groupName"
+                        @click="triggerGroupPhotoSelection"
                       />
-                      <AvatarFallback class="size-16">
-                        {{ getInitials(groupName) }}
-                      </AvatarFallback>
-                    </Avatar>
+                    </div>
                   </TooltipTrigger>
                   <TooltipContent>
                     {{ t("components.groupDialog.uploadPhoto") }}
@@ -217,7 +211,7 @@ const handleSubmit = async () => {
                   <TooltipTrigger as-child>
                     <Button
                       variant="secondary"
-                      class="ring-background absolute -top-2 -right-2 size-4 opacity-0 ring-2 transition group-hover:opacity-100"
+                      class="ring-background absolute top-1 right-1 size-4 opacity-0 ring-2 transition group-hover:opacity-100"
                       size="icon"
                       @click.stop="removePhoto"
                     >
@@ -230,13 +224,6 @@ const handleSubmit = async () => {
                 </Tooltip>
               </TooltipProvider>
             </div>
-            <p>
-              {{
-                photoPreview
-                  ? t("components.groupDialog.clickToChange")
-                  : t("components.groupDialog.clickToUpload")
-              }}
-            </p>
           </div>
         </Field>
 
@@ -283,11 +270,17 @@ const handleSubmit = async () => {
                   count: selectedIds.size,
                 })
               }}
+              <!-- Blast-radius cue (edit mode) -->
+              <template v-if="mode === 'edit' && usageCount > 0">
+                /
+                {{
+                  t("components.groupDialog.usedInWorkspaces", {
+                    count: usageCount,
+                  })
+                }}
+              </template>
             </span>
           </div>
-          <p class="text-muted-foreground text-xs">
-            {{ t("components.groupDialog.membersHint") }}
-          </p>
           <Input
             v-model="search"
             :placeholder="t('components.groupDialog.searchPlaceholder')"
@@ -305,28 +298,23 @@ const handleSubmit = async () => {
               </EmptyTitle>
             </EmptyHeader>
           </Empty>
-          <ItemGroup class="max-h-56 overflow-y-auto">
+          <ItemGroup
+            class="bg-secondary max-h-56 overflow-y-auto rounded-2xl p-3"
+          >
             <Item
               v-for="member in filteredMembers"
               :key="member.userId"
-              as="label"
               size="sm"
-              class="hover:bg-muted/50 cursor-pointer"
+              class="p-0"
             >
               <ItemMedia>
-                <Avatar class="size-7">
-                  <AvatarImage
-                    v-if="member.user?.photoURL"
-                    :src="member.user.photoURL"
-                    referrerpolicy="no-referrer"
-                  />
-                  <AvatarFallback class="text-xs">
-                    {{ getInitials(memberLabel(member)) }}
-                  </AvatarFallback>
-                </Avatar>
+                <AppAvatar
+                  :src="member.user?.photoURL"
+                  :name="memberLabel(member)"
+                />
               </ItemMedia>
-              <ItemContent class="gap-0.5 truncate">
-                <ItemTitle class="truncate">
+              <ItemContent>
+                <ItemTitle>
                   {{ memberLabel(member) }}
                 </ItemTitle>
                 <ItemDescription
@@ -334,32 +322,26 @@ const handleSubmit = async () => {
                     member.user?.email &&
                     member.user.email !== memberLabel(member)
                   "
-                  class="truncate text-xs"
+                  class="text-xs"
                 >
                   {{ member.user.email }}
                 </ItemDescription>
               </ItemContent>
               <ItemActions>
-                <Checkbox
-                  :model-value="isSelected(member.userId)"
-                  @update:model-value="
-                    (value) => toggleMember(member.userId, value === true)
-                  "
-                />
+                <Button variant="outline" size="icon" :disabled="isSaving">
+                  <Checkbox
+                    :model-value="isSelected(member.userId)"
+                    :disabled="isSaving"
+                    class="rounded-full border-none opacity-100! disabled:opacity-25! data-[state=checked]:bg-transparent"
+                    @update:model-value="
+                      (value) => toggleMember(member.userId, value === true)
+                    "
+                  />
+                </Button>
               </ItemActions>
             </Item>
           </ItemGroup>
         </Field>
-
-        <!-- Blast-radius cue (edit mode) -->
-        <p
-          v-if="mode === 'edit' && usageCount > 0"
-          class="text-muted-foreground text-xs"
-        >
-          {{
-            t("components.groupDialog.usedInWorkspaces", { count: usageCount })
-          }}
-        </p>
       </div>
 
       <DialogFooter>

@@ -134,9 +134,9 @@ const errorMessage = computed(
               >
                 <Component :is="syncIcon" class="size-4" />
               </ItemMedia>
-              <ItemContent class="gap-0.5 truncate">
-                <ItemTitle class="truncate">{{ syncTitle }}</ItemTitle>
-                <ItemDescription class="truncate text-xs">
+              <ItemContent>
+                <ItemTitle>{{ syncTitle }}</ItemTitle>
+                <ItemDescription class="text-xs">
                   {{ syncDescription }}
                 </ItemDescription>
               </ItemContent>

@@ -14,7 +14,6 @@ import type {
 } from "@/types/domain"
 import { storeToRefs } from "pinia"
 import { onBeforeUnmount, onMounted } from "vue"
-import Avatar from "vue-boring-avatars"
 
 const { t } = useI18n()
 
@@ -649,19 +648,11 @@ const handleEditorSave = async (): Promise<void> => {
                 <div class="flex flex-col gap-4 p-4">
                   <!-- Identity (avatar + name + description) -->
                   <div class="flex items-center gap-3">
-                    <div class="size-10 shrink-0 overflow-hidden rounded-full">
-                      <Avatar
-                        variant="beam"
-                        :name="effectiveAvatarSeed"
-                        :colors="[
-                          'var(--color-chart-1)',
-                          'var(--color-chart-2)',
-                          'var(--color-chart-3)',
-                          'var(--color-chart-4)',
-                          'var(--color-chart-5)',
-                        ]"
-                      />
-                    </div>
+                    <AppAvatar
+                      variant="beam"
+                      :name="effectiveAvatarSeed"
+                      class="size-10 shrink-0"
+                    />
                     <div class="min-w-0">
                       <p class="truncate text-sm font-medium">
                         {{
@@ -792,19 +783,11 @@ const handleEditorSave = async (): Promise<void> => {
                 enough (pure-SVG portrait) that this is fine.
               -->
                   <div class="flex items-center gap-3">
-                    <div class="size-10 shrink-0 overflow-hidden rounded-full">
-                      <Avatar
-                        variant="beam"
-                        :name="effectiveAvatarSeed"
-                        :colors="[
-                          'var(--color-chart-1)',
-                          'var(--color-chart-2)',
-                          'var(--color-chart-3)',
-                          'var(--color-chart-4)',
-                          'var(--color-chart-5)',
-                        ]"
-                      />
-                    </div>
+                    <AppAvatar
+                      variant="beam"
+                      :name="effectiveAvatarSeed"
+                      class="size-10 shrink-0"
+                    />
                     <Input
                       :id="`agent-avatar-seed-${editingAgent?.id ?? 'new'}`"
                       v-model="draft.avatarSeed"

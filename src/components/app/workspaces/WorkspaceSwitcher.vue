@@ -7,7 +7,6 @@ import {
   IconChevronDown,
   IconCirclePlus,
 } from "@/data/icons"
-import { getInitials } from "@/helpers/utilities"
 import { emitter } from "@/modules/mitt"
 
 const { t } = useI18n()
@@ -57,17 +56,11 @@ onUnmounted(() => {
               >
                 <div class="flex grow items-center gap-2">
                   <template v-if="currentWorkspace">
-                    <Avatar class="size-4">
-                      <AvatarImage
-                        class="size-4"
-                        :src="currentWorkspace?.photoURL!"
-                        :alt="currentWorkspace?.name!"
-                        referrerpolicy="no-referrer"
-                      />
-                      <AvatarFallback class="size-4">
-                        {{ getInitials(currentWorkspace?.name!) }}
-                      </AvatarFallback>
-                    </Avatar>
+                    <AppAvatar
+                      class="size-4"
+                      :src="currentWorkspace?.photoURL"
+                      :name="currentWorkspace?.name"
+                    />
                     <span class="truncate">
                       {{ currentWorkspace?.name! }}
                     </span>
@@ -84,12 +77,7 @@ onUnmounted(() => {
               </SidebarMenuButton>
             </DropdownMenuTrigger>
             <DropdownMenuContent>
-              <DropdownMenuGroup
-                v-if="isLoading"
-                class="flex justify-center py-2"
-              >
-                <Spinner />
-              </DropdownMenuGroup>
+              <LoadingState v-if="isLoading" />
               <DropdownMenuGroup v-else>
                 <DropdownMenuLabel v-if="workspaces.length === 0">
                   {{ t("components.workspaceSwitcher.noOtherWorkspaces") }}
@@ -99,17 +87,11 @@ onUnmounted(() => {
                   :key="workspace.id"
                   @click="switchWorkspace(workspace.id)"
                 >
-                  <Avatar class="size-4">
-                    <AvatarImage
-                      class="size-4"
-                      :src="workspace.photoURL!"
-                      :alt="workspace.name"
-                      referrerpolicy="no-referrer"
-                    />
-                    <AvatarFallback class="size-4">
-                      {{ getInitials(workspace.name) }}
-                    </AvatarFallback>
-                  </Avatar>
+                  <AppAvatar
+                    class="size-4"
+                    :src="workspace.photoURL"
+                    :name="workspace.name"
+                  />
                   <span class="truncate">
                     {{ workspace.name }}
                   </span>
@@ -147,7 +129,7 @@ onUnmounted(() => {
             </DropdownMenuContent>
           </DropdownMenu>
         </ContextMenuTrigger>
-        <ContextMenuContent class="w-auto">
+        <ContextMenuContent>
           <ContextMenuGroup>
             <ContextMenuItem
               @click="emitter.emit('Dialog.Settings.Open', 'workspaces')"

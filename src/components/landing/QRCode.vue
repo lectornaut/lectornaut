@@ -35,7 +35,6 @@ const { t } = useI18n()
         <img
           :src="`/assets/images/qr-code-${state}.svg`"
           :alt="t('components.landing.qrCode.alt')"
-          class="w-full"
         />
       </div>
     </DialogContent>

@@ -403,6 +403,11 @@ function cancelRename() {
   renamingName.value = ""
 }
 
+function handleRenameKeydown(event: KeyboardEvent) {
+  if (event.key === "Enter") saveRename()
+  else if (event.key === "Escape") cancelRename()
+}
+
 async function handleToggleTabPinned(id: string | undefined) {
   if (!id) return
   const tab = tabs.value.find((entry) => entry.id === id)
@@ -609,8 +614,7 @@ onUnmounted(() => {
                     v-model="renamingName"
                     :placeholder="tab.name"
                     class="h-fit"
-                    @keydown.enter="saveRename"
-                    @keydown.esc="cancelRename"
+                    @keydown="handleRenameKeydown"
                   />
                   <InputGroupAddon align="inline-end">
                     <TooltipProvider>
@@ -695,7 +699,7 @@ onUnmounted(() => {
                           </RouterLink>
                         </Button>
                       </ContextMenuTrigger>
-                      <ContextMenuContent class="w-auto">
+                      <ContextMenuContent>
                         <ContextMenuGroup>
                           <ContextMenuItem @click="openNewTab">
                             <IconPlus />
@@ -848,7 +852,7 @@ onUnmounted(() => {
                       </DropdownMenuTrigger>
                     </TooltipTrigger>
                     <TooltipContent> {{ t("tabs.options") }} </TooltipContent>
-                    <DropdownMenuContent class="w-auto" align="end">
+                    <DropdownMenuContent align="end">
                       <DropdownMenuGroup>
                         <DropdownMenuItem @click="openNewTab">
                           <IconPlus />
@@ -945,7 +949,7 @@ onUnmounted(() => {
                               {{ t("tabs.activeTabs") }}
                             </DropdownMenuSubTrigger>
                           </DropdownMenuItem>
-                          <DropdownMenuSubContent class="w-auto">
+                          <DropdownMenuSubContent>
                             <DropdownMenuLabel v-if="tabs.length === 0">
                               {{ t("tabs.activeTabsEmpty") }}
                             </DropdownMenuLabel>
@@ -985,7 +989,7 @@ onUnmounted(() => {
                               {{ t("tabs.recentClosedTabs") }}
                             </DropdownMenuSubTrigger>
                           </DropdownMenuItem>
-                          <DropdownMenuSubContent class="w-auto">
+                          <DropdownMenuSubContent>
                             <DropdownMenuLabel
                               v-if="recentlyClosed.length === 0"
                             >
@@ -1071,7 +1075,7 @@ onUnmounted(() => {
         </div>
       </div>
     </ContextMenuTrigger>
-    <ContextMenuContent class="w-auto">
+    <ContextMenuContent>
       <ContextMenuGroup>
         <ContextMenuItem @click="openNewTab">
           <IconPlus />

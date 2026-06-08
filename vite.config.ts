@@ -230,6 +230,9 @@ export default defineConfig({
     ViteImageOptimizer(),
     Icons({
       defaultClass: "inline-flex shrink-0 size-4",
+      iconCustomizer(collection, _icon, props) {
+        if (collection === "hugeicons") props["data-hg"] = ""
+      },
     }),
     VueI18nPlugin({
       include: resolve(

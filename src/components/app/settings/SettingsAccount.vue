@@ -918,24 +918,19 @@ const getDeviceIcon = (deviceType: string) => {
               <TooltipProvider>
                 <Tooltip>
                   <TooltipTrigger as-child>
-                    <Avatar
-                      class="flex size-10 cursor-pointer items-center justify-center"
+                    <AppAvatar
+                      class="size-10 cursor-pointer"
+                      :src="uploadError ? null : displayPhotoURL"
+                      :name="user?.displayName"
                       @click="triggerProfilePhotoUpload"
                     >
-                      <template v-if="uploadError">
-                        <IconAlertTriangle />
+                      <template #fallback>
+                        <IconAlertTriangle v-if="uploadError" />
+                        <template v-else>{{
+                          getInitials(user?.displayName!)
+                        }}</template>
                       </template>
-                      <template v-else>
-                        <AvatarImage
-                          :src="displayPhotoURL || ''"
-                          :alt="user?.displayName"
-                          referrerpolicy="no-referrer"
-                        />
-                        <AvatarFallback>
-                          {{ getInitials(user?.displayName!) }}
-                        </AvatarFallback>
-                      </template>
-                    </Avatar>
+                    </AppAvatar>
                   </TooltipTrigger>
                   <TooltipContent>
                     {{
@@ -1264,16 +1259,10 @@ const getDeviceIcon = (deviceType: string) => {
               size="xs"
             >
               <ItemMedia class="group relative">
-                <Avatar>
-                  <AvatarImage
-                    :src="provider?.photoURL!"
-                    :alt="provider?.displayName"
-                    referrerpolicy="no-referrer"
-                  />
-                  <AvatarFallback>
-                    {{ getInitials(provider.displayName!) }}
-                  </AvatarFallback>
-                </Avatar>
+                <AppAvatar
+                  :src="provider?.photoURL"
+                  :name="provider?.displayName"
+                />
                 <TooltipProvider>
                   <Tooltip>
                     <TooltipTrigger as-child>
@@ -1296,11 +1285,11 @@ const getDeviceIcon = (deviceType: string) => {
                   </Tooltip>
                 </TooltipProvider>
               </ItemMedia>
-              <ItemContent class="gap-0.5 truncate">
-                <ItemTitle class="truncate">
+              <ItemContent>
+                <ItemTitle>
                   {{ provider.displayName }}
                 </ItemTitle>
-                <ItemDescription class="truncate text-xs">
+                <ItemDescription class="text-xs">
                   {{ provider.email }}
                 </ItemDescription>
               </ItemContent>
@@ -1548,12 +1537,7 @@ const getDeviceIcon = (deviceType: string) => {
               v-if="totpStep === 'qr'"
               class="flex flex-col items-center gap-4"
             >
-              <div
-                v-if="totpLoading"
-                class="flex size-50 items-center justify-center"
-              >
-                <Spinner />
-              </div>
+              <LoadingState v-if="totpLoading" />
               <img v-else :src="totpQrDataUrl" alt="QR Code" />
               <p class="text-muted-foreground text-center text-sm">
                 {{ t("settings.account.mfa.scanQrDescription") }}
@@ -1783,11 +1767,11 @@ const getDeviceIcon = (deviceType: string) => {
               <ItemMedia>
                 <Component :is="session.deviceIcon" />
               </ItemMedia>
-              <ItemContent class="gap-0.5 truncate">
-                <ItemTitle class="truncate">
+              <ItemContent>
+                <ItemTitle>
                   {{ session.deviceName }}
                 </ItemTitle>
-                <ItemDescription class="truncate text-xs">
+                <ItemDescription class="text-xs">
                   {{ session.ip }}
                   ·
                   {{
@@ -1859,14 +1843,7 @@ const getDeviceIcon = (deviceType: string) => {
           </ItemGroup>
           <Field v-if="sessionsPending" orientation="horizontal">
             <FieldContent>
-              <Empty>
-                <EmptyHeader>
-                  <EmptyMedia variant="icon">
-                    <Spinner />
-                  </EmptyMedia>
-                  <EmptyTitle>{{ t("common.loading") }}</EmptyTitle>
-                </EmptyHeader>
-              </Empty>
+              <LoadingState :label="t('common.loading')" />
             </FieldContent>
           </Field>
           <Field v-else-if="sessionRows.length === 0" orientation="horizontal">
@@ -1937,11 +1914,18 @@ const getDeviceIcon = (deviceType: string) => {
         </FieldSet>
       </FieldGroup>
     </div>
-    <SettingsUnsavedBar
-      v-if="hasPendingChanges"
-      :saving="isSaving"
-      @discard="discardChanges"
-      @save="saveChanges"
-    />
+    <Transition
+      enter-active-class="transition duration-200 ease-out"
+      leave-active-class="transition duration-150 ease-in"
+      enter-from-class="translate-y-2 opacity-0"
+      leave-to-class="translate-y-2 opacity-0"
+    >
+      <SettingsUnsavedBar
+        v-if="hasPendingChanges"
+        :saving="isSaving"
+        @discard="discardChanges"
+        @save="saveChanges"
+      />
+    </Transition>
   </div>
 </template>

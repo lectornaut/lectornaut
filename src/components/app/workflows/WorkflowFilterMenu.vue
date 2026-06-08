@@ -63,7 +63,7 @@ const keepMenuOpen = (event: Event): void => {
           </DropdownMenuTrigger>
         </TooltipTrigger>
         <TooltipContent>{{ t("pages.workflows.filter") }}</TooltipContent>
-        <DropdownMenuContent align="end" class="w-auto">
+        <DropdownMenuContent align="end">
           <DropdownMenuLabel class="flex items-center justify-between gap-2">
             {{ t("pages.workflows.filter") }}
             <Badge
@@ -80,7 +80,7 @@ const keepMenuOpen = (event: Event): void => {
             <DropdownMenuSubTrigger>{{
               t("settings.workflows.trigger")
             }}</DropdownMenuSubTrigger>
-            <DropdownMenuSubContent class="w-44">
+            <DropdownMenuSubContent>
               <DropdownMenuCheckboxItem
                 v-for="tr in WORKFLOW_TRIGGER_VALUES"
                 :key="tr"
@@ -97,7 +97,7 @@ const keepMenuOpen = (event: Event): void => {
             <DropdownMenuSubTrigger>{{
               t("pages.workflows.status")
             }}</DropdownMenuSubTrigger>
-            <DropdownMenuSubContent class="w-44">
+            <DropdownMenuSubContent>
               <DropdownMenuCheckboxItem
                 v-for="s in WORKFLOW_STATUS_VALUES"
                 :key="s"
@@ -116,7 +116,7 @@ const keepMenuOpen = (event: Event): void => {
             <DropdownMenuSubTrigger>{{
               t("ai.groupBy")
             }}</DropdownMenuSubTrigger>
-            <DropdownMenuSubContent class="w-44">
+            <DropdownMenuSubContent>
               <DropdownMenuRadioGroup
                 :model-value="filter.state.groupBy"
                 @update:model-value="
@@ -138,7 +138,7 @@ const keepMenuOpen = (event: Event): void => {
             <DropdownMenuSubTrigger>{{
               t("ai.sortBy")
             }}</DropdownMenuSubTrigger>
-            <DropdownMenuSubContent class="w-44">
+            <DropdownMenuSubContent>
               <DropdownMenuRadioGroup
                 :model-value="filter.state.sortBy"
                 @update:model-value="

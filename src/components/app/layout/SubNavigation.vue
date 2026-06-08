@@ -129,7 +129,7 @@ onMounted(() => {
           </BreadcrumbList>
         </Breadcrumb>
       </ContextMenuTrigger>
-      <ContextMenuContent class="w-auto">
+      <ContextMenuContent>
         <ContextMenuItem @click="router.go(0)">
           <IconRefreshCcw /> Refresh
         </ContextMenuItem>

@@ -199,7 +199,7 @@ const submitDelete = async () => {
           <Component :is="modeIcons[activeMode]" />
           {{ t("ai.mode") }}
         </SidebarGroupLabel>
-        <SidebarGroupContent class="space-y-2 p-2">
+        <SidebarGroupContent>
           <p class="text-muted-foreground text-xs">
             {{ t("ai.sidebar.modeDescription") }}
           </p>
@@ -240,7 +240,7 @@ const submitDelete = async () => {
           <IconGlobe v-else />
           {{ t("ai.sidebar.visibility") }}
         </SidebarGroupLabel>
-        <SidebarGroupContent class="space-y-2 p-2">
+        <SidebarGroupContent>
           <p v-if="!sessionId" class="text-muted-foreground text-xs">
             {{ t("ai.sidebar.noSessionVisibility") }}
           </p>

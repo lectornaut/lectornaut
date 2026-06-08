@@ -250,7 +250,7 @@ const handleFinalStepAction = async () => {
       class="h-full min-h-auto overflow-auto overscroll-none scroll-smooth"
       :default-open="true"
     >
-      <Sidebar collapsible="none">
+      <Sidebar collapsible="none" class="w-full">
         <SidebarContent>
           <SidebarGroup>
             <SidebarGroupLabel>

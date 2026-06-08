@@ -1,7 +1,7 @@
 <script lang="ts" setup>
 import DataTableColumnHeader from "@/components/table/DataTableColumnHeader.vue"
 import SettingsSessionsRowActions from "@/components/app/settings/SettingsSessionsRowActions.vue"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import AppAvatar from "@/components/app/global/AppAvatar.vue"
 import { Badge } from "@/components/ui/badge"
 import { Checkbox } from "@/components/ui/checkbox"
 import type { BotChatMode } from "@/composables/useFunctions"
@@ -17,7 +17,6 @@ import {
   IconUsers,
   IconX,
 } from "@/data/icons"
-import { getInitials } from "@/helpers/utilities"
 import { useMembershipStore } from "@/stores/membershipStore"
 import type { IBotSession, IBotSessionVisibility } from "@/types/domain"
 import { isUserMembership, type IMembership } from "@/types/membership"
@@ -324,16 +323,11 @@ const columns = computed<ColumnDef<IBotSession>[]>(() => [
       const member = uid ? memberByUid.value.get(uid) : undefined
       const name = memberName(uid)
       return h("div", { class: "flex min-w-0 items-center gap-2" }, [
-        h(Avatar, { class: "size-6 shrink-0" }, () => [
-          member?.user?.photoURL
-            ? h(AvatarImage, {
-                src: member.user.photoURL,
-                alt: name,
-                referrerpolicy: "no-referrer",
-              })
-            : null,
-          h(AvatarFallback, { class: "text-xs" }, () => getInitials(name)),
-        ]),
+        h(AppAvatar, {
+          class: "size-6 shrink-0",
+          src: member?.user?.photoURL,
+          name,
+        }),
         h("span", { class: "truncate text-sm" }, name),
       ])
     },
@@ -654,15 +648,11 @@ const submitDelete = async () => {
           </Field>
 
           <Field orientation="horizontal">
-            <FieldContent class="min-w-0">
-              <Empty v-if="isLoading && sessions.length === 0">
-                <EmptyHeader>
-                  <EmptyMedia variant="icon">
-                    <Spinner />
-                  </EmptyMedia>
-                  <EmptyTitle>{{ $t("common.loading") }}</EmptyTitle>
-                </EmptyHeader>
-              </Empty>
+            <FieldContent>
+              <LoadingState
+                v-if="isLoading && sessions.length === 0"
+                :label="$t('common.loading')"
+              />
               <Empty
                 v-else-if="sessions.length === 0"
                 class="border border-dashed"

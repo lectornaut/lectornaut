@@ -40,7 +40,7 @@ const { t } = useI18n()
                 </RouterLink>
               </Button>
             </ContextMenuTrigger>
-            <ContextMenuContent class="w-auto">
+            <ContextMenuContent>
               <ContextMenuItem>
                 <IconAiFill />
                 {{ t("landing.header.copyIcon") }}
@@ -337,8 +337,8 @@ const { t } = useI18n()
                                         />
                                       </div>
                                     </ItemMedia>
-                                    <ItemContent class="gap-0.5 truncate">
-                                      <ItemTitle class="truncate">
+                                    <ItemContent>
+                                      <ItemTitle>
                                         {{
                                           t(
                                             "landing.menu.items." +
@@ -347,9 +347,7 @@ const { t } = useI18n()
                                           )
                                         }}
                                       </ItemTitle>
-                                      <ItemDescription
-                                        class="line-clamp-2 text-xs"
-                                      >
+                                      <ItemDescription class="text-xs">
                                         {{
                                           t(
                                             "landing.menu.items." +
@@ -403,13 +401,11 @@ const { t } = useI18n()
                                           />
                                         </div>
                                       </ItemMedia>
-                                      <ItemContent class="gap-0.5 truncate">
-                                        <ItemTitle class="truncate">
+                                      <ItemContent>
+                                        <ItemTitle>
                                           {{ item.title }}
                                         </ItemTitle>
-                                        <ItemDescription
-                                          class="line-clamp-2 text-xs"
-                                        >
+                                        <ItemDescription class="text-xs">
                                           {{ item.description }}
                                         </ItemDescription>
                                       </ItemContent>
@@ -443,13 +439,11 @@ const { t } = useI18n()
                                         />
                                       </div>
                                     </ItemMedia>
-                                    <ItemContent class="gap-0.5 truncate">
-                                      <ItemTitle class="truncate">
+                                    <ItemContent>
+                                      <ItemTitle>
                                         {{ item.title }}
                                       </ItemTitle>
-                                      <ItemDescription
-                                        class="line-clamp-2 text-xs"
-                                      >
+                                      <ItemDescription class="text-xs">
                                         {{ item.description }}
                                       </ItemDescription>
                                     </ItemContent>
@@ -482,13 +476,11 @@ const { t } = useI18n()
                                         />
                                       </div>
                                     </ItemMedia>
-                                    <ItemContent class="gap-0.5 truncate">
-                                      <ItemTitle class="truncate">
+                                    <ItemContent>
+                                      <ItemTitle>
                                         {{ item.title }}
                                       </ItemTitle>
-                                      <ItemDescription
-                                        class="line-clamp-2 text-xs"
-                                      >
+                                      <ItemDescription class="text-xs">
                                         {{ item.description }}
                                       </ItemDescription>
                                     </ItemContent>
@@ -499,7 +491,7 @@ const { t } = useI18n()
                           </AccordionItem>
                           <Item as-child>
                             <RouterLink to="/pricing">
-                              <ItemTitle class="truncate">
+                              <ItemTitle>
                                 {{ t("landing.menu.pricing") }}
                               </ItemTitle>
                             </RouterLink>

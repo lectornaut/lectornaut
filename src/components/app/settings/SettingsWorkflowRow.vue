@@ -6,7 +6,6 @@ import {
   IconSettings,
   IconTrash,
 } from "@/data/icons"
-import Avatar from "vue-boring-avatars"
 import { computed, ref } from "vue"
 
 /**
@@ -82,20 +81,14 @@ const onToggleEnabled = (value: boolean | string): void => {
 <template>
   <Item variant="outline" :class="{ 'opacity-70': statusBadgeKey !== null }">
     <ItemMedia variant="image" class="rounded-full">
-      <Avatar
+      <AppAvatar
         variant="bauhaus"
         :name="avatarSeedEffective"
-        :colors="[
-          'var(--color-chart-1)',
-          'var(--color-chart-2)',
-          'var(--color-chart-3)',
-          'var(--color-chart-4)',
-          'var(--color-chart-5)',
-        ]"
+        class="size-full"
       />
     </ItemMedia>
 
-    <ItemContent class="truncate">
+    <ItemContent>
       <ItemTitle class="flex items-center gap-2 truncate">
         <span class="truncate">{{ name }}</span>
         <Badge v-if="isPredefined" variant="secondary" class="shrink-0">
@@ -116,7 +109,7 @@ const onToggleEnabled = (value: boolean | string): void => {
           {{ t("settings.workflows.archivedBadge") }}
         </Badge>
       </ItemTitle>
-      <ItemDescription v-if="description" class="truncate text-xs">
+      <ItemDescription v-if="description" class="text-xs">
         {{ description }}
       </ItemDescription>
     </ItemContent>

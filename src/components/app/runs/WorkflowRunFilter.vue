@@ -18,7 +18,7 @@ const isSelected = (workflowIds: string[]): boolean =>
 </script>
 
 <template>
-  <div class="flex flex-col gap-3">
+  <div class="flex flex-col gap-2">
     <div class="flex items-center justify-between">
       <span class="text-muted-foreground text-xs font-medium">
         {{ t("pages.runs.filterByWorkflow") }}

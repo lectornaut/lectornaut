@@ -7,7 +7,6 @@ import {
   IconTrash,
 } from "@/data/icons"
 import type { ITeamAgent } from "@/types/domain"
-import Avatar from "vue-boring-avatars"
 
 const { t } = useI18n()
 
@@ -91,21 +90,11 @@ const onToggleEnabled = (value: boolean | string): void => {
       boring-avatars renders a SVG portrait that wants a circle clip.
     -->
     <ItemMedia variant="image" class="rounded-full">
-      <Avatar
-        variant="beam"
-        :name="avatarSeedEffective"
-        :colors="[
-          'var(--color-chart-1)',
-          'var(--color-chart-2)',
-          'var(--color-chart-3)',
-          'var(--color-chart-4)',
-          'var(--color-chart-5)',
-        ]"
-      />
+      <AppAvatar variant="beam" :name="avatarSeedEffective" class="size-full" />
     </ItemMedia>
 
-    <ItemContent class="truncate">
-      <ItemTitle class="truncate">
+    <ItemContent>
+      <ItemTitle>
         {{ agent.name }}
         <Badge v-if="statusBadgeKey === 'disabled'" variant="outline">
           {{ t("settings.agents.custom.disabledBadge") }}
@@ -114,7 +103,7 @@ const onToggleEnabled = (value: boolean | string): void => {
           {{ t("settings.agents.custom.archivedBadge") }}
         </Badge>
       </ItemTitle>
-      <ItemDescription v-if="description" class="truncate text-xs">
+      <ItemDescription v-if="description" class="text-xs">
         {{ description }}
       </ItemDescription>
     </ItemContent>

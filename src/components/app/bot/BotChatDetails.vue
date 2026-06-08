@@ -332,7 +332,7 @@ const detailRows = computed<DetailRow[]>(() => {
   <div class="flex size-full min-h-0 grow flex-col">
     <OverlayScrollbarsWrapper>
       <SidebarGroup>
-        <SidebarGroupContent class="space-y-3 p-2">
+        <SidebarGroupContent>
           <div
             v-if="!sessionId"
             class="text-muted-foreground flex flex-col items-center gap-2 py-6 text-center text-xs"
@@ -388,21 +388,17 @@ const detailRows = computed<DetailRow[]>(() => {
                   class="flex min-w-0 items-center gap-2 text-right"
                   :class="{ 'text-muted-foreground italic': isOwnerFormer }"
                 >
-                  <Avatar
-                    class="size-5 shrink-0"
+                  <AppAvatar
+                    class="size-5"
                     :class="{ 'opacity-60': isOwnerFormer }"
+                    :src="ownerPhotoURL"
+                    :name="ownerLabel"
                   >
-                    <AvatarImage
-                      v-if="ownerPhotoURL"
-                      :src="ownerPhotoURL"
-                      :alt="ownerLabel"
-                      referrerpolicy="no-referrer"
-                    />
-                    <AvatarFallback>
+                    <template #fallback>
                       <IconUserRound v-if="isOwnerFormer" />
                       <template v-else>{{ getInitials(ownerLabel) }}</template>
-                    </AvatarFallback>
-                  </Avatar>
+                    </template>
+                  </AppAvatar>
                   <span class="truncate text-sm font-medium">
                     {{ ownerLabel }}
                   </span>
@@ -438,7 +434,7 @@ const detailRows = computed<DetailRow[]>(() => {
           <IconWrench />
           {{ t("ai.sidebar.availableTools") }}
         </SidebarGroupLabel>
-        <SidebarGroupContent class="space-y-2 p-2">
+        <SidebarGroupContent>
           <p class="text-muted-foreground text-xs">
             {{ t("ai.sidebar.toolsEnabledHint") }}
           </p>
@@ -495,7 +491,7 @@ const detailRows = computed<DetailRow[]>(() => {
           <IconMessageCircle />
           {{ t("ai.sidebar.humanInTheLoop") }}
         </SidebarGroupLabel>
-        <SidebarGroupContent class="space-y-2 p-2">
+        <SidebarGroupContent>
           <i18n-t
             keypath="ai.sidebar.humanInTheLoopHint"
             tag="p"

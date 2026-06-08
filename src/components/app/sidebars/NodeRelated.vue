@@ -187,7 +187,7 @@ const isEmpty = computed(
                 </ItemMedia>
                 <ItemContent>
                   <ItemTitle class="break-all">{{ result.name }}</ItemTitle>
-                  <ItemDescription v-if="result.snippet">
+                  <ItemDescription v-if="result.snippet" class="text-xs">
                     {{ result.snippet }}
                   </ItemDescription>
                 </ItemContent>
@@ -204,7 +204,7 @@ const isEmpty = computed(
               </ItemMedia>
               <ItemContent>
                 <ItemTitle class="break-all">{{ result.name }}</ItemTitle>
-                <ItemDescription v-if="result.snippet">
+                <ItemDescription v-if="result.snippet" class="text-xs">
                   {{ result.snippet }}
                 </ItemDescription>
               </ItemContent>

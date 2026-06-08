@@ -78,11 +78,11 @@ const handleClick = () => {
               class="bg-primary ring-accent size-2.5ring-2 absolute -top-1 -left-1 flex"
             ></span>
           </ItemMedia>
-          <ItemContent class="gap-0.5 truncate">
+          <ItemContent>
             <ItemTitle class="line-clamp-1 truncate">
               {{ notification.title }}
             </ItemTitle>
-            <ItemDescription class="truncate text-xs">
+            <ItemDescription class="text-xs">
               {{ notification.description }}
             </ItemDescription>
           </ItemContent>
@@ -173,7 +173,7 @@ const handleClick = () => {
         </RouterLink>
       </Item>
     </ContextMenuTrigger>
-    <ContextMenuContent class="w-auto">
+    <ContextMenuContent>
       <ContextMenuSub>
         <ContextMenuItem as-child>
           <ContextMenuSubTrigger>
@@ -181,7 +181,7 @@ const handleClick = () => {
             {{ $t("components.notificationItem.contextMenu.moveTo") }}
           </ContextMenuSubTrigger>
         </ContextMenuItem>
-        <ContextMenuSubContent class="w-auto">
+        <ContextMenuSubContent>
           <ContextMenuItem @click="emit('mark-inbox', notification.id)">
             <IconInbox />
             {{ $t("components.notificationItem.contextMenu.inbox") }}
@@ -203,7 +203,7 @@ const handleClick = () => {
             {{ $t("components.notificationItem.contextMenu.markAs") }}
           </ContextMenuSubTrigger>
         </ContextMenuItem>
-        <ContextMenuSubContent class="w-auto">
+        <ContextMenuSubContent>
           <ContextMenuItem @click="emit('mark-read', notification.id)">
             <IconEye />
             {{ $t("components.notificationItem.contextMenu.read") }}

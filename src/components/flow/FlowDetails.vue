@@ -235,7 +235,7 @@ const getUsagePercentage = (usage: number, capacity: number): number => {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <dl class="flex flex-col gap-3">
+            <dl class="flex flex-col gap-2">
               <div class="flex justify-between">
                 <dt class="text-muted-foreground">
                   {{ t("labels.createdBy") }}
@@ -301,7 +301,7 @@ const getUsagePercentage = (usage: number, capacity: number): number => {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <ul role="list" class="flex flex-col gap-3">
+            <ul role="list" class="flex flex-col gap-2">
               <li class="flex items-center justify-between">
                 <div class="flex items-center gap-3">
                   <img

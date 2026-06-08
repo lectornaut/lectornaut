@@ -14,7 +14,6 @@ import { useTeamAgentsStore } from "@/stores/teamAgentsStore"
 import { isAgentMembership } from "@/types/membership"
 import { storeToRefs } from "pinia"
 import { computed } from "vue"
-import Avatar from "vue-boring-avatars"
 
 const { t } = useI18n()
 const isFullscreen = useIsFullscreen()
@@ -142,16 +141,10 @@ const openNewAgentDialog = (): void => {
       <SheetTrigger as-child>
         <SidebarMenuItem>
           <SidebarMenuButton :tooltip="agent.name">
-            <Avatar
+            <AppAvatar
               variant="beam"
               :name="avatarSeed(agent)"
-              :colors="[
-                'var(--color-chart-1)',
-                'var(--color-chart-2)',
-                'var(--color-chart-3)',
-                'var(--color-chart-4)',
-                'var(--color-chart-5)',
-              ]"
+              class="size-10"
             />
             <span class="truncate">
               {{ agent.name }}
@@ -198,19 +191,11 @@ const openNewAgentDialog = (): void => {
       >
         <SheetHeader>
           <SheetTitle class="flex items-center gap-2">
-            <span class="size-5 shrink-0 overflow-hidden rounded-full">
-              <Avatar
-                variant="beam"
-                :name="avatarSeed(agent)"
-                :colors="[
-                  'var(--color-chart-1)',
-                  'var(--color-chart-2)',
-                  'var(--color-chart-3)',
-                  'var(--color-chart-4)',
-                  'var(--color-chart-5)',
-                ]"
-              />
-            </span>
+            <AppAvatar
+              variant="beam"
+              :name="avatarSeed(agent)"
+              class="size-5 shrink-0"
+            />
             {{ agent.name }}
           </SheetTitle>
           <SheetDescription v-if="agent.description">
