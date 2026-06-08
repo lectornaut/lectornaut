@@ -274,180 +274,167 @@ const isEditing = (shortcut: Shortcut): boolean =>
         </SheetDescription>
       </SheetHeader>
       <OverlayScrollbarsWrapper>
-        <div class="flex grow flex-col px-4">
-          <Accordion
-            collapsible
-            type="multiple"
-            :default-value="filteredShortcuts.map((category) => category.id)"
+        <div class="flex grow flex-col gap-6 px-4">
+          <div
+            v-for="category in filteredShortcuts"
+            :key="category.id"
+            class="flex flex-col gap-2 px-2"
           >
-            <AccordionItem
-              v-for="category in filteredShortcuts"
-              :key="category.id"
-              :value="category.id"
-            >
-              <AccordionTrigger>
-                {{ category.title }}
-              </AccordionTrigger>
-              <AccordionContent>
-                <Item
-                  v-for="(shortcut, shortcutIndex) in category.shortcuts"
-                  :key="shortcutIndex"
-                  size="xs"
-                >
-                  <ItemContent>
-                    <ItemDescription class="text-xs">
-                      <span class="grid grid-cols-1">
-                        <span class="truncate">
-                          <span
-                            v-for="(step, stepIndex) in shortcut.description"
-                            :key="stepIndex"
-                            class="inline-flex min-w-0 items-center"
-                          >
-                            <IconChevronRight
-                              v-if="stepIndex > 0"
-                              class="text-muted-foreground mx-1 shrink-0"
-                            />
-                            {{ step }}
-                          </span>
-                        </span>
-                      </span>
-                    </ItemDescription>
-                  </ItemContent>
-                  <ItemActions>
-                    <!-- Editable shortcut: inline InputGroup recorder -->
-                    <template v-if="shortcut.hotkeys">
-                      <InputGroup
-                        class="bg-background w-min gap-1"
-                        :data-disabled="isShortcutsLoading"
-                        @click="handleShortcutGroupClick(shortcut, $event)"
+            <span class="font-medium">
+              {{ category.title }}
+            </span>
+            <ItemGroup>
+              <Item
+                v-for="(shortcut, shortcutIndex) in category.shortcuts"
+                :key="shortcutIndex"
+                size="xs"
+                class="p-0"
+              >
+                <ItemContent>
+                  <span class="grid grid-cols-1 truncate">
+                    <span class="truncate">
+                      <ItemDescription
+                        v-for="(step, stepIndex) in shortcut.description"
+                        :key="stepIndex"
+                        class="inline-flex min-w-0 truncate align-middle"
                       >
-                        <InputGroupAddon>
-                          <KbdGroup>
-                            <Kbd
-                              v-for="key in getDisplayKeys(shortcut)"
-                              :key="key"
-                            >
-                              {{ key }}
-                            </Kbd>
-                          </KbdGroup>
-                        </InputGroupAddon>
-                        <InputGroupInput
-                          :ref="
-                            (el) =>
-                              setShortcutRecorderRef(
-                                getShortcutId(shortcut),
-                                el
-                              )
-                          "
-                          readonly
-                          :disabled="isShortcutsLoading"
-                          :placeholder="
-                            t('components.global.shortcuts.recording')
-                          "
-                          @focus="handleRecorderFocus"
-                          @click="handleRecorderClick"
-                          @keydown="handleRecorderKeydown"
-                          @blur="stopEditing"
+                        <IconChevronRight
+                          v-if="stepIndex > 0"
+                          class="text-muted-foreground mx-1 my-auto"
                         />
-                        <TooltipProvider>
-                          <InputGroupAddon align="inline-end" class="gap-1">
-                            <Tooltip v-if="isCustomized(shortcut)">
-                              <TooltipTrigger as-child>
-                                <InputGroupButton
-                                  size="icon-xs"
-                                  :disabled="isShortcutsLoading"
-                                  @mousedown.prevent
-                                  @click="handleRestore(shortcut)"
-                                >
-                                  <IconRotateCcw />
-                                </InputGroupButton>
-                              </TooltipTrigger>
-                              <TooltipContent>
-                                {{
-                                  t(
-                                    "components.global.shortcuts.restoreDefault"
-                                  )
-                                }}
-                              </TooltipContent>
-                            </Tooltip>
-                            <Tooltip v-if="isEditing(shortcut) && isRecording">
-                              <TooltipTrigger as-child>
-                                <InputGroupButton
-                                  size="icon-xs"
-                                  :disabled="isShortcutsLoading"
-                                >
-                                  <IconCheck />
-                                </InputGroupButton>
-                              </TooltipTrigger>
-                              <TooltipContent>
-                                {{ t("components.global.shortcuts.save") }}
-                              </TooltipContent>
-                            </Tooltip>
-                            <Tooltip v-else>
-                              <TooltipTrigger as-child>
-                                <InputGroupButton
-                                  size="icon-xs"
-                                  :disabled="isShortcutsLoading"
-                                  @mousedown.prevent
-                                  @click="startEditing(shortcut)"
-                                >
-                                  <IconSettings2 />
-                                </InputGroupButton>
-                              </TooltipTrigger>
-                              <TooltipContent>
-                                {{ t("components.global.shortcuts.recording") }}
-                              </TooltipContent>
-                            </Tooltip>
-                          </InputGroupAddon>
-                        </TooltipProvider>
-                      </InputGroup>
-                    </template>
-                    <!-- Non-editable shortcut: display-only keys -->
-                    <template v-else>
-                      <InputGroup
-                        class="bg-background w-min gap-1"
-                        data-disabled
-                      >
-                        <InputGroupAddon>
-                          <KbdGroup
-                            v-for="keys in shortcut.keys"
-                            :key="keys.toString()"
+                        <span class="truncate">
+                          {{ step }}
+                        </span>
+                      </ItemDescription>
+                    </span>
+                  </span>
+                </ItemContent>
+                <ItemActions>
+                  <!-- Editable shortcut: inline InputGroup recorder -->
+                  <template v-if="shortcut.hotkeys">
+                    <InputGroup
+                      class="w-min"
+                      :data-disabled="isShortcutsLoading"
+                      @click="handleShortcutGroupClick(shortcut, $event)"
+                    >
+                      <InputGroupAddon>
+                        <KbdGroup>
+                          <Kbd
+                            v-for="key in getDisplayKeys(shortcut)"
+                            :key="key"
                           >
-                            <Kbd v-for="key in keys" :key="key">
-                              {{ key }}
-                            </Kbd>
-                          </KbdGroup>
-                        </InputGroupAddon>
-                        <InputGroupInput readonly disabled />
-                        <InputGroupAddon align="inline-end">
-                          <Tooltip>
+                            {{ key }}
+                          </Kbd>
+                        </KbdGroup>
+                      </InputGroupAddon>
+                      <InputGroupInput
+                        :ref="
+                          (el) =>
+                            setShortcutRecorderRef(getShortcutId(shortcut), el)
+                        "
+                        readonly
+                        :disabled="isShortcutsLoading"
+                        :placeholder="
+                          t('components.global.shortcuts.recording')
+                        "
+                        @focus="handleRecorderFocus"
+                        @click="handleRecorderClick"
+                        @keydown="handleRecorderKeydown"
+                        @blur="stopEditing"
+                      />
+                      <TooltipProvider>
+                        <InputGroupAddon align="inline-end" class="gap-1">
+                          <Tooltip v-if="isCustomized(shortcut)">
                             <TooltipTrigger as-child>
-                              <InputGroupButton size="icon-xs" disabled>
-                                <IconKeyboard />
+                              <InputGroupButton
+                                size="icon-xs"
+                                :disabled="isShortcutsLoading"
+                                @mousedown.prevent
+                                @click="handleRestore(shortcut)"
+                              >
+                                <IconRotateCcw />
                               </InputGroupButton>
                             </TooltipTrigger>
                             <TooltipContent>
-                              {{ t("components.global.shortcuts.uneditable") }}
+                              {{
+                                t("components.global.shortcuts.restoreDefault")
+                              }}
+                            </TooltipContent>
+                          </Tooltip>
+                          <Tooltip v-if="isEditing(shortcut) && isRecording">
+                            <TooltipTrigger as-child>
+                              <InputGroupButton
+                                size="icon-xs"
+                                :disabled="isShortcutsLoading"
+                              >
+                                <IconCheck />
+                              </InputGroupButton>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              {{ t("components.global.shortcuts.save") }}
+                            </TooltipContent>
+                          </Tooltip>
+                          <Tooltip v-else>
+                            <TooltipTrigger as-child>
+                              <InputGroupButton
+                                size="icon-xs"
+                                :disabled="isShortcutsLoading"
+                                @mousedown.prevent
+                                @click="startEditing(shortcut)"
+                              >
+                                <IconSettings2 />
+                              </InputGroupButton>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              {{ t("components.global.shortcuts.recording") }}
                             </TooltipContent>
                           </Tooltip>
                         </InputGroupAddon>
-                      </InputGroup>
-                    </template>
-                  </ItemActions>
-                </Item>
-              </AccordionContent>
-            </AccordionItem>
-            <Empty v-if="filteredShortcuts.length === 0" class="p-6">
-              <EmptyHeader>
-                <EmptyMedia variant="icon">
-                  <IconKeyboard />
-                </EmptyMedia>
-                <EmptyTitle>
-                  {{ t("components.global.shortcuts.noShortcuts") }}
-                </EmptyTitle>
-              </EmptyHeader>
-            </Empty>
-          </Accordion>
+                      </TooltipProvider>
+                    </InputGroup>
+                  </template>
+                  <!-- Non-editable shortcut: display-only keys -->
+                  <template v-else>
+                    <InputGroup class="bg-background w-min gap-1" data-disabled>
+                      <InputGroupAddon>
+                        <KbdGroup
+                          v-for="keys in shortcut.keys"
+                          :key="keys.toString()"
+                        >
+                          <Kbd v-for="key in keys" :key="key">
+                            {{ key }}
+                          </Kbd>
+                        </KbdGroup>
+                      </InputGroupAddon>
+                      <InputGroupInput readonly disabled />
+                      <InputGroupAddon align="inline-end">
+                        <Tooltip>
+                          <TooltipTrigger as-child>
+                            <InputGroupButton size="icon-xs" disabled>
+                              <IconKeyboard />
+                            </InputGroupButton>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            {{ t("components.global.shortcuts.uneditable") }}
+                          </TooltipContent>
+                        </Tooltip>
+                      </InputGroupAddon>
+                    </InputGroup>
+                  </template>
+                </ItemActions>
+              </Item>
+            </ItemGroup>
+          </div>
+          <Empty v-if="filteredShortcuts.length === 0" class="p-6">
+            <EmptyHeader>
+              <EmptyMedia variant="icon">
+                <IconKeyboard />
+              </EmptyMedia>
+              <EmptyTitle>
+                {{ t("components.global.shortcuts.noShortcuts") }}
+              </EmptyTitle>
+            </EmptyHeader>
+          </Empty>
         </div>
       </OverlayScrollbarsWrapper>
       <SheetFooter>

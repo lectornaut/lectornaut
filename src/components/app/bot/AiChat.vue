@@ -303,7 +303,7 @@ const renderedMessages = computed(() =>
               v-if="message.role === 'user' && !isOwnMessage(message)"
               variant="beam"
               :name="messageAvatarSeed(message)"
-              class="sticky bottom-0 size-5 shrink-0"
+              class="sticky bottom-0 size-5"
             />
             <div
               :class="[

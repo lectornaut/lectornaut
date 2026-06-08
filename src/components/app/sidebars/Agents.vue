@@ -144,7 +144,7 @@ const openNewAgentDialog = (): void => {
             <AppAvatar
               variant="beam"
               :name="avatarSeed(agent)"
-              class="size-10"
+              class="size-8"
             />
             <span class="truncate">
               {{ agent.name }}
@@ -194,7 +194,7 @@ const openNewAgentDialog = (): void => {
             <AppAvatar
               variant="beam"
               :name="avatarSeed(agent)"
-              class="size-5 shrink-0"
+              class="size-5"
             />
             {{ agent.name }}
           </SheetTitle>

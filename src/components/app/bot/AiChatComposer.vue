@@ -1325,7 +1325,7 @@ const onToolMenuCloseAutoFocus = (event: Event) => {
                           <AppAvatar
                             variant="beam"
                             :name="agentAvatarSeed(activeAgent)"
-                            class="size-4 shrink-0"
+                            class="size-4"
                           />
                           {{ activeAgent.name }}
                           <span
@@ -1381,7 +1381,7 @@ const onToolMenuCloseAutoFocus = (event: Event) => {
                     <AppAvatar
                       variant="beam"
                       :name="agentAvatarSeed(agent)"
-                      class="size-4 shrink-0"
+                      class="size-4"
                     />
                   </ItemMedia>
                   <ItemContent>
@@ -1421,7 +1421,7 @@ const onToolMenuCloseAutoFocus = (event: Event) => {
                       <AppAvatar
                         variant="beam"
                         :name="agentAvatarSeed(agent)"
-                        class="size-4 shrink-0"
+                        class="size-4"
                       />
                     </ItemMedia>
                     <ItemContent>

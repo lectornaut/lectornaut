@@ -477,7 +477,7 @@ const handleSave = async (): Promise<void> => {
             -->
             <div class="flex min-h-0 flex-col gap-3">
               <InputGroup class="min-h-0 grow">
-                <div class="w-full shrink-0 border-b p-2">
+                <div class="w-full border-b p-2">
                   <span class="text-sm font-medium">
                     {{ t("settings.workflows.ai.promptLabel") }}
                   </span>
@@ -524,7 +524,7 @@ const handleSave = async (): Promise<void> => {
                 v-if="generateError"
                 class="text-destructive flex items-center gap-1.5 text-xs"
               >
-                <IconAlertTriangle class="size-3.5 shrink-0" />
+                <IconAlertTriangle class="size-3.5" />
                 {{ generateError }}
               </p>
             </div>
@@ -533,7 +533,7 @@ const handleSave = async (): Promise<void> => {
             <div
               class="bg-muted/30 flex h-full min-h-0 flex-col overflow-hidden rounded-lg border"
             >
-              <div class="w-full shrink-0 border-b p-2">
+              <div class="w-full border-b p-2">
                 <span class="text-sm font-medium">
                   {{ t("settings.workflows.ai.previewTitle") }}
                 </span>
@@ -557,7 +557,7 @@ const handleSave = async (): Promise<void> => {
                     <AppAvatar
                       variant="bauhaus"
                       :name="effectiveAvatarSeed"
-                      class="size-10 shrink-0"
+                      class="size-10"
                     />
                     <div class="min-w-0">
                       <p class="truncate text-sm font-medium">
@@ -585,13 +585,13 @@ const handleSave = async (): Promise<void> => {
                           !selectedAgent ||
                           selectedAgent.id === DEFAULT_AGENT_ID
                         "
-                        class="size-4 shrink-0"
+                        class="size-4"
                       />
                       <AppAvatar
                         v-else
                         variant="beam"
                         :name="agentAvatarSeed(selectedAgent)"
-                        class="size-4 shrink-0"
+                        class="size-4"
                       />
                       <span class="truncate text-sm">
                         {{
@@ -700,7 +700,7 @@ const handleSave = async (): Promise<void> => {
                   <AppAvatar
                     variant="bauhaus"
                     :name="effectiveAvatarSeed"
-                    class="size-10 shrink-0"
+                    class="size-10"
                   />
                   <Input
                     id="wf-avatar-seed"
@@ -752,13 +752,13 @@ const handleSave = async (): Promise<void> => {
                       >
                         <IconBot
                           v-if="selectedAgent.id === DEFAULT_AGENT_ID"
-                          class="size-4 shrink-0"
+                          class="size-4"
                         />
                         <AppAvatar
                           v-else
                           variant="beam"
                           :name="agentAvatarSeed(selectedAgent)"
-                          class="size-4 shrink-0"
+                          class="size-4"
                         />
                         {{ selectedAgent.name }}
                       </span>
@@ -810,7 +810,7 @@ const handleSave = async (): Promise<void> => {
                             <AppAvatar
                               variant="beam"
                               :name="agentAvatarSeed(agent)"
-                              class="size-4 shrink-0"
+                              class="size-4"
                             />
                           </ItemMedia>
                           <ItemContent>
@@ -853,7 +853,7 @@ const handleSave = async (): Promise<void> => {
                               <AppAvatar
                                 variant="beam"
                                 :name="agentAvatarSeed(agent)"
-                                class="size-4 shrink-0"
+                                class="size-4"
                               />
                             </ItemMedia>
                             <ItemContent>

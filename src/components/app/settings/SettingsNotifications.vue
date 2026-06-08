@@ -19,6 +19,16 @@ const {
 } = settingsStore
 
 const toBoolean = (value: unknown): boolean => value === true
+
+const frequencyOptions = computed(() => [
+  {
+    value: "immediate",
+    label: t("settings.notifications.frequency.immediate"),
+  },
+  { value: "daily", label: t("settings.notifications.frequency.daily") },
+  { value: "weekly", label: t("settings.notifications.frequency.weekly") },
+  { value: "none", label: t("settings.notifications.frequency.none") },
+])
 </script>
 
 <template>
@@ -109,52 +119,34 @@ const toBoolean = (value: unknown): boolean => value === true
       <FieldSet>
         <Field orientation="horizontal">
           <FieldContent>
-            <FieldLabel>
+            <FieldLabel for="notification-frequency">
               {{ t("settings.notifications.frequency.label") }}
             </FieldLabel>
             <FieldDescription>
               {{ t("settings.notifications.frequency.description") }}
             </FieldDescription>
           </FieldContent>
+          <Select
+            :disabled="isUpdatingNotifications !== null"
+            :model-value="notificationSettings.frequency"
+            @update:model-value="updateNotificationFrequency"
+          >
+            <SelectTrigger id="notification-frequency">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectGroup>
+                <SelectItem
+                  v-for="option in frequencyOptions"
+                  :key="option.value"
+                  :value="option.value"
+                >
+                  {{ option.label }}
+                </SelectItem>
+              </SelectGroup>
+            </SelectContent>
+          </Select>
         </Field>
-        <RadioGroup
-          :disabled="isUpdatingNotifications !== null"
-          :model-value="notificationSettings.frequency"
-          @update:model-value="updateNotificationFrequency"
-        >
-          <Field orientation="horizontal">
-            <RadioGroupItem id="notify-immediate" value="immediate" />
-            <FieldContent>
-              <FieldLabel for="notify-immediate">
-                {{ t("settings.notifications.frequency.immediate") }}
-              </FieldLabel>
-            </FieldContent>
-          </Field>
-          <Field orientation="horizontal">
-            <RadioGroupItem id="notify-daily" value="daily" />
-            <FieldContent>
-              <FieldLabel for="notify-daily">
-                {{ t("settings.notifications.frequency.daily") }}
-              </FieldLabel>
-            </FieldContent>
-          </Field>
-          <Field orientation="horizontal">
-            <RadioGroupItem id="notify-weekly" value="weekly" />
-            <FieldContent>
-              <FieldLabel for="notify-weekly">
-                {{ t("settings.notifications.frequency.weekly") }}
-              </FieldLabel>
-            </FieldContent>
-          </Field>
-          <Field orientation="horizontal">
-            <RadioGroupItem id="notify-none" value="none" />
-            <FieldContent>
-              <FieldLabel for="notify-none">
-                {{ t("settings.notifications.frequency.none") }}
-              </FieldLabel>
-            </FieldContent>
-          </Field>
-        </RadioGroup>
       </FieldSet>
       <FieldSeparator />
       <FieldSet>

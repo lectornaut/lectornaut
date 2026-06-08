@@ -72,16 +72,12 @@ const openHistory = () => {
         <SheetContent
           class="m-2 mt-[calc(var(--spacing-titlebar-height,0px)+(--spacing(2)))] h-auto! gap-0 overflow-clip rounded-xl border"
           :class="{ 'mt-12': isTauri && !isFullscreen }"
+          :show-close-button="false"
         >
           <SheetHeader>
             <div class="flex items-center justify-between gap-2">
               <SheetTitle>{{ t("pages.start.askAi") }}</SheetTitle>
-              <Button
-                variant="ghost"
-                size="icon-sm"
-                class="mr-9"
-                @click="openHistory"
-              >
+              <Button variant="ghost" size="icon-sm" @click="openHistory">
                 <IconHistory />
               </Button>
             </div>

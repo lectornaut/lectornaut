@@ -651,7 +651,7 @@ const handleEditorSave = async (): Promise<void> => {
                     <AppAvatar
                       variant="beam"
                       :name="effectiveAvatarSeed"
-                      class="size-10 shrink-0"
+                      class="size-8"
                     />
                     <div class="min-w-0">
                       <p class="truncate text-sm font-medium">
@@ -786,7 +786,7 @@ const handleEditorSave = async (): Promise<void> => {
                     <AppAvatar
                       variant="beam"
                       :name="effectiveAvatarSeed"
-                      class="size-10 shrink-0"
+                      class="size-8"
                     />
                     <Input
                       :id="`agent-avatar-seed-${editingAgent?.id ?? 'new'}`"
