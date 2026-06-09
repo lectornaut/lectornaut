@@ -89,7 +89,7 @@ const {
   collabError,
   collabReady,
   collabAwareness,
-  externalEditorContent,
+  registerEditorAdapter,
   adoptEditorBaseline,
   saveContent,
 } = useCollabPage({
@@ -109,7 +109,7 @@ useHead(() => ({
 </script>
 
 <template>
-  <Teleport defer to="#left-sidebar">
+  <SidebarSlot side="left">
     <Sidebar collapsible="none" class="w-full">
       <SidebarContent>
         <OverlayScrollbarsWrapper>
@@ -132,10 +132,8 @@ useHead(() => ({
         </OverlayScrollbarsWrapper>
       </SidebarContent>
     </Sidebar>
-  </Teleport>
-  <div
-    class="m-2 flex grow flex-col overflow-auto overscroll-none scroll-smooth rounded border"
-  >
+  </SidebarSlot>
+  <div class="flex grow flex-col overflow-auto overscroll-none scroll-smooth">
     <!--
       Mount the editor ONCE, only after the collab session resolves (ready or
       errored). Tiptap fixes its Collaboration extension at creation, so the old
@@ -155,8 +153,9 @@ useHead(() => ({
         :read-only="editorReadOnly"
         :collaboration-doc="collabDoc"
         :collaboration-awareness="collabAwareness"
-        :external-content="externalEditorContent"
+        :applier-status="collabSession?.isAgentApplier"
         @baseline="adoptEditorBaseline"
+        @adapter="registerEditorAdapter"
       />
     </OverlayScrollbarsWrapper>
     <LoadingState v-else-if="teamId && workspaceId && selectedFile" />
@@ -194,12 +193,12 @@ useHead(() => ({
       {{ t("actions.save") }}
     </Button>
   </Teleport>
-  <Teleport defer to="#right-sidebar">
+  <SidebarSlot side="right">
     <NodeInspectorSidebar
       :team-id="teamId"
       :workspace-id="workspaceId"
       :scope="nodeScope"
       :node="selectedNode"
     />
-  </Teleport>
+  </SidebarSlot>
 </template>

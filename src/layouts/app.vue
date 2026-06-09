@@ -4,8 +4,8 @@ import { useTeamActions } from "@/composables/useTeamActions"
 import { useWorkspaceActions } from "@/composables/useWorkspaceActions"
 import { emitter } from "@/modules/mitt"
 import { useBillingStore } from "@/stores/billingStore"
-import { useLayoutStore } from "@/stores/layoutStore"
-import { useSettingsStore } from "@/stores/settingsStore"
+import { useThemeStore } from "@/stores/themeStore"
+import { useUiPreferencesStore } from "@/stores/uiPreferencesStore"
 import type { IWorkflow } from "@/types/domain"
 import { listen } from "@tauri-apps/api/event"
 import { storeToRefs } from "pinia"
@@ -14,11 +14,11 @@ const { currentTeam, isLoading: isTeamLoading } = useTeamActions()
 
 const { currentWorkspace, isBootstrapping: isWorkspaceBootstrapping } =
   useWorkspaceActions()
-const layoutStore = useLayoutStore()
-const { sidebarOpen } = storeToRefs(layoutStore)
+const uiPreferencesStore = useUiPreferencesStore()
+const { sidebarOpen } = storeToRefs(uiPreferencesStore)
 
-const settingsStore = useSettingsStore()
-const { themeSettings } = storeToRefs(settingsStore)
+const themeStore = useThemeStore()
+const { themeSettings } = storeToRefs(themeStore)
 
 const billingStore = useBillingStore()
 const { canUseFeature } = billingStore
@@ -68,7 +68,6 @@ watch(
 onMounted(async () => {
   if (isTauri.value) {
     await listen("tray-action", (event) => {
-      console.log("Tray action received:", event.payload)
       if (event.payload === "settings") {
         emitter.emit("Dialog.Settings.Open", "preferences")
       }

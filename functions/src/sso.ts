@@ -1,3 +1,5 @@
+import { getApp } from "firebase-admin/app"
+import { FieldValue } from "firebase-admin/firestore"
 import * as logger from "firebase-functions/logger"
 import {
   CallableRequest,
@@ -5,7 +7,8 @@ import {
   onCall,
 } from "firebase-functions/v2/https"
 import { logEvent } from "./audit.js"
-import { admin, auth, db } from "./firebase.js"
+import { assertAuthenticated } from "./auth.js"
+import { auth, db } from "./firebase.js"
 import { can } from "./permissions.js"
 import { CALLABLE_OPTS } from "./runtimeConfig.js"
 import { Actor, Capabilities, type IMembershipRole } from "./types.js"
@@ -13,19 +16,6 @@ import { Actor, Capabilities, type IMembershipRole } from "./types.js"
 // ============================================================================
 // Helpers
 // ============================================================================
-
-function assertAuthenticated(
-  request: CallableRequest
-): asserts request is CallableRequest & {
-  auth: NonNullable<CallableRequest["auth"]>
-} {
-  if (!request.auth) {
-    throw new HttpsError(
-      "unauthenticated",
-      "The function must be called while authenticated."
-    )
-  }
-}
 
 function assertString(value: unknown, field: string): string {
   if (!value || typeof value !== "string") {
@@ -203,7 +193,7 @@ export const configureSso = onCall({ ...CALLABLE_OPTS }, async (request) => {
       )
     }
 
-    const projectId = admin.app().options.projectId
+    const projectId = getApp().options.projectId
     const samlConfig = {
       providerId,
       displayName: `SSO for team ${teamId}`,
@@ -242,7 +232,7 @@ export const configureSso = onCall({ ...CALLABLE_OPTS }, async (request) => {
         saml: { idpEntityId, ssoUrl, certificate },
       },
       configuredBy: request.auth.uid,
-      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      updatedAt: FieldValue.serverTimestamp(),
     }
   } else {
     // OIDC
@@ -294,7 +284,7 @@ export const configureSso = onCall({ ...CALLABLE_OPTS }, async (request) => {
         oidc: { issuer, clientId },
       },
       configuredBy: request.auth.uid,
-      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      updatedAt: FieldValue.serverTimestamp(),
     }
   }
 
@@ -408,10 +398,10 @@ export const deleteSso = onCall({ ...CALLABLE_OPTS }, async (request) => {
     "sso.domains": [],
     "sso.enforced": false,
     "sso.autoProvision": false,
-    "sso.saml": admin.firestore.FieldValue.delete(),
-    "sso.oidc": admin.firestore.FieldValue.delete(),
+    "sso.saml": FieldValue.delete(),
+    "sso.oidc": FieldValue.delete(),
     "loginMethods.sso": false,
-    updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+    updatedAt: FieldValue.serverTimestamp(),
   })
 
   await batch.commit()
@@ -623,7 +613,7 @@ export const updateTeamLoginMethods = onCall(
     await db.doc(`teams/${teamId}/settings/security`).set(
       {
         loginMethods,
-        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+        updatedAt: FieldValue.serverTimestamp(),
       },
       { merge: true }
     )
@@ -678,7 +668,7 @@ export const updateTeamApprovedDomains = onCall(
     await db.doc(`teams/${teamId}/settings/security`).set(
       {
         approvedDomains,
-        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+        updatedAt: FieldValue.serverTimestamp(),
       },
       { merge: true }
     )

@@ -20,9 +20,11 @@ import { genkit } from "genkit/beta"
 import path from "node:path"
 import { fileURLToPath } from "node:url"
 
+import type { AiProvider } from "./domain.js"
+
 enableFirebaseTelemetry()
 
-export type AiModelProvider = "google" | "anthropic" | "openai"
+export type AiModelProvider = AiProvider
 
 const providerSecretEnvKey: Record<AiModelProvider, string> = {
   google: "GEMINI_API_KEY",

@@ -95,8 +95,9 @@ await preloadActiveCodeTheme().catch(() => {})
 app.mount("#app")
 
 // Route schema violations through the project logger + a dev-only toast.
-// In prod, reads degrade silently (caught by parseOrWarn's short-circuit);
-// writes throw SchemaValidationError which store write paths catch.
+// Reads now validate in prod too: a bad row is reported here and dropped
+// (parseSafe) or best-effort'd by the converter — never a silent cast.
+// Writes throw SchemaValidationError, which store write paths catch.
 setSchemaViolationSink((violation) => {
   console.warn(
     `[schema:${violation.context}]`,

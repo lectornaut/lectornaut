@@ -43,21 +43,16 @@ import {
   useLocalHydration,
   writeHydrationCache,
 } from "@/utils/firebase/firebase-hydration"
-import { useFirestoreMutation } from "@/utils/firebase/firebase-mutation"
+import { useRunWrite } from "@/utils/firebase/firebase-mutation"
 import {
-  addPending,
   cloneState,
   createPendingSet,
-  removePending,
 } from "@/utils/firebase/firebase-optimistic"
 import { useDocumentQuery } from "@/utils/firebase/firebase-query"
-import {
-  queryKeys,
-  type FirestoreQueryKey,
-} from "@/utils/firebase/firebase-query-keys"
+import { queryKeys } from "@/utils/firebase/firebase-query-keys"
 import {
   buildUpdatedAtBaseVersion,
-  mutateWithCoordinator,
+  mutateSetDocument,
 } from "@/utils/firebase/firebase-sync-engine"
 import type { User } from "firebase/auth"
 import { Timestamp } from "firebase/firestore"
@@ -277,23 +272,7 @@ export const useAuthStore = defineStore("auth", () => {
   const isAuthenticated = computed(() => !!currentUser.value)
 
   // ── Profile mutation (optimistic, cache-held) ───────────────────────────────
-  const userProfileMutation = useFirestoreMutation<
-    {
-      keys: FirestoreQueryKey[]
-      apply: () => void
-      rollback: () => void
-      run: () => Promise<void>
-    },
-    void
-  >({
-    mutationFn: (vars) => vars.run(),
-    optimistic: (vars) => ({
-      keys: vars.keys,
-      apply: vars.apply,
-      rollback: vars.rollback,
-    }),
-    source: "auth.updateUserProfile",
-  })
+  const runWrite = useRunWrite("auth.updateUserProfile")
 
   // ── Profile auto-provision ──────────────────────────────────────────────────
   // First sign-in with no profile doc → seed a default into the cache for an
@@ -419,25 +398,29 @@ export const useAuthStore = defineStore("auth", () => {
         if (!currentUser.value) return
         if (currentTeamId.value === teamId) return
 
+        const uid = currentUser.value.uid
         const previous = cloneState(userPreferences.value)
-        await mutateWithCoordinator({
-          id: currentUser.value.uid,
-          source: "auth.setCurrentTeamId",
-          pendingIds: pendingUserIds,
-          applyLocal: () => setCurrentTeamIdLocal(teamId),
-          rollbackLocal: () => {
+        await runWrite({
+          keys: [],
+          apply: () => setCurrentTeamIdLocal(teamId),
+          rollback: () => {
             overlayUserPreferences.value = previous
           },
-          mutation: {
-            source: "auth.setCurrentTeamId",
-            targetPath: getUserPreferencesRef(currentUser.value.uid).path,
-            type: "set",
-            merge: true,
-            data: { currentTeamId: teamId },
-            baseVersion: buildUpdatedAtBaseVersion(
-              firestoreUserPreferences.value?.updatedAt ?? previous?.updatedAt
+          fn: () =>
+            mutateSetDocument(
+              getUserPreferencesRef(uid),
+              { currentTeamId: teamId },
+              {
+                source: "auth.setCurrentTeamId",
+                merge: true,
+                baseVersion: buildUpdatedAtBaseVersion(
+                  firestoreUserPreferences.value?.updatedAt ??
+                    previous?.updatedAt
+                ),
+              }
             ),
-          },
+          pending: { ref: pendingUserIds, ids: [uid] },
+          source: "auth.setCurrentTeamId",
         })
       })
 
@@ -487,19 +470,15 @@ export const useAuthStore = defineStore("auth", () => {
       ...(photoURL !== undefined ? { photoURL: normalizedPhotoURL } : {}),
     }
 
-    addPending(pendingUserIds, user.uid)
-    try {
-      await userProfileMutation.mutateAsync({
-        keys: [key],
-        apply: () => queryClient.setQueryData(key, optimistic),
-        rollback: () => queryClient.setQueryData(key, previous),
-        run: async () => {
-          await updateOwnUserProfileFn(payload)
-        },
-      })
-    } finally {
-      setTimeout(() => removePending(pendingUserIds, user.uid), 120)
-    }
+    await runWrite({
+      keys: [key],
+      apply: () => queryClient.setQueryData(key, optimistic),
+      rollback: () => queryClient.setQueryData(key, previous),
+      fn: async () => {
+        await updateOwnUserProfileFn(payload)
+      },
+      pending: { ref: pendingUserIds, ids: [user.uid] },
+    })
   }
 
   async function uploadProfilePhoto(file: File): Promise<string> {

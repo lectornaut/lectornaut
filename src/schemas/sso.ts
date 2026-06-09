@@ -5,7 +5,7 @@ import { timestampSchema } from "./_primitives"
  * Team security + SSO schemas — mirror `src/types/sso.ts`.
  *
  * `ITeamSecurityConfig` is read via `useSsoConfig` composable and written
- * through `mutateWithCoordinator`. Per-protocol sub-configs (`saml`, `oidc`)
+ * through the sync engine (`mutateSetDocument`). Per-protocol sub-configs (`saml`, `oidc`)
  * are optional on the parent to let teams store either without the other.
  */
 

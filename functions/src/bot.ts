@@ -30,6 +30,7 @@
  */
 
 import { cacheControl } from "@genkit-ai/anthropic"
+import { FieldValue, Timestamp } from "firebase-admin/firestore"
 import { onCallGenkit } from "firebase-functions/https"
 import * as logger from "firebase-functions/logger"
 import { HttpsError, type CallableRequest } from "firebase-functions/v2/https"
@@ -91,10 +92,19 @@ import {
 } from "./botRag.js"
 import { summarizeNodeTool } from "./botSummarize.js"
 import {
+  buildTurnConfig,
+  deliveryToSendArgs,
+  getMissingToolName,
+  isToolInputValidationError,
+  isToolIterationsExceededError,
+  type TurnDelivery,
+} from "./botTurn.js"
+import {
   DEFAULT_AGENT_DEFINITION,
   hydrateBuiltInAgent,
 } from "./builtInAgents.js"
-import { admin, db } from "./firebase.js"
+import type { BotChatRole, BotSessionVisibility } from "./domain.js"
+import { db } from "./firebase.js"
 import {
   ai,
   getModelProvider,
@@ -120,7 +130,7 @@ import {
 import type { IMembershipRole, WorkspaceNodeScope } from "./types.js"
 import { assertWithinBudget, incrementTeamTokenUsage } from "./usageMetering.js"
 import { generateId } from "./utilities.js"
-import { getWorkspaceRoleOverride } from "./workspaceRoles.js"
+import { resolveParticipation } from "./workspaceRoles.js"
 
 // `AuthData` isn't re-exported from `firebase-functions/v2/https`, so derive
 // it from `CallableRequest["auth"]` to avoid reaching into internal paths.
@@ -179,7 +189,7 @@ async function resolveActingRole(
   return role
 }
 
-export type SessionVisibility = "private" | "shared" | "public"
+export type SessionVisibility = BotSessionVisibility
 
 const MAIN_THREAD = "main"
 // TITLE_MAX_LENGTH and PREVIEW_MAX_LENGTH are imported from
@@ -187,7 +197,7 @@ const MAIN_THREAD = "main"
 // the SessionStore AND as the field-level defaults in
 // `DEFAULT_BOT_AGENT_CONFIG`. Single source of truth lives there.
 
-type ChatRole = "user" | "agent"
+type ChatRole = BotChatRole
 
 interface ToolCall {
   ref?: string
@@ -296,28 +306,6 @@ function createThinkingFolder(emit: (text: string) => void) {
       open = false
     },
   }
-}
-
-/**
- * Thinking budget (tokens) requested from Anthropic when extended thinking
- * is enabled. Must be ≥ 1024 (Anthropic's minimum). Gemini manages its own
- * budget dynamically, so this is Anthropic-only. We add it on top of the
- * agent's `maxOutputTokens` so the answer keeps its full allotment.
- */
-const ANTHROPIC_THINKING_BUDGET_TOKENS = 2048
-
-/**
- * Whether a model wire-name exposes chain-of-thought we can surface as
- * `<thinking>` blocks. Gemini gained it in 2.5 (2.0-flash/-lite have none);
- * Claude exposes it on 3.7 and the 4.x line. OpenAI's offered `gpt-4*`
- * aren't reasoning models, so they return nothing to fold — and if a
- * compatible endpoint ever emits `reasoning_content`, the shared fold picks
- * it up regardless of this gate.
- */
-function modelSupportsThinking(name: string): boolean {
-  if (/^gemini-(2\.5|3)/.test(name)) return true
-  if (/^claude-(3-7|(opus|sonnet|haiku)-4)/.test(name)) return true
-  return false
 }
 
 /**
@@ -730,7 +718,7 @@ class FirestoreBotSessionStore implements SessionStore {
       messages: sanitizedMessages,
       preview: derivePreview(messages, this.previewMaxLength),
       messageCount: messages.length,
-      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      updatedAt: FieldValue.serverTimestamp(),
       // The complete chip set, including the pinned node if any.
       // Re-written every turn so a detach shrinks the array on the doc
       // rather than leaving stale entries. Empty array is meaningful
@@ -771,7 +759,7 @@ class FirestoreBotSessionStore implements SessionStore {
     // from an inspector tab.)
     if (isNew) {
       update.title = deriveTitle(messages, this.titleMaxLength)
-      update.createdAt = admin.firestore.FieldValue.serverTimestamp()
+      update.createdAt = FieldValue.serverTimestamp()
       update.archivedAt = null
       if (this.pinnedNodeKey) {
         update.pinnedNodeKey = this.pinnedNodeKey
@@ -815,7 +803,7 @@ class FirestoreBotSessionStore implements SessionStore {
  */
 export function pinnedNodeKey(
   ownerUid: string,
-  scope: "code" | "write",
+  scope: WorkspaceNodeScope,
   nodeId: string
 ): string {
   return `${ownerUid}:${scope}:${nodeId}`
@@ -1101,7 +1089,7 @@ async function commitTransferIfRequested(
     .set(
       {
         activeAgentId: nextAgentId,
-        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+        updatedAt: FieldValue.serverTimestamp(),
       },
       { merge: true }
     )
@@ -1307,15 +1295,15 @@ async function runTransferTurnIfRequested(opts: {
       transferPrep.existingSession?.data
     )
 
-    const turnAbort = new AbortController()
-    return await streamChatToClient(
-      transferPrep.chat.sendStream({
-        abortSignal: turnAbort.signal,
-        maxTurns: TOOL_MAX_TURNS,
-      }) as ChatStreamResult,
-      opts.sendChunk,
+    // Delivery `{ kind: "continue" }` re-enters the truncated thread with NO
+    // prompt — Genkit generates on the tail user message alone, which is the
+    // whole point of the transfer second turn. `runChatTurn` owns the abort
+    // controller + `maxTurns` + deadline race.
+    return await runChatTurn(
+      transferPrep.chat,
+      { kind: "continue" },
       {
-        abortController: turnAbort,
+        sendChunk: opts.sendChunk,
         preSentToolCalls: priorRefs.calls,
         preSentToolResults: priorRefs.results,
         preExistingToolCallCount: priorRefs.callCount,
@@ -1498,14 +1486,12 @@ async function acquireSessionTurnLock(
   )
   const token = generateId()
   const now = Date.now()
-  const expiresAt = admin.firestore.Timestamp.fromMillis(
-    now + SESSION_LOCK_LEASE_MS
-  )
+  const expiresAt = Timestamp.fromMillis(now + SESSION_LOCK_LEASE_MS)
 
   await db.runTransaction(async (tx) => {
     const snap = await tx.get(ref)
     const existingExpiry = snap.exists
-      ? (snap.get("expiresAt") as admin.firestore.Timestamp | undefined)
+      ? (snap.get("expiresAt") as Timestamp | undefined)
       : undefined
     if (existingExpiry && existingExpiry.toMillis() > now) {
       throw new HttpsError(
@@ -1517,7 +1503,7 @@ async function acquireSessionTurnLock(
     tx.set(ref, {
       token,
       expiresAt,
-      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      updatedAt: FieldValue.serverTimestamp(),
     })
   })
 
@@ -1545,29 +1531,6 @@ async function acquireSessionTurnLock(
 // ===========================================================================
 // Auth helpers
 // ===========================================================================
-
-/**
- * Require the caller to be signed in with a verified email and return the
- * narrowed auth. Used by every non-Genkit callable in this file (the
- * Genkit-wrapped flow enforces `email_verified` via `authPolicy`, so it
- * doesn't need this helper).
- *
- * Returning the auth (instead of using an `asserts` helper) avoids
- * TypeScript's flaky narrowing of property accesses like `request.auth.uid`
- * across the call boundary.
- */
-export function requireVerifiedAuth(auth: AuthData | undefined): AuthData {
-  if (!auth) {
-    throw new HttpsError("unauthenticated", "Sign-in required.")
-  }
-  if (auth.token?.email_verified !== true) {
-    throw new HttpsError(
-      "permission-denied",
-      "Verify your email address to continue."
-    )
-  }
-  return auth
-}
 
 /**
  * Read the caller's membership doc and return their role. Throws if the
@@ -1921,85 +1884,6 @@ function collectPriorTurnToolRefs(data: SessionData | undefined): {
  * Returns the resolved final response so the caller can use
  * `final.text` for the unary reply.
  */
-/**
- * Detect Genkit's "model exhausted its tool budget" error so the chat
- * flow can convert it into a user-visible message instead of letting
- * `onCallGenkit` wrap it as `INTERNAL`.
- *
- * Matches on `status === "ABORTED"` AND the message string mentioning
- * tool-iteration exhaustion — narrowing past `ABORTED` alone, which
- * Genkit also uses for legitimate user-initiated cancellations that
- * should keep propagating.
- */
-function isToolIterationsExceededError(err: unknown): boolean {
-  if (!err || typeof err !== "object") return false
-  const e = err as {
-    status?: string
-    originalMessage?: string
-    message?: string
-  }
-  if (e.status !== "ABORTED") return false
-  const msg = e.originalMessage ?? e.message ?? ""
-  return msg.includes("maximum tool call iterations")
-}
-
-/**
- * Detect Genkit's "model called a tool not registered this turn" error.
- * Happens when the model's continuation emits a tool request whose name
- * isn't in the current `chat({ tools })` catalog — most commonly on a
- * resume turn where the catalog changed since the historical thread was
- * written (e.g., the user switched to an agent with fewer tools while an
- * `askQuestion` interrupt was pending, so the resume runs without the
- * node-CRUD tools that earlier turns successfully used).
- *
- * Status-narrowed past plain `NOT_FOUND` AND matched on the canonical
- * "Tool X not found" message so we don't accidentally swallow unrelated
- * NOT_FOUND errors (e.g. session/model lookup misses elsewhere in the
- * generate pipeline). Returns the offending tool name so the fallback
- * chunk can name it for the user.
- */
-function getMissingToolName(err: unknown): string | null {
-  if (!err || typeof err !== "object") return null
-  const e = err as {
-    status?: string
-    originalMessage?: string
-    message?: string
-  }
-  if (e.status !== "NOT_FOUND") return null
-  const msg = e.originalMessage ?? e.message ?? ""
-  const match = /Tool (\S+) not found/.exec(msg)
-  return match ? match[1] : null
-}
-
-/**
- * Detect Genkit's "the model called a tool with arguments that fail its input
- * schema" error — a numeric field over a `.max()`, a bad enum, a missing
- * required field, etc. Genkit validates tool-call args against the schema
- * BEFORE the handler runs and throws `INVALID_ARGUMENT: Schema validation
- * failed …`, which (like the two errors above) mirrors onto the stream channel
- * and would otherwise escape as an opaque `INTERNAL` / land as the terminal
- * error of a headless Workflows run.
- *
- * Status-narrowed past plain `INVALID_ARGUMENT` AND matched on the canonical
- * "Schema validation failed" wording so we don't swallow unrelated
- * INVALID_ARGUMENTs from elsewhere in the generate pipeline. We can't resume
- * the turn — Genkit already aborted the whole generate — so the caller turns
- * this into a graceful, logged fallback rather than a cryptic crash. The real
- * fix for any given tool is to clamp/relax its schema so the model can't trip
- * it (see `clampSearchLimit` in botRag.ts); this is the catch-all backstop for
- * tools that haven't been hardened that way yet.
- */
-function isToolInputValidationError(err: unknown): boolean {
-  if (!err || typeof err !== "object") return false
-  const e = err as {
-    status?: string
-    originalMessage?: string
-    message?: string
-  }
-  if (e.status !== "INVALID_ARGUMENT") return false
-  const msg = e.originalMessage ?? e.message ?? ""
-  return msg.includes("Schema validation failed")
-}
 
 /**
  * Per-turn hard deadline. The provider call (Gemini / Claude / OpenAI)
@@ -2320,6 +2204,57 @@ async function streamChatToClientInner(
 }
 
 /**
+ * EXECUTE seam for a streaming agent turn — the one place that owns the
+ * per-turn `AbortController`, the `chat.sendStream(..., { maxTurns })`
+ * invocation, and the `streamChatToClient` hand-off (which in turn owns the
+ * `TURN_DEADLINE_MS` race + the recoverable-error recovery).
+ *
+ * `prepareChatTurn` is the SETUP seam (resolve-or-create session, model +
+ * config, tools, system prompt); this is the EXECUTE seam. The three
+ * streaming callsites — interactive `runAgentTurn`, the transfer re-entry in
+ * `runTransferTurnIfRequested`, and the interrupt resume in
+ * `respondToBotInterruptFlow` — differ ONLY in their {@link TurnDelivery}
+ * shape (`{ prompt }` / `{ kind: "continue" }` / `{ resume }`) and their
+ * pre-marked tool-ref sets, so each collapses to a single `runChatTurn(...)`
+ * call instead of re-hand-rolling the abort controller + `maxTurns` + cast +
+ * hand-off. Single-sourcing this is what makes `TURN_DEADLINE_MS` /
+ * `TOOL_MAX_TURNS` / abort policy impossible to drift between callsites.
+ *
+ * The `AbortController` is created HERE (not by the caller) so its signal
+ * rides into `sendStream` AND reaches `streamChatToClient`, which aborts it
+ * on deadline expiry — a hung provider call is genuinely cancelled rather
+ * than left to finish in the background and waste tokens/quota.
+ */
+async function runChatTurn(
+  chat: PreparedChatTurn["chat"],
+  delivery: TurnDelivery,
+  opts: {
+    sendChunk: (chunk: SendBotMessageStreamPayload) => void
+    preSentToolCalls?: Iterable<string>
+    preSentToolResults?: Iterable<string>
+    preExistingToolCallCount?: number
+    preExistingToolResultCount?: number
+  }
+): Promise<Awaited<ChatStreamResult["response"]>> {
+  const turnAbort = new AbortController()
+  return streamChatToClient(
+    chat.sendStream({
+      ...deliveryToSendArgs(delivery),
+      abortSignal: turnAbort.signal,
+      maxTurns: TOOL_MAX_TURNS,
+    }) as ChatStreamResult,
+    opts.sendChunk,
+    {
+      abortController: turnAbort,
+      preSentToolCalls: opts.preSentToolCalls,
+      preSentToolResults: opts.preSentToolResults,
+      preExistingToolCallCount: opts.preExistingToolCallCount,
+      preExistingToolResultCount: opts.preExistingToolResultCount,
+    }
+  )
+}
+
+/**
  * Shape returned by `prepareChatTurn`. Carries everything both flows
  * need to actually drive a chat turn — the configured Genkit `Chat`
  * object (not yet streamed), the action context the model + tools
@@ -2476,7 +2411,7 @@ async function prepareChatTurn(opts: {
   // original error precedence (membership → existence → archived →
   // edit-rights): if `resolveActingRole` rejects, `Promise.all` rejects
   // with that same error first.
-  const [role, loadedSession, agentConfig, actingWorkspaceRole] =
+  const [role, loadedSession, agentConfig, actingParticipation] =
     await Promise.all([
       resolveActingRole(principal, teamId),
       sessionId
@@ -2486,12 +2421,23 @@ async function prepareChatTurn(opts: {
       // SessionStore's title/preview lengths. Not cached — admin settings
       // changes should apply on the next send, not after a deploy.
       loadTeamAgentConfig(teamId),
-      // Per-workspace role override for the acting principal (elevate-only):
+      // Per-workspace participation for the acting principal (elevate-only):
       // lets a member/agent granted rights in THIS workspace edit content here
       // even when their team role alone wouldn't. Folded into the parallel
       // batch so it adds no round-trip.
-      getWorkspaceRoleOverride(teamId, workspaceId, actingId),
+      resolveParticipation(teamId, workspaceId, actingId),
     ])
+  // An excluded principal is a non-member of this workspace. The old throwing
+  // resolver surfaced this from inside the Promise.all; resolving participation
+  // as data moves the rejection here — keeping the same error and giving
+  // `resolveActingRole`'s failure strict precedence.
+  if (actingParticipation.excluded) {
+    throw new HttpsError(
+      "permission-denied",
+      "You are not a member of this workspace."
+    )
+  }
+  const actingWorkspaceRole = actingParticipation.role
 
   // Edit-permission gate. The owner always has edit; for shared sessions,
   // any full member (owner/admin/member) also has edit — guests, who lack
@@ -2646,12 +2592,23 @@ async function prepareChatTurn(opts: {
   // Either way `canManage/ReadNodes` stay the pure security checks, re-
   // verified inside the tool handlers (`resolveNodeContext` fails closed),
   // so a misconfigured run can only under-permit, never escalate.
-  const [activeAgentRole, activeAgentWorkspaceRole] = activeAgent
+  const [activeAgentRole, activeAgentParticipation] = activeAgent
     ? await Promise.all([
         getMembershipRoleOrNull(teamId, activeAgent.id),
-        getWorkspaceRoleOverride(teamId, workspaceId, activeAgent.id),
+        resolveParticipation(teamId, workspaceId, activeAgent.id),
       ])
     : [null, null]
+  // Preserve the throwing resolver's behavior: an active agent excluded from
+  // this workspace fails the turn rather than silently losing its node tools.
+  if (activeAgentParticipation?.excluded) {
+    throw new HttpsError(
+      "permission-denied",
+      "You are not a member of this workspace."
+    )
+  }
+  const activeAgentWorkspaceRole = activeAgentParticipation
+    ? activeAgentParticipation.role
+    : null
   const agentCanManageNodes = activeAgent
     ? can(activeAgent.id, Capabilities.MANAGE_WORKSPACE_CONTENT, {
         scope: "workspace",
@@ -2973,28 +2930,17 @@ async function prepareChatTurn(opts: {
   //   - OpenAI gpt-4*: not reasoning models, nothing to enable;
   //     `reasoning_content` from a compatible endpoint is still folded.
   const provider = getModelProvider(effectiveModel)
-  const sampling = {
-    temperature: agentConfig.temperature,
-    topP: agentConfig.topP,
-    topK: agentConfig.topK,
-    maxOutputTokens: agentConfig.maxOutputTokens,
-  }
-  let turnConfig: Record<string, unknown> = sampling
-  if (agentConfig.thinking && modelSupportsThinking(effectiveModel)) {
-    if (provider === "google") {
-      turnConfig = { ...sampling, thinkingConfig: { includeThoughts: true } }
-    } else if (provider === "anthropic") {
-      turnConfig = {
-        maxOutputTokens:
-          agentConfig.maxOutputTokens + ANTHROPIC_THINKING_BUDGET_TOKENS,
-        apiVersion: "beta",
-        thinking: {
-          enabled: true,
-          budgetTokens: ANTHROPIC_THINKING_BUDGET_TOKENS,
-        },
-      }
-    }
-  }
+  const turnConfig = buildTurnConfig({
+    provider,
+    model: effectiveModel,
+    sampling: {
+      temperature: agentConfig.temperature,
+      topP: agentConfig.topP,
+      topK: agentConfig.topK,
+      maxOutputTokens: agentConfig.maxOutputTokens,
+    },
+    thinkingEnabled: agentConfig.thinking,
+  })
 
   // Anthropic prompt caching: mark the (large, turn-stable) system prompt as
   // an ephemeral cache breakpoint so Claude reuses the tokenized system+tools
@@ -3171,27 +3117,20 @@ async function runAgentTurn(
     // a brand-new session, so this is a no-op on first turns.
     const priorRefs = collectPriorTurnToolRefs(existingSession?.data)
 
-    // Per-turn AbortController: its signal rides into `sendStream` and the
-    // deadline race (`streamChatToClient`) aborts it on expiry, so a hung
-    // provider call is genuinely cancelled rather than left to finish in the
-    // background. `maxTurns` raises Genkit's default tool-iteration budget.
     // Multimodal turn: when the attached nodes contributed media parts
     // (images/PDFs), send the user turn as a `[text, ...media]` array;
     // otherwise keep the plain-string prompt (cheaper, unchanged behavior).
+    // `runChatTurn` owns the per-turn AbortController + `maxTurns` + the
+    // deadline race; here we only pick the delivery shape and the ref dedup.
     const turnPrompt: string | Part[] =
       userMediaParts.length > 0
         ? [{ text: opts.message }, ...userMediaParts]
         : opts.message
-    const turnAbort = new AbortController()
-    const firstFinal = await streamChatToClient(
-      chat.sendStream({
-        prompt: turnPrompt,
-        abortSignal: turnAbort.signal,
-        maxTurns: TOOL_MAX_TURNS,
-      }) as ChatStreamResult,
-      sendChunk,
+    const firstFinal = await runChatTurn(
+      chat,
+      { prompt: turnPrompt },
       {
-        abortController: turnAbort,
+        sendChunk,
         preSentToolCalls: priorRefs.calls,
         preSentToolResults: priorRefs.results,
         preExistingToolCallCount: priorRefs.callCount,
@@ -3684,19 +3623,15 @@ const respondToBotInterruptFlow = ai.defineFlow(
         : `result:${interruptName}#${priorRefs.resultCount}`
       const preSentResults = [...priorRefs.results, answeredResultKey]
 
-      // Same per-turn abort + tool-budget treatment as `sendBotMessageFlow`:
-      // the resumed turn can chain tools and hang on the provider just like a
-      // fresh send, so it gets its own AbortController + `maxTurns`.
-      const turnAbort = new AbortController()
-      const firstFinal = await streamChatToClient(
-        chat.sendStream({
-          resume: { respond: [respondPart] },
-          abortSignal: turnAbort.signal,
-          maxTurns: TOOL_MAX_TURNS,
-        }) as ChatStreamResult,
-        sendChunk,
+      // Delivery `{ resume }` folds the user's answer back in as the tool
+      // response (NOT a new user-role message). `runChatTurn` owns the abort
+      // controller + `maxTurns` + deadline race; the resumed turn can chain
+      // tools and hang on the provider just like a fresh send.
+      const firstFinal = await runChatTurn(
+        chat,
+        { resume: { respond: [respondPart] } },
         {
-          abortController: turnAbort,
+          sendChunk,
           preSentToolCalls: priorRefs.calls,
           preSentToolResults: preSentResults,
           preExistingToolCallCount: priorRefs.callCount,

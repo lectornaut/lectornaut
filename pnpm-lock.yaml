@@ -39,8 +39,8 @@ importers:
         specifier: ^6.12.3
         version: 6.12.3
       '@codemirror/lint':
-        specifier: ^6.9.6
-        version: 6.9.6
+        specifier: ^6.9.7
+        version: 6.9.7
       '@codemirror/search':
         specifier: ^6.7.0
         version: 6.7.0
@@ -48,8 +48,8 @@ importers:
         specifier: ^6.6.0
         version: 6.6.0
       '@codemirror/view':
-        specifier: ^6.43.0
-        version: 6.43.0
+        specifier: ^6.43.1
+        version: 6.43.1
       '@fontsource-variable/bricolage-grotesque':
         specifier: ^5.2.10
         version: 5.2.10
@@ -322,7 +322,7 @@ importers:
         version: 0.2.117
       markstream-vue:
         specifier: 1.0.1-beta.5
-        version: 1.0.1-beta.5(katex@0.17.0)(mermaid@11.15.0)(stream-markdown@0.0.15(shiki@4.2.0)(vue@3.5.35(typescript@6.0.3)))(stream-monaco@0.0.41(monaco-editor@0.55.1))(vue-i18n@11.4.5(vue@3.5.35(typescript@6.0.3)))(vue@3.5.35(typescript@6.0.3))
+        version: 1.0.1-beta.5(katex@0.17.0)(mermaid@11.15.0)(stream-markdown@0.0.16(shiki@4.2.0)(vue@3.5.35(typescript@6.0.3)))(stream-monaco@0.0.41(monaco-editor@0.55.1))(vue-i18n@11.4.5(vue@3.5.35(typescript@6.0.3)))(vue@3.5.35(typescript@6.0.3))
       mermaid:
         specifier: ^11.15.0
         version: 11.15.0
@@ -360,8 +360,8 @@ importers:
         specifier: ^1.15.7
         version: 1.15.7
       stream-markdown:
-        specifier: ^0.0.15
-        version: 0.0.15(shiki@4.2.0)(vue@3.5.35(typescript@6.0.3))
+        specifier: ^0.0.16
+        version: 0.0.16(shiki@4.2.0)(vue@3.5.35(typescript@6.0.3))
       tailwind-merge:
         specifier: ^3.6.0
         version: 3.6.0
@@ -403,7 +403,7 @@ importers:
         version: 2.2.2
       y-codemirror.next:
         specifier: ^0.3.5
-        version: 0.3.5(@codemirror/state@6.6.0)(@codemirror/view@6.43.0)(yjs@13.6.31)
+        version: 0.3.5(@codemirror/state@6.6.0)(@codemirror/view@6.43.1)(yjs@13.6.31)
       y-protocols:
         specifier: ^1.0.7
         version: 1.0.7(yjs@13.6.31)
@@ -454,8 +454,8 @@ importers:
         specifier: ^1.15.9
         version: 1.15.9
       '@typescript-eslint/parser':
-        specifier: ^8.60.1
-        version: 8.60.1(eslint@10.4.1(jiti@2.7.0))(typescript@6.0.3)
+        specifier: ^8.61.0
+        version: 8.61.0(eslint@10.4.1(jiti@2.7.0))(typescript@6.0.3)
       '@vite-pwa/assets-generator':
         specifier: ^1.0.2
         version: 1.0.2
@@ -476,10 +476,10 @@ importers:
         version: 10.1.8(eslint@10.4.1(jiti@2.7.0))
       eslint-plugin-prettier:
         specifier: ^5.5.6
-        version: 5.5.6(eslint-config-prettier@10.1.8(eslint@10.4.1(jiti@2.7.0)))(eslint@10.4.1(jiti@2.7.0))(prettier@3.8.3)
+        version: 5.5.6(eslint-config-prettier@10.1.8(eslint@10.4.1(jiti@2.7.0)))(eslint@10.4.1(jiti@2.7.0))(prettier@3.8.4)
       eslint-plugin-vue:
         specifier: ^10.9.2
-        version: 10.9.2(@typescript-eslint/parser@8.60.1(eslint@10.4.1(jiti@2.7.0))(typescript@6.0.3))(eslint@10.4.1(jiti@2.7.0))(vue-eslint-parser@10.4.1(eslint@10.4.1(jiti@2.7.0)))
+        version: 10.9.2(@typescript-eslint/parser@8.61.0(eslint@10.4.1(jiti@2.7.0))(typescript@6.0.3))(eslint@10.4.1(jiti@2.7.0))(vue-eslint-parser@10.4.1(eslint@10.4.1(jiti@2.7.0)))
       globals:
         specifier: ^17.6.0
         version: 17.6.0
@@ -490,14 +490,14 @@ importers:
         specifier: ^17.0.7
         version: 17.0.7
       prettier:
-        specifier: ^3.8.3
-        version: 3.8.3
+        specifier: ^3.8.4
+        version: 3.8.4
       prettier-plugin-organize-imports:
         specifier: ^4.3.0
-        version: 4.3.0(prettier@3.8.3)(typescript@6.0.3)(vue-tsc@3.3.4(typescript@6.0.3))
+        version: 4.3.0(prettier@3.8.4)(typescript@6.0.3)(vue-tsc@3.3.4(typescript@6.0.3))
       prettier-plugin-tailwindcss:
         specifier: ^0.8.0
-        version: 0.8.0(prettier-plugin-organize-imports@4.3.0(prettier@3.8.3)(typescript@6.0.3)(vue-tsc@3.3.4(typescript@6.0.3)))(prettier@3.8.3)
+        version: 0.8.0(prettier-plugin-organize-imports@4.3.0(prettier@3.8.4)(typescript@6.0.3)(vue-tsc@3.3.4(typescript@6.0.3)))(prettier@3.8.4)
       shadcn-vue:
         specifier: ^2.7.4
         version: 2.7.4(@cfworker/json-schema@4.1.1)(babel-plugin-macros@3.1.0)(eslint@10.4.1(jiti@2.7.0))(vue@3.5.35(typescript@6.0.3))
@@ -523,8 +523,8 @@ importers:
         specifier: ^6.0.3
         version: 6.0.3
       typescript-eslint:
-        specifier: ^8.60.1
-        version: 8.60.1(eslint@10.4.1(jiti@2.7.0))(typescript@6.0.3)
+        specifier: ^8.61.0
+        version: 8.61.0(eslint@10.4.1(jiti@2.7.0))(typescript@6.0.3)
       unplugin-auto-import:
         specifier: ^21.0.0
         version: 21.0.0(@vueuse/core@14.3.0(vue@3.5.35(typescript@6.0.3)))
@@ -575,16 +575,16 @@ importers:
     dependencies:
       '@genkit-ai/anthropic':
         specifier: ^0.3.0
-        version: 0.3.0(genkit@1.36.0(@google-cloud/firestore@7.11.6)(firebase-admin@13.10.0)(firebase@12.14.0))(zod@3.25.76)
+        version: 0.3.0(genkit@1.36.0(@google-cloud/firestore@8.6.0)(firebase-admin@13.10.0)(firebase@12.14.0))(zod@3.25.76)
       '@genkit-ai/compat-oai':
         specifier: ^1.36.0
-        version: 1.36.0(genkit@1.36.0(@google-cloud/firestore@7.11.6)(firebase-admin@13.10.0)(firebase@12.14.0))(ws@8.21.0)(zod@3.25.76)
+        version: 1.36.0(genkit@1.36.0(@google-cloud/firestore@8.6.0)(firebase-admin@13.10.0)(firebase@12.14.0))(ws@8.21.0)(zod@3.25.76)
       '@genkit-ai/firebase':
         specifier: ^1.36.0
-        version: 1.36.0(@google-cloud/firestore@7.11.6)(firebase-admin@13.10.0)(firebase@12.14.0)(genkit@1.36.0(@google-cloud/firestore@7.11.6)(firebase-admin@13.10.0)(firebase@12.14.0))
+        version: 1.36.0(@google-cloud/firestore@8.6.0)(firebase-admin@13.10.0)(firebase@12.14.0)(genkit@1.36.0(@google-cloud/firestore@8.6.0)(firebase-admin@13.10.0)(firebase@12.14.0))
       '@genkit-ai/google-genai':
         specifier: ^1.36.0
-        version: 1.36.0(genkit@1.36.0(@google-cloud/firestore@7.11.6)(firebase-admin@13.10.0)(firebase@12.14.0))
+        version: 1.36.0(genkit@1.36.0(@google-cloud/firestore@8.6.0)(firebase-admin@13.10.0)(firebase@12.14.0))
       '@google-cloud/functions-framework':
         specifier: 5.0.2
         version: 5.0.2
@@ -596,7 +596,7 @@ importers:
         version: 7.2.5(firebase-admin@13.10.0)
       genkit:
         specifier: ^1.36.0
-        version: 1.36.0(@google-cloud/firestore@7.11.6)(firebase-admin@13.10.0)(firebase@12.14.0)
+        version: 1.36.0(@google-cloud/firestore@8.6.0)(firebase-admin@13.10.0)(firebase@12.14.0)
       handlebars:
         specifier: ^4.7.9
         version: 4.7.9
@@ -623,8 +623,8 @@ importers:
         specifier: ^5.0.0
         version: 5.0.0
       '@typescript-eslint/parser':
-        specifier: ^8.60.1
-        version: 8.60.1(eslint@10.4.1(jiti@2.7.0))(typescript@6.0.3)
+        specifier: ^8.61.0
+        version: 8.61.0(eslint@10.4.1(jiti@2.7.0))(typescript@6.0.3)
       esbuild:
         specifier: ^0.28.0
         version: 0.28.0
@@ -636,7 +636,7 @@ importers:
         version: 10.1.8(eslint@10.4.1(jiti@2.7.0))
       eslint-plugin-prettier:
         specifier: ^5.5.6
-        version: 5.5.6(eslint-config-prettier@10.1.8(eslint@10.4.1(jiti@2.7.0)))(eslint@10.4.1(jiti@2.7.0))(prettier@3.8.3)
+        version: 5.5.6(eslint-config-prettier@10.1.8(eslint@10.4.1(jiti@2.7.0)))(eslint@10.4.1(jiti@2.7.0))(prettier@3.8.4)
       firebase-functions-test:
         specifier: ^3.5.0
         version: 3.5.0(firebase-admin@13.10.0)(firebase-functions@7.2.5(firebase-admin@13.10.0))(jest@30.4.2(@types/node@25.9.2)(babel-plugin-macros@3.1.0))
@@ -647,11 +647,11 @@ importers:
         specifier: ^17.6.0
         version: 17.6.0
       prettier:
-        specifier: ^3.8.3
-        version: 3.8.3
+        specifier: ^3.8.4
+        version: 3.8.4
       prettier-plugin-organize-imports:
         specifier: ^4.3.0
-        version: 4.3.0(prettier@3.8.3)(typescript@6.0.3)(vue-tsc@3.3.4(typescript@6.0.3))
+        version: 4.3.0(prettier@3.8.4)(typescript@6.0.3)(vue-tsc@3.3.4(typescript@6.0.3))
       rimraf:
         specifier: ^6.1.3
         version: 6.1.3
@@ -659,8 +659,8 @@ importers:
         specifier: ^6.0.3
         version: 6.0.3
       typescript-eslint:
-        specifier: ^8.60.1
-        version: 8.60.1(eslint@10.4.1(jiti@2.7.0))(typescript@6.0.3)
+        specifier: ^8.61.0
+        version: 8.61.0(eslint@10.4.1(jiti@2.7.0))(typescript@6.0.3)
 
   shared: {}
 
@@ -1477,8 +1477,8 @@ packages:
   '@codemirror/language@6.12.3':
     resolution: {integrity: sha512-QwCZW6Tt1siP37Jet9Tb02Zs81TQt6qQrZR2H+eGMcFsL1zMrk2/b9CLC7/9ieP1fjIUMgviLWMmgiHoJrj+ZA==}
 
-  '@codemirror/lint@6.9.6':
-    resolution: {integrity: sha512-6Kp7r6XfCi/D/5sdXieMfg9pJU1bUEx96WITuLU6ESaKizCz0QHFMjY/TaFSbigDdEAIgi93itLBIUETP4oK+A==}
+  '@codemirror/lint@6.9.7':
+    resolution: {integrity: sha512-28/+iWLYxKxsvGYhSYL7zaCZqLz5+FFFDq9tVsvGv9kv8RY4fFAchJ5WX9M3YrrRlTIsECjsXPqeNgnSmNP2dg==}
 
   '@codemirror/search@6.7.0':
     resolution: {integrity: sha512-ZvGm99wc/s2cITtMT15LFdn8aH/aS+V+DqyGq/N5ZlV5vWtH+nILvC2nw0zX7ByNoHHDZ2IxxdW38O0tc5nVHg==}
@@ -1486,8 +1486,8 @@ packages:
   '@codemirror/state@6.6.0':
     resolution: {integrity: sha512-4nbvra5R5EtiCzr9BTHiTLc+MLXK2QGiAVYMyi8PkQd3SR+6ixar/Q/01Fa21TBIDOZXgeWV4WppsQolSreAPQ==}
 
-  '@codemirror/view@6.43.0':
-    resolution: {integrity: sha512-V7ZCLQO3Jus9hzh2jVCCPW3mO4IBMr43O37PqSUYautJSnnJF41YlgLw21x0fLJTYvJ+Vkm6Gp+qKGH9pltgXA==}
+  '@codemirror/view@6.43.1':
+    resolution: {integrity: sha512-+BIjw/AG3tDQ4pJgTLPYdAW25eDE66YsvM4LKyVPgGzVgZ4a9Wj1SRX8kPVKgBDdPt8oHtZ15F0qx7p0oOHdHw==}
 
   '@colordx/core@5.4.3':
     resolution: {integrity: sha512-kIxYSfA5T8HXjav55UaaH/o/cKivF6jCCGIb8eqtcsfI46wsvlSiT8jMDyrl779qLec3c2c2oHBZo4oAhvbjrQ==}
@@ -2265,6 +2265,10 @@ packages:
     resolution: {integrity: sha512-EW/O8ktzwLfyWBOsNuhRoMi8lrC3clHM5LVFhGvO1HCsLozCOOXRAlHrYBoE6HL42Sc8yYMuCb2XqcnJ4OOEpw==}
     engines: {node: '>=14.0.0'}
 
+  '@google-cloud/firestore@8.6.0':
+    resolution: {integrity: sha512-TdvZHfwQj5B5CSDEgDqyrhdVqtOSupmBXDQPasMAJiC64tjsGvyMooNiC43fdk1TsUHeklyoZ6/vQ1TjWKVMbg==}
+    engines: {node: '>=18'}
+
   '@google-cloud/functions-framework@5.0.2':
     resolution: {integrity: sha512-QDPRkPO1KWqbJ+z5RexKjZzHilIK5vM58YFkr/GZU5NIBcCb7Vd4dBKn9cLxEMaBxg6bXbmqEhF6O6977gLNkQ==}
     engines: {node: '>=10.0.0'}
@@ -2344,8 +2348,8 @@ packages:
     resolution: {integrity: sha512-hyUoE85Rj3rRUVk3VU+Selp4MorBwEzsQEqAj6+SE+WabR9LIFitYS6A4R+PyiwVaRk/tggGD8p7bNiIY5sk4w==}
     engines: {node: '>=18'}
 
-  '@google-cloud/storage@7.19.0':
-    resolution: {integrity: sha512-n2FjE7NAOYyshogdc7KQOl/VZb4sneqPjWouSyia9CMDdMhRX5+RIbqalNmC7LOLzuLAN89VlF2HvG8na9G+zQ==}
+  '@google-cloud/storage@7.21.0':
+    resolution: {integrity: sha512-l+IFTkd+6Y5LoAuXyYCKNAKtw/Ci+rAMqgdTB1jv4iZiLhw0rtq+0qjIRbBizXkNzEFmXiXUW0H7sZQQvk1ffA==}
     engines: {node: '>=14'}
 
   '@googleapis/sqladmin@35.2.0':
@@ -3044,8 +3048,8 @@ packages:
     resolution: {integrity: sha512-jCs9ldd7NwzpgXDIf6P3+NrHh9/sD6CQdxHyjQI+h/6rDNo88ypBxxz45UDuZHz9r3tNz7N/VInSVoVdtXEI4A==}
     engines: {node: ^14.21.3 || >=16}
 
-  '@nodable/entities@2.1.0':
-    resolution: {integrity: sha512-nyT7T3nbMyBI/lvr6L5TyWbFJAI9FTgVRakNoBqCD+PmID8DzFrrNdLLtHMwMszOtqZa8PAOV24ZqDnQrhQINA==}
+  '@nodable/entities@2.1.1':
+    resolution: {integrity: sha512-Pig3HxDIoMgjdEH8OCf/dkcTmLFjJRjWuq8jSnklu284/TKOPibSRERmOykiwmyXTtv61mP+44f3GMx0tLAyjg==}
 
   '@nodelib/fs.scandir@2.1.5':
     resolution: {integrity: sha512-vq24Bq3ym5HEQm2NKCr3yXDwjc7vTsEThRDnkp2DK9p1uqLR+DHurm/NOTo0KG7HYHU7eppKZj3MyqYuMBf62g==}
@@ -5266,16 +5270,16 @@ packages:
   '@types/yargs@17.0.35':
     resolution: {integrity: sha512-qUHkeCyQFxMXg79wQfTtfndEC+N9ZZg76HJftDJp+qH2tV7Gj4OJi7l+PiWwJ+pWtW8GwSmqsDj/oymhrTWXjg==}
 
-  '@typescript-eslint/eslint-plugin@8.60.1':
-    resolution: {integrity: sha512-JQ4S5GB0tfjO8BuJ4fcX+HodkzJjYBV+7OJ+wLygaX7OGQ7FudyHL4NSCA6ob+w3Yn+5MkKIozOwQhXeM7opVg==}
+  '@typescript-eslint/eslint-plugin@8.61.0':
+    resolution: {integrity: sha512-bFNvl9ZczlVb+wR2Akszf3gHfKVj/8WanXaGJ3UstTA7brNKg0cNdk6X1Psu5V7MZ2oQtzZKOEzIUehaoxbDGw==}
     engines: {node: ^18.18.0 || ^20.9.0 || >=21.1.0}
     peerDependencies:
-      '@typescript-eslint/parser': ^8.60.1
+      '@typescript-eslint/parser': ^8.61.0
       eslint: ^8.57.0 || ^9.0.0 || ^10.0.0
       typescript: '>=4.8.4 <6.1.0'
 
-  '@typescript-eslint/parser@8.60.1':
-    resolution: {integrity: sha512-A0M6ua6H252bVjPvvtSgl2QA4+ET9S5Mtkb2GDyTxIhH/C4qDItT7RQNO5PhMC6NXGYXOR9dIalcDDgBKT7oFA==}
+  '@typescript-eslint/parser@8.61.0':
+    resolution: {integrity: sha512-5B7PfA2e1NQGCnDHd/0lW7W3gvp3d59Ryw54FYO8Uswxo9f6ikw3AZV+Xj/TvpImmpsiYyUqAfhC6kJID1jF6w==}
     engines: {node: ^18.18.0 || ^20.9.0 || >=21.1.0}
     peerDependencies:
       eslint: ^8.57.0 || ^9.0.0 || ^10.0.0
@@ -5287,8 +5291,8 @@ packages:
     peerDependencies:
       typescript: '>=4.8.4 <6.1.0'
 
-  '@typescript-eslint/project-service@8.60.1':
-    resolution: {integrity: sha512-eXkTH2bxmXlqD1RnOPmLZ9ZM9D3VwSx04JOwBnP9RQ+yUA5a2Mu7SfW8uaV2Aon53NJzZlZYuX7tn91Izf+xaw==}
+  '@typescript-eslint/project-service@8.61.0':
+    resolution: {integrity: sha512-DV42F7MLJO6Rax7SK1yg43tcnEfGUrurSpSxKuVX+a3RCTzBlH3fuxprrOJXKCJGAaw82xXocikJ0uQaqwXgGA==}
     engines: {node: ^18.18.0 || ^20.9.0 || >=21.1.0}
     peerDependencies:
       typescript: '>=4.8.4 <6.1.0'
@@ -5297,8 +5301,8 @@ packages:
     resolution: {integrity: sha512-t2LvZnoEfzKtnPjgeEu41xw5gxq9mQVfYy4OoZ4Vlt0sk3JwxmhCca/AR7DwOiHrjWgjAj6as4AhRLKSDfvZIA==}
     engines: {node: ^18.18.0 || ^20.9.0 || >=21.1.0}
 
-  '@typescript-eslint/scope-manager@8.60.1':
-    resolution: {integrity: sha512-gvI5OQoptnxQnchOirukCuQ55svJSTuD/4k5+pC267xyBtYry748R9/c3tYUzb/iE6RZfllRz2lVulLCHkTm4w==}
+  '@typescript-eslint/scope-manager@8.61.0':
+    resolution: {integrity: sha512-IWdXFHFSb6mlC3HPc7QsLDm5zYEbUla6trDEHf32D3/dnuUyXd87plScSNXSbm0/RxMvObpI17sv/EDTGrGZkA==}
     engines: {node: ^18.18.0 || ^20.9.0 || >=21.1.0}
 
   '@typescript-eslint/tsconfig-utils@8.59.3':
@@ -5307,14 +5311,14 @@ packages:
     peerDependencies:
       typescript: '>=4.8.4 <6.1.0'
 
-  '@typescript-eslint/tsconfig-utils@8.60.1':
-    resolution: {integrity: sha512-nh8w4qAteiKuZu3pSSzG/yGKpw0OlkrKnzFmbVRenKaD4qc+7i1GrmZaLVkr8rk4uipiPGMOW4YsM6WmKZ5CvA==}
+  '@typescript-eslint/tsconfig-utils@8.61.0':
+    resolution: {integrity: sha512-O5Amvdv9ztMpxpf+vmFULGG78IE6Qwdr3bCGvqwG4nwc9H2qXkOYJJnRbRHyMkQTjv1d03olqwwwzHLMqpFePQ==}
     engines: {node: ^18.18.0 || ^20.9.0 || >=21.1.0}
     peerDependencies:
       typescript: '>=4.8.4 <6.1.0'
 
-  '@typescript-eslint/type-utils@8.60.1':
-    resolution: {integrity: sha512-sdwTrpjosW7ANQYJ39ZBF1ZyEMEGVB2UsikrserVM/30a/F1dTLnu9bGxEdosugyu5caigjLrR2qiD11asjI1A==}
+  '@typescript-eslint/type-utils@8.61.0':
+    resolution: {integrity: sha512-TuBiQYIkd97yBfInHCTKVYMbX4kvEmpOEuixIuzCU9p8BGT1SfyyO0d0IfDMbPIHcjn/hWnusUX5e8v5Xg+X8A==}
     engines: {node: ^18.18.0 || ^20.9.0 || >=21.1.0}
     peerDependencies:
       eslint: ^8.57.0 || ^9.0.0 || ^10.0.0
@@ -5324,8 +5328,8 @@ packages:
     resolution: {integrity: sha512-ePFoH0g4ludssdRFqqDxQePCxU4WQyRa9+XVwjm7yLn0FKhMeoetC+qBEEI1Eyb1pGSDveTIT09Bvw2WhlGayg==}
     engines: {node: ^18.18.0 || ^20.9.0 || >=21.1.0}
 
-  '@typescript-eslint/types@8.60.1':
-    resolution: {integrity: sha512-4h0tY8ppCkdCzcrl2YM5M3my0xsE1Tf8om3owEu5oPWmXwkKRmk0j0LGDzYBGUcAlesEbxBhazqu/K4cu3Ug7w==}
+  '@typescript-eslint/types@8.61.0':
+    resolution: {integrity: sha512-9QTQpZ5Iin4CdIodfbDQFSeiSJKidgYJYug1P9CC2xWgUTvlmixViqDZNciMjwLBZyJnG4tGmPl97rVAFb1AJg==}
     engines: {node: ^18.18.0 || ^20.9.0 || >=21.1.0}
 
   '@typescript-eslint/typescript-estree@8.59.3':
@@ -5334,14 +5338,14 @@ packages:
     peerDependencies:
       typescript: '>=4.8.4 <6.1.0'
 
-  '@typescript-eslint/typescript-estree@8.60.1':
-    resolution: {integrity: sha512-alpRkfG8hlVE5kdJW2GkfgDgXxold3e8e4l6EnmhRmRLbekgAPCCGDVD++sABy9FcgPFroq+uFcCSM1vR57Cew==}
+  '@typescript-eslint/typescript-estree@8.61.0':
+    resolution: {integrity: sha512-42zatd5qSvvcV1JdDBCLxYRznvP4eIHpPoZXdkPFnAmanA4FuZ5dibSnCBggY8hQnqajPpoGjXFdZ7fIJKQnlA==}
     engines: {node: ^18.18.0 || ^20.9.0 || >=21.1.0}
     peerDependencies:
       typescript: '>=4.8.4 <6.1.0'
 
-  '@typescript-eslint/utils@8.60.1':
-    resolution: {integrity: sha512-h2MPBLoNtjc3qZWfY3Tl51yPorQ2McHn8pJfcMNTcIvrrZrr90Ykffit0yjrPFWQcRcUxzH20+6OcVdW4yHtUg==}
+  '@typescript-eslint/utils@8.61.0':
+    resolution: {integrity: sha512-3bzFt7ImFMW/jVYwJamDoe/dMOdFLSC6pom6rRjdh4SZJEYupyMzem8e7vKZLclLfpHjlwSAXOUxtKxGXUiLqA==}
     engines: {node: ^18.18.0 || ^20.9.0 || >=21.1.0}
     peerDependencies:
       eslint: ^8.57.0 || ^9.0.0 || ^10.0.0
@@ -5351,8 +5355,8 @@ packages:
     resolution: {integrity: sha512-f1UQF7ggd42YiwI5wGrRaPsa+P0CINBlrkLPmGfpq/u/I/oVtecoEIfFR9ag/oa1sLOsRNZ6xehf6qMZhQGBDg==}
     engines: {node: ^18.18.0 || ^20.9.0 || >=21.1.0}
 
-  '@typescript-eslint/visitor-keys@8.60.1':
-    resolution: {integrity: sha512-EbGRQg4FhrmwLodl+t3JNAnXHWVr9Vp+Zl1QBZVPY4ByfkzIT8cX3K6QWODHtkIZqqJVEWvhHSx3v5PDHsaQag==}
+  '@typescript-eslint/visitor-keys@8.61.0':
+    resolution: {integrity: sha512-QVLZu3ZPQEE+HICQyAMZ2yLQhxf0meY/wx6Hx14YcTNj13JB3qHlX3lJ02L3fLGHgERRH71kvYDwiXIguT3AjQ==}
     engines: {node: ^18.18.0 || ^20.9.0 || >=21.1.0}
 
   '@ungap/structured-clone@1.3.1':
@@ -7786,8 +7790,16 @@ packages:
     resolution: {integrity: sha512-LDODD4TMYx7XXdpwxAVRAIAuB0bzv0s+ywFonY46k126qzQHT9ygyoa9tncmOiQmmDrik65UYsEkv3lbfqQ3yQ==}
     engines: {node: '>=14'}
 
+  gaxios@7.1.3:
+    resolution: {integrity: sha512-YGGyuEdVIjqxkxVH1pUTMY/XtmmsApXrCVv5EU25iX6inEPbV+VakJfLealkBtJN69AQmh1eGOdCl9Sm1UP6XQ==}
+    engines: {node: '>=18'}
+
   gaxios@7.1.4:
     resolution: {integrity: sha512-bTIgTsM2bWn3XklZISBTQX7ZSddGW+IO3bMdGaemHZ3tbqExMENHLx6kKZ/KlejgrMtj8q7wBItt51yegqalrA==}
+    engines: {node: '>=18'}
+
+  gaxios@7.1.5:
+    resolution: {integrity: sha512-5FZy72Rh8LhtjmvDrKkI+lVhrsQrVKVsItxMoDm5mNQE+xR0WVIIs+jzPSJgBvKVsLi24fZhXJIsNI0bihDzFg==}
     engines: {node: '>=18'}
 
   gcp-metadata@6.1.1:
@@ -7796,6 +7808,10 @@ packages:
 
   gcp-metadata@8.1.2:
     resolution: {integrity: sha512-zV/5HKTfCeKWnxG0Dmrw51hEWFGfcF2xiXqcA3+J90WDuP0SvoiSO5ORvcBsifmx/FoIjgQN3oNOGaQ5PhLFkg==}
+    engines: {node: '>=18'}
+
+  gcp-metadata@8.1.3:
+    resolution: {integrity: sha512-ziTrzUhhpL9Zk5k0HHzgP/KIpWDJT0VMBC/ynt/QIBvTW+UUcSivQRl6VlwTf/EilDxtSWklHoRsKy1c4k+59w==}
     engines: {node: '>=18'}
 
   generator-function@2.0.1:
@@ -7941,8 +7957,16 @@ packages:
     engines: {node: '>=0.6.0'}
     hasBin: true
 
+  google-auth-library@10.5.0:
+    resolution: {integrity: sha512-7ABviyMOlX5hIVD60YOfHw4/CxOfBhyduaYB+wbFWCWoni4N7SLcV46hrVRktuBbZjFC9ONyqamZITN7q3n32w==}
+    engines: {node: '>=18'}
+
   google-auth-library@10.6.2:
     resolution: {integrity: sha512-e27Z6EThmVNNvtYASwQxose/G57rkRuaRbQyxM2bvYLLX/GqWZ5chWq2EBoUchJbCc57eC9ArzO5wMsEmWftCw==}
+    engines: {node: '>=18'}
+
+  google-auth-library@10.7.0:
+    resolution: {integrity: sha512-QpTAbNJ36TliZLx3TTtahR8HG0hN9RllL1e3FymOvQSIKK8JmgV58H924ub2wa2DsS3ANjjP1Aw1N+Ramc8hqQ==}
     engines: {node: '>=18'}
 
   google-auth-library@9.15.1:
@@ -7955,6 +7979,10 @@ packages:
 
   google-gax@5.0.6:
     resolution: {integrity: sha512-1kGbqVQBZPAAu4+/R1XxPQKP0ydbNYoLAr4l0ZO2bMV0kLyLW4I1gAk++qBLWt7DPORTzmWRMsCZe86gDjShJA==}
+    engines: {node: '>=18'}
+
+  google-gax@5.0.7:
+    resolution: {integrity: sha512-EhiqaWWJ+9h7sCcKJTsoo6tMcjokVHhWsbSuWCnZJT4vIBP3y4mAoFLnt9SzgkVZeq24ZsFaArr06nnYYku2yA==}
     engines: {node: '>=18'}
 
   google-logging-utils@0.0.2:
@@ -7990,6 +8018,10 @@ packages:
   gtoken@7.1.0:
     resolution: {integrity: sha512-pCcEwRi+TKpMlxAQObHDQ56KawURgyAf6jtIY046fJ5tIv3zDe/LEIubckAO8fj6JnAxLdmWkUfNyulQ2iKdEw==}
     engines: {node: '>=14.0.0'}
+
+  gtoken@8.0.0:
+    resolution: {integrity: sha512-+CqsMbHPiSTdtSO14O51eMNlrp9N79gmeqmXeouJOhfucAedHw9noVe/n5uJk3tbKE6a+6ZCQg3RPhVhHByAIw==}
+    engines: {node: '>=18'}
 
   h3@1.15.11:
     resolution: {integrity: sha512-L3THSe2MPeBwgIZVSH5zLdBBU90TOxarvhK9d04IDY2AmVS8j2Jz2LIWtwsGOU3lu2I5jCN7FNvVfY2+XyF+mg==}
@@ -10384,8 +10416,8 @@ packages:
       prettier-plugin-svelte:
         optional: true
 
-  prettier@3.8.3:
-    resolution: {integrity: sha512-7igPTM53cGHMW8xWuVTydi2KO233VFiTNyF5hLJqpilHfmn8C8gPf+PS7dUT64YcXFbiMGZxS9pCSxL/Dxm/Jw==}
+  prettier@3.8.4:
+    resolution: {integrity: sha512-N2MylSdi48+5N/6S5j+maeHbUSIzzZ5uOcX5Hm4QpV8Dkb1HFjfAKTKX6yNPJQD9AhcT3ifHNB66tWTTJDi11Q==}
     engines: {node: '>=14'}
     hasBin: true
 
@@ -10485,6 +10517,10 @@ packages:
 
   protobufjs@7.6.1:
     resolution: {integrity: sha512-4K0myLaWL5EteuSAro91EGFgcfVgxb64Jx+7oDAY6GOkXD4M69yuSEljNcInGVCA5sOPxmZ/EqDLj2x0Q0+Ygg==}
+    engines: {node: '>=12.0.0'}
+
+  protobufjs@7.6.2:
+    resolution: {integrity: sha512-N9EiLovGEQOJSPF26Ij7qUGvahfEnq0eeYZ02aigIedkmz1qZSwjnP9SBITHJuF/6MYbIW4HDN8zdYjsjqJKXQ==}
     engines: {node: '>=12.0.0'}
 
   protocol-buffers-schema@3.6.1:
@@ -10750,6 +10786,10 @@ packages:
 
   retry-request@8.0.2:
     resolution: {integrity: sha512-JzFPAfklk1kjR1w76f0QOIhoDkNkSqW8wYKT08n9yysTmZfB+RQ2QoXoTAeOi1HD9ZipTyTAZg3c4pM/jeqgSw==}
+    engines: {node: '>=18'}
+
+  retry-request@8.0.3:
+    resolution: {integrity: sha512-qqoc4kkGgP9cmQDWELlOpAmfgJOg0Yi7MT82ZjiPWu451ayju4itwomjM4/dBEliify8C1b3tSaeCOldugtwPQ==}
     engines: {node: '>=18'}
 
   retry@0.12.0:
@@ -11154,10 +11194,10 @@ packages:
   stream-markdown-parser@1.0.3:
     resolution: {integrity: sha512-hSU22+3LIPKZTwa80vgSkQV5wuwrZfeeKIEqXnAOqwVnrtWUTJodIYh2IU/6mYwHQeBrs4eWcEe9/JHWx2pvHA==}
 
-  stream-markdown@0.0.15:
-    resolution: {integrity: sha512-1WlzjZUb9W5BWZYMKCr2/exPVh5P7HIhHzkcYZczkXm0upiuN4zEddwjdckL+WSQWGGlv9bboXCqcTYCEgqexw==}
+  stream-markdown@0.0.16:
+    resolution: {integrity: sha512-2WoOxlpc3N5RLc3zGuW+g/w76z6ketWBY0N1YzDYbXds1qw7zrUBv5PTQ3DOtpqgCjLuF3P2iCfjJTEqWGv0NQ==}
     peerDependencies:
-      shiki: '>=3.13.0'
+      shiki: '>=3.23.0'
 
   stream-monaco@0.0.41:
     resolution: {integrity: sha512-TkGqo94td8SRciHm9C3Fi8zfHHz6mxtcn/Z8kzPO47y0AJ5quDs4oXmw4lnxneAt6fARTK1JuEqnh8aJ+RxOvA==}
@@ -11396,6 +11436,10 @@ packages:
     resolution: {integrity: sha512-Xj0ZAQ0CeuQn6UxCDPLbFRlgcSTUEyO3+wiepr2grjIjyL/lMMs1Z4OwXn8kLvn/V1OuaEP0UY7Na6UDNNsYrQ==}
     engines: {node: '>=18'}
 
+  teeny-request@10.1.3:
+    resolution: {integrity: sha512-5yDliI1uWkYPo7W+Zvrxg6YmoWuj5iC5EydewqrRTvc68nyMTZhlPPlLg6cptUGfbQAb+N9XDPDPzF6N081lug==}
+    engines: {node: '>=18'}
+
   teeny-request@9.0.0:
     resolution: {integrity: sha512-resvxdc6Mgb7YEThw6G6bExlXKkv6+YbuzGg9xuXxSgxJF7Ozs+o8Y9+2R3sArdWdW8nOokoQb1yrpFB0pQK2g==}
     engines: {node: '>=14'}
@@ -11600,8 +11644,8 @@ packages:
   typedarray-to-buffer@3.1.5:
     resolution: {integrity: sha512-zdu8XMNEDepKKR+XYOXAVPtWui0ly0NtohUscw+UmaHiAWT8hrV1rr//H6V+0DvJ3OQ19S979M0laLfX8rm82Q==}
 
-  typescript-eslint@8.60.1:
-    resolution: {integrity: sha512-6m5hkkRAp8lKvhVpcprAIn5KkehQEh+47oHH2VGnExEh7dhNxXlg6GPAOIu6TxbVQxhebrJDvjl3020ooiWCMA==}
+  typescript-eslint@8.61.0:
+    resolution: {integrity: sha512-8y31Rd0eGTrDKqhy6vT0HtzhN+YLjQizwX3aA3hPXP/ynSfnrBXcQY5IzsP9/DM7+klX4IUncZZjkchP0z+rUw==}
     engines: {node: ^18.18.0 || ^20.9.0 || >=21.1.0}
     peerDependencies:
       eslint: ^8.57.0 || ^9.0.0 || ^10.0.0
@@ -13573,14 +13617,14 @@ snapshots:
     dependencies:
       '@codemirror/language': 6.12.3
       '@codemirror/state': 6.6.0
-      '@codemirror/view': 6.43.0
+      '@codemirror/view': 6.43.1
       '@lezer/common': 1.5.2
 
   '@codemirror/commands@6.10.3':
     dependencies:
       '@codemirror/language': 6.12.3
       '@codemirror/state': 6.6.0
-      '@codemirror/view': 6.43.0
+      '@codemirror/view': 6.43.1
       '@lezer/common': 1.5.2
 
   '@codemirror/lang-css@6.3.1':
@@ -13598,7 +13642,7 @@ snapshots:
       '@codemirror/lang-javascript': 6.2.5
       '@codemirror/language': 6.12.3
       '@codemirror/state': 6.6.0
-      '@codemirror/view': 6.43.0
+      '@codemirror/view': 6.43.1
       '@lezer/common': 1.5.2
       '@lezer/css': 1.3.0
       '@lezer/html': 1.3.13
@@ -13607,9 +13651,9 @@ snapshots:
     dependencies:
       '@codemirror/autocomplete': 6.20.3
       '@codemirror/language': 6.12.3
-      '@codemirror/lint': 6.9.6
+      '@codemirror/lint': 6.9.7
       '@codemirror/state': 6.6.0
-      '@codemirror/view': 6.43.0
+      '@codemirror/view': 6.43.1
       '@lezer/common': 1.5.2
       '@lezer/javascript': 1.5.4
 
@@ -13624,36 +13668,36 @@ snapshots:
       '@codemirror/lang-html': 6.4.11
       '@codemirror/language': 6.12.3
       '@codemirror/state': 6.6.0
-      '@codemirror/view': 6.43.0
+      '@codemirror/view': 6.43.1
       '@lezer/common': 1.5.2
       '@lezer/markdown': 1.6.3
 
   '@codemirror/language@6.12.3':
     dependencies:
       '@codemirror/state': 6.6.0
-      '@codemirror/view': 6.43.0
+      '@codemirror/view': 6.43.1
       '@lezer/common': 1.5.2
       '@lezer/highlight': 1.2.3
       '@lezer/lr': 1.4.8
       style-mod: 4.1.3
 
-  '@codemirror/lint@6.9.6':
+  '@codemirror/lint@6.9.7':
     dependencies:
       '@codemirror/state': 6.6.0
-      '@codemirror/view': 6.43.0
+      '@codemirror/view': 6.43.1
       crelt: 1.0.6
 
   '@codemirror/search@6.7.0':
     dependencies:
       '@codemirror/state': 6.6.0
-      '@codemirror/view': 6.43.0
+      '@codemirror/view': 6.43.1
       crelt: 1.0.6
 
   '@codemirror/state@6.6.0':
     dependencies:
       '@marijn/find-cluster-break': 1.0.2
 
-  '@codemirror/view@6.43.0':
+  '@codemirror/view@6.43.1':
     dependencies:
       '@codemirror/state': 6.6.0
       crelt: 1.0.6
@@ -14379,9 +14423,9 @@ snapshots:
 
   '@fontsource-variable/geist@5.2.9': {}
 
-  '@genkit-ai/ai@1.36.0(@google-cloud/firestore@7.11.6)(firebase-admin@13.10.0)(firebase@12.14.0)(genkit@1.36.0(@google-cloud/firestore@7.11.6)(firebase-admin@13.10.0)(firebase@12.14.0))':
+  '@genkit-ai/ai@1.36.0(@google-cloud/firestore@8.6.0)(firebase-admin@13.10.0)(firebase@12.14.0)(genkit@1.36.0(@google-cloud/firestore@8.6.0)(firebase-admin@13.10.0)(firebase@12.14.0))':
     dependencies:
-      '@genkit-ai/core': 1.36.0(@google-cloud/firestore@7.11.6)(firebase-admin@13.10.0)(firebase@12.14.0)(genkit@1.36.0(@google-cloud/firestore@7.11.6)(firebase-admin@13.10.0)(firebase@12.14.0))
+      '@genkit-ai/core': 1.36.0(@google-cloud/firestore@8.6.0)(firebase-admin@13.10.0)(firebase@12.14.0)(genkit@1.36.0(@google-cloud/firestore@8.6.0)(firebase-admin@13.10.0)(firebase@12.14.0))
       '@opentelemetry/api': 1.9.1
       '@types/node': 20.19.42
       colorette: 2.0.20
@@ -14402,23 +14446,23 @@ snapshots:
       - supports-color
       - utf-8-validate
 
-  '@genkit-ai/anthropic@0.3.0(genkit@1.36.0(@google-cloud/firestore@7.11.6)(firebase-admin@13.10.0)(firebase@12.14.0))(zod@3.25.76)':
+  '@genkit-ai/anthropic@0.3.0(genkit@1.36.0(@google-cloud/firestore@8.6.0)(firebase-admin@13.10.0)(firebase@12.14.0))(zod@3.25.76)':
     dependencies:
       '@anthropic-ai/sdk': 0.97.1(zod@3.25.76)
-      genkit: 1.36.0(@google-cloud/firestore@7.11.6)(firebase-admin@13.10.0)(firebase@12.14.0)
+      genkit: 1.36.0(@google-cloud/firestore@8.6.0)(firebase-admin@13.10.0)(firebase@12.14.0)
     transitivePeerDependencies:
       - zod
 
-  '@genkit-ai/compat-oai@1.36.0(genkit@1.36.0(@google-cloud/firestore@7.11.6)(firebase-admin@13.10.0)(firebase@12.14.0))(ws@8.21.0)(zod@3.25.76)':
+  '@genkit-ai/compat-oai@1.36.0(genkit@1.36.0(@google-cloud/firestore@8.6.0)(firebase-admin@13.10.0)(firebase@12.14.0))(ws@8.21.0)(zod@3.25.76)':
     dependencies:
-      genkit: 1.36.0(@google-cloud/firestore@7.11.6)(firebase-admin@13.10.0)(firebase@12.14.0)
+      genkit: 1.36.0(@google-cloud/firestore@8.6.0)(firebase-admin@13.10.0)(firebase@12.14.0)
       openai: 4.104.0(ws@8.21.0)(zod@3.25.76)
     transitivePeerDependencies:
       - encoding
       - ws
       - zod
 
-  '@genkit-ai/core@1.36.0(@google-cloud/firestore@7.11.6)(firebase-admin@13.10.0)(firebase@12.14.0)(genkit@1.36.0(@google-cloud/firestore@7.11.6)(firebase-admin@13.10.0)(firebase@12.14.0))':
+  '@genkit-ai/core@1.36.0(@google-cloud/firestore@8.6.0)(firebase-admin@13.10.0)(firebase@12.14.0)(genkit@1.36.0(@google-cloud/firestore@8.6.0)(firebase-admin@13.10.0)(firebase@12.14.0))':
     dependencies:
       '@opentelemetry/api': 1.9.1
       '@opentelemetry/api-logs': 0.52.1
@@ -14442,7 +14486,7 @@ snapshots:
       zod-to-json-schema: 3.25.2(zod@3.25.76)
     optionalDependencies:
       '@cfworker/json-schema': 4.1.1
-      '@genkit-ai/firebase': 1.36.0(@google-cloud/firestore@7.11.6)(firebase-admin@13.10.0)(firebase@12.14.0)(genkit@1.36.0(@google-cloud/firestore@7.11.6)(firebase-admin@13.10.0)(firebase@12.14.0))
+      '@genkit-ai/firebase': 1.36.0(@google-cloud/firestore@8.6.0)(firebase-admin@13.10.0)(firebase@12.14.0)(genkit@1.36.0(@google-cloud/firestore@8.6.0)(firebase-admin@13.10.0)(firebase@12.14.0))
     transitivePeerDependencies:
       - '@google-cloud/firestore'
       - bufferutil
@@ -14453,19 +14497,19 @@ snapshots:
       - supports-color
       - utf-8-validate
 
-  '@genkit-ai/firebase@1.36.0(@google-cloud/firestore@7.11.6)(firebase-admin@13.10.0)(firebase@12.14.0)(genkit@1.36.0(@google-cloud/firestore@7.11.6)(firebase-admin@13.10.0)(firebase@12.14.0))':
+  '@genkit-ai/firebase@1.36.0(@google-cloud/firestore@8.6.0)(firebase-admin@13.10.0)(firebase@12.14.0)(genkit@1.36.0(@google-cloud/firestore@8.6.0)(firebase-admin@13.10.0)(firebase@12.14.0))':
     dependencies:
-      '@genkit-ai/google-cloud': 1.36.0(genkit@1.36.0(@google-cloud/firestore@7.11.6)(firebase-admin@13.10.0)(firebase@12.14.0))
-      '@google-cloud/firestore': 7.11.6
+      '@genkit-ai/google-cloud': 1.36.0(genkit@1.36.0(@google-cloud/firestore@8.6.0)(firebase-admin@13.10.0)(firebase@12.14.0))
+      '@google-cloud/firestore': 8.6.0
       firebase-admin: 13.10.0
-      genkit: 1.36.0(@google-cloud/firestore@7.11.6)(firebase-admin@13.10.0)(firebase@12.14.0)
+      genkit: 1.36.0(@google-cloud/firestore@8.6.0)(firebase-admin@13.10.0)(firebase@12.14.0)
     optionalDependencies:
       firebase: 12.14.0
     transitivePeerDependencies:
       - encoding
       - supports-color
 
-  '@genkit-ai/google-cloud@1.36.0(genkit@1.36.0(@google-cloud/firestore@7.11.6)(firebase-admin@13.10.0)(firebase@12.14.0))':
+  '@genkit-ai/google-cloud@1.36.0(genkit@1.36.0(@google-cloud/firestore@8.6.0)(firebase-admin@13.10.0)(firebase@12.14.0))':
     dependencies:
       '@google-cloud/logging-winston': 6.0.1(winston@3.19.0)
       '@google-cloud/modelarmor': 0.4.1
@@ -14482,7 +14526,7 @@ snapshots:
       '@opentelemetry/sdk-metrics': 1.25.1(@opentelemetry/api@1.9.1)
       '@opentelemetry/sdk-node': 0.52.1(@opentelemetry/api@1.9.1)
       '@opentelemetry/sdk-trace-base': 1.25.1(@opentelemetry/api@1.9.1)
-      genkit: 1.36.0(@google-cloud/firestore@7.11.6)(firebase-admin@13.10.0)(firebase@12.14.0)
+      genkit: 1.36.0(@google-cloud/firestore@8.6.0)(firebase-admin@13.10.0)(firebase@12.14.0)
       google-auth-library: 9.15.1
       node-fetch: 3.3.2
       winston: 3.19.0
@@ -14490,9 +14534,9 @@ snapshots:
       - encoding
       - supports-color
 
-  '@genkit-ai/google-genai@1.36.0(genkit@1.36.0(@google-cloud/firestore@7.11.6)(firebase-admin@13.10.0)(firebase@12.14.0))':
+  '@genkit-ai/google-genai@1.36.0(genkit@1.36.0(@google-cloud/firestore@8.6.0)(firebase-admin@13.10.0)(firebase@12.14.0))':
     dependencies:
-      genkit: 1.36.0(@google-cloud/firestore@7.11.6)(firebase-admin@13.10.0)(firebase@12.14.0)
+      genkit: 1.36.0(@google-cloud/firestore@8.6.0)(firebase-admin@13.10.0)(firebase@12.14.0)
       google-auth-library: 9.15.1
       jsonpath-plus: 10.4.0
     transitivePeerDependencies:
@@ -14529,9 +14573,20 @@ snapshots:
       fast-deep-equal: 3.1.3
       functional-red-black-tree: 1.0.1
       google-gax: 4.6.1
-      protobufjs: 7.5.6
+      protobufjs: 7.6.2
     transitivePeerDependencies:
       - encoding
+      - supports-color
+    optional: true
+
+  '@google-cloud/firestore@8.6.0':
+    dependencies:
+      '@opentelemetry/api': 1.9.1
+      fast-deep-equal: 3.1.3
+      functional-red-black-tree: 1.0.1
+      google-gax: 5.0.7
+      protobufjs: 7.6.2
+    transitivePeerDependencies:
       - supports-color
 
   '@google-cloud/functions-framework@5.0.2':
@@ -14663,7 +14718,7 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  '@google-cloud/storage@7.19.0':
+  '@google-cloud/storage@7.21.0':
     dependencies:
       '@google-cloud/paginator': 5.0.2
       '@google-cloud/projectify': 4.0.0
@@ -14679,7 +14734,6 @@ snapshots:
       p-limit: 3.1.0
       retry-request: 7.0.2
       teeny-request: 9.0.0
-      uuid: 8.3.2
     transitivePeerDependencies:
       - encoding
       - supports-color
@@ -15488,7 +15542,7 @@ snapshots:
 
   '@noble/hashes@1.8.0': {}
 
-  '@nodable/entities@2.1.0':
+  '@nodable/entities@2.1.1':
     optional: true
 
   '@nodelib/fs.scandir@2.1.5':
@@ -17648,14 +17702,14 @@ snapshots:
     dependencies:
       '@types/yargs-parser': 21.0.3
 
-  '@typescript-eslint/eslint-plugin@8.60.1(@typescript-eslint/parser@8.60.1(eslint@10.4.1(jiti@2.7.0))(typescript@6.0.3))(eslint@10.4.1(jiti@2.7.0))(typescript@6.0.3)':
+  '@typescript-eslint/eslint-plugin@8.61.0(@typescript-eslint/parser@8.61.0(eslint@10.4.1(jiti@2.7.0))(typescript@6.0.3))(eslint@10.4.1(jiti@2.7.0))(typescript@6.0.3)':
     dependencies:
       '@eslint-community/regexpp': 4.12.2
-      '@typescript-eslint/parser': 8.60.1(eslint@10.4.1(jiti@2.7.0))(typescript@6.0.3)
-      '@typescript-eslint/scope-manager': 8.60.1
-      '@typescript-eslint/type-utils': 8.60.1(eslint@10.4.1(jiti@2.7.0))(typescript@6.0.3)
-      '@typescript-eslint/utils': 8.60.1(eslint@10.4.1(jiti@2.7.0))(typescript@6.0.3)
-      '@typescript-eslint/visitor-keys': 8.60.1
+      '@typescript-eslint/parser': 8.61.0(eslint@10.4.1(jiti@2.7.0))(typescript@6.0.3)
+      '@typescript-eslint/scope-manager': 8.61.0
+      '@typescript-eslint/type-utils': 8.61.0(eslint@10.4.1(jiti@2.7.0))(typescript@6.0.3)
+      '@typescript-eslint/utils': 8.61.0(eslint@10.4.1(jiti@2.7.0))(typescript@6.0.3)
+      '@typescript-eslint/visitor-keys': 8.61.0
       eslint: 10.4.1(jiti@2.7.0)
       ignore: 7.0.5
       natural-compare: 1.4.0
@@ -17664,12 +17718,12 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  '@typescript-eslint/parser@8.60.1(eslint@10.4.1(jiti@2.7.0))(typescript@6.0.3)':
+  '@typescript-eslint/parser@8.61.0(eslint@10.4.1(jiti@2.7.0))(typescript@6.0.3)':
     dependencies:
-      '@typescript-eslint/scope-manager': 8.60.1
-      '@typescript-eslint/types': 8.60.1
-      '@typescript-eslint/typescript-estree': 8.60.1(typescript@6.0.3)
-      '@typescript-eslint/visitor-keys': 8.60.1
+      '@typescript-eslint/scope-manager': 8.61.0
+      '@typescript-eslint/types': 8.61.0
+      '@typescript-eslint/typescript-estree': 8.61.0(typescript@6.0.3)
+      '@typescript-eslint/visitor-keys': 8.61.0
       debug: 4.4.3
       eslint: 10.4.1(jiti@2.7.0)
       typescript: 6.0.3
@@ -17685,10 +17739,10 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  '@typescript-eslint/project-service@8.60.1(typescript@6.0.3)':
+  '@typescript-eslint/project-service@8.61.0(typescript@6.0.3)':
     dependencies:
-      '@typescript-eslint/tsconfig-utils': 8.60.1(typescript@6.0.3)
-      '@typescript-eslint/types': 8.60.1
+      '@typescript-eslint/tsconfig-utils': 8.61.0(typescript@6.0.3)
+      '@typescript-eslint/types': 8.61.0
       debug: 4.4.3
       typescript: 6.0.3
     transitivePeerDependencies:
@@ -17699,24 +17753,24 @@ snapshots:
       '@typescript-eslint/types': 8.59.3
       '@typescript-eslint/visitor-keys': 8.59.3
 
-  '@typescript-eslint/scope-manager@8.60.1':
+  '@typescript-eslint/scope-manager@8.61.0':
     dependencies:
-      '@typescript-eslint/types': 8.60.1
-      '@typescript-eslint/visitor-keys': 8.60.1
+      '@typescript-eslint/types': 8.61.0
+      '@typescript-eslint/visitor-keys': 8.61.0
 
   '@typescript-eslint/tsconfig-utils@8.59.3(typescript@6.0.3)':
     dependencies:
       typescript: 6.0.3
 
-  '@typescript-eslint/tsconfig-utils@8.60.1(typescript@6.0.3)':
+  '@typescript-eslint/tsconfig-utils@8.61.0(typescript@6.0.3)':
     dependencies:
       typescript: 6.0.3
 
-  '@typescript-eslint/type-utils@8.60.1(eslint@10.4.1(jiti@2.7.0))(typescript@6.0.3)':
+  '@typescript-eslint/type-utils@8.61.0(eslint@10.4.1(jiti@2.7.0))(typescript@6.0.3)':
     dependencies:
-      '@typescript-eslint/types': 8.60.1
-      '@typescript-eslint/typescript-estree': 8.60.1(typescript@6.0.3)
-      '@typescript-eslint/utils': 8.60.1(eslint@10.4.1(jiti@2.7.0))(typescript@6.0.3)
+      '@typescript-eslint/types': 8.61.0
+      '@typescript-eslint/typescript-estree': 8.61.0(typescript@6.0.3)
+      '@typescript-eslint/utils': 8.61.0(eslint@10.4.1(jiti@2.7.0))(typescript@6.0.3)
       debug: 4.4.3
       eslint: 10.4.1(jiti@2.7.0)
       ts-api-utils: 2.5.0(typescript@6.0.3)
@@ -17726,7 +17780,7 @@ snapshots:
 
   '@typescript-eslint/types@8.59.3': {}
 
-  '@typescript-eslint/types@8.60.1': {}
+  '@typescript-eslint/types@8.61.0': {}
 
   '@typescript-eslint/typescript-estree@8.59.3(typescript@6.0.3)':
     dependencies:
@@ -17743,27 +17797,27 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  '@typescript-eslint/typescript-estree@8.60.1(typescript@6.0.3)':
+  '@typescript-eslint/typescript-estree@8.61.0(typescript@6.0.3)':
     dependencies:
-      '@typescript-eslint/project-service': 8.60.1(typescript@6.0.3)
-      '@typescript-eslint/tsconfig-utils': 8.60.1(typescript@6.0.3)
-      '@typescript-eslint/types': 8.60.1
-      '@typescript-eslint/visitor-keys': 8.60.1
+      '@typescript-eslint/project-service': 8.61.0(typescript@6.0.3)
+      '@typescript-eslint/tsconfig-utils': 8.61.0(typescript@6.0.3)
+      '@typescript-eslint/types': 8.61.0
+      '@typescript-eslint/visitor-keys': 8.61.0
       debug: 4.4.3
       minimatch: 10.2.5
-      semver: 7.8.1
+      semver: 7.8.3
       tinyglobby: 0.2.17
       ts-api-utils: 2.5.0(typescript@6.0.3)
       typescript: 6.0.3
     transitivePeerDependencies:
       - supports-color
 
-  '@typescript-eslint/utils@8.60.1(eslint@10.4.1(jiti@2.7.0))(typescript@6.0.3)':
+  '@typescript-eslint/utils@8.61.0(eslint@10.4.1(jiti@2.7.0))(typescript@6.0.3)':
     dependencies:
       '@eslint-community/eslint-utils': 4.9.1(eslint@10.4.1(jiti@2.7.0))
-      '@typescript-eslint/scope-manager': 8.60.1
-      '@typescript-eslint/types': 8.60.1
-      '@typescript-eslint/typescript-estree': 8.60.1(typescript@6.0.3)
+      '@typescript-eslint/scope-manager': 8.61.0
+      '@typescript-eslint/types': 8.61.0
+      '@typescript-eslint/typescript-estree': 8.61.0(typescript@6.0.3)
       eslint: 10.4.1(jiti@2.7.0)
       typescript: 6.0.3
     transitivePeerDependencies:
@@ -17774,9 +17828,9 @@ snapshots:
       '@typescript-eslint/types': 8.59.3
       eslint-visitor-keys: 5.0.1
 
-  '@typescript-eslint/visitor-keys@8.60.1':
+  '@typescript-eslint/visitor-keys@8.61.0':
     dependencies:
-      '@typescript-eslint/types': 8.60.1
+      '@typescript-eslint/types': 8.61.0
       eslint-visitor-keys: 5.0.1
 
   '@ungap/structured-clone@1.3.1': {}
@@ -17917,7 +17971,7 @@ snapshots:
       '@vue/compiler-sfc': 3.5.35
       '@vuedx/template-ast-types': 0.7.1
       fast-glob: 3.3.3
-      prettier: 3.8.3
+      prettier: 3.8.4
       typescript: 5.9.3
     transitivePeerDependencies:
       - supports-color
@@ -19028,10 +19082,10 @@ snapshots:
       '@codemirror/autocomplete': 6.20.3
       '@codemirror/commands': 6.10.3
       '@codemirror/language': 6.12.3
-      '@codemirror/lint': 6.9.6
+      '@codemirror/lint': 6.9.7
       '@codemirror/search': 6.7.0
       '@codemirror/state': 6.6.0
-      '@codemirror/view': 6.43.0
+      '@codemirror/view': 6.43.1
 
   collect-v8-coverage@1.0.3: {}
 
@@ -20028,16 +20082,16 @@ snapshots:
     dependencies:
       eslint: 10.4.1(jiti@2.7.0)
 
-  eslint-plugin-prettier@5.5.6(eslint-config-prettier@10.1.8(eslint@10.4.1(jiti@2.7.0)))(eslint@10.4.1(jiti@2.7.0))(prettier@3.8.3):
+  eslint-plugin-prettier@5.5.6(eslint-config-prettier@10.1.8(eslint@10.4.1(jiti@2.7.0)))(eslint@10.4.1(jiti@2.7.0))(prettier@3.8.4):
     dependencies:
       eslint: 10.4.1(jiti@2.7.0)
-      prettier: 3.8.3
+      prettier: 3.8.4
       prettier-linter-helpers: 1.0.1
       synckit: 0.11.13
     optionalDependencies:
       eslint-config-prettier: 10.1.8(eslint@10.4.1(jiti@2.7.0))
 
-  eslint-plugin-vue@10.9.2(@typescript-eslint/parser@8.60.1(eslint@10.4.1(jiti@2.7.0))(typescript@6.0.3))(eslint@10.4.1(jiti@2.7.0))(vue-eslint-parser@10.4.1(eslint@10.4.1(jiti@2.7.0))):
+  eslint-plugin-vue@10.9.2(@typescript-eslint/parser@8.61.0(eslint@10.4.1(jiti@2.7.0))(typescript@6.0.3))(eslint@10.4.1(jiti@2.7.0))(vue-eslint-parser@10.4.1(eslint@10.4.1(jiti@2.7.0))):
     dependencies:
       '@eslint-community/eslint-utils': 4.9.1(eslint@10.4.1(jiti@2.7.0))
       eslint: 10.4.1(jiti@2.7.0)
@@ -20048,7 +20102,7 @@ snapshots:
       vue-eslint-parser: 10.4.1(eslint@10.4.1(jiti@2.7.0))
       xml-name-validator: 4.0.0
     optionalDependencies:
-      '@typescript-eslint/parser': 8.60.1(eslint@10.4.1(jiti@2.7.0))(typescript@6.0.3)
+      '@typescript-eslint/parser': 8.61.0(eslint@10.4.1(jiti@2.7.0))(typescript@6.0.3)
 
   eslint-scope@9.1.2:
     dependencies:
@@ -20331,7 +20385,7 @@ snapshots:
 
   fast-xml-parser@5.8.0:
     dependencies:
-      '@nodable/entities': 2.1.0
+      '@nodable/entities': 2.1.1
       fast-xml-builder: 1.2.0
       path-expression-matcher: 1.5.0
       strnum: 2.3.0
@@ -20437,12 +20491,12 @@ snapshots:
       '@firebase/database-types': 1.0.20
       farmhash-modern: 1.1.0
       fast-deep-equal: 3.1.3
-      google-auth-library: 10.6.2
+      google-auth-library: 10.7.0
       jsonwebtoken: 9.0.3
       jwks-rsa: 3.2.2
     optionalDependencies:
       '@google-cloud/firestore': 7.11.6
-      '@google-cloud/storage': 7.19.0
+      '@google-cloud/storage': 7.21.0
     transitivePeerDependencies:
       - encoding
       - supports-color
@@ -20731,7 +20785,24 @@ snapshots:
       - encoding
       - supports-color
 
+  gaxios@7.1.3:
+    dependencies:
+      extend: 3.0.2
+      https-proxy-agent: 7.0.6
+      node-fetch: 3.3.2
+      rimraf: 5.0.10
+    transitivePeerDependencies:
+      - supports-color
+
   gaxios@7.1.4:
+    dependencies:
+      extend: 3.0.2
+      https-proxy-agent: 7.0.6
+      node-fetch: 3.3.2
+    transitivePeerDependencies:
+      - supports-color
+
+  gaxios@7.1.5:
     dependencies:
       extend: 3.0.2
       https-proxy-agent: 7.0.6
@@ -20756,12 +20827,20 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
+  gcp-metadata@8.1.3:
+    dependencies:
+      gaxios: 7.1.3
+      google-logging-utils: 1.1.3
+      json-bigint: 1.0.0
+    transitivePeerDependencies:
+      - supports-color
+
   generator-function@2.0.1: {}
 
-  genkit@1.36.0(@google-cloud/firestore@7.11.6)(firebase-admin@13.10.0)(firebase@12.14.0):
+  genkit@1.36.0(@google-cloud/firestore@8.6.0)(firebase-admin@13.10.0)(firebase@12.14.0):
     dependencies:
-      '@genkit-ai/ai': 1.36.0(@google-cloud/firestore@7.11.6)(firebase-admin@13.10.0)(firebase@12.14.0)(genkit@1.36.0(@google-cloud/firestore@7.11.6)(firebase-admin@13.10.0)(firebase@12.14.0))
-      '@genkit-ai/core': 1.36.0(@google-cloud/firestore@7.11.6)(firebase-admin@13.10.0)(firebase@12.14.0)(genkit@1.36.0(@google-cloud/firestore@7.11.6)(firebase-admin@13.10.0)(firebase@12.14.0))
+      '@genkit-ai/ai': 1.36.0(@google-cloud/firestore@8.6.0)(firebase-admin@13.10.0)(firebase@12.14.0)(genkit@1.36.0(@google-cloud/firestore@8.6.0)(firebase-admin@13.10.0)(firebase@12.14.0))
+      '@genkit-ai/core': 1.36.0(@google-cloud/firestore@8.6.0)(firebase-admin@13.10.0)(firebase@12.14.0)(genkit@1.36.0(@google-cloud/firestore@8.6.0)(firebase-admin@13.10.0)(firebase@12.14.0))
       uuid: 10.0.0
     transitivePeerDependencies:
       - '@google-cloud/firestore'
@@ -20921,11 +21000,34 @@ snapshots:
     dependencies:
       minimist: 1.2.8
 
+  google-auth-library@10.5.0:
+    dependencies:
+      base64-js: 1.5.1
+      ecdsa-sig-formatter: 1.0.11
+      gaxios: 7.1.5
+      gcp-metadata: 8.1.3
+      google-logging-utils: 1.1.3
+      gtoken: 8.0.0
+      jws: 4.0.1
+    transitivePeerDependencies:
+      - supports-color
+
   google-auth-library@10.6.2:
     dependencies:
       base64-js: 1.5.1
       ecdsa-sig-formatter: 1.0.11
       gaxios: 7.1.4
+      gcp-metadata: 8.1.2
+      google-logging-utils: 1.1.3
+      jws: 4.0.1
+    transitivePeerDependencies:
+      - supports-color
+
+  google-auth-library@10.7.0:
+    dependencies:
+      base64-js: 1.5.1
+      ecdsa-sig-formatter: 1.0.11
+      gaxios: 7.1.5
       gcp-metadata: 8.1.2
       google-logging-utils: 1.1.3
       jws: 4.0.1
@@ -20978,6 +21080,22 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
+  google-gax@5.0.7:
+    dependencies:
+      '@grpc/grpc-js': 1.14.4
+      '@grpc/proto-loader': 0.8.1
+      duplexify: 4.1.3
+      google-auth-library: 10.5.0
+      google-logging-utils: 1.1.3
+      node-fetch: 3.3.2
+      object-hash: 3.0.0
+      proto3-json-serializer: 3.0.4
+      protobufjs: 7.6.2
+      retry-request: 8.0.3
+      rimraf: 5.0.10
+    transitivePeerDependencies:
+      - supports-color
+
   google-logging-utils@0.0.2: {}
 
   google-logging-utils@1.1.3: {}
@@ -21024,6 +21142,13 @@ snapshots:
       jws: 4.0.1
     transitivePeerDependencies:
       - encoding
+      - supports-color
+
+  gtoken@8.0.0:
+    dependencies:
+      gaxios: 7.1.5
+      jws: 4.0.1
+    transitivePeerDependencies:
       - supports-color
 
   h3@1.15.11:
@@ -22399,7 +22524,7 @@ snapshots:
 
   markstream-core@1.0.0: {}
 
-  markstream-vue@1.0.1-beta.5(katex@0.17.0)(mermaid@11.15.0)(stream-markdown@0.0.15(shiki@4.2.0)(vue@3.5.35(typescript@6.0.3)))(stream-monaco@0.0.41(monaco-editor@0.55.1))(vue-i18n@11.4.5(vue@3.5.35(typescript@6.0.3)))(vue@3.5.35(typescript@6.0.3)):
+  markstream-vue@1.0.1-beta.5(katex@0.17.0)(mermaid@11.15.0)(stream-markdown@0.0.16(shiki@4.2.0)(vue@3.5.35(typescript@6.0.3)))(stream-monaco@0.0.41(monaco-editor@0.55.1))(vue-i18n@11.4.5(vue@3.5.35(typescript@6.0.3)))(vue@3.5.35(typescript@6.0.3)):
     dependencies:
       '@chenglou/pretext': 0.0.5
       '@floating-ui/dom': 1.7.6
@@ -22409,7 +22534,7 @@ snapshots:
     optionalDependencies:
       katex: 0.17.0
       mermaid: 11.15.0
-      stream-markdown: 0.0.15(shiki@4.2.0)(vue@3.5.35(typescript@6.0.3))
+      stream-markdown: 0.0.16(shiki@4.2.0)(vue@3.5.35(typescript@6.0.3))
       stream-monaco: 0.0.41(monaco-editor@0.55.1)
       vue-i18n: 11.4.5(vue@3.5.35(typescript@6.0.3))
 
@@ -23900,20 +24025,20 @@ snapshots:
     dependencies:
       fast-diff: 1.3.0
 
-  prettier-plugin-organize-imports@4.3.0(prettier@3.8.3)(typescript@6.0.3)(vue-tsc@3.3.4(typescript@6.0.3)):
+  prettier-plugin-organize-imports@4.3.0(prettier@3.8.4)(typescript@6.0.3)(vue-tsc@3.3.4(typescript@6.0.3)):
     dependencies:
-      prettier: 3.8.3
+      prettier: 3.8.4
       typescript: 6.0.3
     optionalDependencies:
       vue-tsc: 3.3.4(typescript@6.0.3)
 
-  prettier-plugin-tailwindcss@0.8.0(prettier-plugin-organize-imports@4.3.0(prettier@3.8.3)(typescript@6.0.3)(vue-tsc@3.3.4(typescript@6.0.3)))(prettier@3.8.3):
+  prettier-plugin-tailwindcss@0.8.0(prettier-plugin-organize-imports@4.3.0(prettier@3.8.4)(typescript@6.0.3)(vue-tsc@3.3.4(typescript@6.0.3)))(prettier@3.8.4):
     dependencies:
-      prettier: 3.8.3
+      prettier: 3.8.4
     optionalDependencies:
-      prettier-plugin-organize-imports: 4.3.0(prettier@3.8.3)(typescript@6.0.3)(vue-tsc@3.3.4(typescript@6.0.3))
+      prettier-plugin-organize-imports: 4.3.0(prettier@3.8.4)(typescript@6.0.3)(vue-tsc@3.3.4(typescript@6.0.3))
 
-  prettier@3.8.3: {}
+  prettier@3.8.4: {}
 
   pretty-bytes@5.6.0: {}
 
@@ -24050,6 +24175,21 @@ snapshots:
       long: 5.3.2
 
   protobufjs@7.6.1:
+    dependencies:
+      '@protobufjs/aspromise': 1.1.2
+      '@protobufjs/base64': 1.1.2
+      '@protobufjs/codegen': 2.0.5
+      '@protobufjs/eventemitter': 1.1.1
+      '@protobufjs/fetch': 1.1.1
+      '@protobufjs/float': 1.0.2
+      '@protobufjs/inquire': 1.1.2
+      '@protobufjs/path': 1.1.2
+      '@protobufjs/pool': 1.1.0
+      '@protobufjs/utf8': 1.1.1
+      '@types/node': 25.9.2
+      long: 5.3.2
+
+  protobufjs@7.6.2:
     dependencies:
       '@protobufjs/aspromise': 1.1.2
       '@protobufjs/base64': 1.1.2
@@ -24387,6 +24527,13 @@ snapshots:
     dependencies:
       extend: 3.0.2
       teeny-request: 10.1.2
+    transitivePeerDependencies:
+      - supports-color
+
+  retry-request@8.0.3:
+    dependencies:
+      extend: 3.0.2
+      teeny-request: 10.1.3
     transitivePeerDependencies:
       - supports-color
 
@@ -24928,7 +25075,7 @@ snapshots:
       markdown-it-task-checkbox: 1.0.6
       markdown-it-ts: 1.0.0
 
-  stream-markdown@0.0.15(shiki@4.2.0)(vue@3.5.35(typescript@6.0.3)):
+  stream-markdown@0.0.16(shiki@4.2.0)(vue@3.5.35(typescript@6.0.3)):
     dependencies:
       shiki: 4.2.0
       shiki-stream: 0.1.4(vue@3.5.35(typescript@6.0.3))
@@ -25288,6 +25435,15 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
+  teeny-request@10.1.3:
+    dependencies:
+      http-proxy-agent: 7.0.2
+      https-proxy-agent: 7.0.6
+      node-fetch: 3.3.2
+      stream-events: 1.0.5
+    transitivePeerDependencies:
+      - supports-color
+
   teeny-request@9.0.0:
     dependencies:
       http-proxy-agent: 5.0.0
@@ -25493,12 +25649,12 @@ snapshots:
     dependencies:
       is-typedarray: 1.0.0
 
-  typescript-eslint@8.60.1(eslint@10.4.1(jiti@2.7.0))(typescript@6.0.3):
+  typescript-eslint@8.61.0(eslint@10.4.1(jiti@2.7.0))(typescript@6.0.3):
     dependencies:
-      '@typescript-eslint/eslint-plugin': 8.60.1(@typescript-eslint/parser@8.60.1(eslint@10.4.1(jiti@2.7.0))(typescript@6.0.3))(eslint@10.4.1(jiti@2.7.0))(typescript@6.0.3)
-      '@typescript-eslint/parser': 8.60.1(eslint@10.4.1(jiti@2.7.0))(typescript@6.0.3)
-      '@typescript-eslint/typescript-estree': 8.60.1(typescript@6.0.3)
-      '@typescript-eslint/utils': 8.60.1(eslint@10.4.1(jiti@2.7.0))(typescript@6.0.3)
+      '@typescript-eslint/eslint-plugin': 8.61.0(@typescript-eslint/parser@8.61.0(eslint@10.4.1(jiti@2.7.0))(typescript@6.0.3))(eslint@10.4.1(jiti@2.7.0))(typescript@6.0.3)
+      '@typescript-eslint/parser': 8.61.0(eslint@10.4.1(jiti@2.7.0))(typescript@6.0.3)
+      '@typescript-eslint/typescript-estree': 8.61.0(typescript@6.0.3)
+      '@typescript-eslint/utils': 8.61.0(eslint@10.4.1(jiti@2.7.0))(typescript@6.0.3)
       eslint: 10.4.1(jiti@2.7.0)
       typescript: 6.0.3
     transitivePeerDependencies:
@@ -26412,10 +26568,10 @@ snapshots:
 
   xterminal@2.2.2: {}
 
-  y-codemirror.next@0.3.5(@codemirror/state@6.6.0)(@codemirror/view@6.43.0)(yjs@13.6.31):
+  y-codemirror.next@0.3.5(@codemirror/state@6.6.0)(@codemirror/view@6.43.1)(yjs@13.6.31):
     dependencies:
       '@codemirror/state': 6.6.0
-      '@codemirror/view': 6.43.0
+      '@codemirror/view': 6.43.1
       lib0: 0.2.117
       yjs: 13.6.31
 

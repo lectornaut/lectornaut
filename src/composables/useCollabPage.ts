@@ -4,6 +4,7 @@ import { useAuthStore } from "@/stores/authStore"
 import { useFileTreeStore } from "@/stores/fileTreeStore"
 import { useWorkspaceStore } from "@/stores/workspaceStore"
 import type { WorkspaceNode, WorkspaceNodeScope } from "@/types/nodes"
+import type { CollabEditorAdapter } from "@/utils/collab/editorAdapter"
 import { subscribeAgentRelay } from "@/utils/collab/signaling"
 import {
   createYjsCollab,
@@ -70,11 +71,13 @@ export interface UseCollabPageReturn {
   collabReady: Ref<boolean>
   collabAwareness: Ref<import("y-protocols/awareness").Awareness | null>
   /**
-   * New content from a server-relayed agent edit for `write` docs, to be
-   * applied by the editor via setContent. Only set on the elected applier;
-   * `code` docs apply internally to the Y.Text and never use this.
+   * Register the active editor's {@link CollabEditorAdapter} (or `null` on
+   * teardown). The page's single conversation partner for live agent edits:
+   * `useCollabPage` applies relayed edits through it instead of forking on
+   * scope and reaching into the transport. Both the rich-text and code editors
+   * register one; only the elected applier's `applyAgentEdit` actually writes.
    */
-  externalEditorContent: Ref<{ seq: number; content: string } | null>
+  registerEditorAdapter: (adapter: CollabEditorAdapter | null) => void
   /**
    * Adopt the editor's canonical serialization of the just-opened document as
    * the dirty baseline. Wired to the rich-text editor's one-shot `baseline`
@@ -147,12 +150,13 @@ export function useCollabPage(
   const collabAwareness = computed(() => collabSession.value?.awareness ?? null)
 
   // Server-relayed agent edits. `relayUnsub` is torn down alongside the
-  // session; `externalEditorContent` carries a `write`-doc edit out to the
-  // editor (the applier only).
+  // session; `editorAdapter` is the active editor's integration seam, swapped
+  // in when an editor mounts and nulled on teardown.
   let relayUnsub: (() => void) | null = null
-  const externalEditorContent = ref<{ seq: number; content: string } | null>(
-    null
-  )
+  const editorAdapter = shallowRef<CollabEditorAdapter | null>(null)
+  const registerEditorAdapter = (adapter: CollabEditorAdapter | null): void => {
+    editorAdapter.value = adapter
+  }
 
   const editorReadOnly = computed(() => {
     if (!selectedFile.value) return true
@@ -160,41 +164,27 @@ export function useCollabPage(
   })
 
   // Apply an external content update (from the agent relay or the file-doc
-  // fallback below). Gated on the elected applier so only one peer mutates Y
-  // per room — others see the change through the WebRTC mesh. Content-based
-  // dedup via `lastSyncedContent` makes the relay and fallback paths
-  // idempotent: whichever fires first applies, the other becomes a no-op.
+  // fallback below) through the active editor adapter — the page is blind to
+  // whether the CRDT underneath is a Y.XmlFragment (Tiptap) or a Y.Text
+  // (CodeMirror). Content-based dedup via `lastSyncedContent` makes the relay
+  // and fallback paths idempotent: whichever fires first applies, the other
+  // becomes a no-op.
   const applyExternalContent = (rawContent: string): void => {
-    const activeSession = collabSession.value
-    if (!activeSession) return
+    const adapter = editorAdapter.value
+    if (!adapter) return
 
     const normalized = normalizeContent(rawContent)
     if (normalized === lastSyncedContent.value) return
 
-    // Non-applier peers receive the agent edit through the Yjs mesh (their
-    // editor — and thus `editorContent` — updates on its own). They must still
-    // advance `lastSyncedContent` to the new baseline, or the mesh-driven
-    // change reads as a local edit and flips `isDirty` true: a spurious
+    // Only the elected applier mutates Y per room — others receive the same
+    // agent edit through the WebRTC mesh (their editor, and thus
+    // `editorContent`, updates on its own). Both still advance
+    // `lastSyncedContent` to the new baseline below: without it a mesh-driven
+    // change reads as a local edit and flips `isDirty` true — a spurious
     // "unsaved" indicator plus an enabled Save that would re-write the agent's
-    // content. Only the elected applier mutates Y; everyone else just tracks.
-    if (!activeSession.isAgentApplier()) {
-      lastSyncedContent.value = normalized
-      return
-    }
-
-    if (scope === "code") {
-      const ytext = activeSession.ydoc.getText("codemirror")
-      if (ytext.toString() !== rawContent) {
-        activeSession.ydoc.transact(() => {
-          ytext.delete(0, ytext.length)
-          if (rawContent) ytext.insert(0, rawContent)
-        })
-      }
-    } else {
-      externalEditorContent.value = {
-        seq: (externalEditorContent.value?.seq ?? 0) + 1,
-        content: rawContent,
-      }
+    // content.
+    if (adapter.applierStatus()) {
+      adapter.applyAgentEdit(rawContent)
     }
 
     lastSyncedContent.value = normalized
@@ -330,10 +320,11 @@ export function useCollabPage(
       collabSession.value = null
       options.onSessionDestroyed?.()
 
-      // Tear down the previous file's agent-relay subscription.
+      // Tear down the previous file's agent-relay subscription and drop the
+      // previous editor's adapter (the new editor re-registers on mount).
       relayUnsub?.()
       relayUnsub = null
-      externalEditorContent.value = null
+      editorAdapter.value = null
 
       if (previousSession) {
         await previousSession.destroy().catch((error) => {
@@ -536,6 +527,7 @@ export function useCollabPage(
   onBeforeUnmount(() => {
     relayUnsub?.()
     relayUnsub = null
+    editorAdapter.value = null
     const session = collabSession.value
     collabSession.value = null
     if (!session) return
@@ -560,7 +552,7 @@ export function useCollabPage(
     collabError,
     collabReady,
     collabAwareness,
-    externalEditorContent,
+    registerEditorAdapter,
     adoptEditorBaseline,
     saveContent,
   }

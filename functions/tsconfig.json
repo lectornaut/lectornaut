@@ -14,5 +14,12 @@
     "skipLibCheck": true
   },
   "compileOnSave": true,
-  "include": ["./src/**/*"]
+  "include": ["./src/**/*"],
+  // Unit tests run via `node --test --experimental-strip-types` and import
+  // their target module with a `.ts` specifier (the only form this Node
+  // version's type-stripping resolves). Excluding them keeps that `.ts`
+  // specifier from tripping `tsc --noEmit` under `moduleResolution: nodenext`.
+  // They're validated by being run, not type-checked — and esbuild never
+  // bundles them (it follows imports from `index.ts` only).
+  "exclude": ["src/**/*.test.ts"]
 }

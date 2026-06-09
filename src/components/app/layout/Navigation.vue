@@ -1,65 +1,29 @@
 <script lang="ts" setup>
-import { isBuiltInAgentId } from "@/data/builtInAgents"
-import {
-  IconBadgeCheck,
-  IconGrid2X2Plus,
-  IconRotateCcw,
-  IconSparkle,
-  IconSparkles,
-} from "@/data/icons"
+import { useNavigation } from "@/composables/useNavigation"
+import { IconBadgeCheck, IconGrid2X2Plus, IconRotateCcw } from "@/data/icons"
 import { defaultMenu } from "@/helpers/defaults"
-import { useLayoutStore } from "@/stores/layoutStore"
-import { useMembershipStore } from "@/stores/membershipStore"
-import { useTeamAgentsStore } from "@/stores/teamAgentsStore"
-import { isAgentMembership } from "@/types/membership"
-import { useSortable } from "@vueuse/integrations/useSortable"
-import { storeToRefs } from "pinia"
 
 const { t } = useI18n()
-const layoutStore = useLayoutStore()
-const { activeNavItems, isLoading, agentsSidebarVisible } =
-  storeToRefs(layoutStore)
-const { toggleNavItem, resetNavItems, isAgentVisible, setAgentVisible } =
-  layoutStore
 
-// Merged built-in + custom roster the Agents sidebar renders. Listed here
-// so each agent gets its own visibility checkbox in the submenu.
-const teamAgentsStore = useTeamAgentsStore()
-const { pickerAgents } = storeToRefs(teamAgentsStore)
-
-// Agents added as members of the active team get a corner dot in the
-// submenu below. `teamMembers` is already scoped to the current team, so
-// we just narrow to the agent rows and key by agentId for an O(1) lookup.
-const membershipStore = useMembershipStore()
-const { teamMembers } = storeToRefs(membershipStore)
-const memberAgentIds = computed(
-  () =>
-    new Set(
-      teamMembers.value
-        .filter(isAgentMembership)
-        .map((member) => member.agentId)
-    )
-)
-
-// Agent-kind glyph + label. A single `sparkle` marks an admin-authored
-// custom agent; the plural `sparkles` marks a built-in preset. Keyed off
-// `isBuiltInAgentId`, which detects the `_`-prefixed built-in ids.
-const agentKindIcon = (agentId: string) =>
-  isBuiltInAgentId(agentId) ? IconSparkles : IconSparkle
-const agentKindLabel = (agentId: string) =>
-  isBuiltInAgentId(agentId)
-    ? t("ai.agents.builtInTooltip")
-    : t("ai.agents.customTooltip")
-
+// Drag-reorder target for the nav list; the wiring lives in useNavigation.
 const el = ref<HTMLElement>()
 
-useSortable(el, activeNavItems, {
-  animation: 150,
-  draggable: ".nav-item",
-  ghostClass: "cursor-grab",
-  chosenClass: "cursor-grabbing",
-  dragClass: "cursor-grabbing",
-})
+// Navigation roster + drag-reorder wiring (see useNavigation). The stores stay
+// the source of truth; the composable derives the agent roster metadata and
+// re-exposes the nav-item state/actions the template binds.
+const {
+  isLoading,
+  activeNavItems,
+  toggleNavItem,
+  resetNavItems,
+  agentsSidebarVisible,
+  isAgentVisible,
+  setAgentVisible,
+  pickerAgents,
+  memberAgentIds,
+  agentKindIcon,
+  agentKindLabel,
+} = useNavigation(el)
 </script>
 
 <template>

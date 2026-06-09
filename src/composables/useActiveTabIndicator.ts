@@ -1,4 +1,4 @@
-import { useLayoutStore } from "@/stores/layoutStore"
+import { useTabsStore } from "@/stores/tabsStore"
 import type { LayoutTabIndicator } from "@/types/layout"
 import { storeToRefs } from "pinia"
 import type { MaybeRefOrGetter } from "vue"
@@ -7,9 +7,9 @@ import { onBeforeUnmount, toValue, watchEffect } from "vue"
 export function useActiveTabIndicator(
   indicator: MaybeRefOrGetter<LayoutTabIndicator | null | undefined>
 ) {
-  const layoutStore = useLayoutStore()
-  const { activeTabId } = storeToRefs(layoutStore)
-  const { clearTabIndicator, setTabIndicator } = layoutStore
+  const tabsStore = useTabsStore()
+  const { activeTabId } = storeToRefs(tabsStore)
+  const { clearTabIndicator, setTabIndicator } = tabsStore
   let currentTabId: string | null = null
 
   watchEffect(() => {

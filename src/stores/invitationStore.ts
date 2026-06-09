@@ -33,7 +33,7 @@ import {
 } from "@/composables/useFunctions"
 import { firestore, functions } from "@/modules/firebase"
 import { queryClient } from "@/modules/queryClient"
-import { parseSafe } from "@/schemas/_utils"
+import { parseSafe, zodConverter } from "@/schemas/_utils"
 import { invitationSchema } from "@/schemas/invitation"
 import { membershipSchema } from "@/schemas/membership"
 import { useAuthStore } from "@/stores/authStore"
@@ -45,7 +45,7 @@ import {
 } from "@/types/membership"
 import { can, Capabilities, type Capability } from "@/types/permissions"
 import { getMembershipRef } from "@/utils/firebase/firebase-helpers"
-import { useFirestoreMutation } from "@/utils/firebase/firebase-mutation"
+import { useRunWrite } from "@/utils/firebase/firebase-mutation"
 import { generateOperationId } from "@/utils/firebase/firebase-optimistic"
 import { useCollectionQuery } from "@/utils/firebase/firebase-query"
 import {
@@ -78,6 +78,19 @@ export interface IInvitation {
   resentAt?: Timestamp
 }
 
+/**
+ * Firestore converter for the `invitations` collection. The live reads below use
+ * a raw `collection()` ref, so the converter must be attached at the query level
+ * (`useCollectionQuery` reads through it): it injects the doc `id` from `snap.id`
+ * — Firestore doc data omits the id — and validates each snapshot. Without it
+ * every row's `id` is `undefined`, which silently breaks every per-invitation
+ * action (cancel/resend/role-change all forward an empty id to the callable).
+ */
+const invitationConverter = zodConverter<IInvitation>(
+  invitationSchema,
+  "invitation"
+)
+
 export const useInvitationStore = defineStore("invitations", () => {
   const authStore = useAuthStore()
   const membershipStore = useMembershipStore()
@@ -96,23 +109,7 @@ export const useInvitationStore = defineStore("invitations", () => {
   // cache list keys + an optimistic transform + the Cloud Function call via
   // `runInvitationMutation`; the optimistic value is written straight into the
   // invitations cache and held until the server-applied snapshot reconciles it.
-  const invitationMutation = useFirestoreMutation<
-    {
-      keys: FirestoreQueryKey[]
-      apply: () => void
-      rollback: () => void
-      run: () => Promise<void>
-    },
-    void
-  >({
-    mutationFn: (vars) => vars.run(),
-    optimistic: (vars) => ({
-      keys: vars.keys,
-      apply: vars.apply,
-      rollback: vars.rollback,
-    }),
-    source: "invitation",
-  })
+  const runWrite = useRunWrite("invitation")
 
   // ============================================================================
   // Realtime Firestore bindings (TanStack Query)
@@ -137,7 +134,7 @@ export const useInvitationStore = defineStore("invitations", () => {
     }
 
     return query(
-      collection(firestore, "invitations"),
+      collection(firestore, "invitations").withConverter(invitationConverter),
       where("teamId", "==", teamId)
     )
   })
@@ -158,7 +155,7 @@ export const useInvitationStore = defineStore("invitations", () => {
     const email = currentUser.value?.email?.toLowerCase()
     if (!email) return null
     return query(
-      collection(firestore, "invitations"),
+      collection(firestore, "invitations").withConverter(invitationConverter),
       where("email", "==", email)
     )
   })
@@ -310,7 +307,7 @@ export const useInvitationStore = defineStore("invitations", () => {
       previous: queryClient.getQueryData<IInvitation[]>(key),
     }))
 
-    await invitationMutation.mutateAsync({
+    await runWrite({
       keys,
       apply: () => {
         for (const key of keys) {
@@ -323,7 +320,7 @@ export const useInvitationStore = defineStore("invitations", () => {
           queryClient.setQueryData(key, previous)
         }
       },
-      run: mutation,
+      fn: mutation,
     })
   }
 
@@ -600,7 +597,7 @@ export function useTeamInvitations(
   const localQuery = computed(() => {
     if (!targetId.value || isCurrentTeam.value) return null
     return query(
-      collection(firestore, "invitations"),
+      collection(firestore, "invitations").withConverter(invitationConverter),
       where("teamId", "==", targetId.value)
     )
   })

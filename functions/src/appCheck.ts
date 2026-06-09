@@ -1,7 +1,7 @@
+import { getAppCheck } from "firebase-admin/app-check"
 import * as logger from "firebase-functions/logger"
 import { HttpsError, onRequest } from "firebase-functions/v2/https"
 import { createHmac, timingSafeEqual } from "node:crypto"
-import { admin } from "./firebase.js"
 import { APP_CHECK_OPTS } from "./runtimeConfig.js"
 import {
   appCheckAllowedAppId,
@@ -144,7 +144,7 @@ export const exchangeTauriAppCheckToken = onRequest(
         throw new HttpsError("permission-denied", "Invalid proof signature")
       }
 
-      const token = await admin.appCheck().createToken(appId, {
+      const token = await getAppCheck().createToken(appId, {
         ttlMillis: APP_CHECK_TOKEN_TTL_MS,
       })
 

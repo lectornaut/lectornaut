@@ -1,3 +1,8 @@
+import {
+  AUDIT_ACTIONS,
+  AUTH_TYPES,
+  LOG_RESOURCE_TYPES,
+} from "@lectornaut/shared/domain"
 import { z } from "zod"
 import { timestampSchema } from "./_primitives"
 
@@ -6,57 +11,14 @@ import { timestampSchema } from "./_primitives"
  *
  * Logs are read from Firestore as a streaming paginated collection and
  * parsed with `parseSafe` in `usePaginatedLogs.ts`. One corrupt row must
- * never throw the whole list — that's why `parseSafe` (null on failure)
- * is the right tool, not `parseOrWarn`.
+ * never collapse or fake the whole list — that's why `parseSafe` (drop +
+ * report the row) is the right tool, not the schema converter (which would
+ * best-effort a bad row through) or `assertValid` (which would throw).
  */
 
-export const logResourceTypeSchema = z.enum([
-  "team",
-  "workspace",
-  "content",
-  "membership",
-  "group",
-  "security",
-])
+export const logResourceTypeSchema = z.enum(LOG_RESOURCE_TYPES)
 
-export const logActionSchema = z.enum([
-  "team.create",
-  "team.update",
-  "team.delete",
-  "workspace.create",
-  "workspace.update",
-  "workspace.delete",
-  "content.create",
-  "content.rename",
-  "content.move",
-  "content.archive",
-  "content.unarchive",
-  "content.delete",
-  "content.update",
-  "content.attachment.create",
-  "content.attachment.rename",
-  "content.attachment.update",
-  "content.attachment.delete",
-  "membership.role.update",
-  "membership.workspace_role.update",
-  "membership.leave",
-  "membership.remove",
-  "membership.agent.add",
-  "membership.agent.remove",
-  "group.create",
-  "group.update",
-  "group.delete",
-  "group.grant.update",
-  "invitation.create",
-  "invitation.resend",
-  "invitation.update",
-  "invitation.delete",
-  "invitation.decline",
-  "sso.configured",
-  "sso.deleted",
-  "security.login_methods.updated",
-  "security.approved_domains.updated",
-])
+export const logActionSchema = z.enum(AUDIT_ACTIONS)
 
 export const logActorSchema = z.object({
   // Optional: an autonomous Workflows run has no driving human, so an agent
@@ -83,7 +45,7 @@ export const logResourceSchema = z.object({
 export const logContextSchema = z.object({
   ip: z.string().optional(),
   userAgent: z.string().optional(),
-  authType: z.enum(["password", "sso", "api"]).optional(),
+  authType: z.enum(AUTH_TYPES).optional(),
 })
 
 export const logChangesSchema = z.object({

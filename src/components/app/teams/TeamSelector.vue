@@ -43,7 +43,7 @@ const onSelectTeam = (value: AcceptableValue) => {
       </EmptyDescription>
     </EmptyHeader>
     <EmptyContent
-      class="bg-background flex max-w-xs flex-col items-stretch gap-2 rounded-xl border p-2"
+      class="bg-background flex max-w-xs flex-col items-stretch gap-2 rounded-3xl border p-2"
     >
       <LoadingState v-if="isLoading" />
       <Select
@@ -51,7 +51,7 @@ const onSelectTeam = (value: AcceptableValue) => {
         :model-value="currentTeam?.id"
         @update:model-value="onSelectTeam"
       >
-        <SelectTrigger>
+        <SelectTrigger class="w-full">
           <SelectValue
             :placeholder="t('components.teamSelector.placeholder')"
           />

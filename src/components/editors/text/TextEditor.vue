@@ -8,10 +8,7 @@ import {
   type SlashCommandItem,
   type SlashCommandPanelState,
 } from "@/components/editors/text/extensions/slashCommand"
-import {
-  TIPTAP_COLLAB_FIELD,
-  useTiptapCollab,
-} from "@/composables/useTiptapCollab"
+import { useTiptapCollab } from "@/composables/useTiptapCollab"
 import {
   IconBold,
   IconBraces,
@@ -40,6 +37,10 @@ import {
 } from "@/data/icons"
 import { accents } from "@/helpers/defaults"
 import { showErrorToast } from "@/helpers/toast"
+import {
+  createTiptapEditorAdapter,
+  type CollabEditorAdapter,
+} from "@/utils/collab/editorAdapter"
 import type { JSONContent, Editor as TiptapEditor } from "@tiptap/core"
 import {
   Details,
@@ -73,7 +74,6 @@ import { Placeholder } from "@tiptap/extensions/placeholder"
 import StarterKit from "@tiptap/starter-kit"
 import { EditorContent, useEditor } from "@tiptap/vue-3"
 import { BubbleMenu } from "@tiptap/vue-3/menus"
-import { prosemirrorJSONToYXmlFragment } from "@tiptap/y-tiptap"
 import type { Awareness } from "y-protocols/awareness"
 import type { Doc as YDoc } from "yjs"
 
@@ -86,19 +86,18 @@ const props = withDefaults(
     collaborationDoc?: YDoc | null
     collaborationAwareness?: Awareness | null
     /**
-     * A server-relayed agent edit to apply to the live collaborative document
-     * (the editor's modelValue watcher is bypassed while collaborating, so
-     * external content must come through this dedicated channel). Bumping
-     * `seq` triggers a `setContent`; only the elected applier receives it.
+     * Whether THIS client is the elected applier for server-relayed agent edits.
+     * Read by the editor's {@link CollabEditorAdapter} so a non-applier's
+     * `applyAgentEdit` stays a no-op (it receives the edit through the mesh).
      */
-    externalContent?: { seq: number; content: string } | null
+    applierStatus?: (() => boolean) | null
   }>(),
   {
     modelValue: "",
     readOnly: false,
     collaborationDoc: null,
     collaborationAwareness: null,
-    externalContent: null,
+    applierStatus: null,
   }
 )
 
@@ -112,6 +111,13 @@ const emit = defineEmits<{
    * to avoid a freshly opened doc looking "unsaved" with no user input.
    */
   (e: "baseline", value: string): void
+  /**
+   * Fired with the editor's {@link CollabEditorAdapter} once the editor is
+   * created (and `null` on teardown). The page registers it with
+   * `useCollabPage`, which applies live agent edits through it — the editor no
+   * longer reaches into the Y.XmlFragment itself.
+   */
+  (e: "adapter", adapter: CollabEditorAdapter | null): void
 }>()
 
 const EDITOR_COLORS = accents.filter(
@@ -749,6 +755,22 @@ const editor = useEditor({
     // makes `isDirty` false on open even when the stored `content` was a
     // non-canonical (e.g. agent-authored) encoding of the same document.
     emit("baseline", currentSerializedModelValue)
+
+    // Hand the page this editor's agent-edit seam. The Y.XmlFragment write that
+    // used to live in a watcher here now lives in the Tiptap adapter; the page
+    // applies relayed edits through it. Only meaningful while collaborating.
+    if (props.collaborationDoc) {
+      emit(
+        "adapter",
+        createTiptapEditorAdapter({
+          ydoc: props.collaborationDoc,
+          isApplier: () => props.applierStatus?.() ?? false,
+          schema: currentEditor.schema,
+          parseContent: parseModelValue,
+          afterApply: () => migrateMathStrings(currentEditor),
+        })
+      )
+    }
   },
   onUpdate: () => {
     scheduleModelSync()
@@ -807,44 +829,6 @@ watch(
   }
 )
 
-// Apply a server-relayed agent edit (write docs). The modelValue watcher
-// above is deliberately inert while collaborating ("Yjs owns the document
-// state"), so agent edits arrive through this dedicated channel.
-//
-// We write the new content straight into the shared Y.XmlFragment (a minimal
-// diff via `prosemirrorJSONToYXmlFragment`) rather than calling `setContent`.
-// An imperative `setContent` only repaints the ProseMirror view; the CRDT
-// still holds whatever the human had (an unsaved draft), so the y-sync binding
-// pushes that stale draft back on its next observe tick — the agent edit
-// "flashes" in and then reverts to the draft (with `isDirty` true). Mutating
-// the CRDT itself makes the agent edit the new source of truth: the binding
-// then reconciles the view, the other peers (via the mesh), and the snapshot
-// from it. Agent edits win.
-watch(
-  () => props.externalContent?.seq,
-  () => {
-    const currentEditor = editor.value
-    const external = props.externalContent
-    const collaborationDoc = props.collaborationDoc
-    if (!currentEditor || !external || !collaborationDoc) {
-      return
-    }
-    try {
-      const fragment = collaborationDoc.getXmlFragment(TIPTAP_COLLAB_FIELD)
-      collaborationDoc.transact(() => {
-        prosemirrorJSONToYXmlFragment(
-          currentEditor.schema,
-          parseModelValue(external.content),
-          fragment
-        )
-      })
-      migrateMathStrings(currentEditor)
-    } catch (error) {
-      console.error("[TextEditor] Failed to apply external content:", error)
-    }
-  }
-)
-
 watch(
   () => props.readOnly,
   (next) => {
@@ -870,6 +854,10 @@ onBeforeUnmount(() => {
     clearTimeout(modelEmitTimer)
     modelEmitTimer = null
   }
+
+  // Drop this editor's adapter before its Y.Doc/editor go away, so the page
+  // can't apply a relayed edit through a torn-down editor.
+  emit("adapter", null)
 
   // Serialize + emit the LIVE doc (not just any already-serialized pending
   // value) — with the debounced sync above, edits since the last window may

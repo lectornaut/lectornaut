@@ -17,13 +17,13 @@ import {
   isCheckingForUpdates,
   lastCheckResult,
 } from "@/modules/updater"
-import { useSettingsStore } from "@/stores/settingsStore"
+import { useAppPreferencesStore } from "@/stores/appPreferencesStore"
 import { storeToRefs } from "pinia"
 import { toast } from "vue-sonner"
 
 const { t } = useI18n()
 
-const settingsStore = useSettingsStore()
+const appPreferencesStore = useAppPreferencesStore()
 const {
   runOnStartup,
   menuBar,
@@ -37,8 +37,8 @@ const {
   readAloudEnabled,
   dictationEnabled,
   isUpdatingPreferences,
-} = storeToRefs(settingsStore)
-const { updatePreference } = settingsStore
+} = storeToRefs(appPreferencesStore)
+const { updatePreference } = appPreferencesStore
 
 const toBoolean = (value: unknown): boolean => value === true
 

@@ -8,9 +8,9 @@ import {
   IconSparkles,
 } from "@/data/icons"
 import { emitter } from "@/modules/mitt"
-import { useLayoutStore } from "@/stores/layoutStore"
 import { useMembershipStore } from "@/stores/membershipStore"
 import { useTeamAgentsStore } from "@/stores/teamAgentsStore"
+import { useUiPreferencesStore } from "@/stores/uiPreferencesStore"
 import { isAgentMembership } from "@/types/membership"
 import { storeToRefs } from "pinia"
 import { computed } from "vue"
@@ -36,8 +36,8 @@ const { pickerAgents: activeAgents, customAgentsEnabled } =
 // sheets are filtered — the empty-state hints below stay keyed on
 // `activeAgents` (team availability), so hiding every agent yourself
 // doesn't trip the "no agents available" message.
-const layoutStore = useLayoutStore()
-const { isAgentVisible } = layoutStore
+const uiPreferencesStore = useUiPreferencesStore()
+const { isAgentVisible } = uiPreferencesStore
 const visibleAgents = computed(() =>
   activeAgents.value.filter((agent) => isAgentVisible(agent.id))
 )

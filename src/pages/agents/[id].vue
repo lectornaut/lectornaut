@@ -37,15 +37,15 @@ const metadata = computed(() => [
 </script>
 
 <template>
-  <Teleport defer to="#left-sidebar">
+  <SidebarSlot side="left">
     <Sidebar collapsible="none" class="w-full"></Sidebar>
-  </Teleport>
+  </SidebarSlot>
   <div class="flex grow flex-col overflow-auto overscroll-none scroll-smooth">
     <div class="flex grow flex-col gap-2">
       <FlowApp />
     </div>
   </div>
-  <Teleport defer to="#right-sidebar">
+  <SidebarSlot side="right">
     <Tabs default-value="details" class="grow gap-0">
       <Sidebar collapsible="none" class="w-full">
         <SidebarHeader>
@@ -94,5 +94,5 @@ const metadata = computed(() => [
         </SidebarContent>
       </Sidebar>
     </Tabs>
-  </Teleport>
+  </SidebarSlot>
 </template>

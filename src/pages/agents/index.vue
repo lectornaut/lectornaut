@@ -156,7 +156,7 @@ const route = useRoute()
 </script>
 
 <template>
-  <Teleport defer to="#left-sidebar">
+  <SidebarSlot side="left">
     <Tabs default-value="details" class="grow gap-0">
       <Sidebar collapsible="none" class="w-full">
         <SidebarHeader>
@@ -244,7 +244,7 @@ const route = useRoute()
         </SidebarContent>
       </Sidebar>
     </Tabs>
-  </Teleport>
+  </SidebarSlot>
   <OverlayScrollbarsWrapper>
     <div class="mx-auto grid w-fit grid-cols-1">
       <div class="flex max-w-6xl flex-col gap-16 p-16">
@@ -523,9 +523,9 @@ const route = useRoute()
       </div>
     </div>
   </OverlayScrollbarsWrapper>
-  <Teleport defer to="#right-sidebar">
+  <SidebarSlot side="right">
     <Sidebar collapsible="none" class="w-full"></Sidebar>
-  </Teleport>
+  </SidebarSlot>
 </template>
 
 <!-- <style scoped>

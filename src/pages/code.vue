@@ -44,6 +44,7 @@ const {
   collabError,
   collabReady,
   collabAwareness,
+  registerEditorAdapter,
   saveContent,
 } = useCollabPage({
   scope: nodeScope,
@@ -53,9 +54,11 @@ const {
     const cmCollab = useCodeMirrorCollab(session, fileContent)
     activeCmCollab = cmCollab
     collabExtensions.value = cmCollab.extensions
+    registerEditorAdapter(cmCollab.adapter)
     return cmCollab.getText()
   },
   onSessionDestroyed: () => {
+    registerEditorAdapter(null)
     activeCmCollab?.destroy()
     activeCmCollab = null
     collabExtensions.value = []
@@ -70,7 +73,7 @@ useHead(() => ({
 </script>
 
 <template>
-  <Teleport defer to="#left-sidebar">
+  <SidebarSlot side="left">
     <Sidebar collapsible="none" class="w-full">
       <SidebarContent>
         <OverlayScrollbarsWrapper>
@@ -93,10 +96,8 @@ useHead(() => ({
         </OverlayScrollbarsWrapper>
       </SidebarContent>
     </Sidebar>
-  </Teleport>
-  <div
-    class="m-2 flex grow flex-col overflow-auto overscroll-none scroll-smooth rounded border"
-  >
+  </SidebarSlot>
+  <div class="flex grow flex-col overflow-auto overscroll-none scroll-smooth">
     <OverlayScrollbarsWrapper v-if="teamId && workspaceId && selectedFile">
       <CodeEditor
         ref="editorRef"
@@ -145,12 +146,12 @@ useHead(() => ({
       {{ t("actions.save") }}
     </Button>
   </Teleport>
-  <Teleport defer to="#right-sidebar">
+  <SidebarSlot side="right">
     <NodeInspectorSidebar
       :team-id="teamId"
       :workspace-id="workspaceId"
       :scope="nodeScope"
       :node="selectedNode"
     />
-  </Teleport>
+  </SidebarSlot>
 </template>

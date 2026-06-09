@@ -1,13 +1,27 @@
+import type {
+  CollectionReference,
+  DocumentReference,
+  DocumentSnapshot,
+  Transaction,
+} from "firebase-admin/firestore"
+import { FieldValue } from "firebase-admin/firestore"
+import { getStorage } from "firebase-admin/storage"
 import * as logger from "firebase-functions/logger"
+import { type SecretParam } from "firebase-functions/params"
 import {
   CallableRequest,
   HttpsError,
   onCall,
+  type CallableOptions,
 } from "firebase-functions/v2/https"
 import Stripe from "stripe"
+import { z, type ZodType } from "zod"
+import { assertAuthenticated, type AuthData } from "./auth.js"
+import { authorize, requireAuthorized } from "./authorize.js"
 import { BUILT_IN_AGENTS_BY_ID, isBuiltInAgentId } from "./builtInAgents.js"
 import { COST_BUDGET } from "./costBudget.js"
-import { admin, db } from "./firebase.js"
+import { defineCallable } from "./defineCallable.js"
+import { db } from "./firebase.js"
 import {
   ATTACHMENT_NAME_MAX_LENGTH,
   botSessionAttachmentsCollectionPath,
@@ -16,7 +30,7 @@ import {
   normalizeAttachmentDisplayName,
   workspaceNodeAttachmentsCollectionPath,
 } from "./nodeAttachments.js"
-import { can, effectiveRole } from "./permissions.js"
+import { can, effectiveRole, type Capability } from "./permissions.js"
 import { CALLABLE_OPTS, DESTRUCTIVE_CALLABLE_OPTS } from "./runtimeConfig.js"
 import { stripeSecretKey } from "./secrets.js"
 import {
@@ -33,7 +47,6 @@ import {
   WorkspaceNodeScope,
 } from "./types.js"
 import { removeMemberFromWorkspaces } from "./workspaceMembership.js"
-import { resolveWorkspaceGroupRole } from "./workspaceRoles.js"
 
 // =============================================================================
 // Audit Log Types
@@ -42,19 +55,6 @@ import { resolveWorkspaceGroupRole } from "./workspaceRoles.js"
 // =============================================================================
 // Audit Log Utilities
 // =============================================================================
-
-function assertAuthenticated(
-  request: CallableRequest
-): asserts request is CallableRequest & {
-  auth: NonNullable<CallableRequest["auth"]>
-} {
-  if (!request.auth) {
-    throw new HttpsError(
-      "unauthenticated",
-      "The function must be called while authenticated."
-    )
-  }
-}
 
 function mapAuthType(provider?: string): Context["authType"] | undefined {
   if (!provider) return undefined
@@ -141,12 +141,12 @@ function buildChanges(
 
 export async function logEvent(
   params: LogEventParams,
-  options?: { transaction?: admin.firestore.Transaction }
-): Promise<admin.firestore.DocumentReference> {
+  options?: { transaction?: Transaction }
+): Promise<DocumentReference> {
   const logRef = db.collection("logs").doc()
   const entry: LogEntry = {
     id: logRef.id,
-    timestamp: admin.firestore.FieldValue.serverTimestamp(),
+    timestamp: FieldValue.serverTimestamp(),
     teamId: params.teamId,
     actor: normalizeActor(params.actor),
     action: params.action,
@@ -168,8 +168,170 @@ export async function logEvent(
   return logRef
 }
 
+/**
+ * Run a content mutation inside a Firestore transaction and emit its audit log
+ * entry atomically within the SAME transaction. The body returns the caller's
+ * `result` plus the `audit` params to log — or `audit: null` to skip the log (a
+ * no-op mutation with no changes). Returns the result and the generated log id
+ * (absent when nothing was logged).
+ *
+ * Owns the "open transaction → run body → log iff changed" shape that every
+ * single-transaction audited mutation repeated by hand. Mutations with
+ * out-of-band side effects (attachment storage I/O) or a batched subtree purge
+ * compose `authorize` + `logEvent` directly instead, since they cannot live
+ * inside a single transaction.
+ */
+export async function runAuditedTransaction<T>(
+  body: (
+    transaction: Transaction
+  ) => Promise<{ result: T; audit: LogEventParams | null }>
+): Promise<{ result: T; logId?: string }> {
+  return db.runTransaction(async (transaction) => {
+    const { result, audit } = await body(transaction)
+    if (!audit) return { result }
+    const logRef = await logEvent(audit, { transaction })
+    return { result, logId: logRef.id }
+  })
+}
+
+// ===========================================================================
+// defineMutation — the audited-transaction variant of defineCallable
+// ===========================================================================
+
+/**
+ * The body-computed half of the audit entry; `defineMutation` supplies the rest.
+ * `workspaceId` is optional here so a create-with-generated-id mutation can audit
+ * against an id that didn't exist at parse time (else it defaults to the
+ * `context` scope's workspaceId).
+ */
+type MutationAuditBits = Pick<
+  LogEventParams,
+  "resource" | "changes" | "workspaceId"
+>
+
+/** Typed context handed to a {@link defineMutation} handler. */
+interface MutationCtx<In> {
+  /** The raw Firebase request — for the rare handler that needs rawRequest/app. */
+  request: CallableRequest<In>
+  /** The authenticated caller (non-null: mutations are `"required"` or `"verified"`). */
+  auth: AuthData
+  /** `request.data` parsed through `spec.input` (or the raw data when no schema). */
+  input: In
+  /** The mutation's open transaction — do all reads/writes through it. */
+  tx: Transaction
+  /** `auth.uid` — the audit actor + the `createdBy`/`updatedBy` stamp. */
+  actorId: string
+  /** `auth.token.email`, if present. */
+  actorEmail: string | undefined
+  /** The role `authorize` resolved for the actor (undefined without a `capability` slot). */
+  teamRole: IMembershipRole | undefined
+}
+
+interface MutationSpec<In, Out, M extends "required" | "verified"> {
+  name: string
+  /** Auth policy. Default `"required"` (the legacy `assertAuthenticated` gate). */
+  auth?: M
+  appCheck?: boolean
+  input?: ZodType<In>
+  opts?: CallableOptions<In>
+  secrets?: SecretParam[]
+  /** When set, gate the mutation on this capability via `authorize` + `requireAuthorized`. */
+  capability?: Capability
+  /** Derive the authorize scope AND the audit log's teamId/workspaceId from the parsed input. */
+  context: (input: In) => { teamId: string; workspaceId?: string }
+  /** Per-callable deny message for the `insufficient-capability` case. */
+  denyMessage?: string
+  /** The audit action (static per callable). */
+  action: LogEventParams["action"]
+  /**
+   * Domain logic. Read/write via `ctx.tx`; return the client `result` plus the
+   * audit's `resource` + `changes` (or `audit: null` to skip the log for a no-op).
+   */
+  handler: (
+    ctx: MutationCtx<In>
+  ) => Promise<{ result: Out; audit: MutationAuditBits | null }>
+}
+
+/**
+ * The audited-transaction-composing variant of {@link defineCallable}.
+ *
+ * A content mutation's outer ring is identical every time: assert auth, derive
+ * the actor, open a transaction, `authorize()` inside it, do the write, emit a
+ * `logEvent` in the SAME transaction, and return `{ ...result, logId }`. This
+ * seam owns all of that DECLARATIVELY and composes the existing inner seams —
+ * {@link authorize} / {@link requireAuthorized} and {@link runAuditedTransaction}
+ * — rather than re-implementing them. Both stay transaction-scoped: `authorize`
+ * reads through the mutation's transaction, and `logEvent` writes inside it.
+ *
+ * The handler is left with ONLY the domain work: read/write via `ctx.tx`,
+ * compute the `changes`, and return the result + the audit's `resource`/`changes`.
+ * `defineMutation` fills the audit's `teamId`/`workspaceId` (from `context`),
+ * `actor` (the caller + the role `authorize` resolved), `action` (the static
+ * slot), and request `context` (IP / UA), then appends the generated `logId`.
+ */
+export function defineMutation<
+  In = unknown,
+  Out = unknown,
+  M extends "required" | "verified" = "required",
+>(spec: MutationSpec<In, Out, M>) {
+  return defineCallable<In, Out & { logId?: string }, M>({
+    name: spec.name,
+    auth: spec.auth,
+    appCheck: spec.appCheck,
+    input: spec.input,
+    opts: spec.opts,
+    secrets: spec.secrets,
+    handler: async ({ request, auth, input }) => {
+      const actorId = auth.uid
+      const actorEmail = auth.token.email ?? undefined
+      const scope = spec.context(input)
+
+      const { result, logId } = await runAuditedTransaction<Out>(async (tx) => {
+        let teamRole: IMembershipRole | undefined
+        if (spec.capability) {
+          teamRole =
+            requireAuthorized(
+              await authorize(actorId, spec.capability, {
+                teamId: scope.teamId,
+                workspaceId: scope.workspaceId,
+                transaction: tx,
+              }),
+              spec.denyMessage
+            ).teamRole ?? undefined
+        }
+
+        const out = await spec.handler({
+          request,
+          auth,
+          input,
+          tx,
+          actorId,
+          actorEmail,
+          teamRole,
+        })
+
+        if (!out.audit) return { result: out.result, audit: null }
+
+        const workspaceId = out.audit.workspaceId ?? scope.workspaceId
+        const audit: LogEventParams = {
+          teamId: scope.teamId,
+          ...(workspaceId ? { workspaceId } : {}),
+          actor: { userId: actorId, email: actorEmail, role: teamRole },
+          action: spec.action,
+          resource: out.audit.resource,
+          context: buildContext(request),
+          ...(out.audit.changes ? { changes: out.audit.changes } : {}),
+        }
+        return { result: out.result, audit }
+      })
+
+      return { ...result, logId }
+    },
+  })
+}
+
 async function requireTeamRole(
-  transaction: admin.firestore.Transaction,
+  transaction: Transaction,
   teamId: string,
   userId: string
 ): Promise<IMembershipRole> {
@@ -211,74 +373,6 @@ async function getTeamRole(
   }
 
   return role
-}
-
-/**
- * A member's per-workspace role override, or null when none applies. The
- * override at teams/{teamId}/memberships/{userId}/workspaces/{workspaceId} is
- * read through the passed transaction (so it sits in the transaction's read
- * phase alongside the membership/workspace reads). Functions-only-write.
- */
-async function getWorkspaceRoleOverride(
-  transaction: admin.firestore.Transaction,
-  teamId: string,
-  workspaceId: string,
-  userId: string
-): Promise<IMembershipRole | null> {
-  const overrideRef = db.doc(
-    `teams/${teamId}/memberships/${userId}/workspaces/${workspaceId}`
-  )
-  const overrideSnap = await transaction.get(overrideRef)
-  // Excluded = non-member of the workspace → no effective role (deny). Enforced
-  // here so every content callsite that resolves a workspace role rejects an
-  // excluded actor without per-callsite changes.
-  if (overrideSnap.exists && overrideSnap.data()?.excluded === true) {
-    throw new HttpsError(
-      "permission-denied",
-      "You are not a member of this workspace."
-    )
-  }
-  const directRoleRaw = overrideSnap.exists
-    ? overrideSnap.data()?.role
-    : undefined
-  const directRole = isMembershipRole(directRoleRaw) ? directRoleRaw : null
-  // Fold in group elevation LIVE (elevate-only, max over the member's groups).
-  // Read non-transactionally: groups + grants are admin-managed config, not part
-  // of THIS mutation's consistency boundary, so they stay out of the
-  // transaction's read set (no extra contention on the hot content path).
-  const groupRole = await resolveWorkspaceGroupRole(teamId, workspaceId, userId)
-  return effectiveRole(directRole, groupRole)
-}
-
-/**
- * Non-transactional variant of {@link getWorkspaceRoleOverride}, for callables
- * that resolve the caller's role outside a transaction (the batched
- * `deleteWorkspaceNode` subtree purge and the attachment mutations, which read
- * the role via `getTeamRole` rather than inside `runTransaction`).
- */
-async function getWorkspaceRoleOverrideDirect(
-  teamId: string,
-  workspaceId: string,
-  userId: string
-): Promise<IMembershipRole | null> {
-  const overrideSnap = await db
-    .doc(`teams/${teamId}/memberships/${userId}/workspaces/${workspaceId}`)
-    .get()
-  // Excluded = non-member of the workspace → no effective role (deny). See the
-  // transaction-aware variant above.
-  if (overrideSnap.exists && overrideSnap.data()?.excluded === true) {
-    throw new HttpsError(
-      "permission-denied",
-      "You are not a member of this workspace."
-    )
-  }
-  const directRoleRaw = overrideSnap.exists
-    ? overrideSnap.data()?.role
-    : undefined
-  const directRole = isMembershipRole(directRoleRaw) ? directRoleRaw : null
-  // Fold in group elevation LIVE (elevate-only, max over the member's groups).
-  const groupRole = await resolveWorkspaceGroupRole(teamId, workspaceId, userId)
-  return effectiveRole(directRole, groupRole)
 }
 
 function assertString(value: unknown, field: string): string {
@@ -586,7 +680,7 @@ const getUserPreferencesRef = (userId: string) =>
   db.doc(`users/${userId}/settings/preferences`)
 
 function readSelectedTeamId(
-  snapshot: admin.firestore.DocumentSnapshot
+  snapshot: DocumentSnapshot
 ): string | null | undefined {
   if (!snapshot.exists) return undefined
 
@@ -596,7 +690,7 @@ function readSelectedTeamId(
 }
 
 async function getSelectedTeamId(
-  transaction: admin.firestore.Transaction,
+  transaction: Transaction,
   userId: string
 ): Promise<string | null> {
   const preferencesSnap = await transaction.get(getUserPreferencesRef(userId))
@@ -725,13 +819,6 @@ function getTypeOrder(type: NodeType): number {
   return type === "folder" ? 0 : 1
 }
 
-function assertNodeType(value: unknown): NodeType {
-  if (value !== "folder" && value !== "file") {
-    throw new HttpsError("invalid-argument", "type must be folder or file.")
-  }
-  return value
-}
-
 function assertWorkspaceNodeScope(value: unknown): WorkspaceNodeScope {
   if (value !== "code" && value !== "write") {
     throw new HttpsError(
@@ -740,17 +827,6 @@ function assertWorkspaceNodeScope(value: unknown): WorkspaceNodeScope {
     )
   }
   return value
-}
-
-function assertNodeName(value: unknown, field: string): string {
-  const normalized = normalizeNodeName(assertString(value, field))
-  if (!normalized.length || normalized.length > NODE_NAME_MAX_LENGTH) {
-    throw new HttpsError(
-      "invalid-argument",
-      `${field} must be between 1 and ${NODE_NAME_MAX_LENGTH} characters.`
-    )
-  }
-  return normalized
 }
 
 function workspaceNodesCollectionPath(
@@ -806,7 +882,7 @@ async function readStorageObjectMetadata(storagePath: string): Promise<{
   mimeType: string | null
   size: number | null
 }> {
-  const file = admin.storage().bucket().file(storagePath)
+  const file = getStorage().bucket().file(storagePath)
   const [exists] = await file.exists()
   if (!exists) {
     throw new HttpsError(
@@ -833,7 +909,7 @@ export async function deleteStorageObjectIfExists(
   if (!storagePath) return
 
   try {
-    await admin.storage().bucket().file(storagePath).delete({
+    await getStorage().bucket().file(storagePath).delete({
       ignoreNotFound: true,
     })
   } catch (error) {
@@ -858,7 +934,7 @@ export async function deleteStoragePrefix(
   if (!prefix) return
 
   try {
-    await admin.storage().bucket().deleteFiles({ prefix, force: true })
+    await getStorage().bucket().deleteFiles({ prefix, force: true })
   } catch (error) {
     logger.warn("Failed to delete storage objects under prefix", {
       prefix,
@@ -881,13 +957,13 @@ function chunkArray<T>(items: T[], size: number): T[][] {
 }
 
 async function collectNodeAttachmentDeletes(
-  nodesCollection: admin.firestore.CollectionReference,
+  nodesCollection: CollectionReference,
   nodeIds: string[]
 ): Promise<{
-  refs: admin.firestore.DocumentReference[]
+  refs: DocumentReference[]
   storagePaths: string[]
 }> {
-  const refs: admin.firestore.DocumentReference[] = []
+  const refs: DocumentReference[] = []
   const storagePaths = new Set<string>()
 
   for (const batchIds of chunkArray(nodeIds, IN_QUERY_CHUNK_SIZE)) {
@@ -932,7 +1008,7 @@ export const createTeam = onCall(CALLABLE_OPTS, async (request) => {
   const actorEmail = request.auth.token.email ?? undefined
 
   const teamRef = db.collection("teams").doc()
-  const now = admin.firestore.FieldValue.serverTimestamp()
+  const now = FieldValue.serverTimestamp()
 
   const teamData = {
     id: teamRef.id,
@@ -1029,19 +1105,14 @@ export const updateTeam = onCall(CALLABLE_OPTS, async (request) => {
   const actorEmail = request.auth.token.email ?? undefined
 
   return db.runTransaction(async (transaction) => {
-    const role = await requireTeamRole(transaction, teamId, actorId)
-
-    if (
-      !can(actorId, Capabilities.EDIT_TEAM, {
-        scope: "team",
-        teamRole: role,
-      })
-    ) {
-      throw new HttpsError(
-        "permission-denied",
+    const role =
+      requireAuthorized(
+        await authorize(actorId, Capabilities.EDIT_TEAM, {
+          teamId,
+          transaction,
+        }),
         "You do not have permission to update this team."
-      )
-    }
+      ).teamRole ?? undefined
 
     const teamRef = db.doc(`teams/${teamId}`)
     const teamSnap = await transaction.get(teamRef)
@@ -1103,7 +1174,7 @@ export const updateTeam = onCall(CALLABLE_OPTS, async (request) => {
         transaction.set(usernameRef, {
           entityType: "team",
           entityId: teamId,
-          createdAt: admin.firestore.FieldValue.serverTimestamp(),
+          createdAt: FieldValue.serverTimestamp(),
         })
       }
 
@@ -1129,7 +1200,7 @@ export const updateTeam = onCall(CALLABLE_OPTS, async (request) => {
 
     transaction.update(teamRef, {
       ...updates,
-      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      updatedAt: FieldValue.serverTimestamp(),
     })
 
     // COST OPTIMIZATION: Use select() to fetch minimal fields for denormalization.
@@ -1144,7 +1215,7 @@ export const updateTeam = onCall(CALLABLE_OPTS, async (request) => {
         "team.photoURL": updates.photoURL ?? before.photoURL,
         "team.username": updates.username ?? before.username ?? null,
         "team.isPublic": updates.isPublic ?? previousIsPublic,
-        "team.updatedAt": admin.firestore.FieldValue.serverTimestamp(),
+        "team.updatedAt": FieldValue.serverTimestamp(),
       })
     })
 
@@ -1181,26 +1252,13 @@ export const deleteTeam = onCall(
     const actorId = request.auth.uid
     const actorEmail = request.auth.token.email ?? undefined
 
-    // First verify role outside transaction
-    const membershipRef = db.doc(`teams/${teamId}/memberships/${actorId}`)
-    const membershipSnap = await membershipRef.get()
-
-    if (!membershipSnap.exists) {
-      throw new HttpsError("permission-denied", "User is not a team member.")
-    }
-
-    const role = membershipSnap.data()?.role as IMembershipRole
-    if (
-      !can(actorId, Capabilities.DELETE_TEAM, {
-        scope: "team",
-        teamRole: role,
-      })
-    ) {
-      throw new HttpsError(
-        "permission-denied",
+    // Verify role outside a transaction — the delete runs as a recursive
+    // delete, not a transaction.
+    const role =
+      requireAuthorized(
+        await authorize(actorId, Capabilities.DELETE_TEAM, { teamId }),
         "You do not have permission to delete this team."
-      )
-    }
+      ).teamRole ?? undefined
 
     // Get team data for logging
     const teamRef = db.doc(`teams/${teamId}`)
@@ -1259,7 +1317,7 @@ export const deleteTeam = onCall(
       await getUserPreferencesRef(actorId).set(
         {
           currentTeamId: null,
-          updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+          updatedAt: FieldValue.serverTimestamp(),
         },
         { merge: true }
       )
@@ -1331,36 +1389,68 @@ export const deleteTeam = onCall(
 // Workspace CRUD Operations
 // =============================================================================
 
-export const createWorkspace = onCall(CALLABLE_OPTS, async (request) => {
-  assertAuthenticated(request)
+// ---------------------------------------------------------------------------
+// Shared content-mutation input schemas + scope helpers (workspace + node)
+// ---------------------------------------------------------------------------
+// Structural fields validate BEFORE `authorize` runs (matching the old
+// `assertString` / `assertWorkspaceNodeScope` ordering); `name` reuses
+// `normalizeNodeName` so the stored value is identical, and `parentId` keeps the
+// lenient "anything non-string/blank → root" fallback the hand-rolled parse had.
+const nonEmptyString = z.string().trim().min(1)
 
-  const teamId = assertString(request.data?.teamId, "teamId")
-  const name = assertString(request.data?.name, "name")
-  const descriptionRaw = request.data?.description
-  const description =
-    typeof descriptionRaw === "string" ? descriptionRaw.trim() || null : null
-
-  const actorId = request.auth.uid
-  const actorEmail = request.auth.token.email ?? undefined
-
-  return db.runTransaction(async (transaction) => {
-    const role = await requireTeamRole(transaction, teamId, actorId)
-
-    if (
-      !can(actorId, Capabilities.CREATE_WORKSPACE, {
-        scope: "team",
-        teamRole: role,
-      })
-    ) {
-      throw new HttpsError(
-        "permission-denied",
-        "You do not have permission to create workspaces."
-      )
+const nodeNameSchema = z
+  .string()
+  .transform((value) => normalizeNodeName(value))
+  .refine(
+    (value) => value.length >= 1 && value.length <= NODE_NAME_MAX_LENGTH,
+    {
+      message: `name must be between 1 and ${NODE_NAME_MAX_LENGTH} characters.`,
     }
+  )
+
+const parentIdSchema = z
+  .unknown()
+  .transform((value) =>
+    typeof value === "string" && value.trim() ? value.trim() : ROOT_PARENT_ID
+  )
+
+const nodeTargetSchema = z.object({
+  teamId: nonEmptyString,
+  workspaceId: nonEmptyString,
+  scope: z.enum(["code", "write"]),
+  nodeId: nonEmptyString,
+})
+
+/** Every node mutation authorizes + audits on the same (team, workspace). */
+const workspaceContentScope = (input: {
+  teamId: string
+  workspaceId: string
+}) => ({ teamId: input.teamId, workspaceId: input.workspaceId })
+
+const MANAGE_CONTENT_DENY =
+  "You do not have permission to manage workspace content."
+
+export const createWorkspace = defineMutation({
+  name: "createWorkspace",
+  input: z.object({
+    teamId: nonEmptyString,
+    name: nonEmptyString,
+    description: z
+      .unknown()
+      .transform((value) =>
+        typeof value === "string" ? value.trim() || null : null
+      ),
+  }),
+  capability: Capabilities.CREATE_WORKSPACE,
+  context: (input) => ({ teamId: input.teamId }),
+  denyMessage: "You do not have permission to create workspaces.",
+  action: "workspace.create",
+  handler: async ({ input, tx }) => {
+    const { teamId, name, description } = input
 
     // Seed memberUids = the team's human members (airtight list-level
     // participation; agents excluded). Read in-transaction for consistency.
-    const membersSnap = await transaction.get(
+    const membersSnap = await tx.get(
       db.collection(`teams/${teamId}/memberships`)
     )
     const memberUids = membersSnap.docs
@@ -1368,7 +1458,7 @@ export const createWorkspace = onCall(CALLABLE_OPTS, async (request) => {
       .map((memberDoc) => memberDoc.id)
 
     const workspaceRef = db.collection(`teams/${teamId}/workspaces`).doc()
-    const now = admin.firestore.FieldValue.serverTimestamp()
+    const now = FieldValue.serverTimestamp()
 
     const workspaceData = {
       id: workspaceRef.id,
@@ -1381,32 +1471,20 @@ export const createWorkspace = onCall(CALLABLE_OPTS, async (request) => {
       updatedAt: now,
     }
 
-    transaction.set(workspaceRef, workspaceData)
-
-    const logRef = await logEvent(
-      {
-        teamId,
-        workspaceId: workspaceRef.id,
-        actor: { userId: actorId, email: actorEmail, role },
-        action: "workspace.create",
-        resource: { type: "workspace", id: workspaceRef.id, parentId: teamId },
-        context: buildContext(request),
-        changes: {
-          fields: ["name", "description"],
-          after: {
-            name,
-            description,
-          },
-        },
-      },
-      { transaction }
-    )
+    tx.set(workspaceRef, workspaceData)
 
     return {
-      workspaceId: workspaceRef.id,
-      logId: logRef.id,
+      result: { workspaceId: workspaceRef.id },
+      audit: {
+        workspaceId: workspaceRef.id,
+        resource: { type: "workspace", id: workspaceRef.id, parentId: teamId },
+        changes: {
+          fields: ["name", "description"],
+          after: { name, description },
+        },
+      },
     }
-  })
+  },
 })
 
 export const updateWorkspace = onCall(CALLABLE_OPTS, async (request) => {
@@ -1448,37 +1526,20 @@ export const updateWorkspace = onCall(CALLABLE_OPTS, async (request) => {
   const actorEmail = request.auth.token.email ?? undefined
 
   return db.runTransaction(async (transaction) => {
-    const role = await requireTeamRole(transaction, teamId, actorId)
-
-    // EDIT_WORKSPACE is workspace-scoped: a team owner/admin can edit any
-    // workspace, AND a member elevated to admin/owner in THIS workspace (direct
-    // override or group grant) can edit it too. Check the team role first so a
-    // team admin excluded from workspace participation keeps their entity-level
-    // edit right; only fall back to the (exclusion-aware) per-workspace resolver
-    // when the team role alone isn't enough.
-    let allowed = can(actorId, Capabilities.EDIT_WORKSPACE, {
-      scope: "team",
-      teamRole: role,
-    })
-    if (!allowed) {
-      const workspaceRole = await getWorkspaceRoleOverride(
-        transaction,
-        teamId,
-        workspaceId,
-        actorId
-      )
-      allowed = can(actorId, Capabilities.EDIT_WORKSPACE, {
-        scope: "workspace",
-        teamRole: role,
-        workspaceRole,
-      })
-    }
-    if (!allowed) {
-      throw new HttpsError(
-        "permission-denied",
+    // EDIT_WORKSPACE is checked at team scope first, then per-workspace
+    // (CAPABILITY_SCOPES): a team owner/admin can edit any workspace — and one
+    // excluded from the workspace keeps that entity-level right — while a member
+    // elevated to admin/owner in THIS workspace can too. `authorize` walks those
+    // ordered scopes and short-circuits.
+    const role =
+      requireAuthorized(
+        await authorize(actorId, Capabilities.EDIT_WORKSPACE, {
+          teamId,
+          workspaceId,
+          transaction,
+        }),
         "You do not have permission to update workspaces."
-      )
-    }
+      ).teamRole ?? undefined
 
     const workspaceRef = db.doc(`teams/${teamId}/workspaces/${workspaceId}`)
     const workspaceSnap = await transaction.get(workspaceRef)
@@ -1499,7 +1560,7 @@ export const updateWorkspace = onCall(CALLABLE_OPTS, async (request) => {
 
     transaction.update(workspaceRef, {
       ...updates,
-      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      updatedAt: FieldValue.serverTimestamp(),
     })
 
     const logRef = await logEvent(
@@ -1579,36 +1640,19 @@ export const deleteWorkspace = onCall(
     // Step 1: Verify permissions and capture data for logging in a transaction
     const { role, workspaceData } = await db.runTransaction(
       async (transaction) => {
-        const memberRole = await requireTeamRole(transaction, teamId, actorId)
-
-        // DELETE_WORKSPACE is workspace-scoped: a team owner/admin can delete
-        // any workspace, AND a member elevated to admin/owner in THIS workspace
-        // (direct override or group grant) can delete it. Team role first so an
-        // excluded team admin keeps the right; fall back to the exclusion-aware
-        // per-workspace resolver only when the team role isn't enough.
-        let allowed = can(actorId, Capabilities.DELETE_WORKSPACE, {
-          scope: "team",
-          teamRole: memberRole,
-        })
-        if (!allowed) {
-          const workspaceRole = await getWorkspaceRoleOverride(
-            transaction,
-            teamId,
-            workspaceId,
-            actorId
-          )
-          allowed = can(actorId, Capabilities.DELETE_WORKSPACE, {
-            scope: "workspace",
-            teamRole: memberRole,
-            workspaceRole,
-          })
-        }
-        if (!allowed) {
-          throw new HttpsError(
-            "permission-denied",
+        // DELETE_WORKSPACE walks team scope then per-workspace
+        // (CAPABILITY_SCOPES): a team owner/admin (even one excluded from the
+        // workspace) can delete it, as can a member elevated to admin/owner in
+        // THIS workspace.
+        const memberRole =
+          requireAuthorized(
+            await authorize(actorId, Capabilities.DELETE_WORKSPACE, {
+              teamId,
+              workspaceId,
+              transaction,
+            }),
             "You do not have permission to delete workspaces."
-          )
-        }
+          ).teamRole ?? undefined
 
         const workspaceRef = db.doc(`teams/${teamId}/workspaces/${workspaceId}`)
         const workspaceSnap = await transaction.get(workspaceRef)
@@ -1691,46 +1735,25 @@ export const deleteWorkspace = onCall(
 // Workspace Node Operations
 // =============================================================================
 
-export const createWorkspaceNode = onCall(CALLABLE_OPTS, async (request) => {
-  assertAuthenticated(request)
-
-  const teamId = assertString(request.data?.teamId, "teamId")
-  const workspaceId = assertString(request.data?.workspaceId, "workspaceId")
-  const scope = assertWorkspaceNodeScope(request.data?.scope)
-  const parentIdRaw = request.data?.parentId
-  const parentId =
-    typeof parentIdRaw === "string" && parentIdRaw.trim()
-      ? parentIdRaw.trim()
-      : ROOT_PARENT_ID
-  const name = assertNodeName(request.data?.name, "name")
-  const type = assertNodeType(request.data?.type)
-
-  const actorId = request.auth.uid
-  const actorEmail = request.auth.token.email ?? undefined
-
-  return db.runTransaction(async (transaction) => {
-    const role = await requireTeamRole(transaction, teamId, actorId)
-
-    if (
-      !can(actorId, Capabilities.MANAGE_WORKSPACE_CONTENT, {
-        scope: "workspace",
-        teamRole: role,
-        workspaceRole: await getWorkspaceRoleOverride(
-          transaction,
-          teamId,
-          workspaceId,
-          actorId
-        ),
-      })
-    ) {
-      throw new HttpsError(
-        "permission-denied",
-        "You do not have permission to manage workspace content."
-      )
-    }
+export const createWorkspaceNode = defineMutation({
+  name: "createWorkspaceNode",
+  input: z.object({
+    teamId: nonEmptyString,
+    workspaceId: nonEmptyString,
+    scope: z.enum(["code", "write"]),
+    parentId: parentIdSchema,
+    name: nodeNameSchema,
+    type: z.enum(["folder", "file"]),
+  }),
+  capability: Capabilities.MANAGE_WORKSPACE_CONTENT,
+  context: workspaceContentScope,
+  denyMessage: MANAGE_CONTENT_DENY,
+  action: "content.create",
+  handler: async ({ input, tx, actorId }) => {
+    const { teamId, workspaceId, scope, parentId, name, type } = input
 
     const workspaceRef = db.doc(`teams/${teamId}/workspaces/${workspaceId}`)
-    const workspaceSnap = await transaction.get(workspaceRef)
+    const workspaceSnap = await tx.get(workspaceRef)
     if (!workspaceSnap.exists) {
       throw new HttpsError("not-found", "Workspace not found.")
     }
@@ -1739,7 +1762,7 @@ export const createWorkspaceNode = onCall(CALLABLE_OPTS, async (request) => {
       const parentRef = db.doc(
         `${workspaceNodesCollectionPath(teamId, workspaceId, scope)}/${parentId}`
       )
-      const parentSnap = await transaction.get(parentRef)
+      const parentSnap = await tx.get(parentRef)
       if (!parentSnap.exists) {
         throw new HttpsError("not-found", "Parent folder not found.")
       }
@@ -1758,7 +1781,7 @@ export const createWorkspaceNode = onCall(CALLABLE_OPTS, async (request) => {
     const nodeRef = db
       .collection(workspaceNodesCollectionPath(teamId, workspaceId, scope))
       .doc()
-    const now = admin.firestore.FieldValue.serverTimestamp()
+    const now = FieldValue.serverTimestamp()
     const nameLower = toNameLower(name)
 
     const nodeData = {
@@ -1777,72 +1800,35 @@ export const createWorkspaceNode = onCall(CALLABLE_OPTS, async (request) => {
       ...(type === "file" ? { content: "" } : {}),
     }
 
-    transaction.set(nodeRef, nodeData)
-
-    const logRef = await logEvent(
-      {
-        teamId,
-        workspaceId,
-        actor: { userId: actorId, email: actorEmail, role },
-        action: "content.create",
-        resource: { type: "content", id: nodeRef.id, parentId: workspaceId },
-        context: buildContext(request),
-        changes: {
-          fields: ["name", "type", "parentId"],
-          after: {
-            name,
-            type,
-            parentId,
-          },
-        },
-      },
-      { transaction }
-    )
+    tx.set(nodeRef, nodeData)
 
     return {
-      nodeId: nodeRef.id,
-      logId: logRef.id,
+      result: { nodeId: nodeRef.id },
+      audit: {
+        resource: { type: "content", id: nodeRef.id, parentId: workspaceId },
+        changes: {
+          fields: ["name", "type", "parentId"],
+          after: { name, type, parentId },
+        },
+      },
     }
-  })
+  },
 })
 
-export const renameWorkspaceNode = onCall(CALLABLE_OPTS, async (request) => {
-  assertAuthenticated(request)
-
-  const teamId = assertString(request.data?.teamId, "teamId")
-  const workspaceId = assertString(request.data?.workspaceId, "workspaceId")
-  const scope = assertWorkspaceNodeScope(request.data?.scope)
-  const nodeId = assertString(request.data?.nodeId, "nodeId")
-  const name = assertNodeName(request.data?.name, "name")
-
-  const actorId = request.auth.uid
-  const actorEmail = request.auth.token.email ?? undefined
-
-  return db.runTransaction(async (transaction) => {
-    const role = await requireTeamRole(transaction, teamId, actorId)
-
-    if (
-      !can(actorId, Capabilities.MANAGE_WORKSPACE_CONTENT, {
-        scope: "workspace",
-        teamRole: role,
-        workspaceRole: await getWorkspaceRoleOverride(
-          transaction,
-          teamId,
-          workspaceId,
-          actorId
-        ),
-      })
-    ) {
-      throw new HttpsError(
-        "permission-denied",
-        "You do not have permission to manage workspace content."
-      )
-    }
+export const renameWorkspaceNode = defineMutation({
+  name: "renameWorkspaceNode",
+  input: nodeTargetSchema.extend({ name: nodeNameSchema }),
+  capability: Capabilities.MANAGE_WORKSPACE_CONTENT,
+  context: workspaceContentScope,
+  denyMessage: MANAGE_CONTENT_DENY,
+  action: "content.rename",
+  handler: async ({ input, tx, actorId }) => {
+    const { teamId, workspaceId, scope, nodeId, name } = input
 
     const nodeRef = db.doc(
       `${workspaceNodesCollectionPath(teamId, workspaceId, scope)}/${nodeId}`
     )
-    const nodeSnap = await transaction.get(nodeRef)
+    const nodeSnap = await tx.get(nodeRef)
     if (!nodeSnap.exists) {
       throw new HttpsError("not-found", "Node not found.")
     }
@@ -1856,9 +1842,9 @@ export const renameWorkspaceNode = onCall(CALLABLE_OPTS, async (request) => {
     }
 
     const nameLower = toNameLower(name)
-    const now = admin.firestore.FieldValue.serverTimestamp()
+    const now = FieldValue.serverTimestamp()
 
-    transaction.update(nodeRef, {
+    tx.update(nodeRef, {
       name,
       nameLower,
       sortKey: nameLower,
@@ -1866,73 +1852,34 @@ export const renameWorkspaceNode = onCall(CALLABLE_OPTS, async (request) => {
       updatedBy: actorId,
     })
 
-    const changes = buildChanges(before, { name })
-    const logRef = await logEvent(
-      {
-        teamId,
-        workspaceId,
-        actor: { userId: actorId, email: actorEmail, role },
-        action: "content.rename",
-        resource: { type: "content", id: nodeId, parentId: workspaceId },
-        context: buildContext(request),
-        changes,
-      },
-      { transaction }
-    )
-
     return {
-      nodeId,
-      updated: true,
-      logId: logRef.id,
+      result: { nodeId, updated: true },
+      audit: {
+        resource: { type: "content", id: nodeId, parentId: workspaceId },
+        changes: buildChanges(before, { name }),
+      },
     }
-  })
+  },
 })
 
-export const moveWorkspaceNode = onCall(CALLABLE_OPTS, async (request) => {
-  assertAuthenticated(request)
-
-  const teamId = assertString(request.data?.teamId, "teamId")
-  const workspaceId = assertString(request.data?.workspaceId, "workspaceId")
-  const scope = assertWorkspaceNodeScope(request.data?.scope)
-  const nodeId = assertString(request.data?.nodeId, "nodeId")
-  const parentIdRaw = request.data?.parentId
-  const parentId =
-    typeof parentIdRaw === "string" && parentIdRaw.trim()
-      ? parentIdRaw.trim()
-      : ROOT_PARENT_ID
-
-  if (nodeId === parentId) {
-    throw new HttpsError("invalid-argument", "A node cannot be its own parent.")
-  }
-
-  const actorId = request.auth.uid
-  const actorEmail = request.auth.token.email ?? undefined
-
-  return db.runTransaction(async (transaction) => {
-    const role = await requireTeamRole(transaction, teamId, actorId)
-
-    if (
-      !can(actorId, Capabilities.MANAGE_WORKSPACE_CONTENT, {
-        scope: "workspace",
-        teamRole: role,
-        workspaceRole: await getWorkspaceRoleOverride(
-          transaction,
-          teamId,
-          workspaceId,
-          actorId
-        ),
-      })
-    ) {
-      throw new HttpsError(
-        "permission-denied",
-        "You do not have permission to manage workspace content."
-      )
-    }
+export const moveWorkspaceNode = defineMutation({
+  name: "moveWorkspaceNode",
+  input: nodeTargetSchema
+    .extend({ parentId: parentIdSchema })
+    .refine((data) => data.nodeId !== data.parentId, {
+      message: "A node cannot be its own parent.",
+    }),
+  capability: Capabilities.MANAGE_WORKSPACE_CONTENT,
+  context: workspaceContentScope,
+  denyMessage: MANAGE_CONTENT_DENY,
+  action: "content.move",
+  handler: async ({ input, tx, actorId }) => {
+    const { teamId, workspaceId, scope, nodeId, parentId } = input
 
     const nodeRef = db.doc(
       `${workspaceNodesCollectionPath(teamId, workspaceId, scope)}/${nodeId}`
     )
-    const nodeSnap = await transaction.get(nodeRef)
+    const nodeSnap = await tx.get(nodeRef)
     if (!nodeSnap.exists) {
       throw new HttpsError("not-found", "Node not found.")
     }
@@ -1949,7 +1896,7 @@ export const moveWorkspaceNode = onCall(CALLABLE_OPTS, async (request) => {
       const parentRef = db.doc(
         `${workspaceNodesCollectionPath(teamId, workspaceId, scope)}/${parentId}`
       )
-      const parentSnap = await transaction.get(parentRef)
+      const parentSnap = await tx.get(parentRef)
       if (!parentSnap.exists) {
         throw new HttpsError("not-found", "Parent folder not found.")
       }
@@ -1965,71 +1912,37 @@ export const moveWorkspaceNode = onCall(CALLABLE_OPTS, async (request) => {
       }
     }
 
-    const now = admin.firestore.FieldValue.serverTimestamp()
-    transaction.update(nodeRef, {
+    const now = FieldValue.serverTimestamp()
+    tx.update(nodeRef, {
       parentId,
       updatedAt: now,
       updatedBy: actorId,
     })
 
-    const changes = buildChanges(before, { parentId })
-    const logRef = await logEvent(
-      {
-        teamId,
-        workspaceId,
-        actor: { userId: actorId, email: actorEmail, role },
-        action: "content.move",
-        resource: { type: "content", id: nodeId, parentId: workspaceId },
-        context: buildContext(request),
-        changes,
-      },
-      { transaction }
-    )
-
     return {
-      nodeId,
-      updated: true,
-      logId: logRef.id,
+      result: { nodeId, updated: true },
+      audit: {
+        resource: { type: "content", id: nodeId, parentId: workspaceId },
+        changes: buildChanges(before, { parentId }),
+      },
     }
-  })
+  },
 })
 
-export const archiveWorkspaceNode = onCall(CALLABLE_OPTS, async (request) => {
-  assertAuthenticated(request)
-
-  const teamId = assertString(request.data?.teamId, "teamId")
-  const workspaceId = assertString(request.data?.workspaceId, "workspaceId")
-  const scope = assertWorkspaceNodeScope(request.data?.scope)
-  const nodeId = assertString(request.data?.nodeId, "nodeId")
-
-  const actorId = request.auth.uid
-  const actorEmail = request.auth.token.email ?? undefined
-
-  return db.runTransaction(async (transaction) => {
-    const role = await requireTeamRole(transaction, teamId, actorId)
-
-    if (
-      !can(actorId, Capabilities.MANAGE_WORKSPACE_CONTENT, {
-        scope: "workspace",
-        teamRole: role,
-        workspaceRole: await getWorkspaceRoleOverride(
-          transaction,
-          teamId,
-          workspaceId,
-          actorId
-        ),
-      })
-    ) {
-      throw new HttpsError(
-        "permission-denied",
-        "You do not have permission to manage workspace content."
-      )
-    }
+export const archiveWorkspaceNode = defineMutation({
+  name: "archiveWorkspaceNode",
+  input: nodeTargetSchema,
+  capability: Capabilities.MANAGE_WORKSPACE_CONTENT,
+  context: workspaceContentScope,
+  denyMessage: MANAGE_CONTENT_DENY,
+  action: "content.archive",
+  handler: async ({ input, tx, actorId }) => {
+    const { teamId, workspaceId, scope, nodeId } = input
 
     const nodeRef = db.doc(
       `${workspaceNodesCollectionPath(teamId, workspaceId, scope)}/${nodeId}`
     )
-    const nodeSnap = await transaction.get(nodeRef)
+    const nodeSnap = await tx.get(nodeRef)
     if (!nodeSnap.exists) {
       throw new HttpsError("not-found", "Node not found.")
     }
@@ -2039,8 +1952,8 @@ export const archiveWorkspaceNode = onCall(CALLABLE_OPTS, async (request) => {
       throw new HttpsError("failed-precondition", "Node is already archived.")
     }
 
-    const now = admin.firestore.FieldValue.serverTimestamp()
-    transaction.update(nodeRef, {
+    const now = FieldValue.serverTimestamp()
+    tx.update(nodeRef, {
       isArchived: true,
       archivedAt: now,
       archivedBy: actorId,
@@ -2048,64 +1961,30 @@ export const archiveWorkspaceNode = onCall(CALLABLE_OPTS, async (request) => {
       updatedBy: actorId,
     })
 
-    const changes = buildChanges(before, { isArchived: true })
-    const logRef = await logEvent(
-      {
-        teamId,
-        workspaceId,
-        actor: { userId: actorId, email: actorEmail, role },
-        action: "content.archive",
-        resource: { type: "content", id: nodeId, parentId: workspaceId },
-        context: buildContext(request),
-        changes,
-      },
-      { transaction }
-    )
-
     return {
-      nodeId,
-      archived: true,
-      logId: logRef.id,
+      result: { nodeId, archived: true },
+      audit: {
+        resource: { type: "content", id: nodeId, parentId: workspaceId },
+        changes: buildChanges(before, { isArchived: true }),
+      },
     }
-  })
+  },
 })
 
-export const unarchiveWorkspaceNode = onCall(CALLABLE_OPTS, async (request) => {
-  assertAuthenticated(request)
-
-  const teamId = assertString(request.data?.teamId, "teamId")
-  const workspaceId = assertString(request.data?.workspaceId, "workspaceId")
-  const scope = assertWorkspaceNodeScope(request.data?.scope)
-  const nodeId = assertString(request.data?.nodeId, "nodeId")
-
-  const actorId = request.auth.uid
-  const actorEmail = request.auth.token.email ?? undefined
-
-  return db.runTransaction(async (transaction) => {
-    const role = await requireTeamRole(transaction, teamId, actorId)
-
-    if (
-      !can(actorId, Capabilities.MANAGE_WORKSPACE_CONTENT, {
-        scope: "workspace",
-        teamRole: role,
-        workspaceRole: await getWorkspaceRoleOverride(
-          transaction,
-          teamId,
-          workspaceId,
-          actorId
-        ),
-      })
-    ) {
-      throw new HttpsError(
-        "permission-denied",
-        "You do not have permission to manage workspace content."
-      )
-    }
+export const unarchiveWorkspaceNode = defineMutation({
+  name: "unarchiveWorkspaceNode",
+  input: nodeTargetSchema,
+  capability: Capabilities.MANAGE_WORKSPACE_CONTENT,
+  context: workspaceContentScope,
+  denyMessage: MANAGE_CONTENT_DENY,
+  action: "content.unarchive",
+  handler: async ({ input, tx, actorId }) => {
+    const { teamId, workspaceId, scope, nodeId } = input
 
     const nodeRef = db.doc(
       `${workspaceNodesCollectionPath(teamId, workspaceId, scope)}/${nodeId}`
     )
-    const nodeSnap = await transaction.get(nodeRef)
+    const nodeSnap = await tx.get(nodeRef)
     if (!nodeSnap.exists) {
       throw new HttpsError("not-found", "Node not found.")
     }
@@ -2115,35 +1994,23 @@ export const unarchiveWorkspaceNode = onCall(CALLABLE_OPTS, async (request) => {
       throw new HttpsError("failed-precondition", "Node is not archived.")
     }
 
-    const now = admin.firestore.FieldValue.serverTimestamp()
-    transaction.update(nodeRef, {
+    const now = FieldValue.serverTimestamp()
+    tx.update(nodeRef, {
       isArchived: false,
-      archivedAt: admin.firestore.FieldValue.delete(),
-      archivedBy: admin.firestore.FieldValue.delete(),
+      archivedAt: FieldValue.delete(),
+      archivedBy: FieldValue.delete(),
       updatedAt: now,
       updatedBy: actorId,
     })
 
-    const changes = buildChanges(before, { isArchived: false })
-    const logRef = await logEvent(
-      {
-        teamId,
-        workspaceId,
-        actor: { userId: actorId, email: actorEmail, role },
-        action: "content.unarchive",
-        resource: { type: "content", id: nodeId, parentId: workspaceId },
-        context: buildContext(request),
-        changes,
-      },
-      { transaction }
-    )
-
     return {
-      nodeId,
-      unarchived: true,
-      logId: logRef.id,
+      result: { nodeId, unarchived: true },
+      audit: {
+        resource: { type: "content", id: nodeId, parentId: workspaceId },
+        changes: buildChanges(before, { isArchived: false }),
+      },
     }
-  })
+  },
 })
 
 export const deleteWorkspaceNode = onCall(
@@ -2158,24 +2025,14 @@ export const deleteWorkspaceNode = onCall(
 
     const actorId = request.auth.uid
     const actorEmail = request.auth.token.email ?? undefined
-    const role = await getTeamRole(teamId, actorId)
-
-    if (
-      !can(actorId, Capabilities.MANAGE_WORKSPACE_CONTENT, {
-        scope: "workspace",
-        teamRole: role,
-        workspaceRole: await getWorkspaceRoleOverrideDirect(
+    const role =
+      requireAuthorized(
+        await authorize(actorId, Capabilities.MANAGE_WORKSPACE_CONTENT, {
           teamId,
           workspaceId,
-          actorId
-        ),
-      })
-    ) {
-      throw new HttpsError(
-        "permission-denied",
+        }),
         "You do not have permission to manage workspace content."
-      )
-    }
+      ).teamRole ?? undefined
 
     const nodesCollection = db.collection(
       workspaceNodesCollectionPath(teamId, workspaceId, scope)
@@ -2265,94 +2122,56 @@ export const deleteWorkspaceNode = onCall(
   }
 )
 
-export const updateWorkspaceNodeContent = onCall(
-  CALLABLE_OPTS,
-  async (request) => {
-    assertAuthenticated(request)
+export const updateWorkspaceNodeContent = defineMutation({
+  name: "updateWorkspaceNodeContent",
+  input: nodeTargetSchema.extend({
+    // Lenient like the old hand-rolled parse: a non-string `content` → "".
+    content: z
+      .unknown()
+      .transform((value) => (typeof value === "string" ? value : "")),
+  }),
+  capability: Capabilities.MANAGE_WORKSPACE_CONTENT,
+  context: workspaceContentScope,
+  denyMessage: MANAGE_CONTENT_DENY,
+  action: "content.update",
+  handler: async ({ input, tx, actorId }) => {
+    const { teamId, workspaceId, scope, nodeId, content } = input
 
-    const teamId = assertString(request.data?.teamId, "teamId")
-    const workspaceId = assertString(request.data?.workspaceId, "workspaceId")
-    const scope = assertWorkspaceNodeScope(request.data?.scope)
-    const nodeId = assertString(request.data?.nodeId, "nodeId")
-    const contentRaw = request.data?.content
-    const content = typeof contentRaw === "string" ? contentRaw : ""
+    const nodeRef = db.doc(
+      `${workspaceNodesCollectionPath(teamId, workspaceId, scope)}/${nodeId}`
+    )
+    const nodeSnap = await tx.get(nodeRef)
+    if (!nodeSnap.exists) {
+      throw new HttpsError("not-found", "Node not found.")
+    }
 
-    const actorId = request.auth.uid
-    const actorEmail = request.auth.token.email ?? undefined
-
-    return db.runTransaction(async (transaction) => {
-      const role = await requireTeamRole(transaction, teamId, actorId)
-
-      if (
-        !can(actorId, Capabilities.MANAGE_WORKSPACE_CONTENT, {
-          scope: "workspace",
-          teamRole: role,
-          workspaceRole: await getWorkspaceRoleOverride(
-            transaction,
-            teamId,
-            workspaceId,
-            actorId
-          ),
-        })
-      ) {
-        throw new HttpsError(
-          "permission-denied",
-          "You do not have permission to manage workspace content."
-        )
-      }
-
-      const nodeRef = db.doc(
-        `${workspaceNodesCollectionPath(teamId, workspaceId, scope)}/${nodeId}`
+    const before = nodeSnap.data() ?? {}
+    if (before.type !== "file") {
+      throw new HttpsError("failed-precondition", "Only files can be updated.")
+    }
+    if (before.isArchived) {
+      throw new HttpsError(
+        "failed-precondition",
+        "Cannot edit an archived file."
       )
-      const nodeSnap = await transaction.get(nodeRef)
-      if (!nodeSnap.exists) {
-        throw new HttpsError("not-found", "Node not found.")
-      }
+    }
 
-      const before = nodeSnap.data() ?? {}
-      if (before.type !== "file") {
-        throw new HttpsError(
-          "failed-precondition",
-          "Only files can be updated."
-        )
-      }
-      if (before.isArchived) {
-        throw new HttpsError(
-          "failed-precondition",
-          "Cannot edit an archived file."
-        )
-      }
-
-      const now = admin.firestore.FieldValue.serverTimestamp()
-      transaction.update(nodeRef, {
-        content,
-        updatedAt: now,
-        updatedBy: actorId,
-      })
-
-      const logRef = await logEvent(
-        {
-          teamId,
-          workspaceId,
-          actor: { userId: actorId, email: actorEmail, role },
-          action: "content.update",
-          resource: { type: "content", id: nodeId, parentId: workspaceId },
-          context: buildContext(request),
-          changes: {
-            fields: ["content"],
-          },
-        },
-        { transaction }
-      )
-
-      return {
-        nodeId,
-        updated: true,
-        logId: logRef.id,
-      }
+    const now = FieldValue.serverTimestamp()
+    tx.update(nodeRef, {
+      content,
+      updatedAt: now,
+      updatedBy: actorId,
     })
-  }
-)
+
+    return {
+      result: { nodeId, updated: true },
+      audit: {
+        resource: { type: "content", id: nodeId, parentId: workspaceId },
+        changes: { fields: ["content"] },
+      },
+    }
+  },
+})
 
 export const createWorkspaceNodeAttachment = onCall(
   CALLABLE_OPTS,
@@ -2385,24 +2204,14 @@ export const createWorkspaceNodeAttachment = onCall(
 
     const actorId = request.auth.uid
     const actorEmail = request.auth.token.email ?? undefined
-    const role = await getTeamRole(teamId, actorId)
-
-    if (
-      !can(actorId, Capabilities.MANAGE_WORKSPACE_CONTENT, {
-        scope: "workspace",
-        teamRole: role,
-        workspaceRole: await getWorkspaceRoleOverrideDirect(
+    const role =
+      requireAuthorized(
+        await authorize(actorId, Capabilities.MANAGE_WORKSPACE_CONTENT, {
           teamId,
           workspaceId,
-          actorId
-        ),
-      })
-    ) {
-      throw new HttpsError(
-        "permission-denied",
+        }),
         "You do not have permission to manage workspace attachments."
-      )
-    }
+      ).teamRole ?? undefined
 
     const storageMetadata = await readStorageObjectMetadata(storagePath)
 
@@ -2439,7 +2248,7 @@ export const createWorkspaceNodeAttachment = onCall(
         throw new HttpsError("already-exists", "Attachment already exists.")
       }
 
-      const now = admin.firestore.FieldValue.serverTimestamp()
+      const now = FieldValue.serverTimestamp()
 
       transaction.set(attachmentRef, {
         workspaceId,
@@ -2536,24 +2345,14 @@ export const updateWorkspaceNodeAttachment = onCall(
 
     const actorId = request.auth.uid
     const actorEmail = request.auth.token.email ?? undefined
-    const role = await getTeamRole(teamId, actorId)
-
-    if (
-      !can(actorId, Capabilities.MANAGE_WORKSPACE_CONTENT, {
-        scope: "workspace",
-        teamRole: role,
-        workspaceRole: await getWorkspaceRoleOverrideDirect(
+    const role =
+      requireAuthorized(
+        await authorize(actorId, Capabilities.MANAGE_WORKSPACE_CONTENT, {
           teamId,
           workspaceId,
-          actorId
-        ),
-      })
-    ) {
-      throw new HttpsError(
-        "permission-denied",
+        }),
         "You do not have permission to manage workspace attachments."
-      )
-    }
+      ).teamRole ?? undefined
 
     const storageMetadata =
       hasReplacement && nextStoragePath
@@ -2617,7 +2416,7 @@ export const updateWorkspaceNodeAttachment = onCall(
         }
       }
 
-      const now = admin.firestore.FieldValue.serverTimestamp()
+      const now = FieldValue.serverTimestamp()
       transaction.update(attachmentRef, {
         ...updates,
         updatedAt: now,
@@ -2686,24 +2485,14 @@ export const deleteWorkspaceNodeAttachment = onCall(
 
     const actorId = request.auth.uid
     const actorEmail = request.auth.token.email ?? undefined
-    const role = await getTeamRole(teamId, actorId)
-
-    if (
-      !can(actorId, Capabilities.MANAGE_WORKSPACE_CONTENT, {
-        scope: "workspace",
-        teamRole: role,
-        workspaceRole: await getWorkspaceRoleOverrideDirect(
+    const role =
+      requireAuthorized(
+        await authorize(actorId, Capabilities.MANAGE_WORKSPACE_CONTENT, {
           teamId,
           workspaceId,
-          actorId
-        ),
-      })
-    ) {
-      throw new HttpsError(
-        "permission-denied",
+        }),
         "You do not have permission to manage workspace attachments."
-      )
-    }
+      ).teamRole ?? undefined
 
     const result = await db.runTransaction(async (transaction) => {
       const nodeRef = db.doc(
@@ -2741,7 +2530,7 @@ export const deleteWorkspaceNodeAttachment = onCall(
       const before = attachmentSnap.data() ?? {}
       const storagePath =
         typeof before.storagePath === "string" ? before.storagePath : null
-      const now = admin.firestore.FieldValue.serverTimestamp()
+      const now = FieldValue.serverTimestamp()
 
       transaction.delete(attachmentRef)
       transaction.update(nodeRef, {
@@ -2903,23 +2692,14 @@ export const createBotSessionAttachment = onCall(
     )
 
     const actorId = request.auth.uid
-    const role = await getTeamRole(teamId, actorId)
-    if (
-      !can(actorId, Capabilities.MANAGE_WORKSPACE_CONTENT, {
-        scope: "workspace",
-        teamRole: role,
-        workspaceRole: await getWorkspaceRoleOverrideDirect(
+    const role =
+      requireAuthorized(
+        await authorize(actorId, Capabilities.MANAGE_WORKSPACE_CONTENT, {
           teamId,
           workspaceId,
-          actorId
-        ),
-      })
-    ) {
-      throw new HttpsError(
-        "permission-denied",
+        }),
         "You do not have permission to manage chat attachments."
-      )
-    }
+      ).teamRole ?? undefined
 
     const storageMetadata = await readStorageObjectMetadata(storagePath)
 
@@ -2950,7 +2730,7 @@ export const createBotSessionAttachment = onCall(
         throw new HttpsError("already-exists", "Attachment already exists.")
       }
 
-      const now = admin.firestore.FieldValue.serverTimestamp()
+      const now = FieldValue.serverTimestamp()
       transaction.set(attachmentRef, {
         workspaceId,
         sessionId,
@@ -3008,23 +2788,14 @@ export const updateBotSessionAttachment = onCall(
       : undefined
 
     const actorId = request.auth.uid
-    const role = await getTeamRole(teamId, actorId)
-    if (
-      !can(actorId, Capabilities.MANAGE_WORKSPACE_CONTENT, {
-        scope: "workspace",
-        teamRole: role,
-        workspaceRole: await getWorkspaceRoleOverrideDirect(
+    const role =
+      requireAuthorized(
+        await authorize(actorId, Capabilities.MANAGE_WORKSPACE_CONTENT, {
           teamId,
           workspaceId,
-          actorId
-        ),
-      })
-    ) {
-      throw new HttpsError(
-        "permission-denied",
+        }),
         "You do not have permission to manage chat attachments."
-      )
-    }
+      ).teamRole ?? undefined
 
     const storageMetadata =
       hasReplacement && nextStoragePath
@@ -3070,7 +2841,7 @@ export const updateBotSessionAttachment = onCall(
         updates.size = storageMetadata?.size ?? null
       }
 
-      const now = admin.firestore.FieldValue.serverTimestamp()
+      const now = FieldValue.serverTimestamp()
       transaction.update(attachmentRef, {
         ...updates,
         updatedAt: now,
@@ -3106,23 +2877,14 @@ export const deleteBotSessionAttachment = onCall(
     )
 
     const actorId = request.auth.uid
-    const role = await getTeamRole(teamId, actorId)
-    if (
-      !can(actorId, Capabilities.MANAGE_WORKSPACE_CONTENT, {
-        scope: "workspace",
-        teamRole: role,
-        workspaceRole: await getWorkspaceRoleOverrideDirect(
+    const role =
+      requireAuthorized(
+        await authorize(actorId, Capabilities.MANAGE_WORKSPACE_CONTENT, {
           teamId,
           workspaceId,
-          actorId
-        ),
-      })
-    ) {
-      throw new HttpsError(
-        "permission-denied",
+        }),
         "You do not have permission to manage chat attachments."
-      )
-    }
+      ).teamRole ?? undefined
 
     const result = await db.runTransaction(async (transaction) => {
       const sessionRef = db.doc(
@@ -3248,7 +3010,7 @@ export const assignRoleToUser = onCall(CALLABLE_OPTS, async (request) => {
 
     transaction.update(membershipRef, {
       role,
-      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      updatedAt: FieldValue.serverTimestamp(),
     })
 
     const logRef = await logEvent(
@@ -3398,7 +3160,7 @@ export const assignWorkspaceRole = onCall(CALLABLE_OPTS, async (request) => {
     }
 
     const patch: Record<string, unknown> = {
-      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      updatedAt: FieldValue.serverTimestamp(),
     }
     const fields: string[] = []
     const before: Record<string, unknown> = {}
@@ -3434,8 +3196,8 @@ export const assignWorkspaceRole = onCall(CALLABLE_OPTS, async (request) => {
     if (excluded !== undefined && excluded !== beforeExcluded) {
       transaction.update(workspaceRef, {
         memberUids: excluded
-          ? admin.firestore.FieldValue.arrayRemove(targetUserId)
-          : admin.firestore.FieldValue.arrayUnion(targetUserId),
+          ? FieldValue.arrayRemove(targetUserId)
+          : FieldValue.arrayUnion(targetUserId),
       })
     }
 
@@ -3619,7 +3381,7 @@ export const removeMember = onCall(CALLABLE_OPTS, async (request) => {
         getUserPreferencesRef(actorId),
         {
           currentTeamId: null,
-          updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+          updatedAt: FieldValue.serverTimestamp(),
         },
         { merge: true }
       )
@@ -3782,7 +3544,7 @@ export const removeMembers = onCall(CALLABLE_OPTS, async (request) => {
         getUserPreferencesRef(actorId),
         {
           currentTeamId: null,
-          updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+          updatedAt: FieldValue.serverTimestamp(),
         },
         { merge: true }
       )
@@ -3866,7 +3628,7 @@ interface AgentMemberSnapshot {
  * a fresh membership (mirrors the client's selectable-agents filter).
  */
 async function resolveAgentMemberSnapshot(
-  transaction: admin.firestore.Transaction,
+  transaction: Transaction,
   teamId: string,
   agentId: string
 ): Promise<AgentMemberSnapshot> {
@@ -3959,8 +3721,8 @@ export const addTeamAgentMember = onCall(CALLABLE_OPTS, async (request) => {
       role: AGENT_MEMBER_ROLE,
       agent: agentSnapshot,
       team: teamSnap.data() ?? {},
-      createdAt: admin.firestore.FieldValue.serverTimestamp(),
-      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      createdAt: FieldValue.serverTimestamp(),
+      updatedAt: FieldValue.serverTimestamp(),
     })
 
     const logRef = await logEvent(
@@ -4145,7 +3907,7 @@ export const sendInvitation = onCall(CALLABLE_OPTS, async (request) => {
     .map((b) => b.toString(16).padStart(2, "0"))
     .join("")
 
-  const now = admin.firestore.FieldValue.serverTimestamp()
+  const now = FieldValue.serverTimestamp()
   const invitationRef = db.collection("invitations").doc()
 
   const invitationData: InvitationData = {
@@ -4214,7 +3976,7 @@ export const resendInvitation = onCall(CALLABLE_OPTS, async (request) => {
 
   // Update invitation
   await invRef.update({
-    resentAt: admin.firestore.FieldValue.serverTimestamp(),
+    resentAt: FieldValue.serverTimestamp(),
     status: "pending", // Reset status if it was declined? Usually yes.
   })
 

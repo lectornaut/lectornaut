@@ -37,10 +37,13 @@
 import { HttpsError } from "firebase-functions/v2/https"
 import { z } from "genkit/beta"
 import { loadTeamAgentConfig } from "./botAgentConfig.js"
+import { NODE_SCOPES } from "./domain.js"
 import { db } from "./firebase.js"
-import { ai, resolveModel } from "./genkitClient.js"
-import { aiMiddlewares, redactText } from "./genkitMiddleware.js"
+import { ai } from "./genkitClient.js"
+import { redactText } from "./genkitMiddleware.js"
+import { runStructuredGeneration } from "./structuredGeneration.js"
 import { extractPlainText } from "./tiptapText.js"
+import type { NodeType, WorkspaceNodeScope } from "./types.js"
 
 // ===========================================================================
 // Schemas
@@ -53,7 +56,7 @@ import { extractPlainText } from "./tiptapText.js"
  * uses) and worth the loose coupling.
  */
 const compareNodeRefSchema = z.object({
-  scope: z.enum(["code", "write"]),
+  scope: z.enum(NODE_SCOPES),
   nodeId: z.string().min(1),
 })
 
@@ -146,7 +149,7 @@ const compareModelOutputSchema = z.object({
  * Firestore reads, not the model's echo.
  */
 const perNodeResultSchema = z.object({
-  scope: z.enum(["code", "write"]),
+  scope: z.enum(NODE_SCOPES),
   nodeId: z.string(),
   name: z.string(),
   contribution: z.string(),
@@ -168,10 +171,10 @@ type CompareToolOutput = z.infer<typeof compareToolOutputSchema>
 // ===========================================================================
 
 interface LoadedNode {
-  scope: "code" | "write"
+  scope: WorkspaceNodeScope
   nodeId: string
   name: string
-  type: "folder" | "file"
+  type: NodeType
   isArchived: boolean
   /** Already plain-text-extracted (Tiptap → text for `write` scope). */
   content: string
@@ -189,7 +192,7 @@ async function loadOneNode(
   const data = snap.data() ?? {}
   const type =
     data.type === "folder" || data.type === "file"
-      ? (data.type as "folder" | "file")
+      ? (data.type as NodeType)
       : "file"
   const name = typeof data.name === "string" ? data.name : ref.nodeId
   const rawContent = typeof data.content === "string" ? data.content : ""
@@ -387,28 +390,27 @@ export const compareNodesTool = ai.defineTool(
     }
 
     const agentConfig = await loadTeamAgentConfig(teamId)
-    const model = resolveModel(agentConfig.model)
     const promptBody = buildComparePromptBody(present, input.focus)
 
     try {
-      const response = await ai.generate({
-        model,
+      // Comparisons want a low-randomness, source-anchored read of the
+      // documents — same intent as the summarize prompt's 0.3 upper bound.
+      // `temperatureCap` clamps against the team's configured ceiling so a
+      // team that tuned its chat temperature down stays low here too. The
+      // schema is intentionally NOT `.partial()`, so a decode-miss throws
+      // INVALID_ARGUMENT — caught by the surrounding try → makeErrorResult.
+      const output = await runStructuredGeneration({
+        model: agentConfig.model,
         prompt: promptBody,
-        output: { schema: compareModelOutputSchema },
-        config: {
-          // Comparisons want a low-randomness, source-anchored read of
-          // the documents — same intent as the summarize prompt's 0.3
-          // upper bound. Clamp against the team's configured ceiling
-          // so a team that tuned its chat temperature down stays low
-          // here too.
-          temperature: Math.min(agentConfig.temperature, 0.3),
+        output: compareModelOutputSchema,
+        sampling: {
+          temperature: agentConfig.temperature,
           topP: agentConfig.topP,
           maxOutputTokens: agentConfig.maxOutputTokens,
         },
-        use: aiMiddlewares(),
+        temperatureCap: 0.3,
       })
 
-      const output = response.output
       if (!output) {
         return makeErrorResult(
           "The model couldn't produce a valid structured comparison. Try " +

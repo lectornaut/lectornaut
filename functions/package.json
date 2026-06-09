@@ -16,7 +16,7 @@
     "lint:format:fix": "prettier . --write",
     "lint": "pnpm lint:types && pnpm lint:code && pnpm lint:format",
     "lint:fix": "pnpm lint:types && pnpm lint:code:fix && pnpm lint:format:fix",
-    "test": "node --test",
+    "test": "node --test --experimental-strip-types",
     "serve": "pnpm run build && firebase emulators:start --only functions",
     "shell": "pnpm run build && firebase functions:shell",
     "start": "pnpm run shell",
@@ -46,7 +46,7 @@
     "@eslint/js": "^10.0.1",
     "@lectornaut/shared": "workspace:*",
     "@types/mjml": "^5.0.0",
-    "@typescript-eslint/parser": "^8.60.1",
+    "@typescript-eslint/parser": "^8.61.0",
     "esbuild": "^0.28.0",
     "eslint": "^10.4.1",
     "eslint-config-prettier": "^10.1.8",
@@ -54,10 +54,10 @@
     "firebase-functions-test": "^3.5.0",
     "firebase-tools": "^15.19.1",
     "globals": "^17.6.0",
-    "prettier": "^3.8.3",
+    "prettier": "^3.8.4",
     "prettier-plugin-organize-imports": "^4.3.0",
     "rimraf": "^6.1.3",
     "typescript": "^6.0.3",
-    "typescript-eslint": "^8.60.1"
+    "typescript-eslint": "^8.61.0"
   }
 }

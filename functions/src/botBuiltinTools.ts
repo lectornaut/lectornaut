@@ -43,14 +43,14 @@ import { z } from "genkit/beta"
 import { ai, isAiModelProviderConfigured } from "./genkitClient.js"
 // Type-only imports (erased at runtime — no import cycle with botNodeTools).
 import type { CapturedNodeChange } from "./botNodeTools.js"
+import { BOT_CHAT_MODES, type BotChatMode } from "./domain.js"
 import type { WorkspaceNodeScope } from "./types.js"
 
 // ===========================================================================
 // Modes + action context — the contract tools share with the chat flow
 // ===========================================================================
 
-export const BOT_CHAT_MODES = ["auto", "agent", "manual"] as const
-export type BotChatMode = (typeof BOT_CHAT_MODES)[number]
+export { BOT_CHAT_MODES, type BotChatMode }
 
 /**
  * Action context shape — what flows into Genkit's `chat({ context })` and

@@ -21,7 +21,7 @@ import {
 } from "@/data/icons"
 import { generateId } from "@/helpers/utilities"
 import { emitter } from "@/modules/mitt"
-import { useLayoutStore } from "@/stores/layoutStore"
+import { useUiPreferencesStore } from "@/stores/uiPreferencesStore"
 import { UseDraggable as Draggable } from "@vueuse/components"
 import { storeToRefs } from "pinia"
 import { SplitterPanel } from "reka-ui"
@@ -31,13 +31,13 @@ const router = useRouter()
 
 const { isMobile, open: sidebarOpen, setOpen: setSidebarOpen } = useSidebar()
 
-const layoutStore = useLayoutStore()
+const uiPreferencesStore = useUiPreferencesStore()
 const {
   leftPanelCollapsed,
   rightPanelCollapsed,
   bottomPanelCollapsed,
   sidebarPinned,
-} = storeToRefs(layoutStore)
+} = storeToRefs(uiPreferencesStore)
 
 const sidebarPanel = ref<InstanceType<typeof SplitterPanel>>()
 const leftPanel = ref<InstanceType<typeof SplitterPanel>>()
@@ -392,7 +392,7 @@ const closeTab = (id: string) => {
             <ResizablePanelGroup
               :style="{ overflow: 'clip' }"
               :class="[
-                'shadow-muted-foreground/5 size-full min-h-0 min-w-0 rounded-xl border shadow',
+                'shadow-muted-foreground/5 size-full min-h-0 min-w-0 rounded-2xl border shadow',
                 { 'animate-layout-panels': animatePanels },
               ]"
               direction="horizontal"
@@ -412,12 +412,15 @@ const closeTab = (id: string) => {
                     @collapse="leftPanelCollapsed = true"
                     @expand="leftPanelCollapsed = false"
                   >
-                    <div class="h-full">
-                      <div
-                        id="left-sidebar"
-                        ref="leftSidebarEl"
-                        class="h-full grow overflow-clip"
-                      ></div>
+                    <div class="grid size-full min-h-0 min-w-0">
+                      <div class="mr-0 min-h-0 min-w-0">
+                        <!-- overflow-clip rounded-2xl border -->
+                        <div
+                          id="left-sidebar"
+                          ref="leftSidebarEl"
+                          class="h-full grow overflow-clip"
+                        ></div>
+                      </div>
                     </div>
                   </ResizablePanel>
                 </ContextMenuTrigger>
@@ -495,14 +498,19 @@ const closeTab = (id: string) => {
                         :inert="topPanel?.isCollapsed"
                       >
                         <div
-                          class="bg-background flex min-h-0 min-w-0 grow flex-col overflow-clip"
+                          class="bg-background flex min-h-0 min-w-0 grow flex-col"
                         >
+                          <!-- overflow-clip rounded-2xl border -->
                           <!-- Non-scrollable sub-header with backdrop blur -->
                           <SubNavigation />
                           <!-- Scrollable content area -->
-                          <OverlayScrollbarsWrapper>
-                            <RouterView />
-                          </OverlayScrollbarsWrapper>
+                          <div
+                            class="mx-2 mb-2 flex min-h-0 min-w-0 grow flex-col rounded-2xl border"
+                          >
+                            <OverlayScrollbarsWrapper>
+                              <RouterView />
+                            </OverlayScrollbarsWrapper>
+                          </div>
                         </div>
                       </ResizablePanel>
                     </ContextMenuTrigger>
@@ -584,6 +592,7 @@ const closeTab = (id: string) => {
                           class="size-full min-h-0 min-w-0"
                         >
                           <div class="size-full min-h-0 min-w-0">
+                            <!-- overflow-clip rounded-2xl border -->
                             <div
                               id="bottom-sidebar"
                               class="bg-background flex size-full min-h-0 min-w-0 flex-col overflow-clip overscroll-none"
@@ -825,12 +834,15 @@ const closeTab = (id: string) => {
                     @collapse="rightPanelCollapsed = true"
                     @expand="rightPanelCollapsed = false"
                   >
-                    <div class="h-full">
-                      <div
-                        id="right-sidebar"
-                        ref="rightSidebarEl"
-                        class="h-full grow overflow-clip"
-                      ></div>
+                    <div class="grid size-full min-h-0 min-w-0">
+                      <div class="ml-0 min-h-0 min-w-0">
+                        <!-- overflow-clip rounded-2xl border -->
+                        <div
+                          id="right-sidebar"
+                          ref="rightSidebarEl"
+                          class="h-full grow overflow-clip"
+                        ></div>
+                      </div>
                     </div>
                   </ResizablePanel>
                 </ContextMenuTrigger>

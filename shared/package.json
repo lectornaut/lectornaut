@@ -7,6 +7,10 @@
     "./permissions": {
       "types": "./permissions.ts",
       "default": "./permissions.ts"
+    },
+    "./domain": {
+      "types": "./domain.ts",
+      "default": "./domain.ts"
     }
   }
 }

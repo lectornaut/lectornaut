@@ -58,11 +58,11 @@ watch(botChat.sessionId, (id) => {
 </script>
 
 <template>
-  <Teleport defer to="#left-sidebar">
+  <SidebarSlot side="left">
     <BotHistorySidebar />
-  </Teleport>
+  </SidebarSlot>
   <AiChatShell />
-  <Teleport defer to="#right-sidebar">
+  <SidebarSlot side="right">
     <BotInspectorSidebar />
-  </Teleport>
+  </SidebarSlot>
 </template>

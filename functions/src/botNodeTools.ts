@@ -38,9 +38,10 @@
  * action is reversible.
  */
 
+import { FieldValue } from "firebase-admin/firestore"
 import { z } from "genkit/beta"
 import { logEvent } from "./audit.js"
-import { admin, db } from "./firebase.js"
+import { db } from "./firebase.js"
 import { ai } from "./genkitClient.js"
 import {
   markdownToTiptapJson,
@@ -408,7 +409,7 @@ export async function applyCreateNode(
       const nodeRef = input.nodeId
         ? nodesCollection.doc(input.nodeId)
         : nodesCollection.doc()
-      const now = admin.firestore.FieldValue.serverTimestamp()
+      const now = FieldValue.serverTimestamp()
       const nameLower = toNameLower(name)
       const fileContent =
         type === "file" && typeof input.content === "string" && input.content
@@ -519,7 +520,7 @@ export const readNodeTool = ai.defineTool(
         }
       }
       const name = typeof data.name === "string" ? data.name : nodeId
-      const type: "folder" | "file" = data.type === "folder" ? "folder" : "file"
+      const type: NodeType = data.type === "folder" ? "folder" : "file"
       if (type === "folder") {
         return {
           ok: true,
@@ -639,7 +640,7 @@ export async function applyUpdateNodeContent(
       if (before.type !== "file") throw new Error("Only files have content.")
       if (before.isArchived) throw new Error("Cannot edit an archived file.")
 
-      const now = admin.firestore.FieldValue.serverTimestamp()
+      const now = FieldValue.serverTimestamp()
       transaction.update(nodeRef, {
         content,
         updatedAt: now,
@@ -663,7 +664,7 @@ export async function applyUpdateNodeContent(
           content,
           by: agentId,
           byName: agentName,
-          seq: admin.firestore.FieldValue.increment(1),
+          seq: FieldValue.increment(1),
           updatedAt: now,
         },
         { merge: true }
@@ -749,7 +750,7 @@ export async function applyRenameNode(
         throw new Error("Cannot rename an archived node.")
       }
 
-      const now = admin.firestore.FieldValue.serverTimestamp()
+      const now = FieldValue.serverTimestamp()
       const nameLower = toNameLower(name)
       transaction.update(nodeRef, {
         name,
@@ -863,7 +864,7 @@ export async function applyMoveNode(
         if (parentData.isArchived) throw new Error("Parent folder is archived.")
       }
 
-      const now = admin.firestore.FieldValue.serverTimestamp()
+      const now = FieldValue.serverTimestamp()
       transaction.update(nodeRef, {
         parentId,
         updatedAt: now,
@@ -953,7 +954,7 @@ export async function applyArchiveNode(
         )
       }
 
-      const now = admin.firestore.FieldValue.serverTimestamp()
+      const now = FieldValue.serverTimestamp()
       transaction.update(nodeRef, {
         isArchived: archived,
         updatedAt: now,

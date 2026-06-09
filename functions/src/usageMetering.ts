@@ -14,12 +14,11 @@
  * `aiMiddlewares()` calls too when full-fidelity accounting is needed.
  */
 
+import { FieldValue } from "firebase-admin/firestore"
 import * as logger from "firebase-functions/logger"
 import { HttpsError } from "firebase-functions/v2/https"
 import { getPlanTokenAllowance, type PlanKey } from "./billingConfig.js"
-import { admin, db } from "./firebase.js"
-
-const FieldValue = admin.firestore.FieldValue
+import { db } from "./firebase.js"
 
 /** Calendar-month bucket key (UTC), e.g. "2026-05". */
 export function currentUsageMonthKey(now: Date = new Date()): string {

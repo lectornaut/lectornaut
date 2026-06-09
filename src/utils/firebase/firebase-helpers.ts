@@ -6,10 +6,10 @@
  *
  * As of PR 4, all single-doc ref getters and their corresponding collection
  * getters are wired through Zod converters. Every snapshot read via the
- * TanStack read composables (`useDocumentQuery` / `useCollectionQuery`) flows
- * through `parseOrWarn(schema, data, …)` automatically — store and composable
- * code needs no changes because the returned `DocumentReference<T>` generic is
- * identical to the previous hand-cast version.
+ * TanStack read composables (`useDocumentQuery` / `useCollectionQuery`) is
+ * validated against its schema automatically (in dev and prod alike) — store
+ * and composable code needs no changes because the returned
+ * `DocumentReference<T>` generic is identical to the previous hand-cast version.
  */
 
 import { firestore, storage } from "@/modules/firebase"
@@ -60,9 +60,10 @@ import {
 // Zod Converters
 //
 // Each converter is created once at module load and reused by every ref
-// getter and collection getter for its entity. Reads flow through
-// `parseOrWarn` inside the converter's `fromFirestore`; writes are a
-// pass-through because the sync engine validates via its path registry.
+// getter and collection getter for its entity. Reads are validated against
+// the schema inside the converter's `fromFirestore` (dev and prod alike);
+// writes are a pass-through because the sync engine validates via its path
+// registry.
 // ============================================================================
 
 const userConverter = zodConverter<IUser>(userSchema, "user")

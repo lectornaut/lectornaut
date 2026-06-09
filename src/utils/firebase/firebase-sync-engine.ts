@@ -14,13 +14,7 @@ import {
   hasFirebaseErrorCode,
   isRetryableFirebaseError,
 } from "@/utils/firebase/firebase-errors"
-import {
-  beginCloudSyncOperation,
-  endCloudSyncOperation,
-  getBackoffDelay,
-  optimisticUpdater,
-  type PendingCollection,
-} from "@/utils/firebase/firebase-optimistic"
+import { getBackoffDelay } from "@/utils/firebase/firebase-optimistic"
 import {
   compareByCreatedOrder,
   mergeOutboxSnapshots,
@@ -1394,9 +1388,9 @@ export function stopSync(): void {
  * Validate a mutation payload against the path's registered schema, if any.
  *
  * This is the single choke point for write-side validation — every mutation
- * helper (`mutateSetDocument`, `mutateUpdateDocument`, `mutateDeleteDocument`,
- * `mutateWithCoordinator`) funnels through `mutate()`, so adding validation
- * here covers all of them with one change.
+ * helper (`mutateSetDocument`, `mutateUpdateDocument`, `mutateDeleteDocument`)
+ * funnels through `mutate()`, so adding validation here covers all of them with
+ * one change.
  *
  * Rules:
  *   - `delete` operations have no data — skip validation entirely.
@@ -1587,50 +1581,4 @@ export async function mutateDeleteDocument(
     type: "delete",
     baseVersion: options.baseVersion ?? null,
   })
-}
-
-/**
- * Optimistic outbox mutation.
- *
- * Applies `applyLocal` immediately to Pinia state, enqueues `mutation` on the
- * sync outbox, commits the receipt on ack or rolls back on failure. All writes
- * that need offline durability, server ACKs, or queue metrics should go
- * through here rather than calling `enqueue` + `optimisticUpdater` by hand.
- */
-export interface MutateWithCoordinatorOptions {
-  id: string
-  pendingIds: PendingCollection
-  applyLocal: () => void
-  rollbackLocal: () => void
-  mutation: SyncMutatePayload
-  source?: string
-  pendingReleaseDelayMs?: number
-}
-
-export async function mutateWithCoordinator(
-  options: MutateWithCoordinatorOptions
-): Promise<void> {
-  const source = options.source ?? options.mutation.source
-  const receipt = optimisticUpdater.applyLocal({
-    id: options.id,
-    source,
-    pendingIds: options.pendingIds,
-    applyLocal: options.applyLocal,
-    rollback: options.rollbackLocal,
-    pendingReleaseDelayMs: options.pendingReleaseDelayMs,
-  })
-
-  const syncToken = beginCloudSyncOperation({ id: options.id, source })
-  let syncError: unknown
-
-  try {
-    await mutate(options.mutation)
-    optimisticUpdater.commit(receipt)
-  } catch (error) {
-    syncError = error
-    optimisticUpdater.rollback(receipt)
-    throw error
-  } finally {
-    endCloudSyncOperation(syncToken, syncError)
-  }
 }

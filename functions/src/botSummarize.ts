@@ -33,14 +33,18 @@
 import { HttpsError, onCall } from "firebase-functions/v2/https"
 import { z } from "genkit/beta"
 import { createHash } from "node:crypto"
-import { getMembershipRole, requireVerifiedAuth } from "./bot.js"
+import { requireVerifiedAuth } from "./auth.js"
+import { getMembershipRole } from "./bot.js"
 import { loadTeamAgentConfig, type BotAgentConfig } from "./botAgentConfig.js"
+import { NODE_SCOPES } from "./domain.js"
 import { db } from "./firebase.js"
-import { ai, resolveModel } from "./genkitClient.js"
-import { aiMiddlewares, redactText } from "./genkitMiddleware.js"
+import { ai } from "./genkitClient.js"
+import { redactText } from "./genkitMiddleware.js"
 import { GENKIT_OPTS } from "./runtimeConfig.js"
 import { anthropicApiKey, geminiApiKey, openaiApiKey } from "./secrets.js"
+import { runStructuredGeneration } from "./structuredGeneration.js"
 import { extractPlainText } from "./tiptapText.js"
+import type { NodeType, WorkspaceNodeScope } from "./types.js"
 
 // ===========================================================================
 // Schemas
@@ -49,7 +53,7 @@ import { extractPlainText } from "./tiptapText.js"
 const SummarizeNodeInputSchema = z.object({
   teamId: z.string().min(1),
   workspaceId: z.string().min(1),
-  scope: z.enum(["code", "write"]),
+  scope: z.enum(NODE_SCOPES),
   nodeId: z.string().min(1),
 })
 
@@ -203,7 +207,7 @@ function hashSummarizeContent(name: string, content: string): string {
 
 function buildSummarizeCacheKey(args: {
   teamId: string
-  scope: "code" | "write"
+  scope: WorkspaceNodeScope
   nodeId: string
   contentHash: string
   model: string
@@ -249,7 +253,7 @@ const MAX_CONTENT_INPUT_BYTES = 30_000
 
 interface NodeForSummary {
   name: string
-  type: "folder" | "file"
+  type: NodeType
   content: string
   isArchived: boolean
 }
@@ -266,7 +270,7 @@ async function loadNodeForSummary(
   const data = snap.data() ?? {}
   const type =
     data.type === "folder" || data.type === "file"
-      ? (data.type as "folder" | "file")
+      ? (data.type as NodeType)
       : "file"
   const name = typeof data.name === "string" ? data.name : input.nodeId
   // `write` nodes persist Tiptap JSON in `content`; `code` nodes store
@@ -355,29 +359,28 @@ async function runSummarize(
   const cached = getCachedSummary(cacheKey)
   if (cached) return cached
 
-  const model = resolveModel(agentConfig.model)
   const promptInput = buildSummarizePromptInput(node)
 
-  // Dotprompt invocation: the `.prompt` file owns the messages and the
-  // base config (temperature 0.3); per-call we override the model
-  // (team-selected), the topP / maxOutputTokens (also team config),
-  // and attach our middleware stack so logging / budget / redaction
-  // apply to this call too.
-  const response = await getSummarizeNodePrompt()(promptInput, {
-    model,
-    config: {
-      // Clamp at 0.3 even if the team's `agentConfig.temperature` is
-      // higher — chat temperature is tuned for conversation, summaries
-      // should hug the source. The frontmatter's `0.3` is the upper
-      // bound; we'd lower further if the team lowered theirs.
-      temperature: Math.min(agentConfig.temperature, 0.3),
+  // Dotprompt invocation through the shared one-shot seam: the `.prompt`
+  // file owns the messages + base config (temperature 0.3) and its own
+  // output schema; `runStructuredGeneration` resolves the team-selected
+  // model, assembles the per-call config (clamping temperature to 0.3 even
+  // if the team's chat temperature is higher — summaries hug the source),
+  // and attaches the middleware stack. The seam returns `unknown` for the
+  // dotprompt shape (the prompt owns the schema), so we re-assert the
+  // dotprompt's output type here exactly as before.
+  const output = (await runStructuredGeneration({
+    model: agentConfig.model,
+    dotprompt: getSummarizeNodePrompt(),
+    input: promptInput,
+    sampling: {
+      temperature: agentConfig.temperature,
       topP: agentConfig.topP,
       maxOutputTokens: agentConfig.maxOutputTokens,
     },
-    use: aiMiddlewares(),
-  })
+    temperatureCap: 0.3,
+  })) as SummarizeNodeOutput | undefined
 
-  const output = response.output as SummarizeNodeOutput | null | undefined
   if (!output) {
     // Schema validation failed — model produced something Genkit
     // couldn't reconcile against the Zod shape. Rare but worth

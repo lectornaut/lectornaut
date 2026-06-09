@@ -21,10 +21,15 @@
  */
 
 import { queryClient } from "@/modules/queryClient"
-import { withCloudSyncOperation } from "@/utils/firebase/firebase-optimistic"
+import {
+  addPending,
+  removePending,
+  withCloudSyncOperation,
+} from "@/utils/firebase/firebase-optimistic"
 import { holdOptimistic } from "@/utils/firebase/firebase-query"
 import type { FirestoreQueryKey } from "@/utils/firebase/firebase-query-keys"
 import { useMutation, type UseMutationReturnType } from "@tanstack/vue-query"
+import type { Ref } from "vue"
 
 /**
  * Brief hold after a mutation settles before releasing, so the server's
@@ -49,8 +54,12 @@ export interface FirestoreMutationOptions<TVars, TData> {
   optimistic?: (vars: TVars) => OptimisticPlan
   /** Delay before releasing the optimistic hold after settle (default 120ms). */
   settleDelayMs?: number
-  /** Telemetry source tag for the cloud-sync queue (drives `SyncIndicator`). */
-  source?: string
+  /**
+   * Telemetry source tag for the cloud-sync queue (drives `SyncIndicator`).
+   * A function resolves the tag from the mutation vars, so one mutation instance
+   * can carry a per-call source (used by `useRunWrite`).
+   */
+  source?: string | ((vars: TVars) => string | undefined)
 }
 
 interface MutationContext {
@@ -74,7 +83,10 @@ export function useFirestoreMutation<TVars, TData = void>(
     // kept; only its optimistic-apply/merge layer is being retired).
     mutationFn: (vars) =>
       withCloudSyncOperation(() => options.mutationFn(vars), {
-        source: options.source,
+        source:
+          typeof options.source === "function"
+            ? options.source(vars)
+            : options.source,
       }),
     onMutate: async (vars) => {
       const plan = options.optimistic?.(vars)
@@ -110,4 +122,86 @@ export function useFirestoreMutation<TVars, TData = void>(
       }
     },
   })
+}
+
+// ============================================================================
+// The one optimistic-write interface (candidate 6)
+// ============================================================================
+
+/**
+ * Brief hold after a write settles before its per-ID pending entry is released,
+ * matching the optimistic layer's snapshot-lag buffer so per-row spinners don't
+ * flicker between optimistic and server state. Mirrors `DEFAULT_SETTLE_DELAY_MS`.
+ */
+const PENDING_RELEASE_DELAY_MS = 120
+
+/** Vars threaded through the shared `runWrite` mutation. */
+interface RunWriteVars {
+  keys: FirestoreQueryKey[]
+  apply: () => void
+  rollback: () => void
+  fn: () => Promise<void>
+  /** Per-call telemetry source override (falls back to the `useRunWrite` tag). */
+  source?: string
+}
+
+export interface RunWriteOptions extends RunWriteVars {
+  /**
+   * Optional per-ID UI pending tracking. The ids are added to `ref` before the
+   * write and released `PENDING_RELEASE_DELAY_MS` after it settles, so
+   * `isXPending(id)` computeds stay truthful for the row's whole round-trip.
+   * (The cache hold against the live listener is separate — it is driven by
+   * `keys` inside `useFirestoreMutation`. Pass `keys: []` for optimism that
+   * targets store-local/overlay state with no live listener to hold against.)
+   */
+  pending?: { ref: Ref<Set<string>>; ids: string[] }
+}
+
+/**
+ * The single optimistic-write seam. Each store calls this once at setup and
+ * gets back a `runWrite` that collapses the per-store `useFirestoreMutation` +
+ * `runXMutation` wrapper + `addPending`/`removePending` dance into one call:
+ *
+ *   const runWrite = useRunWrite("team")
+ *   await runWrite({ keys, apply, rollback, fn, pending: { ref, ids } })
+ *
+ * `apply`/`rollback` mutate the TanStack cache (and any derived store state);
+ * `keys` are held against the live listener until the server-applied write
+ * reconciles; `fn` performs the actual write (a Cloud Function callable or
+ * `syncEngine.mutate`).
+ */
+export function useRunWrite(
+  source: string
+): (options: RunWriteOptions) => Promise<void> {
+  const mutation = useFirestoreMutation<RunWriteVars, void>({
+    mutationFn: (vars) => vars.fn(),
+    optimistic: (vars) => ({
+      keys: vars.keys,
+      apply: vars.apply,
+      rollback: vars.rollback,
+    }),
+    source: (vars) => vars.source ?? source,
+  })
+
+  return async ({ keys, apply, rollback, fn, pending, source: callSource }) => {
+    if (pending) {
+      for (const id of pending.ids) addPending(pending.ref, id)
+    }
+    try {
+      await mutation.mutateAsync({
+        keys,
+        apply,
+        rollback,
+        fn,
+        source: callSource,
+      })
+    } finally {
+      if (pending) {
+        const { ref, ids } = pending
+        setTimeout(() => {
+          for (const id of ids) removePending(ref, id)
+        }, PENDING_RELEASE_DELAY_MS)
+      }
+    }
+  }
 }

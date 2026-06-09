@@ -1,6 +1,7 @@
+import { FieldValue } from "firebase-admin/firestore"
 import { HttpsError, onCall } from "firebase-functions/v2/https"
 import { COST_BUDGET } from "./costBudget.js"
-import { admin, db } from "./firebase.js"
+import { db } from "./firebase.js"
 import { CALLABLE_OPTS } from "./runtimeConfig.js"
 
 const SESSION_ID_RE = /^[A-Za-z0-9-]{8,128}$/
@@ -93,7 +94,7 @@ export const registerSession = onCall(CALLABLE_OPTS, async (request) => {
     : "desktop"
 
   const sessionRef = db.doc(`users/${uid}/sessions/${data.sessionId}`)
-  const now = admin.firestore.FieldValue.serverTimestamp()
+  const now = FieldValue.serverTimestamp()
 
   const existing = await sessionRef.get()
 

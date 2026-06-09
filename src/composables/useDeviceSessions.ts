@@ -13,6 +13,8 @@ import { generateRandomString } from "@/helpers/utilities"
 import { auth, firestore } from "@/modules/firebase"
 import { emitter } from "@/modules/mitt"
 import { queryClient } from "@/modules/queryClient"
+import { zodConverter } from "@/schemas/_utils"
+import { userSessionSchema } from "@/schemas/session"
 import type { IUserSession } from "@/types/session"
 import {
   holdOptimistic,
@@ -558,6 +560,18 @@ export async function removeCurrentSession(uid: string) {
 }
 
 /**
+ * Read converter for `users/{uid}/sessions`. The list query below builds a raw
+ * collection ref, so without this every row comes back with `id: undefined` —
+ * which breaks current-device matching (`s.id === currentSessionId`) and makes
+ * "revoke this device" forward an empty `sessionId` to the callable. Injects the
+ * doc `id` from `snap.id` and validates each snapshot.
+ */
+const sessionConverter = zodConverter<IUserSession>(
+  userSessionSchema,
+  "userSession"
+)
+
+/**
  * Composable for managing device sessions in the settings UI.
  * The heartbeat is managed globally (started at login, stopped at logout),
  * so this composable only handles the reactive session list and actions.
@@ -570,7 +584,9 @@ export function useDeviceSessions() {
   const sessionsQueryRef = computed(() => {
     if (!user.value?.uid) return null
     return query(
-      collection(firestore, "users", user.value.uid, "sessions"),
+      collection(firestore, "users", user.value.uid, "sessions").withConverter(
+        sessionConverter
+      ),
       orderBy("lastActiveAt", "desc")
     )
   })

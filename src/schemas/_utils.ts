@@ -11,15 +11,27 @@ import type { ZodError, ZodObject, ZodRawShape, ZodType } from "zod"
 /**
  * Schema validation utilities shared across every boundary.
  *
- * Pick the right helper for the layer you're at:
+ * Validation is environment-independent: every helper runs the schema in dev
+ * AND prod, so a value that crosses a typed boundary has actually been checked
+ * in the build users run — the read path can never pass an unchecked cast
+ * through a `T`-typed seam in production, and a bad write is never enqueued.
+ * The only thing that varies by
+ * environment is how loudly a violation surfaces (a dev toast vs. the prod
+ * console / telemetry), routed through `violationSink`.
  *
- *   parseSafe    — non-throwing, returns null on failure. Streaming reads.
- *   parseOrWarn  — dev throws, prod degrades silently. Firestore converter.
- *   assertValid  — always throws. Writes and outbox enqueues.
+ * Pick the helper by how a failure should be handled, NOT by the build:
  *
- * Violations are reported through `violationSink`. Bootstrap code should
- * redirect the sink via `setSchemaViolationSink` to integrate with logging,
- * Sentry, or a dev-only toast.
+ *   parseSafe    — report + return null. Streaming/list reads where one corrupt
+ *                  row must be dropped, not collapse the whole list.
+ *   zodConverter — report + best-effort degrade. The Firestore converter, whose
+ *                  `fromFirestore(): T` contract forbids null, so it can neither
+ *                  drop a row nor (honestly) discard the whole snapshot.
+ *   assertValid  — throw. Writes and outbox enqueues, where bad data must be
+ *                  blocked before it reaches Firestore. `validatePartialUpdate`
+ *                  is its partial-write sibling (per-field, same throw contract).
+ *
+ * Redirect reporting via `setSchemaViolationSink` during bootstrap to integrate
+ * with logging, Sentry, or a dev-only toast.
  */
 
 // ─── Error types ─────────────────────────────────────────────────────────────
@@ -35,7 +47,7 @@ export interface SchemaViolation {
 }
 
 /**
- * Thrown by `assertValid` (writes) and rethrown by `parseOrWarn` in dev.
+ * Thrown by `assertValid` and `validatePartialUpdate` (the write seam).
  * Carries enough context to log the exact field path that failed.
  *
  * Fields are declared explicitly (not as constructor parameter properties)
@@ -78,42 +90,21 @@ export function setSchemaViolationSink(sink: Sink): void {
 // ─── Core parse helpers ──────────────────────────────────────────────────────
 
 /**
- * Non-throwing: logs on failure and returns null. Use for streaming reads
- * where one corrupt row must not throw the whole list.
- *
- * In prod, returns the raw cast without running the schema — zero overhead
- * on the hot path. The dev/prod gate is a compile-time constant, so the
- * branch is eliminated by the minifier in production builds.
+ * Validate `data`, returning the parsed value or `null` on failure (reported
+ * through the sink). Use for streaming/list reads where a single corrupt row
+ * must be dropped rather than collapse the whole list — callers filter the
+ * nulls. Runs in every environment, so a list rendered in production drops and
+ * reports the same bad row a developer sees locally.
  */
 export function parseSafe<T>(
   schema: ZodType<T>,
   data: unknown,
   context: string
 ): T | null {
-  if (!import.meta.env.DEV) return data as T
   const result = schema.safeParse(data)
   if (result.success) return result.data
   violationSink({ context, error: result.error, raw: data })
   return null
-}
-
-/**
- * Read-path default. In dev, throws on failure (loud). In prod, skips
- * validation entirely and returns the raw cast — zero overhead on the
- * hot path, dead branch eliminated by the minifier.
- *
- * Used inside `zodConverter`, so every Firestore snapshot flows through it.
- */
-export function parseOrWarn<T>(
-  schema: ZodType<T>,
-  data: unknown,
-  context: string
-): T {
-  if (!import.meta.env.DEV) return data as T
-  const result = schema.safeParse(data)
-  if (result.success) return result.data
-  violationSink({ context, error: result.error, raw: data })
-  throw result.error
 }
 
 /**
@@ -176,7 +167,8 @@ function coerceNumericTimestamps(
 // ─── Firestore converter factory ─────────────────────────────────────────────
 
 /**
- * Builds a `FirestoreDataConverter` that validates on read via `parseOrWarn`.
+ * Builds a `FirestoreDataConverter` that validates every snapshot against
+ * `schema` on read — in dev and prod alike.
  *
  * `toFirestore` is a pass-through: writes are validated elsewhere (sync
  * engine path registry), so running a schema here would double-validate
@@ -226,7 +218,19 @@ export function zodConverter<T extends DocumentData>(
           enriched[field] = segments[index]
         }
       }
-      return parseOrWarn(schema, enriched, `${context}:${snap.ref.path}`)
+      const result = schema.safeParse(enriched)
+      if (result.success) return result.data
+      // `fromFirestore` must return a `T` — Firestore's converter contract has
+      // no null channel, and throwing here would collapse the entire query over
+      // a single bad doc. So report the violation (in dev AND prod — the seam
+      // never silently casts) and degrade to the best-effort enriched value:
+      // the list survives, and the drift stays observable wherever it occurs.
+      violationSink({
+        context: `${context}:${snap.ref.path}`,
+        error: result.error,
+        raw: enriched,
+      })
+      return enriched as T
     },
   }
 }
@@ -234,10 +238,10 @@ export function zodConverter<T extends DocumentData>(
 // ─── Partial-update helper (writes) ──────────────────────────────────────────
 
 /**
- * Validate a Firestore `.update()` / `.set(…, { merge: true })` payload.
- *
- * In prod, the entire function body is eliminated by the minifier — all
- * keys pass through without validation. The rules below apply in dev.
+ * Validate a Firestore `.update()` / `.set(…, { merge: true })` payload,
+ * field by field. Runs in dev AND prod (like `assertValid`): a bad partial
+ * write throws `SchemaValidationError` before it can be enqueued, in every
+ * build — never a silent prod pass-through.
  *
  * Rules:
  *   - FieldValue sentinels (serverTimestamp, arrayUnion, increment, …)
@@ -254,7 +258,6 @@ export function validatePartialUpdate(
   data: Record<string, unknown>,
   context: string
 ): Record<string, unknown> {
-  if (!import.meta.env.DEV) return data
   const shape = schema.shape as Record<string, ZodType<unknown>>
   for (const [key, value] of Object.entries(data)) {
     if (value instanceof FieldValue) continue

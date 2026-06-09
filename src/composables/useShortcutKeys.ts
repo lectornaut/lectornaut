@@ -3,14 +3,14 @@ import {
   getShortcutById,
   hotkeyToDisplayKeys,
 } from "@/helpers/shortcuts"
-import { useSettingsStore } from "@/stores/settingsStore"
+import { useShortcutsStore } from "@/stores/shortcutsStore"
 import { storeToRefs } from "pinia"
 import { computed, toValue, type ComputedRef, type MaybeRefOrGetter } from "vue"
 
 /**
  * Resolve the displayable keys for a shortcut event id.
  *
- * Honors any user override from the settings store; otherwise falls back to
+ * Honors any user override from the shortcuts store; otherwise falls back to
  * the static `keys` defined on the shortcut. Returns `null` when the event
  * has no displayable keys (e.g. command-palette-only shortcuts).
  *
@@ -22,7 +22,7 @@ import { computed, toValue, type ComputedRef, type MaybeRefOrGetter } from "vue"
 export const useShortcutKeys = (
   shortcutId: MaybeRefOrGetter<string>
 ): ComputedRef<string[] | null> => {
-  const { shortcutOverrides } = storeToRefs(useSettingsStore())
+  const { shortcutOverrides } = storeToRefs(useShortcutsStore())
 
   return computed(() => {
     const id = toValue(shortcutId)

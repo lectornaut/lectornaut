@@ -22,12 +22,15 @@
  * for `genkitClient.ts`).
  */
 
+import { getStorage } from "firebase-admin/storage"
 import { z, type Part } from "genkit/beta"
 import {
   buildMediaPartFromStorage,
   isSupportedMediaContentType,
 } from "./botMedia.js"
-import { admin, db } from "./firebase.js"
+import { NODE_SCOPES } from "./domain.js"
+import { db } from "./firebase.js"
+import type { NodeType, WorkspaceNodeScope } from "./types.js"
 
 // ===========================================================================
 // Constants
@@ -102,7 +105,7 @@ const TEXT_MIME_PREFIXES = [
 // ===========================================================================
 
 export const NodeRefSchema = z.object({
-  scope: z.enum(["code", "write"]),
+  scope: z.enum(NODE_SCOPES),
   nodeId: z.string().min(1),
 })
 
@@ -124,10 +127,10 @@ interface NodeContextAttachment {
 }
 
 interface NodeContextEntry {
-  scope: "code" | "write"
+  scope: WorkspaceNodeScope
   nodeId: string
   name: string
-  type: "folder" | "file"
+  type: NodeType
   content?: string
   contentTruncated?: boolean
   attachments: NodeContextAttachment[]
@@ -177,11 +180,7 @@ async function fetchAttachmentContext(
     (size === null || size <= MAX_ATTACHMENT_INLINE_BYTES)
   ) {
     try {
-      const [buffer] = await admin
-        .storage()
-        .bucket()
-        .file(storagePath)
-        .download()
+      const [buffer] = await getStorage().bucket().file(storagePath).download()
       const text = buffer.toString("utf8")
       if (text.length > MAX_ATTACHMENT_INLINE_BYTES) {
         attContent = text.slice(0, MAX_ATTACHMENT_INLINE_BYTES)
@@ -281,7 +280,7 @@ async function fetchNodeContext(
 
   const type =
     data.type === "folder" || data.type === "file"
-      ? (data.type as "folder" | "file")
+      ? (data.type as NodeType)
       : "file"
   const name = typeof data.name === "string" ? data.name : ref.nodeId
 

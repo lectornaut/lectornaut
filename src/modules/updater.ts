@@ -75,10 +75,6 @@ export const checkForUpdates = async (): Promise<UpdateCheckResult> => {
     const update = await check()
 
     if (update) {
-      console.log(
-        `Found update: ${update.version} (released on ${update.date})\nRelease notes: ${update.body}`
-      )
-
       const result: UpdateCheckResult = {
         status: "available",
         version: update.version,

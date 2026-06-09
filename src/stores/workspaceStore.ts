@@ -29,7 +29,7 @@ import {
   getMembershipPreferencesRef,
   uploadWorkspacePhoto,
 } from "@/utils/firebase/firebase-helpers"
-import { useFirestoreMutation } from "@/utils/firebase/firebase-mutation"
+import { useRunWrite } from "@/utils/firebase/firebase-mutation"
 import {
   addPending,
   createPendingSet,
@@ -40,10 +40,7 @@ import {
   queryKeys,
   type FirestoreQueryKey,
 } from "@/utils/firebase/firebase-query-keys"
-import {
-  mutateSetDocument,
-  mutateWithCoordinator,
-} from "@/utils/firebase/firebase-sync-engine"
+import { mutateSetDocument } from "@/utils/firebase/firebase-sync-engine"
 import { query as fsQuery, Timestamp, where } from "firebase/firestore"
 import { defineStore, storeToRefs } from "pinia"
 
@@ -106,23 +103,7 @@ export const useWorkspaceStore = defineStore("workspaces", () => {
   const workspacesListKey = (teamId: string): FirestoreQueryKey =>
     queryKeys.list(`teams/${teamId}/workspaces`)
 
-  const workspaceMutation = useFirestoreMutation<
-    {
-      keys: FirestoreQueryKey[]
-      apply: () => void
-      rollback: () => void
-      run: () => Promise<void>
-    },
-    void
-  >({
-    mutationFn: (vars) => vars.run(),
-    optimistic: (vars) => ({
-      keys: vars.keys,
-      apply: vars.apply,
-      rollback: vars.rollback,
-    }),
-    source: "workspace",
-  })
+  const runWrite = useRunWrite("workspace")
 
   async function persistWorkspaceSelection(
     workspaceId: string | null
@@ -335,14 +316,13 @@ export const useWorkspaceStore = defineStore("workspaces", () => {
     const previousWorkspaces = queryClient.getQueryData<IWorkspace[]>(key)
     const previousWorkspaceId = currentWorkspaceId.value
 
-    addPending(pendingWorkspaceIds, tempId)
     addPending(pendingUserIds, uid)
-    // Captured inside `run` so callers (e.g. WorkspaceDialog's create flow,
+    // Captured inside `fn` so callers (e.g. WorkspaceDialog's create flow,
     // which then assigns per-workspace roles) can act on the real id once the
     // server confirms. mutateAsync awaits `run`, so this is set on resolve.
     let createdWorkspaceId: string | undefined
     try {
-      await workspaceMutation.mutateAsync({
+      await runWrite({
         keys: [key],
         apply: () => {
           queryClient.setQueryData<IWorkspace[]>(key, [
@@ -355,7 +335,7 @@ export const useWorkspaceStore = defineStore("workspaces", () => {
           queryClient.setQueryData(key, previousWorkspaces)
           authStore.setCurrentWorkspaceId(previousWorkspaceId ?? null)
         },
-        run: async () => {
+        fn: async () => {
           const result = await createWorkspaceFn({
             teamId,
             name,
@@ -384,12 +364,12 @@ export const useWorkspaceStore = defineStore("workspaces", () => {
           await persistWorkspaceSelection(workspaceId)
           authStore.setCurrentWorkspaceId(workspaceId)
         },
+        // Hold the per-id flag briefly past settle so the cleanup watch doesn't
+        // fire in the tempId→realId window before the snapshot lands.
+        pending: { ref: pendingWorkspaceIds, ids: [tempId] },
       })
     } finally {
       removePending(pendingUserIds, uid)
-      // Hold the per-id flag briefly past settle so the cleanup watch doesn't
-      // fire in the tempId→realId window before the snapshot lands.
-      setTimeout(() => removePending(pendingWorkspaceIds, tempId), 120)
     }
 
     return createdWorkspaceId
@@ -402,23 +382,21 @@ export const useWorkspaceStore = defineStore("workspaces", () => {
       throw new Error("Workspace not found")
     }
 
+    const uid = currentUser.value.uid
+    const teamId = currentTeamId.value
     const previousWorkspaceId = currentWorkspaceId.value
-    await mutateWithCoordinator({
-      id: currentUser.value.uid,
+    await runWrite({
+      keys: [],
+      apply: () => authStore.setCurrentWorkspaceId(workspaceId),
+      rollback: () => authStore.setCurrentWorkspaceId(previousWorkspaceId),
+      fn: () =>
+        mutateSetDocument(
+          getMembershipPreferencesRef(teamId, uid),
+          { currentWorkspaceId: workspaceId },
+          { source: "workspace.switchWorkspace", merge: true }
+        ),
+      pending: { ref: pendingUserIds, ids: [uid] },
       source: "workspace.switchWorkspace",
-      pendingIds: pendingUserIds,
-      applyLocal: () => authStore.setCurrentWorkspaceId(workspaceId),
-      rollbackLocal: () => authStore.setCurrentWorkspaceId(previousWorkspaceId),
-      mutation: {
-        source: "workspace.switchWorkspace",
-        targetPath: getMembershipPreferencesRef(
-          currentTeamId.value,
-          currentUser.value.uid
-        ).path,
-        type: "set",
-        merge: true,
-        data: { currentWorkspaceId: workspaceId },
-      },
     })
   }
 
@@ -464,13 +442,12 @@ export const useWorkspaceStore = defineStore("workspaces", () => {
       )
     }
 
-    addPending(pendingWorkspaceIds, workspaceId)
     try {
-      await workspaceMutation.mutateAsync({
+      await runWrite({
         keys: [key],
         apply: () => patch(optimisticPatch),
         rollback: () => queryClient.setQueryData(key, previousWorkspaces),
-        run: async () => {
+        fn: async () => {
           if (photoFile instanceof File) {
             resolvedPhotoURL = await uploadWorkspacePhoto(
               teamId,
@@ -498,10 +475,10 @@ export const useWorkspaceStore = defineStore("workspaces", () => {
             await deleteWorkspacePhotoFile(teamId, workspaceId)
           }
         },
+        pending: { ref: pendingWorkspaceIds, ids: [workspaceId] },
       })
     } finally {
       if (optimisticPhotoURL) URL.revokeObjectURL(optimisticPhotoURL)
-      setTimeout(() => removePending(pendingWorkspaceIds, workspaceId), 120)
     }
   }
 
@@ -518,10 +495,9 @@ export const useWorkspaceStore = defineStore("workspaces", () => {
     const previousWorkspaceId = currentWorkspaceId.value
     const isCurrent = currentWorkspaceId.value === workspaceId
 
-    addPending(pendingWorkspaceIds, workspaceId)
     if (isCurrent) addPending(pendingUserIds, uid)
     try {
-      await workspaceMutation.mutateAsync({
+      await runWrite({
         keys: [key],
         apply: () => {
           queryClient.setQueryData<IWorkspace[]>(
@@ -538,16 +514,16 @@ export const useWorkspaceStore = defineStore("workspaces", () => {
             authStore.setCurrentWorkspaceId(previousWorkspaceId ?? null)
           }
         },
-        run: async () => {
+        fn: async () => {
           // Photo + attachment cleanup is handled server-side by the
           // deleteWorkspace callable (a prefix sweep over this workspace's
           // Storage objects).
           await deleteWorkspaceFn({ teamId, workspaceId })
         },
+        pending: { ref: pendingWorkspaceIds, ids: [workspaceId] },
       })
     } finally {
       if (isCurrent) removePending(pendingUserIds, uid)
-      setTimeout(() => removePending(pendingWorkspaceIds, workspaceId), 120)
     }
   }
 

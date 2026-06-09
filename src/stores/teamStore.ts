@@ -28,7 +28,7 @@ import {
   getTeamRef,
   uploadTeamPhoto,
 } from "@/utils/firebase/firebase-helpers"
-import { useFirestoreMutation } from "@/utils/firebase/firebase-mutation"
+import { useRunWrite } from "@/utils/firebase/firebase-mutation"
 import {
   addPending,
   cloneState,
@@ -82,30 +82,7 @@ export const useTeamStore = defineStore("teams", () => {
   const teamDocKey = (teamId: string): FirestoreQueryKey =>
     queryKeys.doc(`teams/${teamId}`)
 
-  const teamMutation = useFirestoreMutation<
-    {
-      keys: FirestoreQueryKey[]
-      apply: () => void
-      rollback: () => void
-      run: () => Promise<void>
-    },
-    void
-  >({
-    mutationFn: (vars) => vars.run(),
-    optimistic: (vars) => ({
-      keys: vars.keys,
-      apply: vars.apply,
-      rollback: vars.rollback,
-    }),
-    source: "team",
-  })
-
-  const runTeamMutation = (
-    keys: FirestoreQueryKey[],
-    apply: () => void,
-    rollback: () => void,
-    run: () => Promise<void>
-  ): Promise<void> => teamMutation.mutateAsync({ keys, apply, rollback, run })
+  const runWrite = useRunWrite("team")
 
   // ── Computed ────────────────────────────────────────────────────────────────
   // Realtime doc first; fall back to the denormalized membership `team` snapshot
@@ -246,22 +223,21 @@ export const useTeamStore = defineStore("teams", () => {
     let resolvedUsername: string | null = null
     let resolvedIsPublic = false
 
-    addPending(pendingTeamIds, tempId)
     addPending(pendingUserIds, creatorUid)
     try {
-      await runTeamMutation(
-        [tempKey],
-        () => {
+      await runWrite({
+        keys: [tempKey],
+        apply: () => {
           queryClient.setQueryData<ITeam>(tempKey, optimisticTeam)
           authStore.setCurrentTeamIdLocal(tempId)
         },
-        () => {
+        rollback: () => {
           queryClient.removeQueries({ queryKey: tempKey, exact: true })
           authStore.setCurrentTeamIdLocal(previousTeamId ?? null)
           membershipStore.rollbackMemberships(previousMemberships)
           membershipStore.rollbackTeamMembers(previousTeamMembers)
         },
-        async () => {
+        fn: async () => {
           const result = await createTeamFn({ name, photoURL: null })
           actualTeamId = result.data.teamId
 
@@ -307,11 +283,11 @@ export const useTeamStore = defineStore("teams", () => {
             isPublic: resolvedIsPublic,
           })
           authStore.setCurrentTeamIdLocal(actualTeamId)
-        }
-      )
+        },
+        pending: { ref: pendingTeamIds, ids: [tempId] },
+      })
     } finally {
       removePending(pendingUserIds, creatorUid)
-      setTimeout(() => removePending(pendingTeamIds, tempId), 120)
     }
 
     return actualTeamId
@@ -375,16 +351,15 @@ export const useTeamStore = defineStore("teams", () => {
       membershipStore.updateTeamInMemberships(teamId, changes)
     }
 
-    addPending(pendingTeamIds, teamId)
     try {
-      await runTeamMutation(
-        membershipsKey ? [teamKey, membershipsKey] : [teamKey],
-        () => patch(optimisticPatch),
-        () => {
+      await runWrite({
+        keys: membershipsKey ? [teamKey, membershipsKey] : [teamKey],
+        apply: () => patch(optimisticPatch),
+        rollback: () => {
           queryClient.setQueryData(teamKey, previousTeamDoc)
           membershipStore.rollbackMemberships(previousMemberships)
         },
-        async () => {
+        fn: async () => {
           if (photoFile instanceof File) {
             resolvedPhotoURL = await uploadTeamPhoto(teamId, photoFile)
           }
@@ -405,11 +380,11 @@ export const useTeamStore = defineStore("teams", () => {
           if (resolvedPhotoURL === null) {
             await deleteTeamPhotoFile(teamId)
           }
-        }
-      )
+        },
+        pending: { ref: pendingTeamIds, ids: [teamId] },
+      })
     } finally {
       if (optimisticPhotoURL) URL.revokeObjectURL(optimisticPhotoURL)
-      setTimeout(() => removePending(pendingTeamIds, teamId), 120)
     }
   }
 
@@ -430,35 +405,31 @@ export const useTeamStore = defineStore("teams", () => {
     const previousTeamId = currentTeamId.value
     const isCurrent = currentTeam.value?.id === teamId
 
-    addPending(pendingTeamIds, teamId)
-    try {
-      await runTeamMutation(
-        membershipsKey ? [teamKey, membershipsKey] : [teamKey],
-        () => {
-          membershipStore.removeMembershipsForTeam(teamId)
-          if (isCurrent) {
-            queryClient.setQueryData(teamKey, null)
-            authStore.setCurrentTeamIdLocal(null)
-          }
-        },
-        () => {
-          membershipStore.rollbackMemberships(previousMemberships)
-          queryClient.setQueryData(teamKey, previousTeamDoc)
-          if (isCurrent) {
-            authStore.setCurrentTeamIdLocal(previousTeamId ?? null)
-          }
-        },
-        async () => {
-          // Photo + nested storage (workspace/group avatars, attachments)
-          // cleanup is handled server-side by the deleteTeam callable (a prefix
-          // sweep) — admin SDK, so it avoids the post-delete access-revocation
-          // race the client-side delete previously had to work around.
-          await deleteTeamFn({ teamId })
+    await runWrite({
+      keys: membershipsKey ? [teamKey, membershipsKey] : [teamKey],
+      apply: () => {
+        membershipStore.removeMembershipsForTeam(teamId)
+        if (isCurrent) {
+          queryClient.setQueryData(teamKey, null)
+          authStore.setCurrentTeamIdLocal(null)
         }
-      )
-    } finally {
-      setTimeout(() => removePending(pendingTeamIds, teamId), 120)
-    }
+      },
+      rollback: () => {
+        membershipStore.rollbackMemberships(previousMemberships)
+        queryClient.setQueryData(teamKey, previousTeamDoc)
+        if (isCurrent) {
+          authStore.setCurrentTeamIdLocal(previousTeamId ?? null)
+        }
+      },
+      fn: async () => {
+        // Photo + nested storage (workspace/group avatars, attachments)
+        // cleanup is handled server-side by the deleteTeam callable (a prefix
+        // sweep) — admin SDK, so it avoids the post-delete access-revocation
+        // race the client-side delete previously had to work around.
+        await deleteTeamFn({ teamId })
+      },
+      pending: { ref: pendingTeamIds, ids: [teamId] },
+    })
   }
 
   async function clearCurrentTeam(): Promise<void> {

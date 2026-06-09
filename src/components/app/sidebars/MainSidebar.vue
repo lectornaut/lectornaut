@@ -11,7 +11,7 @@ import {
   IconX,
 } from "@/data/icons"
 import { useAuthStore } from "@/stores/authStore"
-import { useLayoutStore } from "@/stores/layoutStore"
+import { useUiPreferencesStore } from "@/stores/uiPreferencesStore"
 import { storeToRefs } from "pinia"
 
 const props = withDefaults(
@@ -27,8 +27,8 @@ const { t } = useI18n()
 const { open, isMobile, setOpenMobile, toggleSidebar } = useSidebar()
 const authStore = useAuthStore()
 const { onboarding } = storeToRefs(authStore)
-const layoutStore = useLayoutStore()
-const { agentsSidebarVisible, sidebarPinned } = storeToRefs(layoutStore)
+const uiPreferencesStore = useUiPreferencesStore()
+const { agentsSidebarVisible, sidebarPinned } = storeToRefs(uiPreferencesStore)
 
 const isFullscreen = useIsFullscreen()
 

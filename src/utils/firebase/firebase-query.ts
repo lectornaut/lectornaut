@@ -26,13 +26,24 @@ import {
 } from "@/utils/firebase/firebase-query-keys"
 import { hashKey, useQuery, type UseQueryReturnType } from "@tanstack/vue-query"
 import {
+  getDocs,
   onSnapshot,
   type DocumentReference,
   type FirestoreError,
   type Query,
+  type QueryDocumentSnapshot,
   type Unsubscribe,
 } from "firebase/firestore"
-import { computed, toValue, type MaybeRefOrGetter } from "vue"
+import {
+  computed,
+  ref,
+  shallowRef,
+  toValue,
+  watch,
+  type ComputedRef,
+  type MaybeRefOrGetter,
+  type Ref,
+} from "vue"
 
 // ============================================================================
 // Live listener registry (ref-counting via the query cache)
@@ -65,15 +76,24 @@ const teardownListener = (queryHash: string): void => {
  * the write still carries the OLD data and would clobber the optimistic update.
  */
 const optimisticHolds = new Map<string, number>()
-/** Latest snapshot received while a key was held, applied on final release. */
-const stashedSnapshots = new Map<string, unknown>()
+/**
+ * Reconciler to run against the cached value on a key's FINAL hold release. It
+ * captured the latest server snapshot while the key was held; running it on
+ * release folds that snapshot into whatever the cache holds at that point (the
+ * optimistic value) WITHOUT clobbering the parts of the entry the live listener
+ * doesn't own. Single-doc/collection reads register a whole-value replace
+ * (`() => snapshot`); the infinite read registers a head-only merge
+ * (`(cached) => ({ ...cached, head })`) so its append-only, listener-less tail
+ * survives reconciliation. Keyed by query hash.
+ */
+const stashedReconcilers = new Map<string, (cached: unknown) => unknown>()
 
 /**
  * Hold a query's cached value against live-listener overwrites until the
  * returned release fn runs (wire it to `useMutation`'s onError/onSettled). On
- * the final release the latest stashed server snapshot is applied, reconciling
- * the cache to server truth — e.g. an optimistic temp row is replaced by the
- * real row the server created. The release fn is idempotent and ref-counted.
+ * the final release the stashed reconciler runs, reconciling the cache to server
+ * truth — e.g. an optimistic temp row is replaced by the real row the server
+ * created. The release fn is idempotent and ref-counted.
  */
 export function holdOptimistic(queryKey: FirestoreQueryKey): () => void {
   const queryHash = hashKey(queryKey)
@@ -89,10 +109,10 @@ export function holdOptimistic(queryKey: FirestoreQueryKey): () => void {
       return
     }
     optimisticHolds.delete(queryHash)
-    if (stashedSnapshots.has(queryHash)) {
-      const data = stashedSnapshots.get(queryHash)
-      stashedSnapshots.delete(queryHash)
-      queryClient.setQueryData(queryKey, data)
+    const reconcile = stashedReconcilers.get(queryHash)
+    if (reconcile) {
+      stashedReconcilers.delete(queryHash)
+      queryClient.setQueryData(queryKey, (cached) => reconcile(cached))
     }
   }
 }
@@ -114,45 +134,62 @@ const ensureGcTeardown = (): void => {
 }
 
 /**
- * Shared `queryFn` body for both document and collection reads. Opens a
- * listener via `open`, resolves on the first snapshot, then streams later
- * snapshots into the cache. `open` receives `onNext`/`onError` and returns the
- * Firestore `Unsubscribe`, so this stays free of any document-vs-collection
- * specifics (and trivially testable with a fake `open`).
+ * Shared `queryFn` body for document, collection, AND infinite reads. Opens a
+ * listener via `open`, resolves on the first snapshot, then folds later
+ * snapshots into the cache via `reduce`. `open` receives `onNext`/`onError` and
+ * returns the Firestore `Unsubscribe`, so this stays free of any
+ * document-vs-collection-vs-infinite specifics (and trivially testable with a
+ * fake `open`).
+ *
+ * `reduce(incoming, cached)` decides how a listener payload folds into the cached
+ * value. The default REPLACES wholesale (`incoming` IS the new cache value) — the
+ * single-doc and single-collection reads, where the listener owns the whole
+ * entry. The infinite read passes a reducer that merges the incoming live first
+ * page into the cached `{ head, tail }`, so the append-only `tail` (which has no
+ * listener) survives every head refresh — and survives optimistic reconciliation,
+ * because the held-key stash captures `reduce` and re-runs it against the
+ * optimistic value on release.
  *
  * @internal exported only for unit tests; not part of the public read API.
  */
-export const streamIntoCache = <T>(
+export const streamIntoCache = <T, V = T>(
   queryKey: FirestoreQueryKey,
   open: (
-    onNext: (data: T) => void,
+    onNext: (incoming: T) => void,
     onError: (error: FirestoreError) => void
-  ) => Unsubscribe
-): Promise<T> => {
+  ) => Unsubscribe,
+  reduce: (incoming: T, cached: V | undefined) => V = (incoming) =>
+    incoming as unknown as V
+): Promise<V> => {
   ensureGcTeardown()
   const queryHash = hashKey(queryKey)
   // A re-run of queryFn (remount after gc, or a key change) must not leak a
   // prior listener registered under the same hash.
   teardownListener(queryHash)
 
-  return new Promise<T>((resolve, reject) => {
+  return new Promise<V>((resolve, reject) => {
     let hydrated = false
     const unsubscribe = open(
-      (data) => {
+      (incoming) => {
         if (hydrated) {
           if (optimisticHolds.has(queryHash)) {
-            // An optimistic mutation is holding this key — stash the latest
-            // server snapshot and reconcile on release instead of clobbering
-            // the optimistic value with pre-server-apply data.
-            stashedSnapshots.set(queryHash, data)
+            // An optimistic mutation is holding this key — stash a reconciler
+            // that folds THIS snapshot into whatever the cache holds AT RELEASE
+            // time (the optimistic value), instead of clobbering it now with
+            // pre-server-apply data.
+            stashedReconcilers.set(queryHash, (cached) =>
+              reduce(incoming, cached as V | undefined)
+            )
             return
           }
-          // Later snapshot — push into the cache; observers react.
-          queryClient.setQueryData<T>(queryKey, data)
+          // Later snapshot — fold into the cache; observers react.
+          queryClient.setQueryData<V>(queryKey, (cached) =>
+            reduce(incoming, cached)
+          )
           return
         }
         hydrated = true
-        resolve(data)
+        resolve(reduce(incoming, undefined))
       },
       (error) => {
         teardownListener(queryHash)
@@ -160,11 +197,11 @@ export const streamIntoCache = <T>(
           // Post-hydration failure (e.g. permission revoked mid-session). Evict
           // the query so a future observer re-subscribes cleanly rather than
           // silently serving stale data behind a dead listener. Also drop any
-          // optimistic hold + stashed snapshot for this key: otherwise a later
-          // `holdOptimistic` release would `setQueryData` the stash back and
-          // resurrect the query we just evicted, behind this now-dead listener.
+          // optimistic hold + stashed reconciler for this key: otherwise a later
+          // `holdOptimistic` release would run the reconciler and resurrect the
+          // query we just evicted, behind this now-dead listener.
           optimisticHolds.delete(queryHash)
-          stashedSnapshots.delete(queryHash)
+          stashedReconcilers.delete(queryHash)
           queryClient.removeQueries({ queryKey, exact: true })
           return
         }
@@ -312,4 +349,241 @@ export function useCollectionQuery<T>(
       )
     },
   })
+}
+
+// ============================================================================
+// Infinite read (live first page + cursor-paginated tail)
+// ============================================================================
+
+/**
+ * Cache shape for an infinite collection: a live first page (`head`, replaced
+ * wholesale by the listener on every snapshot) plus append-only older pages
+ * (`tail`, grown by `loadMore`). Kept structured in the cache — rather than one
+ * pre-merged array — so the listener can refresh `head` without losing `tail`,
+ * and an optimistic write can patch a row in either tier. The merged, sorted,
+ * de-duplicated view consumers render is derived by `mergeHeadTail`.
+ */
+export interface InfiniteCollectionData<T> {
+  head: T[]
+  tail: T[]
+}
+
+/**
+ * Merge a live first page (`head`) with appended older pages (`tail`) into one
+ * sorted, de-duplicated list. Head wins on id collisions: a row that crossed the
+ * page boundary — a new arrival pushed it out of the live window into an
+ * already-fetched older page — appears once, carrying its freshest copy.
+ *
+ * Pure and exported for unit tests; this is the structural merge that replaced
+ * the retired seam-A collection-merge overlay. Optimism is no longer merged
+ * here — it is applied directly to `head`/`tail` in the cache, so this needs no
+ * pending-id arbitration.
+ */
+export function mergeHeadTail<T extends { id: string }>(
+  head: readonly T[],
+  tail: readonly T[],
+  sort?: (a: T, b: T) => number
+): T[] {
+  const seen = new Set<string>()
+  const merged: T[] = []
+  for (const row of head) {
+    if (seen.has(row.id)) continue
+    seen.add(row.id)
+    merged.push(row)
+  }
+  for (const row of tail) {
+    if (seen.has(row.id)) continue
+    seen.add(row.id)
+    merged.push(row)
+  }
+  if (sort) merged.sort(sort)
+  return merged
+}
+
+export interface InfiniteCollectionSource<T> {
+  /** Collection path — the stable portion of the cache key. */
+  path: string
+  /** Rows per page (the live first page and each `loadMore`). */
+  pageSize: number
+  /**
+   * Build the (constraint-applied) query for a page. `after` is null for the
+   * live first page and the cursor doc for each older page.
+   */
+  buildQuery: (after: QueryDocumentSnapshot<unknown> | null) => Query<unknown>
+  /** Map a snapshot doc to the row type (converter-independent). */
+  toRow: (id: string, data: Record<string, unknown>) => T
+  /** Sort for the merged `head ∪ tail` view. */
+  sort?: (a: T, b: T) => number
+  /** Disambiguator folded into the cache key (where/orderBy variants). */
+  params?: Record<string, unknown>
+}
+
+export interface UseInfiniteCollectionQueryReturn<T> {
+  /** Merged, sorted, de-duplicated rows (empty array before the first snapshot). */
+  data: ComputedRef<T[]>
+  isLoading: ComputedRef<boolean>
+  isLoadingMore: Ref<boolean>
+  hasMore: Ref<boolean>
+  loadMore: () => Promise<void>
+  /** The cache key — pass through `runWrite({ keys: [key.value] })`. */
+  key: ComputedRef<FirestoreQueryKey>
+  /** Current cache entry (or an empty one) — capture before an optimistic write. */
+  snapshot: () => InfiniteCollectionData<T>
+  /** Patch the cache entry — drive from `runWrite`'s `apply`/`rollback`. */
+  update: (
+    updater: (entry: InfiniteCollectionData<T>) => InfiniteCollectionData<T>
+  ) => void
+}
+
+/**
+ * Realtime infinite collection read: a live `onSnapshot` over the first page
+ * (new arrivals appear automatically) plus cursor-paginated older pages fetched
+ * on demand via `loadMore` (`getDocs`, static history). Both tiers live in ONE
+ * ref-counted cache entry, so optimism flows through the same `runWrite({ keys })`
+ * hold every other store uses: `apply`/`rollback` patch the `{ head, tail }`
+ * entry via `update`, and the listener's interim snapshots are stashed (head-only)
+ * and reconciled on release.
+ *
+ * The cursor and `hasMore`/`isLoadingMore` flags are composable-local — a
+ * `QueryDocumentSnapshot` must never enter the deep-reactive cache, it breaks
+ * `startAfter` (assertion 0xb815) — and reset whenever the source identity
+ * changes (e.g. user switch). The listener owns the cursor only while no older
+ * pages are loaded; once `loadMore` advances past page 1 it owns its own cursor.
+ */
+export function useInfiniteCollectionQuery<T extends { id: string }>(
+  source: MaybeRefOrGetter<InfiniteCollectionSource<T> | null | undefined>,
+  options: UseFirestoreQueryOptions = {}
+): UseInfiniteCollectionQueryReturn<T> {
+  const resolved = computed(() => toValue(source) ?? null)
+  const enabled = computed(
+    () => resolved.value !== null && toValue(options.enabled ?? true)
+  )
+  const queryKey = computed<FirestoreQueryKey>(() =>
+    resolved.value
+      ? queryKeys.list(resolved.value.path, resolved.value.params)
+      : queryKeys.list("__idle__")
+  )
+
+  const cursor = shallowRef<QueryDocumentSnapshot<unknown> | null>(null)
+  const hasMore = ref(true)
+  const isLoadingMore = ref(false)
+
+  // Reset pagination when the source identity changes (user switch / sign-out);
+  // TanStack garbage-collects the old cache entry and tears its listener down.
+  watch(
+    () =>
+      resolved.value
+        ? `${resolved.value.path}|${JSON.stringify(resolved.value.params ?? null)}`
+        : null,
+    () => {
+      cursor.value = null
+      hasMore.value = true
+      isLoadingMore.value = false
+    }
+  )
+
+  const query = useQuery<InfiniteCollectionData<T>, FirestoreError>({
+    queryKey,
+    enabled,
+    queryFn: () => {
+      const current = resolved.value
+      if (!current) {
+        throw new Error(
+          "useInfiniteCollectionQuery: queryFn ran without a source"
+        )
+      }
+      const key = queryKeys.list(current.path, current.params)
+      return streamIntoCache<T[], InfiniteCollectionData<T>>(
+        key,
+        (onNext, onError) =>
+          onSnapshot(
+            current.buildQuery(null),
+            (snap) => {
+              const head = snap.docs.map((entry) =>
+                current.toRow(entry.id, entry.data() as Record<string, unknown>)
+              )
+              // The live listener owns the cursor/hasMore ONLY while no older
+              // pages are loaded — once `loadMore` advances past page 1, its
+              // cursor is further along and a live emission must not rewind it.
+              const tailEmpty =
+                (queryClient.getQueryData<InfiniteCollectionData<T>>(key)?.tail
+                  .length ?? 0) === 0
+              if (tailEmpty) {
+                if (snap.size === current.pageSize) {
+                  cursor.value = snap.docs[snap.size - 1] ?? null
+                  hasMore.value = true
+                } else {
+                  cursor.value = null
+                  hasMore.value = false
+                }
+              }
+              onNext(head)
+            },
+            onError
+          ),
+        (head, cached) => ({ head, tail: cached?.tail ?? [] })
+      )
+    },
+  })
+
+  const data = computed<T[]>(() => {
+    const entry = query.data.value
+    if (!entry) return []
+    return mergeHeadTail(entry.head, entry.tail, resolved.value?.sort)
+  })
+
+  const snapshot = (): InfiniteCollectionData<T> =>
+    queryClient.getQueryData<InfiniteCollectionData<T>>(queryKey.value) ?? {
+      head: [],
+      tail: [],
+    }
+
+  const update = (
+    updater: (entry: InfiniteCollectionData<T>) => InfiniteCollectionData<T>
+  ): void => {
+    queryClient.setQueryData<InfiniteCollectionData<T>>(
+      queryKey.value,
+      (prev) => updater(prev ?? { head: [], tail: [] })
+    )
+  }
+
+  const loadMore = async (): Promise<void> => {
+    const current = resolved.value
+    if (!current) return
+    if (isLoadingMore.value) return
+    if (!hasMore.value) return
+    const after = cursor.value
+    if (!after) return
+
+    isLoadingMore.value = true
+    try {
+      const snap = await getDocs(current.buildQuery(after))
+      const next = snap.docs.map((entry) =>
+        current.toRow(entry.id, entry.data() as Record<string, unknown>)
+      )
+      update((entry) => ({ head: entry.head, tail: [...entry.tail, ...next] }))
+      if (snap.size < current.pageSize) {
+        hasMore.value = false
+        cursor.value = null
+      } else {
+        cursor.value = snap.docs[snap.size - 1] ?? null
+      }
+    } catch (error) {
+      // Don't latch hasMore=false on a transient error — let the user retry.
+      console.error("useInfiniteCollectionQuery: loadMore failed", error)
+    } finally {
+      isLoadingMore.value = false
+    }
+  }
+
+  return {
+    data,
+    isLoading: computed(() => query.isLoading.value),
+    isLoadingMore,
+    hasMore,
+    loadMore,
+    key: queryKey,
+    snapshot,
+    update,
+  }
 }

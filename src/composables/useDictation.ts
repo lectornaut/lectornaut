@@ -1,4 +1,4 @@
-import { useSettingsStore } from "@/stores/settingsStore"
+import { useAppPreferencesStore } from "@/stores/appPreferencesStore"
 import { useSpeechRecognition } from "@vueuse/core"
 import { storeToRefs } from "pinia"
 import { computed, watch, type Ref } from "vue"
@@ -42,7 +42,7 @@ export function useDictation(target: Ref<string>) {
   // Dictation can be switched off in Preferences. Folding that into
   // `isAvailable` lets the mic button hide when it's unsupported OR disabled,
   // and the `startDictation` guard stops it being triggered another way.
-  const { dictationEnabled } = storeToRefs(useSettingsStore())
+  const { dictationEnabled } = storeToRefs(useAppPreferencesStore())
   const isAvailable = computed(
     () => isSupported.value && dictationEnabled.value
   )

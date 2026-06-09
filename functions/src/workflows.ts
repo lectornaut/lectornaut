@@ -25,6 +25,7 @@
  * (the picker/automations UI) and admin-only reads for runs.
  */
 
+import { FieldValue, Timestamp } from "firebase-admin/firestore"
 import * as logger from "firebase-functions/logger"
 import {
   onDocumentCreated,
@@ -34,13 +35,10 @@ import { HttpsError, onCall } from "firebase-functions/v2/https"
 import { onSchedule } from "firebase-functions/v2/scheduler"
 import { z } from "zod"
 import { DEFAULT_AGENT_ID } from "./agents.js"
+import { requireVerifiedAuth } from "./auth.js"
 import { assertAdminRole as assertTeamAdminRole } from "./authGuards.js"
 import { estimateTokenCostUsd } from "./billingConfig.js"
-import {
-  getMembershipRoleOrNull,
-  requireVerifiedAuth,
-  runHeadlessAgentTurn,
-} from "./bot.js"
+import { getMembershipRoleOrNull, runHeadlessAgentTurn } from "./bot.js"
 import { loadTeamAgentConfig } from "./botAgentConfig.js"
 import { CONTEXT_NODE_MAX } from "./botContext.js"
 import {
@@ -49,7 +47,12 @@ import {
   type ResolvedNodeContext,
 } from "./botNodeTools.js"
 import { BUILT_IN_AGENTS_BY_ID, isBuiltInAgentId } from "./builtInAgents.js"
-import { admin, db } from "./firebase.js"
+import {
+  NODE_SCOPES,
+  WORKFLOW_UPDATE_MODES,
+  type WorkflowRunStatus,
+} from "./domain.js"
+import { db } from "./firebase.js"
 import { makeEventIdempotencyKey, runIdempotentEvent } from "./idempotency.js"
 import { sendNotificationToMany } from "./notifier.js"
 import {
@@ -65,11 +68,9 @@ import {
   postmarkApiKey,
 } from "./secrets.js"
 import { getTeamAdminsAndOwners } from "./teams.js"
+import type { WorkspaceNodeScope } from "./types.js"
 import { assertWorkflowAutomaticEntitled } from "./usageMetering.js"
 import { getWorkflowPreset } from "./workflowPresets.js"
-
-const FieldValue = admin.firestore.FieldValue
-const Timestamp = admin.firestore.Timestamp
 
 /** Max scheduled workflows enqueued per dispatcher tick (fits one 300s run). */
 const DISPATCH_BATCH = 200
@@ -105,13 +106,13 @@ const scheduleSchema = z.discriminatedUnion("type", [
 ])
 type WorkflowSchedule = z.infer<typeof scheduleSchema>
 
-const updateModeSchema = z.enum(["automatic", "require_review"])
+const updateModeSchema = z.enum(WORKFLOW_UPDATE_MODES)
 
 const triggerSchema = z.discriminatedUnion("type", [
   z.object({ type: z.literal("schedule"), schedule: scheduleSchema }),
   z.object({
     type: z.literal("event"),
-    scope: z.enum(["code", "write"]),
+    scope: z.enum(NODE_SCOPES),
     // Coalesce a burst of edits: enqueue at most one run per window.
     debounceMinutes: z.number().int().min(0).max(1440).optional(),
   }),
@@ -120,7 +121,7 @@ const triggerSchema = z.discriminatedUnion("type", [
 type WorkflowTrigger = z.infer<typeof triggerSchema>
 
 const nodeRefSchema = z.object({
-  scope: z.enum(["code", "write"]),
+  scope: z.enum(NODE_SCOPES),
   nodeId: z.string().min(1),
 })
 
@@ -133,7 +134,7 @@ const workflowDraftSchema = z.object({
   agentId: z.string().min(1),
   workspaceId: z.string().min(1),
   /** Tree the workflow may edit; null = the workspace's `write` tree. */
-  targetScope: z.enum(["code", "write"]).nullish(),
+  targetScope: z.enum(NODE_SCOPES).nullish(),
   /** The procedure the agent follows each run. */
   instructions: z.string().min(1).max(8000),
   /** Optional supplementary instructions appended to `instructions`. */
@@ -168,27 +169,17 @@ interface WorkflowDoc {
   presetKey: string | null
   agentId: string
   workspaceId: string
-  targetScope: "code" | "write" | null
+  targetScope: WorkspaceNodeScope | null
   instructions: string
   additionalPrompt: string
   trigger: WorkflowTrigger
-  contextNodes: { scope: "code" | "write"; nodeId: string }[]
+  contextNodes: { scope: WorkspaceNodeScope; nodeId: string }[]
   updateMode: "automatic" | "require_review"
   enabled: boolean
-  archivedAt: admin.firestore.Timestamp | null
+  archivedAt: Timestamp | null
 }
 
-type RunStatus =
-  | "queued"
-  | "running"
-  | "success" // automatic run that applied its edits
-  | "awaiting_review" // require_review run: changeset staged, pending approval
-  | "applied" // require_review run: approved + applied (all changes)
-  | "partially_applied" // require_review run: approved, some changes failed
-  | "cancelled" // require_review run: rejected
-  | "error"
-  | "blocked" // over budget / not entitled
-  | "skipped" // workflow disabled or removed before it ran
+type RunStatus = WorkflowRunStatus
 
 // ─── Paths + auth helpers ─────────────────────────────────────────────────────
 
@@ -342,7 +333,7 @@ function nextRunAtField(
   enabled: boolean,
   trigger: WorkflowTrigger,
   nowMs: number
-): admin.firestore.Timestamp | admin.firestore.FieldValue {
+): Timestamp | FieldValue {
   if (enabled && trigger.type === "schedule") {
     return Timestamp.fromMillis(computeNextRunMs(trigger.schedule, nowMs))
   }
@@ -378,7 +369,7 @@ async function enqueueWorkflowRun(params: {
    * `contextNodes` so the agent is grounded in the exact content that changed
    * (schedule/manual runs pass none — they have no triggering node).
    */
-  triggerNode?: { scope: "code" | "write"; nodeId: string } | null
+  triggerNode?: { scope: WorkspaceNodeScope; nodeId: string } | null
 }): Promise<string> {
   const wf = params.workflow
   const runRef = db
@@ -1117,7 +1108,7 @@ export const dispatchScheduledWorkflows = onSchedule(
  * include the embed-on-write trigger's writeback), and writes authored by an
  * agent member (so an agent's own edit can't retrigger workflows).
  */
-function makeWorkflowTrigger(scope: "code" | "write") {
+function makeWorkflowTrigger(scope: WorkspaceNodeScope) {
   return onDocumentWritten(
     {
       document: `teams/{teamId}/workspaces/{workspaceId}/${scope}/{nodeId}`,
@@ -1170,9 +1161,7 @@ function makeWorkflowTrigger(scope: "code" | "write") {
         if (debounceMs > 0) {
           const last =
             (
-              doc.data().lastEventEnqueuedAt as
-                | admin.firestore.Timestamp
-                | undefined
+              doc.data().lastEventEnqueuedAt as Timestamp | undefined
             )?.toMillis() ?? 0
           if (Date.now() - last < debounceMs) continue
         }
@@ -1483,7 +1472,7 @@ export const executeWorkflowRun = onDocumentCreated(
         const updateMode: "automatic" | "require_review" =
           run.updateMode === "automatic" ? "automatic" : "require_review"
         const targetScope =
-          (run.targetScope as "code" | "write" | null | undefined) ?? null
+          (run.targetScope as WorkspaceNodeScope | null | undefined) ?? null
 
         // Entitlement gate for AUTO-APPLY runs (the brief's hard rule): an
         // automatic run mutates content unattended, so it additionally

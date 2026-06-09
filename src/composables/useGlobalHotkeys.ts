@@ -6,7 +6,7 @@ import {
   getShortcutId,
 } from "@/helpers/shortcuts"
 import { emitter } from "@/modules/mitt"
-import { useSettingsStore } from "@/stores/settingsStore"
+import { useShortcutsStore } from "@/stores/shortcutsStore"
 import { useHotkeys, type Hotkey } from "@tanstack/vue-hotkeys"
 import { storeToRefs } from "pinia"
 import { computed } from "vue"
@@ -27,7 +27,7 @@ import { computed } from "vue"
  *   `useHotkeyRegistrations()`.
  */
 export const useGlobalHotkeys = () => {
-  const { shortcutOverrides } = storeToRefs(useSettingsStore())
+  const { shortcutOverrides } = storeToRefs(useShortcutsStore())
 
   const definitions = computed(() =>
     getFilteredShortcuts({ context: "hotkeys", isDesktop: isTauri.value })

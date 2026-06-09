@@ -68,7 +68,8 @@ const isOwnMessage = (message: BotChatMessage): boolean =>
 // ── Copy / Reply (context menu actions) ──────────────────────────────────
 //
 // Both actions read `message.content` — for agent turns this is the
-// running text concatenation built up in `useBotChat.appendText`, i.e.
+// running text concatenation built up by the stream reducer
+// (`applyStreamChunk` in `@/helpers/botChatStream`), i.e.
 // the prose without tool-call payloads. That's the natural plain-text
 // view of the bubble: copying or quoting it gives the user the words,
 // not the JSON the model emitted to fetch a file. Tool segments stay

@@ -7,7 +7,12 @@ import {
   provideFileTreeSelection,
   type FileTreeSelectionMode,
 } from "@/composables/useFileTreeSelection"
-import { IconChevronRight, IconFilePlus, IconFolderPlus } from "@/data/icons"
+import {
+  IconChevronRight,
+  IconFilePlus,
+  IconFolderPlus,
+  IconFolder,
+} from "@/data/icons"
 import { showErrorToast, showSuccessToast } from "@/helpers/toast"
 import { useFileTreeStore } from "@/stores/fileTreeStore"
 import {
@@ -500,42 +505,50 @@ onBeforeUnmount(() => {
 
 <template>
   <SidebarGroup>
-    <Collapsible default-open class="group/collapsible">
-      <SidebarGroupLabel as-child>
+    <Collapsible default-open class="group/collapsible grid gap-2">
+      <SidebarGroupLabel
+        as-child
+        class="h-auto w-full justify-between p-0 pl-2"
+      >
         <CollapsibleTrigger>
-          {{ t("fileTree.documents") }}
-          <IconChevronRight
-            class="mr-auto ml-1 size-3! transition-transform group-data-[state=open]/collapsible:rotate-90"
-          />
+          <span class="flex items-center gap-2">
+            <IconFolder />
+            {{ t("fileTree.documents") }}
+            <IconChevronRight
+              class="transition-transform group-data-[state=open]/collapsible:rotate-90"
+            />
+          </span>
           <TooltipProvider>
             <ButtonGroup>
-              <ButtonGroup>
-                <Tooltip>
-                  <TooltipTrigger as-child>
-                    <InputGroupButton
-                      size="icon-xs"
-                      @click.stop="openCreateDialog('folder', ROOT_PARENT_ID)"
-                    >
-                      <IconFolderPlus />
-                    </InputGroupButton>
-                  </TooltipTrigger>
-                  <TooltipContent>{{ t("fileTree.newFolder") }}</TooltipContent>
-                </Tooltip>
-              </ButtonGroup>
-              <ButtonGroup>
-                <Tooltip>
-                  <TooltipTrigger as-child>
-                    <InputGroupButton
-                      size="icon-xs"
-                      @click.stop="openCreateDialog('file', ROOT_PARENT_ID)"
-                    >
-                      <IconFilePlus />
-                    </InputGroupButton>
-                  </TooltipTrigger>
-                  <TooltipContent>{{ t("fileTree.newFile") }}</TooltipContent>
-                </Tooltip>
-              </ButtonGroup>
+              <!-- <ButtonGroup> -->
+              <Tooltip>
+                <TooltipTrigger as-child>
+                  <Button
+                    size="icon"
+                    variant="outline"
+                    @click.stop="openCreateDialog('folder', ROOT_PARENT_ID)"
+                  >
+                    <IconFolderPlus />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>{{ t("fileTree.newFolder") }}</TooltipContent>
+              </Tooltip>
+              <!-- </ButtonGroup>
+              <ButtonGroup> -->
+              <Tooltip>
+                <TooltipTrigger as-child>
+                  <Button
+                    size="icon"
+                    variant="outline"
+                    @click.stop="openCreateDialog('file', ROOT_PARENT_ID)"
+                  >
+                    <IconFilePlus />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>{{ t("fileTree.newFile") }}</TooltipContent>
+              </Tooltip>
             </ButtonGroup>
+            <!-- </ButtonGroup> -->
           </TooltipProvider>
         </CollapsibleTrigger>
       </SidebarGroupLabel>

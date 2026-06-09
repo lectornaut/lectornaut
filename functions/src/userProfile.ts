@@ -1,15 +1,13 @@
+import { FieldValue } from "firebase-admin/firestore"
 import * as logger from "firebase-functions/logger"
 import {
   onDocumentCreated,
   onDocumentUpdated,
 } from "firebase-functions/v2/firestore"
-import {
-  CallableRequest,
-  HttpsError,
-  onCall,
-} from "firebase-functions/v2/https"
+import { HttpsError, onCall } from "firebase-functions/v2/https"
+import { assertAuthenticated } from "./auth.js"
 import { COST_BUDGET } from "./costBudget.js"
-import { admin, auth, db } from "./firebase.js"
+import { auth, db } from "./firebase.js"
 import { CALLABLE_OPTS, TRIGGER_OPTS } from "./runtimeConfig.js"
 
 const USERNAME_MIN_LENGTH = 3
@@ -143,19 +141,6 @@ type UsernameClaimData = {
   teamId?: string
 }
 
-function assertAuthenticated(
-  request: CallableRequest
-): asserts request is CallableRequest & {
-  auth: NonNullable<CallableRequest["auth"]>
-} {
-  if (!request.auth) {
-    throw new HttpsError(
-      "unauthenticated",
-      "The function must be called while authenticated."
-    )
-  }
-}
-
 function normalizeUsername(username: string): string {
   let normalized = username.trim().toLowerCase()
   if (normalized.startsWith("@")) {
@@ -287,7 +272,7 @@ function buildUserBaseFields(
   if (!userSnap.exists) {
     fields.username = null
     fields.isPublic = false
-    fields.createdAt = admin.firestore.FieldValue.serverTimestamp()
+    fields.createdAt = FieldValue.serverTimestamp()
     return fields
   }
 
@@ -313,7 +298,7 @@ function buildMembershipUserPatch(
     "user.photoURL": nullableString(userData.photoURL),
     "user.username": nullableString(userData.username),
     "user.isPublic": userData.isPublic === true,
-    updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+    updatedAt: FieldValue.serverTimestamp(),
   }
 
   if (userData.createdAt !== undefined) {
@@ -378,7 +363,7 @@ export const syncCurrentUserAccountProfile = onCall(
         {
           ...buildUserBaseFields(uid, userSnap),
           ...authProfile,
-          updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+          updatedAt: FieldValue.serverTimestamp(),
         },
         { merge: true }
       )
@@ -529,7 +514,7 @@ export const updateOwnUserProfile = onCall(
       const merge: Record<string, unknown> = {
         ...buildUserBaseFields(uid, userSnap),
         ...authProfile,
-        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+        updatedAt: FieldValue.serverTimestamp(),
       }
       if (payload.displayName !== undefined) {
         merge.displayName = payload.displayName
@@ -652,9 +637,8 @@ export const claimUsername = onCall({ ...CALLABLE_OPTS }, async (request) => {
         entityType: "user",
         entityId: uid,
         createdAt: usernameSnap.exists
-          ? (usernameSnap.data()?.createdAt ??
-            admin.firestore.FieldValue.serverTimestamp())
-          : admin.firestore.FieldValue.serverTimestamp(),
+          ? (usernameSnap.data()?.createdAt ?? FieldValue.serverTimestamp())
+          : FieldValue.serverTimestamp(),
       },
       { merge: true }
     )
@@ -665,7 +649,7 @@ export const claimUsername = onCall({ ...CALLABLE_OPTS }, async (request) => {
         ...buildUserBaseFields(uid, userSnap),
         ...authProfile,
         username: normalized,
-        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+        updatedAt: FieldValue.serverTimestamp(),
       },
       { merge: true }
     )
@@ -718,7 +702,7 @@ export const releaseUsername = onCall({ ...CALLABLE_OPTS }, async (request) => {
         {
           username: null,
           isPublic: false,
-          updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+          updatedAt: FieldValue.serverTimestamp(),
         },
         { merge: true }
       )
@@ -763,7 +747,7 @@ export const updateUserProfileVisibility = onCall(
           ...buildUserBaseFields(uid, userSnap),
           ...authProfile,
           isPublic,
-          updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+          updatedAt: FieldValue.serverTimestamp(),
         },
         { merge: true }
       )

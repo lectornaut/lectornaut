@@ -1,22 +1,22 @@
 <script lang="ts" setup>
 import { IconBellRing } from "@/data/icons"
-import { useSettingsStore } from "@/stores/settingsStore"
+import { useNotificationSettingsStore } from "@/stores/notificationSettingsStore"
 import { storeToRefs } from "pinia"
 
 const { t } = useI18n()
 
-const settingsStore = useSettingsStore()
+const notificationSettingsStore = useNotificationSettingsStore()
 const {
   notificationSettings,
   isUpdatingNotifications,
   isSendingTestNotification,
-} = storeToRefs(settingsStore)
+} = storeToRefs(notificationSettingsStore)
 const {
   updateNotificationCategory,
   updateNotificationFrequency,
   updateNotificationChannel,
   sendTestNotification,
-} = settingsStore
+} = notificationSettingsStore
 
 const toBoolean = (value: unknown): boolean => value === true
 

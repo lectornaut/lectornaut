@@ -78,7 +78,7 @@ const tooltipLabel = computed(() => {
             )
           "
         >
-          <component :is="itemConfig.icon" v-if="itemConfig?.icon" />
+          <Component :is="itemConfig.icon" v-if="itemConfig?.icon" />
           <template v-else-if="!hideIndicator">
             <div
               :class="

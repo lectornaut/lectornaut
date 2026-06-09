@@ -19,7 +19,7 @@ const { t } = useI18n()
 </script>
 
 <template>
-  <Teleport defer to="#left-sidebar">
+  <SidebarSlot side="left">
     <Sidebar collapsible="none" class="w-full">
       <Empty>
         <EmptyHeader>
@@ -41,9 +41,9 @@ const { t } = useI18n()
         </EmptyContent>
       </Empty>
     </Sidebar>
-  </Teleport>
+  </SidebarSlot>
   <EmptyTab />
-  <Teleport defer to="#right-sidebar">
+  <SidebarSlot side="right">
     <Sidebar collapsible="none" class="w-full">
       <Empty>
         <EmptyHeader>
@@ -65,5 +65,5 @@ const { t } = useI18n()
         </EmptyContent>
       </Empty>
     </Sidebar>
-  </Teleport>
+  </SidebarSlot>
 </template>

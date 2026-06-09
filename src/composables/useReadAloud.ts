@@ -1,4 +1,4 @@
-import { useSettingsStore } from "@/stores/settingsStore"
+import { useAppPreferencesStore } from "@/stores/appPreferencesStore"
 import { useSpeechSynthesis } from "@vueuse/core"
 import { storeToRefs } from "pinia"
 import { computed, onScopeDispose, ref, shallowRef } from "vue"
@@ -50,7 +50,7 @@ export function useReadAloud() {
   // Read-aloud can be switched off in Preferences. Fold that choice into the
   // availability flag the chat UI gates on, so turning it off hides the
   // control everywhere; the `readAloud` guard below stops any stray call.
-  const { readAloudEnabled } = storeToRefs(useSettingsStore())
+  const { readAloudEnabled } = storeToRefs(useAppPreferencesStore())
   const isAvailable = computed(
     () => isSupported.value && readAloudEnabled.value
   )

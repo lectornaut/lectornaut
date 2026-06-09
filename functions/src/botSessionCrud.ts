@@ -2,16 +2,16 @@
  * Bot session metadata callables — load, find-by-pinned-node, visibility,
  * rename, archive, delete.
  *
- * These are plain `onCall` endpoints (no Genkit streaming), gated by
- * `requireVerifiedAuth` + role checks. Each operates on a single
- * session doc at
+ * These are plain callables (no Genkit streaming). Each declares its outer ring
+ * through {@link defineCallable} — `auth: "verified"` + `appCheck: true` + a Zod
+ * `input` schema — so the handler writes only business logic. Each operates on a
+ * single session doc at
  *   teams/{teamId}/workspaces/{workspaceId}/botSessions/{sessionId}
  *
- * Extracted from `bot.ts` so that file can focus on the chat-flow
- * orchestration (streaming, agent dispatch, tool calling). The CRUD
- * callables share auth helpers + `readSessionDoc` + `pinnedNodeKey`
- * with the chat flow but don't touch its streaming machinery — clean
- * extraction.
+ * Extracted from `bot.ts` so that file can focus on the chat-flow orchestration
+ * (streaming, agent dispatch, tool calling). The CRUD callables share
+ * `readSessionDoc` + `pinnedNodeKey` with the chat flow but don't touch its
+ * streaming machinery — clean extraction.
  *
  * Permission model:
  *   - load: owner OR (visibility === "shared" AND team member)
@@ -20,41 +20,31 @@
  *   - rename / archive / delete: owner OR team admin (`assertCanMutate`)
  */
 
-import {
-  HttpsError,
-  onCall,
-  type CallableRequest,
-} from "firebase-functions/v2/https"
+import { FieldValue } from "firebase-admin/firestore"
+import { HttpsError } from "firebase-functions/v2/https"
+import { z } from "zod"
 import {
   extractMessagesFromSessionData,
   getMembershipRole,
   pinnedNodeKey,
   readSessionDoc,
-  requireVerifiedAuth,
   type ChatMessage,
   type SessionVisibility,
 } from "./bot.js"
-import { admin, db } from "./firebase.js"
+import { defineCallable } from "./defineCallable.js"
+import { db } from "./firebase.js"
 import { isAdminRole } from "./permissions.js"
-import { CALLABLE_OPTS } from "./runtimeConfig.js"
 
-// `AuthData` isn't re-exported from `firebase-functions/v2/https`, so derive
-// it from `CallableRequest["auth"]`. Currently unused inside this file —
-// the helpers we import already narrow auth for us — but kept here for
-// parity with the other callables files in case a future CRUD endpoint
-// needs to introspect auth fields directly.
-type _AuthData = NonNullable<CallableRequest["auth"]>
-void (null as unknown as _AuthData)
+/** The three-part address every session callable needs to resolve one doc. */
+const sessionTargetSchema = z.object({
+  teamId: z.string().min(1),
+  workspaceId: z.string().min(1),
+  sessionId: z.string().min(1),
+})
 
 // ===========================================================================
 // Read: loadBotSession
 // ===========================================================================
-
-interface LoadBotSessionRequest {
-  teamId: string
-  workspaceId: string
-  sessionId: string
-}
 
 interface LoadBotSessionResponse {
   sessionId: string
@@ -68,25 +58,13 @@ interface LoadBotSessionResponse {
  * conversation. Allowed when the caller is the owner OR the session's
  * visibility is "shared" and the caller is a team member.
  */
-export const loadBotSession = onCall<LoadBotSessionRequest>(
-  {
-    ...CALLABLE_OPTS,
-    enforceAppCheck: true,
-  },
-  async (request): Promise<LoadBotSessionResponse> => {
-    const auth = requireVerifiedAuth(request.auth)
-
-    const { teamId, workspaceId, sessionId } = request.data ?? {}
-
-    if (typeof teamId !== "string" || !teamId) {
-      throw new HttpsError("invalid-argument", "teamId is required.")
-    }
-    if (typeof workspaceId !== "string" || !workspaceId) {
-      throw new HttpsError("invalid-argument", "workspaceId is required.")
-    }
-    if (typeof sessionId !== "string" || !sessionId) {
-      throw new HttpsError("invalid-argument", "sessionId is required.")
-    }
+export const loadBotSession = defineCallable({
+  name: "loadBotSession",
+  auth: "verified",
+  appCheck: true,
+  input: sessionTargetSchema,
+  handler: async ({ auth, input }): Promise<LoadBotSessionResponse> => {
+    const { teamId, workspaceId, sessionId } = input
 
     await getMembershipRole(teamId, auth.uid)
 
@@ -106,8 +84,8 @@ export const loadBotSession = onCall<LoadBotSessionRequest>(
 
     const messages = extractMessagesFromSessionData(existing.data)
     return { sessionId, messages }
-  }
-)
+  },
+})
 
 // ===========================================================================
 // findBotSessionByPinnedNode — resolve the caller's chat that's pinned to
@@ -121,75 +99,50 @@ export const loadBotSession = onCall<LoadBotSessionRequest>(
 // session exists yet; the next `sendBotMessage` will create one with the
 // matching `pinnedNode`.
 
-interface FindBotSessionByPinnedNodeRequest {
-  teamId: string
-  workspaceId: string
-  scope: "code" | "write"
-  nodeId: string
-}
-
 interface FindBotSessionByPinnedNodeResponse {
   sessionId: string | null
 }
 
-export const findBotSessionByPinnedNode =
-  onCall<FindBotSessionByPinnedNodeRequest>(
-    {
-      ...CALLABLE_OPTS,
-      enforceAppCheck: true,
-    },
-    async (request): Promise<FindBotSessionByPinnedNodeResponse> => {
-      const auth = requireVerifiedAuth(request.auth)
-      const { teamId, workspaceId, scope, nodeId } = request.data ?? {}
+export const findBotSessionByPinnedNode = defineCallable({
+  name: "findBotSessionByPinnedNode",
+  auth: "verified",
+  appCheck: true,
+  input: z.object({
+    teamId: z.string().min(1),
+    workspaceId: z.string().min(1),
+    scope: z.enum(["code", "write"]),
+    nodeId: z.string().min(1),
+  }),
+  handler: async ({
+    auth,
+    input,
+  }): Promise<FindBotSessionByPinnedNodeResponse> => {
+    const { teamId, workspaceId, scope, nodeId } = input
 
-      if (typeof teamId !== "string" || !teamId) {
-        throw new HttpsError("invalid-argument", "teamId is required.")
-      }
-      if (typeof workspaceId !== "string" || !workspaceId) {
-        throw new HttpsError("invalid-argument", "workspaceId is required.")
-      }
-      if (scope !== "code" && scope !== "write") {
-        throw new HttpsError(
-          "invalid-argument",
-          'scope must be "code" or "write".'
-        )
-      }
-      if (typeof nodeId !== "string" || !nodeId) {
-        throw new HttpsError("invalid-argument", "nodeId is required.")
-      }
+    // Membership gate — non-members shouldn't even know whether the session
+    // exists. We don't widen access for shared sessions here: the Bot tab is a
+    // per-user "ask about this node" view; collab chats live on the bot page's
+    // history sidebar.
+    await getMembershipRole(teamId, auth.uid)
 
-      // Membership gate — non-members shouldn't even know whether the
-      // session exists. We don't widen access for shared sessions here:
-      // the Bot tab is a per-user "ask about this node" view; collab
-      // chats live on the bot page's history sidebar.
-      await getMembershipRole(teamId, auth.uid)
+    // Multiple pinned chats can exist for the same (user, node) pair — each
+    // "new chat" click in the inspector creates another. We resume the most
+    // recently active one by default; the history list shows the rest.
+    const snap = await db
+      .collection(`teams/${teamId}/workspaces/${workspaceId}/botSessions`)
+      .where("pinnedNodeKey", "==", pinnedNodeKey(auth.uid, scope, nodeId))
+      .orderBy("updatedAt", "desc")
+      .limit(1)
+      .get()
 
-      // Multiple pinned chats can exist for the same (user, node) pair
-      // — each "new chat" click in the inspector creates another. We
-      // resume the most recently active one by default; the history
-      // list in the inspector shows the rest.
-      const snap = await db
-        .collection(`teams/${teamId}/workspaces/${workspaceId}/botSessions`)
-        .where("pinnedNodeKey", "==", pinnedNodeKey(auth.uid, scope, nodeId))
-        .orderBy("updatedAt", "desc")
-        .limit(1)
-        .get()
-
-      if (snap.empty) return { sessionId: null }
-      return { sessionId: snap.docs[0].id }
-    }
-  )
+    if (snap.empty) return { sessionId: null }
+    return { sessionId: snap.docs[0].id }
+  },
+})
 
 // ===========================================================================
 // Update visibility
 // ===========================================================================
-
-interface UpdateBotSessionVisibilityRequest {
-  teamId: string
-  workspaceId: string
-  sessionId: string
-  visibility: SessionVisibility
-}
 
 interface UpdateBotSessionVisibilityResponse {
   sessionId: string
@@ -197,79 +150,57 @@ interface UpdateBotSessionVisibilityResponse {
 }
 
 /**
- * Change a session's visibility. Only the session owner or a team admin
- * can change it. The "public" mode is rejected here — its read path is
- * not yet implemented and we don't want orphaned-public sessions accruing.
+ * Change a session's visibility. Only the session owner or a team admin can
+ * change it. The "public" mode is rejected by the schema — its read path is not
+ * yet implemented and we don't want orphaned-public sessions accruing.
  */
-export const updateBotSessionVisibility =
-  onCall<UpdateBotSessionVisibilityRequest>(
-    {
-      ...CALLABLE_OPTS,
-      enforceAppCheck: true,
-    },
-    async (request): Promise<UpdateBotSessionVisibilityResponse> => {
-      const auth = requireVerifiedAuth(request.auth)
+export const updateBotSessionVisibility = defineCallable({
+  name: "updateBotSessionVisibility",
+  auth: "verified",
+  appCheck: true,
+  input: sessionTargetSchema.extend({
+    visibility: z.enum(["private", "shared"]),
+  }),
+  handler: async ({
+    auth,
+    input,
+  }): Promise<UpdateBotSessionVisibilityResponse> => {
+    const { teamId, workspaceId, sessionId, visibility } = input
 
-      const { teamId, workspaceId, sessionId, visibility } = request.data ?? {}
-
-      if (typeof teamId !== "string" || !teamId) {
-        throw new HttpsError("invalid-argument", "teamId is required.")
-      }
-      if (typeof workspaceId !== "string" || !workspaceId) {
-        throw new HttpsError("invalid-argument", "workspaceId is required.")
-      }
-      if (typeof sessionId !== "string" || !sessionId) {
-        throw new HttpsError("invalid-argument", "sessionId is required.")
-      }
-      if (visibility !== "private" && visibility !== "shared") {
-        throw new HttpsError(
-          "invalid-argument",
-          'visibility must be "private" or "shared".'
-        )
-      }
-
-      const role = await getMembershipRole(teamId, auth.uid)
-      const existing = await readSessionDoc(teamId, workspaceId, sessionId)
-      if (!existing) {
-        throw new HttpsError("not-found", "Session not found.")
-      }
-
-      const isOwner = existing.ownerUid === auth.uid
-      const canChange = isOwner || isAdminRole(role)
-      if (!canChange) {
-        throw new HttpsError(
-          "permission-denied",
-          "Only the owner or a team admin can change visibility."
-        )
-      }
-
-      await db
-        .doc(
-          `teams/${teamId}/workspaces/${workspaceId}/botSessions/${sessionId}`
-        )
-        .set(
-          {
-            visibility,
-            updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-          },
-          { merge: true }
-        )
-
-      return { sessionId, visibility }
+    const role = await getMembershipRole(teamId, auth.uid)
+    const existing = await readSessionDoc(teamId, workspaceId, sessionId)
+    if (!existing) {
+      throw new HttpsError("not-found", "Session not found.")
     }
-  )
+
+    const isOwner = existing.ownerUid === auth.uid
+    const canChange = isOwner || isAdminRole(role)
+    if (!canChange) {
+      throw new HttpsError(
+        "permission-denied",
+        "Only the owner or a team admin can change visibility."
+      )
+    }
+
+    await db
+      .doc(`teams/${teamId}/workspaces/${workspaceId}/botSessions/${sessionId}`)
+      .set(
+        {
+          visibility,
+          updatedAt: FieldValue.serverTimestamp(),
+        },
+        { merge: true }
+      )
+
+    return { sessionId, visibility }
+  },
+})
 
 // ===========================================================================
 // CRUD: rename, archive, delete
 // ===========================================================================
 
 const TITLE_LIMIT = 120
-
-interface SessionMutationBase {
-  teamId: string
-  workspaceId: string
-  sessionId: string
-}
 
 /** Owner OR team admin can mutate (rename / archive / delete). */
 async function assertCanMutate(
@@ -292,33 +223,24 @@ async function assertCanMutate(
   }
 }
 
-interface RenameBotSessionRequest extends SessionMutationBase {
-  title: string
-}
 interface RenameBotSessionResponse {
   sessionId: string
   title: string
 }
 
-export const renameBotSession = onCall<RenameBotSessionRequest>(
-  { ...CALLABLE_OPTS, enforceAppCheck: true },
-  async (request): Promise<RenameBotSessionResponse> => {
-    const auth = requireVerifiedAuth(request.auth)
-    const { teamId, workspaceId, sessionId, title } = request.data ?? {}
-
-    if (typeof teamId !== "string" || !teamId) {
-      throw new HttpsError("invalid-argument", "teamId is required.")
-    }
-    if (typeof workspaceId !== "string" || !workspaceId) {
-      throw new HttpsError("invalid-argument", "workspaceId is required.")
-    }
-    if (typeof sessionId !== "string" || !sessionId) {
-      throw new HttpsError("invalid-argument", "sessionId is required.")
-    }
-    if (typeof title !== "string" || !title.trim()) {
+export const renameBotSession = defineCallable({
+  name: "renameBotSession",
+  auth: "verified",
+  appCheck: true,
+  // `title` is validated as a string here; the trimmed-non-empty check stays in
+  // the handler because the stored value is the trimmed-and-truncated form.
+  input: sessionTargetSchema.extend({ title: z.string() }),
+  handler: async ({ auth, input }): Promise<RenameBotSessionResponse> => {
+    const { teamId, workspaceId, sessionId } = input
+    const trimmed = input.title.trim().slice(0, TITLE_LIMIT)
+    if (!trimmed) {
       throw new HttpsError("invalid-argument", "title is required.")
     }
-    const trimmed = title.trim().slice(0, TITLE_LIMIT)
 
     await assertCanMutate(teamId, workspaceId, sessionId, auth.uid)
 
@@ -327,41 +249,27 @@ export const renameBotSession = onCall<RenameBotSessionRequest>(
       .set(
         {
           title: trimmed,
-          updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+          updatedAt: FieldValue.serverTimestamp(),
         },
         { merge: true }
       )
 
     return { sessionId, title: trimmed }
-  }
-)
+  },
+})
 
-interface ArchiveBotSessionRequest extends SessionMutationBase {
-  archived: boolean
-}
 interface ArchiveBotSessionResponse {
   sessionId: string
   archived: boolean
 }
 
-export const archiveBotSession = onCall<ArchiveBotSessionRequest>(
-  { ...CALLABLE_OPTS, enforceAppCheck: true },
-  async (request): Promise<ArchiveBotSessionResponse> => {
-    const auth = requireVerifiedAuth(request.auth)
-    const { teamId, workspaceId, sessionId, archived } = request.data ?? {}
-
-    if (typeof teamId !== "string" || !teamId) {
-      throw new HttpsError("invalid-argument", "teamId is required.")
-    }
-    if (typeof workspaceId !== "string" || !workspaceId) {
-      throw new HttpsError("invalid-argument", "workspaceId is required.")
-    }
-    if (typeof sessionId !== "string" || !sessionId) {
-      throw new HttpsError("invalid-argument", "sessionId is required.")
-    }
-    if (typeof archived !== "boolean") {
-      throw new HttpsError("invalid-argument", "archived must be a boolean.")
-    }
+export const archiveBotSession = defineCallable({
+  name: "archiveBotSession",
+  auth: "verified",
+  appCheck: true,
+  input: sessionTargetSchema.extend({ archived: z.boolean() }),
+  handler: async ({ auth, input }): Promise<ArchiveBotSessionResponse> => {
+    const { teamId, workspaceId, sessionId, archived } = input
 
     await assertCanMutate(teamId, workspaceId, sessionId, auth.uid)
 
@@ -369,39 +277,28 @@ export const archiveBotSession = onCall<ArchiveBotSessionRequest>(
       .doc(`teams/${teamId}/workspaces/${workspaceId}/botSessions/${sessionId}`)
       .set(
         {
-          archivedAt: archived
-            ? admin.firestore.FieldValue.serverTimestamp()
-            : null,
-          updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+          archivedAt: archived ? FieldValue.serverTimestamp() : null,
+          updatedAt: FieldValue.serverTimestamp(),
         },
         { merge: true }
       )
 
     return { sessionId, archived }
-  }
-)
+  },
+})
 
-type DeleteBotSessionRequest = SessionMutationBase
 interface DeleteBotSessionResponse {
   sessionId: string
   deleted: true
 }
 
-export const deleteBotSession = onCall<DeleteBotSessionRequest>(
-  { ...CALLABLE_OPTS, enforceAppCheck: true },
-  async (request): Promise<DeleteBotSessionResponse> => {
-    const auth = requireVerifiedAuth(request.auth)
-    const { teamId, workspaceId, sessionId } = request.data ?? {}
-
-    if (typeof teamId !== "string" || !teamId) {
-      throw new HttpsError("invalid-argument", "teamId is required.")
-    }
-    if (typeof workspaceId !== "string" || !workspaceId) {
-      throw new HttpsError("invalid-argument", "workspaceId is required.")
-    }
-    if (typeof sessionId !== "string" || !sessionId) {
-      throw new HttpsError("invalid-argument", "sessionId is required.")
-    }
+export const deleteBotSession = defineCallable({
+  name: "deleteBotSession",
+  auth: "verified",
+  appCheck: true,
+  input: sessionTargetSchema,
+  handler: async ({ auth, input }): Promise<DeleteBotSessionResponse> => {
+    const { teamId, workspaceId, sessionId } = input
 
     await assertCanMutate(teamId, workspaceId, sessionId, auth.uid)
 
@@ -411,5 +308,5 @@ export const deleteBotSession = onCall<DeleteBotSessionRequest>(
       .delete()
 
     return { sessionId, deleted: true }
-  }
-)
+  },
+})

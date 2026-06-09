@@ -32,16 +32,11 @@
  * of which side triggered the switch.
  */
 
+import type { BotChatMode } from "./domain.js"
 import type { TeamAgentDoc } from "./teamAgents.js"
 
-/**
- * Local mirror of `BOT_CHAT_MODES` from `bot.ts`. We re-declare instead
- * of importing to avoid a circular dependency (bot.ts imports from
- * agents.ts). Keep this in sync with the enum in `bot.ts` —
- * fortunately there are only ever a handful of modes so drift is easy
- * to catch in code review.
- */
-type BotChatMode = "auto" | "agent" | "manual"
+// `BotChatMode` comes from `@lectornaut/shared/domain` (the single source). The
+// old local mirror that dodged the bot.ts → agents.ts circular import is gone.
 
 /**
  * Sentinel id for "no custom agent — use the team default persona".

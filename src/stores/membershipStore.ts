@@ -51,7 +51,7 @@ import {
   getMembershipWorkspacesCollection,
   getTeamMembershipsCollection,
 } from "@/utils/firebase/firebase-helpers"
-import { useFirestoreMutation } from "@/utils/firebase/firebase-mutation"
+import { useRunWrite } from "@/utils/firebase/firebase-mutation"
 import {
   addPending,
   cloneState,
@@ -284,31 +284,17 @@ export const useMembershipStore = defineStore("memberships", () => {
   }
 
   // ── Optimistic mutation runner ──────────────────────────────────────────────
-  const membershipMutation = useFirestoreMutation<
-    {
-      keys: FirestoreQueryKey[]
-      apply: () => void
-      rollback: () => void
-      run: () => Promise<void>
-    },
-    void
-  >({
-    mutationFn: (vars) => vars.run(),
-    optimistic: (vars) => ({
-      keys: vars.keys,
-      apply: vars.apply,
-      rollback: vars.rollback,
-    }),
-    source: "membership",
-  })
-
+  // Thin positional adapter over the shared `runWrite` seam. Kept (rather than
+  // inlining at the 5 callsites) because membership's pending dance — batch
+  // `pendingKeys`, the `isSelf` extra on `pendingUserIds`, and the exported
+  // `markPending`/`clearPending` — is wired around the call by hand.
+  const runWrite = useRunWrite("membership")
   const runMembershipMutation = (
     keys: FirestoreQueryKey[],
     apply: () => void,
     rollback: () => void,
     run: () => Promise<void>
-  ): Promise<void> =>
-    membershipMutation.mutateAsync({ keys, apply, rollback, run })
+  ): Promise<void> => runWrite({ keys, apply, rollback, fn: run })
 
   function markPending(key: string) {
     addPending(pendingMembershipIds, key)

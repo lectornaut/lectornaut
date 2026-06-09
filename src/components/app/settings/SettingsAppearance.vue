@@ -20,15 +20,15 @@ import {
   sizes,
   themes,
 } from "@/helpers/defaults"
-import { useSettingsStore } from "@/stores/settingsStore"
+import { useThemeStore } from "@/stores/themeStore"
 import type { ThemeMode } from "@/types/settings"
 import { normalizeHexColor } from "@/utils/theme/customTheme"
 import { storeToRefs } from "pinia"
 
 const { t } = useI18n()
 
-const settingsStore = useSettingsStore()
-const { themeSettings } = storeToRefs(settingsStore)
+const themeStore = useThemeStore()
+const { themeSettings } = storeToRefs(themeStore)
 
 const selectedTheme = computed({
   get: () => themeSettings.value.mode,

@@ -78,9 +78,7 @@ onMounted(() => {
 </script>
 
 <template>
-  <div
-    class="bg-sidebar shadow-muted-foreground/5 mx-2 flex grow items-center gap-2 overflow-clip rounded-b-xl border-x border-b p-2 shadow-xs"
-  >
+  <div class="flex items-center gap-2 overflow-clip p-2">
     <div class="flex items-center gap-2">
       <TooltipProvider>
         <ButtonGroup>

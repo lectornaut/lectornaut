@@ -1,3 +1,4 @@
+import { NODE_SCOPES, NODE_TYPES } from "@lectornaut/shared/domain"
 import { z } from "zod"
 import { timestampSchema } from "./_primitives"
 
@@ -15,8 +16,8 @@ import { timestampSchema } from "./_primitives"
  * add a dedicated write schema in a later PR.
  */
 
-export const nodeTypeSchema = z.enum(["folder", "file"])
-export const workspaceNodeScopeSchema = z.enum(["code", "write"])
+export const nodeTypeSchema = z.enum(NODE_TYPES)
+export const workspaceNodeScopeSchema = z.enum(NODE_SCOPES)
 
 // Shared base object. `nodeBaseSchema` exposes it as a standalone schema
 // (for callers that want to validate the common fields only); the folder

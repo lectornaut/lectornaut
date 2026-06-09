@@ -1,13 +1,9 @@
 import Stripe from "stripe"
 
-const PLAN_ORDER = [
-  "personal",
-  "professional",
-  "business",
-  "enterprise",
-] as const
+import { BILLING_INTERVALS, BILLING_PLAN_KEYS } from "./domain.js"
 
-const BILLING_INTERVALS = ["month", "year"] as const
+const PLAN_ORDER = BILLING_PLAN_KEYS
+
 const PRICE_CACHE_TTL_MS = 10 * 60 * 1000
 
 export type PlanKey = (typeof PLAN_ORDER)[number]

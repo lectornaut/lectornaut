@@ -1,3 +1,4 @@
+import { FieldValue } from "firebase-admin/firestore"
 import * as logger from "firebase-functions/logger"
 import {
   onDocumentCreated,
@@ -10,7 +11,7 @@ import {
   beforeUserSignedIn,
 } from "firebase-functions/v2/identity"
 import { sendEmailInternal } from "./email.js"
-import { admin, auth, db } from "./firebase.js"
+import { auth, db } from "./firebase.js"
 import { makeEventIdempotencyKey, runIdempotentEvent } from "./idempotency.js"
 import { sendNotification, sendNotificationToMany } from "./notifier.js"
 import { REGION, TRIGGER_OPTS } from "./runtimeConfig.js"
@@ -678,8 +679,8 @@ export const onUserSignedIn = beforeUserSignedIn(
               name: teamData?.name || null,
               photoURL: teamData?.photoURL || null,
             },
-            createdAt: admin.firestore.FieldValue.serverTimestamp(),
-            updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+            createdAt: FieldValue.serverTimestamp(),
+            updatedAt: FieldValue.serverTimestamp(),
           })
 
           logger.info(

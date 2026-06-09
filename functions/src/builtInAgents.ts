@@ -27,8 +27,8 @@
  *     hydrated shape.
  */
 
+import { Timestamp } from "firebase-admin/firestore"
 import { DEFAULT_AGENT_ID } from "./agents.js"
-import { admin } from "./firebase.js"
 import type { TeamAgentDoc } from "./teamAgents.js"
 
 interface TeamAgentToolToggles {
@@ -264,7 +264,7 @@ export function hydrateBuiltInAgent(
   teamId: string,
   definition: BuiltInAgentDefinition
 ): TeamAgentDoc {
-  const now = admin.firestore.Timestamp.now()
+  const now = Timestamp.now()
   return {
     id: definition.id,
     teamId,

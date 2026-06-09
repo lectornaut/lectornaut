@@ -28,7 +28,7 @@ import {
   type ShortcutCategory,
 } from "@/helpers/shortcuts"
 import { emitter } from "@/modules/mitt"
-import { useSettingsStore } from "@/stores/settingsStore"
+import { useShortcutsStore } from "@/stores/shortcutsStore"
 import Fuse from "fuse.js"
 import { storeToRefs } from "pinia"
 import { toast } from "vue-sonner"
@@ -36,14 +36,14 @@ import { toast } from "vue-sonner"
 const { t } = useI18n()
 const isFullscreen = useIsFullscreen()
 
-const settingsStore = useSettingsStore()
+const shortcutsStore = useShortcutsStore()
 const { shortcutOverrides, hasCustomShortcuts, isShortcutsLoading } =
-  storeToRefs(settingsStore)
+  storeToRefs(shortcutsStore)
 const {
   updateShortcutOverride,
   resetShortcutOverride,
   resetAllShortcutOverrides,
-} = settingsStore
+} = shortcutsStore
 
 const openShortcuts = ref(false)
 

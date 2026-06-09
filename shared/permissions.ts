@@ -301,3 +301,200 @@ export function isAdminRole(role: IMembershipRole | null | undefined): boolean {
     !!role && (RoleGroups.ADMINS as readonly IMembershipRole[]).includes(role)
   )
 }
+
+// ============================================================================
+// Capability → Scope Policy
+// ============================================================================
+
+/**
+ * The scopes a capability is evaluated at, IN ORDER. The order is load-bearing:
+ * `resolveAuthorization` walks the list and short-circuits on the first scope
+ * that grants, resolving workspace **participation** (the override read that
+ * enforces exclusion and folds in group elevation) only when it reaches a
+ * `"workspace"` entry.
+ *
+ * That laziness is what makes `["team", "workspace"]` correct for entity edits:
+ * a team admin EXCLUDED from a workspace passes at `"team"` and never trips the
+ * exclusion, while a plain member falls through to `"workspace"`, where the
+ * override can elevate them in — or exclusion can deny them. `["workspace"]`
+ * forces the participation read for every actor: the right policy for content
+ * edits, where an excluded member must be denied and a group-elevated guest
+ * allowed.
+ *
+ * `READ_WORKSPACE` and `MANAGE_WORKSPACE_STORAGE` are `["team"]`, not
+ * `["workspace"]`: their call sites consult the team role ONLY (they pass no
+ * workspaceRole), so they neither enforce exclusion nor honour per-workspace
+ * elevation today. Promoting them to `"workspace"` would be a deliberate
+ * semantic change, not a refactor — keep this map faithful to current behaviour.
+ */
+export const CAPABILITY_SCOPES: Readonly<Record<Capability, readonly Scope[]>> =
+  {
+    [Capabilities.CREATE_TEAM]: ["global"],
+
+    [Capabilities.EDIT_TEAM]: ["team"],
+    [Capabilities.DELETE_TEAM]: ["team"],
+    [Capabilities.INVITE_MEMBER]: ["team"],
+    [Capabilities.UPDATE_MEMBER_ROLE]: ["team"],
+    [Capabilities.REMOVE_MEMBER]: ["team"],
+    [Capabilities.READ_TEAM]: ["team"],
+    [Capabilities.VIEW_TEAM_SETTINGS]: ["team"],
+    [Capabilities.MANAGE_BILLING]: ["team"],
+    [Capabilities.READ_AUDIT_LOGS]: ["team"],
+    [Capabilities.MANAGE_BOT_SESSIONS]: ["team"],
+    [Capabilities.MANAGE_SECURITY]: ["team"],
+
+    [Capabilities.CREATE_WORKSPACE]: ["team"],
+    [Capabilities.EDIT_WORKSPACE]: ["team", "workspace"],
+    [Capabilities.DELETE_WORKSPACE]: ["team", "workspace"],
+    [Capabilities.READ_WORKSPACE]: ["team"],
+    [Capabilities.MANAGE_WORKSPACE_CONTENT]: ["workspace"],
+    [Capabilities.MANAGE_WORKSPACE_STORAGE]: ["team"],
+  }
+
+/** The ordered scopes a capability is checked at. See {@link CAPABILITY_SCOPES}. */
+export function scopesFor(capability: Capability): readonly Scope[] {
+  return CAPABILITY_SCOPES[capability] ?? ["team"]
+}
+
+// ============================================================================
+// Authorization Decision (scope walk)
+// ============================================================================
+
+/**
+ * A principal's resolved standing within one workspace — the data the scope
+ * walk consumes in place of a control-flow throw.
+ *
+ *  - `{ excluded: true }`        — explicitly removed; workspace scopes deny.
+ *  - `{ excluded: false, role }` — present; `role` is the per-workspace override
+ *                                  role (the max of the direct grant and any
+ *                                  group elevation), or `null` when no grant.
+ */
+export type Participation =
+  | { excluded: true }
+  | { excluded: false; role: IMembershipRole | null }
+
+/**
+ * Why a denied {@link AuthDecision} was denied — lets a hard-deny caller raise a
+ * message specific to the cause (explicitly excluded vs. not a team member vs.
+ * simply under-ranked) instead of one generic string. Absent when `allowed`.
+ */
+export type DeniedReason =
+  | "not-team-member"
+  | "excluded"
+  | "insufficient-capability"
+
+/**
+ * The outcome of {@link resolveAuthorization}: facts, not control flow. A caller
+ * that wants a hard denial raises its own error from `allowed`; a soft gate (the
+ * bot tool surface) reads `allowed` directly.
+ */
+export interface AuthDecision {
+  /** Whether the capability is granted at any scope. */
+  allowed: boolean
+  /** The principal's team role (synthesised for built-in agents), or null. */
+  teamRole: IMembershipRole | null
+  /** The role under the granting scope, else the most elevated role evaluated. */
+  effectiveRole: IMembershipRole | null
+  /** The scope that granted, or null when denied. */
+  grantedScope: Scope | null
+  /** Workspace participation, resolved iff the walk reached a workspace scope. */
+  participation: Participation | null
+  /** Why the decision was denied; absent when `allowed`. */
+  deniedReason?: DeniedReason
+}
+
+/** The I/O the scope walk needs, supplied as values + a lazy thunk. */
+export interface AuthorizationInputs {
+  /** The principal's team role, resolved eagerly (every scope needs it). */
+  teamRole: IMembershipRole | null
+  /**
+   * The principal's workspace participation, resolved LAZILY — called at most
+   * once, and only when the walk reaches a `"workspace"` scope. The laziness is
+   * what lets a team admin short-circuit at `"team"` without ever reading (and
+   * being denied by) an exclusion that does not apply to their entity-level
+   * right.
+   */
+  resolveParticipation: () => Participation | Promise<Participation>
+}
+
+/**
+ * Decide whether `principal` may exercise `capability`, walking the capability's
+ * ordered scopes (see {@link CAPABILITY_SCOPES}) and short-circuiting on the
+ * first grant. Pure: every Firestore read is supplied via {@link
+ * AuthorizationInputs}, so this is unit-testable without a backend. Returns an
+ * {@link AuthDecision} — it never throws for a denial.
+ */
+export async function resolveAuthorization(
+  principal: { uid?: string } | string | null | undefined,
+  capability: Capability,
+  inputs: AuthorizationInputs
+): Promise<AuthDecision> {
+  const teamRole = inputs.teamRole
+  let participation: Participation | null = null
+  let bestEffective: IMembershipRole | null = teamRole ?? null
+  let sawExcluded = false
+
+  for (const scope of scopesFor(capability)) {
+    if (scope === "workspace") {
+      // Resolve participation lazily, once. Reaching here at all means an
+      // earlier scope (if any) did not already grant.
+      // Elevate-only: a per-workspace grant RAISES a team member's access; it
+      // never confers membership on a non-member. Every server gate requires
+      // membership as the base (requireTeamRole / getMembershipRole), so a null
+      // team role gets no standalone workspace grant — and we skip the override
+      // read entirely, denying a non-member as not-a-member rather than reading
+      // (and reporting) an "excluded" state. (A deliberate future
+      // "workspace-only" principal would relax this.)
+      if (teamRole == null) continue
+      if (!participation) participation = await inputs.resolveParticipation()
+      if (participation.excluded) {
+        sawExcluded = true
+        continue
+      }
+      const workspaceRole = participation.role
+      const folded = effectiveRole(teamRole, workspaceRole)
+      bestEffective = folded
+      if (
+        can(principal, capability, {
+          scope: "workspace",
+          teamRole,
+          workspaceRole,
+        })
+      ) {
+        return {
+          allowed: true,
+          teamRole: teamRole ?? null,
+          effectiveRole: folded,
+          grantedScope: "workspace",
+          participation,
+        }
+      }
+    } else if (can(principal, capability, { scope, teamRole })) {
+      return {
+        allowed: true,
+        teamRole: teamRole ?? null,
+        effectiveRole: scope === "global" ? null : (teamRole ?? null),
+        grantedScope: scope,
+        participation,
+      }
+    }
+  }
+
+  // Most-specific cause first: an explicit exclusion the walk hit, then a
+  // principal with no role at all (not a team member, no workspace grant),
+  // else a present-but-under-ranked role.
+  const deniedReason: DeniedReason = sawExcluded
+    ? "excluded"
+    : teamRole == null && bestEffective == null
+      ? "not-team-member"
+      : "insufficient-capability"
+
+  return {
+    allowed: false,
+    teamRole: teamRole ?? null,
+    effectiveRole: bestEffective,
+    grantedScope: null,
+    participation,
+    deniedReason,
+  }
+}

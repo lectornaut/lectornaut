@@ -521,7 +521,7 @@ const expandedCard = ref<number | null>(null)
 </script>
 
 <template>
-  <Teleport defer to="#left-sidebar">
+  <SidebarSlot side="left">
     <Sidebar collapsible="none" class="w-full">
       <SidebarHeader>
         <SidebarMenu>
@@ -660,7 +660,7 @@ const expandedCard = ref<number | null>(null)
         </SidebarMenu>
       </SidebarFooter>
     </Sidebar>
-  </Teleport>
+  </SidebarSlot>
   <Tabs default-value="overview" class="gap-0">
     <Teleport defer to="#cta-dock">
       <div class="flex grow items-center justify-between gap-2">
@@ -737,7 +737,7 @@ const expandedCard = ref<number | null>(null)
       </div>
     </Teleport>
     <TabsContent value="overview" class="@container">
-      <div class="grid gap-8 p-2">
+      <div class="grid gap-8">
         <div
           v-for="group in dashboardData"
           :key="group.title"
@@ -889,7 +889,7 @@ const expandedCard = ref<number | null>(null)
     </TabsContent>
     <TabsContent value="usage"> </TabsContent>
   </Tabs>
-  <Teleport defer to="#right-sidebar">
+  <SidebarSlot side="right">
     <Sidebar collapsible="none" class="w-full">
       <SidebarContent>
         <OverlayScrollbarsWrapper>
@@ -920,5 +920,5 @@ const expandedCard = ref<number | null>(null)
         </OverlayScrollbarsWrapper>
       </SidebarContent>
     </Sidebar>
-  </Teleport>
+  </SidebarSlot>
 </template>

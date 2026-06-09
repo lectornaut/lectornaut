@@ -27,11 +27,14 @@
  * orchestration, not config plumbing.
  */
 
+import { FieldValue } from "firebase-admin/firestore"
 import { HttpsError, onCall } from "firebase-functions/v2/https"
 import { z } from "genkit/beta"
-import { getMembershipRole, requireVerifiedAuth } from "./bot.js"
+import { requireVerifiedAuth } from "./auth.js"
+import { getMembershipRole } from "./bot.js"
 import { BOT_CHAT_MODES, type BotChatMode } from "./botBuiltinTools.js"
-import { admin, db } from "./firebase.js"
+import { AI_PROVIDERS, BOT_AGENT_MODELS, type BotAgentModel } from "./domain.js"
+import { db } from "./firebase.js"
 import { assertAiModelProviderConfigured } from "./genkitClient.js"
 import { isAdminRole } from "./permissions.js"
 import { CALLABLE_OPTS } from "./runtimeConfig.js"
@@ -105,7 +108,7 @@ export const MODE_CONFIG: Record<BotChatMode, BotChatModeConfig> = {
 // Provider + model registry
 // ===========================================================================
 
-const BOT_MODEL_PROVIDERS = ["google", "anthropic", "openai"] as const
+const BOT_MODEL_PROVIDERS = AI_PROVIDERS
 
 export type BotModelProvider = (typeof BOT_MODEL_PROVIDERS)[number]
 
@@ -134,18 +137,17 @@ const BOT_AGENT_MODEL_REGISTRY = [
   { id: "claude-sonnet-4-5", provider: "anthropic" },
   // OpenAI
   { id: "gpt-5", provider: "openai" },
-] as const satisfies ReadonlyArray<{ id: string; provider: BotModelProvider }>
+] as const satisfies ReadonlyArray<{
+  id: BotAgentModel
+  provider: BotModelProvider
+}>
 
-export type BotAgentModel = (typeof BOT_AGENT_MODEL_REGISTRY)[number]["id"]
-
-/**
- * Wire-name allowlist derived from the registry. Cast asserts the
- * runtime shape (non-empty tuple of `BotAgentModel`) that `.map()`
- * loses from TypeScript's perspective.
- */
-export const BOT_AGENT_MODELS = BOT_AGENT_MODEL_REGISTRY.map(
-  (entry) => entry.id
-) as unknown as readonly [BotAgentModel, ...BotAgentModel[]]
+// `BOT_AGENT_MODELS` + `BotAgentModel` are the single source in
+// @lectornaut/shared/domain; re-exported so this module stays the server's
+// import surface for them. The registry above pairs each shared model with a
+// provider; its `satisfies` keeps every registry id a real model. Keep the
+// registry in step with the shared list — every model needs a provider entry.
+export { BOT_AGENT_MODELS, type BotAgentModel }
 
 const DEFAULT_BOT_AGENT_MODEL: BotAgentModel = BOT_AGENT_MODELS[0]
 
@@ -893,7 +895,7 @@ export const updateTeamAgentConfig = onCall<UpdateTeamAgentConfigRequest>(
       {
         ...updatesToWrite,
         teamId,
-        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+        updatedAt: FieldValue.serverTimestamp(),
         updatedBy: auth.uid,
       },
       { merge: true }

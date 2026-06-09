@@ -1,7 +1,8 @@
+import { FieldValue } from "firebase-admin/firestore"
 import * as logger from "firebase-functions/logger"
 import { COST_BUDGET } from "./costBudget.js"
 import { sendEmailInternal } from "./email.js"
-import { admin, db } from "./firebase.js"
+import { db } from "./firebase.js"
 import {
   DEFAULT_NOTIFICATION_SETTINGS,
   MembershipRoleLabels,
@@ -139,7 +140,7 @@ const createInAppNotification = async (
       ...notification,
       status: "inbox",
       read: false,
-      createdAt: admin.firestore.FieldValue.serverTimestamp(),
+      createdAt: FieldValue.serverTimestamp(),
     })
     return true
   } catch (error) {

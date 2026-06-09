@@ -178,7 +178,7 @@ const formatWhen = (ts: unknown): string =>
 
 <template>
   <!-- Left sidebar: search + filter + grouped workflow list -->
-  <Teleport defer to="#left-sidebar">
+  <SidebarSlot side="left">
     <Sidebar collapsible="none" class="w-full">
       <SidebarHeader>
         <div class="flex items-center justify-between gap-2">
@@ -337,7 +337,7 @@ const formatWhen = (ts: unknown): string =>
         </OverlayScrollbarsWrapper>
       </SidebarContent>
     </Sidebar>
-  </Teleport>
+  </SidebarSlot>
 
   <!-- Main: workspace-wide runs, filterable by Workflow + Date range -->
   <div class="flex h-full min-h-0 flex-col">
@@ -358,7 +358,7 @@ const formatWhen = (ts: unknown): string =>
   </div>
 
   <!-- Right sidebar: selected workflow actions + details -->
-  <Teleport defer to="#right-sidebar">
+  <SidebarSlot side="right">
     <Sidebar collapsible="none" class="w-full">
       <SidebarContent>
         <OverlayScrollbarsWrapper>
@@ -453,7 +453,7 @@ const formatWhen = (ts: unknown): string =>
         </OverlayScrollbarsWrapper>
       </SidebarContent>
     </Sidebar>
-  </Teleport>
+  </SidebarSlot>
 
   <SettingsCustomWorkflow
     v-model:open="editorOpen"

@@ -2,7 +2,8 @@
 import { useSidebar } from "@/components/ui/sidebar"
 import { isTauri, useIsFullscreen } from "@/composables/usePlatform"
 import { useShortcutKeys } from "@/composables/useShortcutKeys"
-import { useWorkspaceActions } from "@/composables/useWorkspaceActions"
+import { useTabRouterSync } from "@/composables/useTabRouterSync"
+import { useTabs } from "@/composables/useTabs"
 import {
   IconCheck,
   IconChevronDown,
@@ -23,16 +24,14 @@ import {
   IconTrash,
   IconX,
 } from "@/data/icons"
-import { resolveRouteName } from "@/helpers/breadcrumber"
 import { getPlatformSpecialKey } from "@/helpers/shortcuts"
 import { isDefaultRoute } from "@/helpers/utilities"
 import { emitter } from "@/modules/mitt"
-import { useLayoutStore } from "@/stores/layoutStore"
+import { useTabsStore } from "@/stores/tabsStore"
+import { useUiPreferencesStore } from "@/stores/uiPreferencesStore"
 import { useLocalStorage } from "@vueuse/core"
 import { useSortable } from "@vueuse/integrations/useSortable"
 import { storeToRefs } from "pinia"
-import type Sortable from "sortablejs"
-import { useRouter } from "vue-router"
 
 // ----------------------------------------------------------------------------
 // Environment / shell context
@@ -41,42 +40,39 @@ const isFullscreen = useIsFullscreen()
 const { open, isMobile } = useSidebar()
 
 const el = ref<HTMLElement>()
-const router = useRouter()
-const route = useRoute()
 const { t } = useI18n()
 
 // ----------------------------------------------------------------------------
 // Layout store: tab state + panel flags + tab actions
 // ----------------------------------------------------------------------------
-const layoutStore = useLayoutStore()
+const tabsStore = useTabsStore()
 const {
   tabs,
   activeTabId,
   activeTab,
   recentlyClosed,
+  isLoading: pending,
+} = storeToRefs(tabsStore)
+const { normalizeTabOrder, renameTab, clearRecentlyClosed } = tabsStore
+
+// Derived views over the tabs store (guards, indicator merge, drag boundary).
+const {
+  hasClosableTabs,
+  canCloseActiveTab,
+  canRenameActiveTab,
+  hasClosableOtherTabs,
+  resolveTabIndicator,
+  canDropWithinTabBoundary,
+} = useTabs()
+
+// Panel/sidebar collapse flags live in the per-user UI-preferences store.
+const uiPreferencesStore = useUiPreferencesStore()
+const {
   leftPanelCollapsed,
   rightPanelCollapsed,
   bottomPanelCollapsed,
   sidebarPinned,
-  isLoading: pending,
-  isHydrated,
-} = storeToRefs(layoutStore)
-const {
-  addTab,
-  closeTab,
-  closeOtherTabs,
-  closeAllTabs,
-  duplicateTab,
-  getTabIndicator: getStoredTabIndicator,
-  isTabPending,
-  normalizeTabOrder,
-  renameTab,
-  setTabPinned,
-  setActiveTab,
-  updateActiveTab,
-  clearRecentlyClosed,
-  reopenLastClosed,
-} = layoutStore
+} = storeToRefs(uiPreferencesStore)
 
 // Display strings for the keyboard shortcuts surfaced in menus/tooltips.
 const leftPanelKeys = useShortcutKeys("Sidebar.Left.Toggle")
@@ -112,36 +108,10 @@ const renamingName = ref("")
 const copiedTabId = ref<string | null>(null)
 const { copy, copied } = useClipboard({ legacy: true })
 
-// Route↔store sync bookkeeping (see watchers below).
-const isInitialRouteSync = ref(true)
-const previousWorkspaceRoutePath = ref<string | null>(null)
-const pinnedTabCount = computed(
-  () => tabs.value.filter((tab) => tab.pinned).length
-)
-
 // ----------------------------------------------------------------------------
-// Drag-and-drop reordering (pinned tabs stay grouped at the front)
+// Drag-and-drop reordering (boundary math lives in useTabs; pinned tabs stay
+// grouped at the front)
 // ----------------------------------------------------------------------------
-function resolveDropIndex(evt: Sortable.MoveEvent) {
-  const siblingTabs = Array.from(evt.to.children)
-  const relatedIndex = siblingTabs.indexOf(evt.related)
-  if (relatedIndex === -1) return siblingTabs.length
-  return evt.willInsertAfter ? relatedIndex + 1 : relatedIndex
-}
-
-function isPinnedTabElement(element?: Element | null) {
-  return element instanceof HTMLElement && element.dataset.pinned === "true"
-}
-
-// A pinned tab may only drop within the pinned prefix; a regular tab only
-// after it. Enforced mid-drag so the strip never interleaves the two groups.
-function canDropWithinTabBoundary(evt: Sortable.MoveEvent) {
-  const dropIndex = resolveDropIndex(evt)
-  return isPinnedTabElement(evt.dragged)
-    ? dropIndex <= pinnedTabCount.value
-    : dropIndex >= pinnedTabCount.value
-}
-
 useSortable(el, tabs, {
   animation: 150,
   draggable: ".tab-item",
@@ -153,17 +123,8 @@ useSortable(el, tabs, {
 })
 
 // ----------------------------------------------------------------------------
-// Derived guards used by the menus/tooltips
+// Local tab predicates + copy-URL UI (derived guards live in useTabs)
 // ----------------------------------------------------------------------------
-const { currentWorkspace } = useWorkspaceActions()
-const hasClosableTabs = computed(() => tabs.value.some((tab) => !tab.pinned))
-const canCloseActiveTab = computed(() =>
-  Boolean(activeTab.value && !activeTab.value.pinned)
-)
-const canRenameActiveTab = computed(() =>
-  Boolean(activeTab.value && !isDefaultRoute(activeTab.value))
-)
-
 function isPinnedTab(tab?: { pinned?: boolean } | null) {
   return Boolean(tab?.pinned)
 }
@@ -184,197 +145,6 @@ async function handleCopyTabUrl(tab: { id: string; fullPath: string }) {
   } catch {
     copiedTabId.value = null
   }
-}
-
-function hasClosableOtherTabs(keepId?: string) {
-  return tabs.value.some((tab) => !tab.pinned && tab.id !== keepId)
-}
-
-// Prefer an explicit stored indicator; otherwise show a syncing badge while a
-// tab op is in flight for this tab.
-function resolveTabIndicator(tab: { id: string }) {
-  const stored = getStoredTabIndicator(tab.id)
-  if (stored) return stored
-  if (isTabPending(tab.id)) {
-    return { label: t("states.syncing"), tone: "info" as const, spin: true }
-  }
-  return null
-}
-
-function navigateToTab(tab: { fullPath: string }) {
-  if (route.fullPath !== tab.fullPath) {
-    router.push(tab.fullPath)
-  }
-}
-
-// ----------------------------------------------------------------------------
-// Core synchronization: Route → Store (primary truth)
-//
-// When the URL changes, reflect it in the store — activating an existing tab,
-// consuming a throwaway "/new" tab, reusing the active tab for in-app
-// navigation, restoring the last session, or finally adding a new tab.
-// ----------------------------------------------------------------------------
-watch(
-  [() => route.fullPath, isHydrated],
-  async ([newPath, hydrated]) => {
-    if (!hydrated || !currentWorkspace.value) return
-
-    // Drop the workspace-switch marker once the route leaves the old path.
-    if (
-      previousWorkspaceRoutePath.value &&
-      newPath !== previousWorkspaceRoutePath.value
-    ) {
-      previousWorkspaceRoutePath.value = null
-    }
-
-    // While switching workspace, don't materialize the *old* workspace's route
-    // as a tab in the new one — redirect to a sensible fallback instead.
-    if (
-      previousWorkspaceRoutePath.value &&
-      newPath === previousWorkspaceRoutePath.value
-    ) {
-      const fallbackPath =
-        activeTab.value?.fullPath ?? tabs.value[0]?.fullPath ?? "/start"
-      if (fallbackPath !== newPath) {
-        router.replace(fallbackPath)
-        return
-      }
-      // The same route can legitimately exist in both workspaces.
-      previousWorkspaceRoutePath.value = null
-    }
-
-    // Already the active tab → nothing to do. Lets several "/new" tabs coexist
-    // without snapping back to the first one.
-    if (activeTab.value?.fullPath === newPath) {
-      isInitialRouteSync.value = false
-      return
-    }
-
-    // Case A: route matches an existing tab (excluding the reusable "/new").
-    const existingTab = tabs.value.find((tab) => tab.fullPath === newPath)
-    if (existingTab && newPath !== "/new") {
-      if (activeTabId.value !== existingTab.id) setActiveTab(existingTab.id)
-      isInitialRouteSync.value = false
-      return
-    }
-
-    // Case B: the active tab is a throwaway "/new" → consume it for this route.
-    if (activeTab.value?.fullPath === "/new") {
-      updateActiveTab(newPath, resolveRouteName(route))
-      isInitialRouteSync.value = false
-      return
-    }
-
-    // Case C: in-app navigation → reuse the active tab (never on initial sync,
-    // never for "/start").
-    if (
-      !isInitialRouteSync.value &&
-      activeTabId.value &&
-      newPath !== "/start"
-    ) {
-      updateActiveTab(newPath, resolveRouteName(route))
-      return
-    }
-
-    // Case D: landed on "/start" with a remembered active tab → restore it.
-    if (newPath === "/start" && activeTabId.value) {
-      const tab = tabs.value.find((entry) => entry.id === activeTabId.value)
-      if (tab) {
-        router.push(tab.fullPath)
-        return
-      }
-    }
-
-    // Case E: fall back to opening a fresh tab (optimistic add sets active id).
-    if (route.name) {
-      await addTab(newPath, resolveRouteName(route))
-    }
-
-    isInitialRouteSync.value = false
-  },
-  { immediate: true }
-)
-
-// ----------------------------------------------------------------------------
-// Store → Route (secondary truth): when the active tab's path changes, follow.
-// ----------------------------------------------------------------------------
-watch(
-  () => activeTab.value?.fullPath,
-  (newPath) => {
-    if (!isHydrated.value) return
-    // During initial sync the Route→Store watcher is authoritative — don't let
-    // a restored tab override a redirect URL.
-    if (isInitialRouteSync.value) return
-
-    if (!activeTabId.value) {
-      if (route.fullPath !== "/start" && tabs.value.length === 0) {
-        router.push("/start")
-      }
-      return
-    }
-
-    if (newPath && newPath !== route.fullPath) {
-      router.push(newPath)
-    }
-  },
-  { flush: "post" }
-)
-
-// ----------------------------------------------------------------------------
-// Workspace switch: re-enter the per-workspace initial-sync phase and remember
-// the outgoing route so the Route→Store watcher can ignore it once hydrated.
-// ----------------------------------------------------------------------------
-watch(
-  () => currentWorkspace.value?.id,
-  (newId, oldId) => {
-    if (newId === oldId) return
-    isInitialRouteSync.value = true
-    previousWorkspaceRoutePath.value =
-      oldId !== undefined ? route.fullPath : null
-  }
-)
-
-// ----------------------------------------------------------------------------
-// Event handlers
-// ----------------------------------------------------------------------------
-function onTabClick(tab: { id: string }) {
-  // Snappy active-state update; the route watcher reconciles the rest.
-  setActiveTab(tab.id)
-}
-
-async function handleAddTab(fullPath = "/new", name?: string) {
-  // Reuse an existing tab for the same (non-"/new") path instead of duplicating.
-  const existing = tabs.value.find(
-    (tab) => tab.fullPath === fullPath && fullPath !== "/new"
-  )
-  if (existing) {
-    setActiveTab(existing.id)
-    return
-  }
-
-  const newTab = await addTab(fullPath, name)
-  if (newTab) navigateToTab(newTab)
-}
-
-function openNewTab() {
-  void handleAddTab()
-}
-
-async function handleCloseTab(id: string | undefined) {
-  if (!id) return
-  const tab = tabs.value.find((entry) => entry.id === id)
-  if (!canCloseTab(tab)) return
-  // closeTab computes the next active tab/path; push it for instant feedback.
-  const result = await closeTab(id)
-  if (result?.nextPath) router.push(result.nextPath)
-}
-
-async function handleDuplicateTab(id: string | undefined) {
-  if (!id) return
-  await duplicateTab(id)
-  // duplicateTab sets the copy active; navigate to it if it's a new tab.
-  const newTab = tabs.value.find((tab) => tab.id === activeTabId.value)
-  if (newTab && newTab.id !== id) navigateToTab(newTab)
 }
 
 function handleRenameTab(id: string | undefined) {
@@ -408,136 +178,22 @@ function handleRenameKeydown(event: KeyboardEvent) {
   else if (event.key === "Escape") cancelRename()
 }
 
-async function handleToggleTabPinned(id: string | undefined) {
-  if (!id) return
-  const tab = tabs.value.find((entry) => entry.id === id)
-  if (!tab) return
-  await setTabPinned(id, !tab.pinned)
-}
-
-// Select a tab by id, by 1-based index, or by relative direction.
-function selectTab(idOrDirection: string | number) {
-  if (tabs.value.length === 0) return
-
-  let targetId: string | undefined
-
-  if (idOrDirection === "next" || idOrDirection === "previous") {
-    const currentIndex = tabs.value.findIndex(
-      (tab) => tab.id === activeTabId.value
-    )
-    const start = currentIndex === -1 ? 0 : currentIndex
-    const nextIndex =
-      idOrDirection === "next"
-        ? (start + 1) % tabs.value.length
-        : (start - 1 + tabs.value.length) % tabs.value.length
-    targetId = tabs.value[nextIndex]?.id
-  } else if (typeof idOrDirection === "number") {
-    const tabIdx = Math.max(
-      0,
-      Math.min(idOrDirection - 1, tabs.value.length - 1)
-    )
-    targetId = tabs.value[tabIdx]?.id
-  } else {
-    targetId = idOrDirection
-  }
-
-  if (!targetId) return
-  const target = tabs.value.find((tab) => tab.id === targetId)
-  if (!target) return
-
-  // Keep active state in sync even when the path doesn't change (e.g. several
-  // tabs pointing at "/new").
-  if (activeTabId.value !== target.id) setActiveTab(target.id)
-  navigateToTab(target)
-}
-
 // ----------------------------------------------------------------------------
-// Global events (Mitt) — driven by hotkeys and other components
+// Route ⇄ store sync, navigation entry points, and the Tabs.* mitt bridge.
+// Inline rename stays in this component (above); the composable triggers it
+// through the `beginRename` callback.
 // ----------------------------------------------------------------------------
-function onTabsAdd(raw?: unknown) {
-  const data = raw as
-    | { fullPath?: string; path?: string; url?: string; name?: string }
-    | undefined
-  const path = data?.fullPath || data?.path || data?.url || "/new"
-  handleAddTab(path, data?.name).catch(() => {})
-}
-
-function onTabsClose(id?: unknown) {
-  handleCloseTab((typeof id === "string" ? id : activeTabId.value) || undefined)
-}
-
-function onTabsCloseOthers(id?: unknown) {
-  const keepId = typeof id === "string" ? id : activeTabId.value
-  if (keepId) closeOtherTabs(keepId)
-}
-
-async function onTabsCloseAll() {
-  await closeAllTabs()
-  const nextPath = activeTab.value?.fullPath
-  if (nextPath && nextPath !== route.fullPath) {
-    router.push(nextPath)
-    return
-  }
-  if (!activeTabId.value && route.fullPath !== "/start") {
-    router.push("/start")
-  }
-}
-
-function onTabsSelect(idOrIndex?: unknown) {
-  if (typeof idOrIndex === "string" || typeof idOrIndex === "number") {
-    selectTab(idOrIndex)
-  }
-}
-
-function onTabsReopenLast() {
-  const last = reopenLastClosed()
-  if (last) handleAddTab(last.fullPath, last.name)
-}
-
-function onTabsReopen(raw?: unknown) {
-  const tab = raw as { fullPath: string; name: string } | undefined
-  if (tab) handleAddTab(tab.fullPath, tab.name)
-}
-
-function onTabsDuplicate(id?: unknown) {
-  handleDuplicateTab(
-    (typeof id === "string" ? id : activeTabId.value) || undefined
-  )
-}
-
-function onTabsRename(id?: unknown) {
-  handleRenameTab(
-    (typeof id === "string" ? id : activeTabId.value) || undefined
-  )
-}
+const {
+  onTabClick,
+  openNewTab,
+  handleCloseTab,
+  handleDuplicateTab,
+  handleToggleTabPinned,
+} = useTabRouterSync({ beginRename: handleRenameTab })
 
 // Reset the per-tab "copied" check mark when the clipboard flag clears.
 watch(copied, (isCopied) => {
   if (!isCopied) copiedTabId.value = null
-})
-
-onMounted(() => {
-  emitter.on("Tabs.Add", onTabsAdd)
-  emitter.on("Tabs.Close", onTabsClose)
-  emitter.on("Tabs.Close.Others", onTabsCloseOthers)
-  emitter.on("Tabs.Close.All", onTabsCloseAll)
-  emitter.on("Tabs.Select", onTabsSelect)
-  emitter.on("Tabs.ReopenLast", onTabsReopenLast)
-  emitter.on("Tabs.Reopen", onTabsReopen)
-  emitter.on("Tabs.Duplicate", onTabsDuplicate)
-  emitter.on("Tabs.Rename", onTabsRename)
-})
-
-onUnmounted(() => {
-  emitter.off("Tabs.Add", onTabsAdd)
-  emitter.off("Tabs.Close", onTabsClose)
-  emitter.off("Tabs.Close.Others", onTabsCloseOthers)
-  emitter.off("Tabs.Close.All", onTabsCloseAll)
-  emitter.off("Tabs.Select", onTabsSelect)
-  emitter.off("Tabs.ReopenLast", onTabsReopenLast)
-  emitter.off("Tabs.Reopen", onTabsReopen)
-  emitter.off("Tabs.Duplicate", onTabsDuplicate)
-  emitter.off("Tabs.Rename", onTabsRename)
 })
 </script>
 

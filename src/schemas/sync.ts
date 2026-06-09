@@ -1,3 +1,4 @@
+import { SYNC_MUTATION_TYPES } from "@lectornaut/shared/domain"
 import { z } from "zod"
 
 /**
@@ -10,8 +11,14 @@ import { z } from "zod"
  * and corrupt entries are quarantined — without ever reaching the retry loop.
  */
 
-export const syncMutationTypeSchema = z.enum(["set", "update", "delete"])
+export const syncMutationTypeSchema = z.enum(SYNC_MUTATION_TYPES)
 
+/**
+ * The client outbox *queue lifecycle*. Deliberately NOT hoisted to
+ * `@lectornaut/shared/domain`: the server's `SyncOperationStatus`
+ * (`pending | ack | reject`) is a different state machine (per-op Firestore
+ * ack), not a drifted copy of this one — only `SyncMutationType` is shared.
+ */
 export const syncOperationStatusSchema = z.enum([
   "pending",
   "sent",

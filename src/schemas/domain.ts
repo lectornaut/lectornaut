@@ -1,3 +1,17 @@
+import {
+  AI_PROVIDERS,
+  BILLING_INTERVALS,
+  BILLING_PLAN_KEYS,
+  BOT_AGENT_MODELS,
+  BOT_CHAT_MODES,
+  BOT_CHAT_ROLES,
+  BOT_SESSION_VISIBILITIES,
+  INTEGRATION_SOURCES,
+  INTEGRATION_TYPES,
+  NODE_SCOPES,
+  WORKFLOW_RUN_STATUSES,
+  WORKFLOW_UPDATE_MODES,
+} from "@lectornaut/shared/domain"
 import { z } from "zod"
 import {
   timestampHydratedSchema,
@@ -23,14 +37,9 @@ import {
 
 // ─── Billing ─────────────────────────────────────────────────────────────────
 
-export const billingPlanKeySchema = z.enum([
-  "personal",
-  "professional",
-  "business",
-  "enterprise",
-])
+export const billingPlanKeySchema = z.enum(BILLING_PLAN_KEYS)
 
-export const billingIntervalSchema = z.enum(["month", "year"])
+export const billingIntervalSchema = z.enum(BILLING_INTERVALS)
 
 export const teamBillingSchema = z.object({
   stripeCustomerId: z.string().nullable(),
@@ -233,11 +242,7 @@ export const membershipPreferencesHydrationSchema =
  *   - shared:  any team member can read; only owner + team admins can write.
  *   - public:  anyone with the URL can read (deferred — schema-only for now).
  */
-export const botSessionVisibilitySchema = z.enum([
-  "private",
-  "shared",
-  "public",
-])
+export const botSessionVisibilitySchema = z.enum(BOT_SESSION_VISIBILITIES)
 
 /**
  * Flat client-facing role for messages stored on the session doc.
@@ -246,7 +251,7 @@ export const botSessionVisibilitySchema = z.enum([
  * `{role, content}` array on save so the client can render directly
  * from the snapshot without parsing the SessionData blob.
  */
-export const botChatRoleSchema = z.enum(["user", "agent"])
+export const botChatRoleSchema = z.enum(BOT_CHAT_ROLES)
 
 /**
  * Tool invocation captured on an agent message. `input` is the JSON the
@@ -318,7 +323,7 @@ export const botSessionMessageSchema = z.object({
  */
 // ─── Workspace agent (bot) config ────────────────────────────────────────────
 
-export const botAgentProviderSchema = z.enum(["google", "anthropic", "openai"])
+export const botAgentProviderSchema = z.enum(AI_PROVIDERS)
 
 export const botAgentProviderTogglesSchema = z.object({
   google: z.boolean(),
@@ -334,16 +339,7 @@ export const botAgentProviderTogglesSchema = z.object({
  * load-bearing — the server's `resolveModel()` dispatches by prefix
  * (`gemini-*` → Google, `claude-*` → Anthropic, `gpt-*` → OpenAI).
  */
-export const botAgentModelSchema = z.enum([
-  // Google Gemini
-  "gemini-3-flash-preview",
-  "gemini-2.5-pro",
-  // Anthropic Claude
-  "claude-opus-4-5",
-  "claude-sonnet-4-5",
-  // OpenAI
-  "gpt-5",
-])
+export const botAgentModelSchema = z.enum(BOT_AGENT_MODELS)
 
 /**
  * Per-model availability toggles. Layered on top of `providers`: a model
@@ -498,7 +494,7 @@ export const botAgentToolTogglesSchema = z.object({
  * and `BotChatMode` on the client; duplicated here so the agent config
  * type carries it cleanly without a circular import.
  */
-export const botAgentDefaultModeSchema = z.enum(["auto", "agent", "manual"])
+export const botAgentDefaultModeSchema = z.enum(BOT_CHAT_MODES)
 
 /**
  * Effective workspace agent config — every field is required because
@@ -736,7 +732,7 @@ export const customToolActionSchema = z.discriminatedUnion("kind", [
      * Restricts which node scope the canned search runs over. `null`
      * means "both" — same default the broad-scope tool uses.
      */
-    scope: z.enum(["code", "write"]).nullable(),
+    scope: z.enum(NODE_SCOPES).nullable(),
     /** Hard cap on returned nodes (the model never sees more). */
     defaultLimit: z.number().int().min(1).max(20),
     /**
@@ -868,7 +864,7 @@ export const botSessionSchema = z.object({
   contextNodes: z
     .array(
       z.object({
-        scope: z.enum(["code", "write"]),
+        scope: z.enum(NODE_SCOPES),
         nodeId: z.string(),
       })
     )
@@ -935,14 +931,14 @@ export const workflowTriggerSchema = z.discriminatedUnion("type", [
   // `debounceMinutes` coalesces a burst of rapid edits into one run.
   z.object({
     type: z.literal("event"),
-    scope: z.enum(["code", "write"]),
+    scope: z.enum(NODE_SCOPES),
     debounceMinutes: z.number().int().min(0).max(1440).default(0),
   }),
   z.object({ type: z.literal("manual") }),
 ])
 
 export const workflowNodeRefSchema = z.object({
-  scope: z.enum(["code", "write"]),
+  scope: z.enum(NODE_SCOPES),
   nodeId: z.string(),
 })
 
@@ -954,20 +950,9 @@ export const workflowNodeRefSchema = z.object({
  *     admin approves before they're applied. Cost-bounded by a human, so it's
  *     the safe default.
  */
-export const workflowUpdateModeSchema = z.enum(["automatic", "require_review"])
+export const workflowUpdateModeSchema = z.enum(WORKFLOW_UPDATE_MODES)
 
-export const workflowRunStatusSchema = z.enum([
-  "queued",
-  "running",
-  "success", // automatic run that applied its edits directly
-  "awaiting_review", // require_review run: changes captured, pending approval
-  "applied", // require_review run: approved + applied
-  "partially_applied", // require_review run: approved, some changes failed
-  "cancelled", // require_review run: rejected by an admin
-  "error",
-  "blocked", // over budget / not entitled — no spend
-  "skipped", // workflow disabled or removed before it ran
-])
+export const workflowRunStatusSchema = z.enum(WORKFLOW_RUN_STATUSES)
 
 /** A team automation. Written server-side; read here for the admin UI. */
 export const workflowSchema = z.object({
@@ -988,7 +973,7 @@ export const workflowSchema = z.object({
   agentId: z.string(),
   workspaceId: z.string(),
   /** Tree the workflow may edit. null = the workspace's `write` tree. */
-  targetScope: z.enum(["code", "write"]).nullable().default(null),
+  targetScope: z.enum(NODE_SCOPES).nullable().default(null),
   /** The procedure the agent follows each run (the brief's `instructions`). */
   instructions: z.string().default(""),
   /** Optional supplementary instructions appended to `instructions`. */
@@ -1023,7 +1008,7 @@ export const workflowWriteSchema = workflowSchema.extend({
 
 /** One node edit a run proposed (require_review) or applied (automatic). */
 export const workflowRunChangeSchema = z.object({
-  scope: z.enum(["code", "write"]),
+  scope: z.enum(NODE_SCOPES),
   nodeId: z.string().nullable(), // null for a create
   op: z.enum(["create", "update", "rename", "move", "archive"]),
   summary: z.string(),
@@ -1039,7 +1024,7 @@ export const workflowRunTriggeredBySchema = z.discriminatedUnion("type", [
   z.object({ type: z.literal("schedule") }),
   z.object({
     type: z.literal("event"),
-    scope: z.enum(["code", "write"]),
+    scope: z.enum(NODE_SCOPES),
     nodeId: z.string(),
   }),
   z.object({ type: z.literal("manual"), uid: z.string() }),
@@ -1138,13 +1123,9 @@ export const workflowRunWriteSchema = workflowRunSchema.extend({
 // integration DOC, however, is only ever an agent or a tool — workflows persist
 // in their own collection. Hence this enum keeps "workflow" for catalog code,
 // while `integrationSchema` below unions only agent | tool.
-export const integrationTypeSchema = z.enum(["agent", "tool", "workflow"])
+export const integrationTypeSchema = z.enum(INTEGRATION_TYPES)
 
-export const integrationSourceSchema = z.enum([
-  "builtin",
-  "custom",
-  "published",
-])
+export const integrationSourceSchema = z.enum(INTEGRATION_SOURCES)
 
 /** Shared identifier message for wire-name / field-name constraints. */
 const IDENTIFIER_MESSAGE =

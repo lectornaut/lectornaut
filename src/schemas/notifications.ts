@@ -1,9 +1,18 @@
+import {
+  NOTIFICATION_FREQUENCIES,
+  NOTIFICATION_STATUSES,
+  NOTIFICATION_TYPES,
+} from "@lectornaut/shared/domain"
 import { z } from "zod"
 
 /**
  * Notification schemas — consolidates `src/types/notification.ts` (the
  * individual notification entity) and `src/types/notifications.ts` (the
  * user's notification *settings* doc).
+ *
+ * The enum *members* live in `@lectornaut/shared/domain` (the cross-platform
+ * single source of truth); these schemas derive their `z.enum`s from those
+ * arrays so the client validator and the server union can never drift.
  *
  * Intentional quirk: `INotification.createdAt` is a plain JS `Date`, not a
  * Firestore `Timestamp`. Notifications are local ephemeral state that may
@@ -13,17 +22,9 @@ import { z } from "zod"
 
 // ─── Individual notification entity ──────────────────────────────────────────
 
-export const notificationStatusSchema = z.enum(["inbox", "saved", "done"])
+export const notificationStatusSchema = z.enum(NOTIFICATION_STATUSES)
 
-export const notificationTypeSchema = z.enum([
-  "user.welcome",
-  "notification.test",
-  "invitation.received",
-  "invitation.declined",
-  "member.joined",
-  "member.removed",
-  "workflow.run",
-])
+export const notificationTypeSchema = z.enum(NOTIFICATION_TYPES)
 
 export const notificationSourceSchema = z.object({
   entityType: z.string(),
@@ -44,12 +45,7 @@ export const notificationSchema = z.object({
 
 // ─── User's notification settings doc ────────────────────────────────────────
 
-export const notificationFrequencySchema = z.enum([
-  "immediate",
-  "daily",
-  "weekly",
-  "none",
-])
+export const notificationFrequencySchema = z.enum(NOTIFICATION_FREQUENCIES)
 
 export const notificationCategorySettingsSchema = z.object({
   communication: z.boolean(),

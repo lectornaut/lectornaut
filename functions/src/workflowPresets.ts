@@ -7,12 +7,14 @@
  * Every preset here is enable-ready. (The SEO preset is intentionally omitted.)
  */
 
+import type { WorkspaceNodeScope } from "./types.js"
+
 type PresetTrigger =
   | {
       type: "schedule"
       schedule: { type: "weekly"; dayOfWeek: number; atMinuteUTC: number }
     }
-  | { type: "event"; scope: "code" | "write"; debounceMinutes?: number }
+  | { type: "event"; scope: WorkspaceNodeScope; debounceMinutes?: number }
 
 export interface ServerWorkflowPreset {
   key: string
@@ -24,7 +26,7 @@ export interface ServerWorkflowPreset {
   additionalPrompt?: string
   defaultTrigger: PresetTrigger
   defaultUpdateMode: "automatic" | "require_review"
-  defaultTargetScope: "code" | "write" | null
+  defaultTargetScope: WorkspaceNodeScope | null
 }
 
 const WEEKLY_MON_9AM = {

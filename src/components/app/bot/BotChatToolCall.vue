@@ -199,7 +199,8 @@ const askQuestionInput = computed<AskQuestionInput | null>(() => {
 
 // A resolved askQuestion — the user answered and the tool produced output.
 // Detected by tool NAME + presence of `output`, NOT by `isInterrupt`: the
-// server's history denormalizer (and our own `fillToolResult`) DELETE the
+// server's history denormalizer (and our own stream reducer, when a
+// `toolResult` lands) DELETE the
 // flag the instant an answer lands, so a persisted/reloaded answered
 // question never carries it. Keying the check on `isInterrupt === true`
 // left this branch permanently dead and dropped every answered question

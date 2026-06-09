@@ -1,4 +1,5 @@
-import { admin, db } from "./firebase.js"
+import { FieldValue } from "firebase-admin/firestore"
+import { db } from "./firebase.js"
 
 /**
  * Workspace participation denormalization for airtight LIST-level exclusion.
@@ -33,7 +34,7 @@ export async function addMemberToWorkspaces(
   const batch = db.batch()
   for (const ws of snap.docs) {
     batch.update(ws.ref, {
-      memberUids: admin.firestore.FieldValue.arrayUnion(uid),
+      memberUids: FieldValue.arrayUnion(uid),
     })
   }
   await batch.commit()
@@ -49,7 +50,7 @@ export async function removeMemberFromWorkspaces(
   const batch = db.batch()
   for (const ws of snap.docs) {
     batch.update(ws.ref, {
-      memberUids: admin.firestore.FieldValue.arrayRemove(uid),
+      memberUids: FieldValue.arrayRemove(uid),
     })
   }
   await batch.commit()

@@ -1,8 +1,10 @@
+import type { Transaction } from "firebase-admin/firestore"
+import { FieldValue } from "firebase-admin/firestore"
 import * as logger from "firebase-functions/logger"
 import { onDocumentCreated } from "firebase-functions/v2/firestore"
 import { onSchedule } from "firebase-functions/v2/scheduler"
 import { COST_BUDGET } from "./costBudget.js"
-import { admin, db } from "./firebase.js"
+import { db } from "./firebase.js"
 import { cleanupExpiredIdempotencyLocks } from "./idempotency.js"
 import { REGION, SCHEDULED_OPTS, TRIGGER_OPTS } from "./runtimeConfig.js"
 import {
@@ -160,7 +162,7 @@ const splitPath = (path: string): string[] =>
     .filter((segment) => segment.length > 0)
 
 const ensureTeamMembership = async (
-  transaction: admin.firestore.Transaction,
+  transaction: Transaction,
   teamId: string,
   userId: string
 ) => {
@@ -375,7 +377,7 @@ const validateNotificationMutation = (
 }
 
 const validateTabsLayoutMutation = async (
-  transaction: admin.firestore.Transaction,
+  transaction: Transaction,
   path: string[],
   operation: SyncOperation,
   userId: string
@@ -401,7 +403,7 @@ const validateTabsLayoutMutation = async (
 }
 
 const validateMembershipSettingsMutation = async (
-  transaction: admin.firestore.Transaction,
+  transaction: Transaction,
   path: string[],
   operation: SyncOperation,
   userId: string
@@ -428,7 +430,7 @@ const validateMembershipSettingsMutation = async (
 }
 
 const validateSnapshotMutation = async (
-  transaction: admin.firestore.Transaction,
+  transaction: Transaction,
   path: string[],
   operation: SyncOperation,
   userId: string
@@ -497,7 +499,7 @@ const validateBaseVersion = (
 }
 
 const validateOperationAccess = async (
-  transaction: admin.firestore.Transaction,
+  transaction: Transaction,
   operation: SyncOperation,
   userId: string
 ) => {
@@ -592,7 +594,7 @@ const withServerManagedFields = (
 
   const nextPayload: Record<string, unknown> = {
     ...payload,
-    updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+    updatedAt: FieldValue.serverTimestamp(),
   }
 
   if (
@@ -600,7 +602,7 @@ const withServerManagedFields = (
     !targetSnap.exists &&
     !("createdAt" in nextPayload)
   ) {
-    nextPayload.createdAt = admin.firestore.FieldValue.serverTimestamp()
+    nextPayload.createdAt = FieldValue.serverTimestamp()
     nextPayload.username = null
     nextPayload.isPublic = false
   }
@@ -613,7 +615,7 @@ const withServerManagedFields = (
 }
 
 const applyMutation = (
-  transaction: admin.firestore.Transaction,
+  transaction: Transaction,
   targetRef: FirebaseFirestore.DocumentReference,
   operation: SyncOperation,
   targetSnap: FirebaseFirestore.DocumentSnapshot,
@@ -730,7 +732,7 @@ export const onSyncOperationCreated = onDocumentCreated(
               message: null,
               atMs: Date.now(),
             },
-            processedAt: admin.firestore.FieldValue.serverTimestamp(),
+            processedAt: FieldValue.serverTimestamp(),
           },
           { merge: true }
         )
@@ -751,7 +753,7 @@ export const onSyncOperationCreated = onDocumentCreated(
               message: rejectDetails.message,
               atMs: Date.now(),
             },
-            processedAt: admin.firestore.FieldValue.serverTimestamp(),
+            processedAt: FieldValue.serverTimestamp(),
           },
           { merge: true }
         )

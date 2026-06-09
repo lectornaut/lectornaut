@@ -2,8 +2,9 @@
  * AI config generators — turn a plain-English admin prompt into a
  * ready-to-save agent, custom-tool, or workflow configuration.
  *
- * Three callables, all structured-output `ai.generate` calls (same shape
- * as `botSummarize.ts`'s `output: { schema }` path):
+ * Three callables, all structured-output generations routed through the
+ * shared `runStructuredGeneration` seam (the `output: { schema }` one-shot
+ * path, same as `botCompare.ts` and `botSummarize.ts`):
  *
  *   1. `generateTeamAgentConfig`      — Settings → Agents "Prompt" tab.
  *   2. `generateTeamCustomToolConfig` — Settings → Custom tools "Prompt" tab.
@@ -13,8 +14,8 @@
  *   - Require an authenticated owner/admin (same gate as create/update —
  *     non-admins can't save the result, so they shouldn't be able to burn
  *     model tokens generating it).
- *   - Use the team's configured model via `resolveModel` so switching the
- *     provider in Settings also routes generation through it.
+ *   - Use the team's configured model (the seam resolves it) so switching
+ *     the provider in Settings also routes generation through it.
  *   - NORMALIZE the model's output server-side before returning: clamp
  *     every string to its domain bound and coerce names into the
  *     `/^[a-z][a-zA-Z0-9_]*$/` identifier shape the create/update schemas
@@ -29,13 +30,14 @@
 
 import { HttpsError, onCall } from "firebase-functions/v2/https"
 import { z } from "genkit/beta"
+import { requireVerifiedAuth } from "./auth.js"
 import { assertAdminRole as assertTeamAdminRole } from "./authGuards.js"
-import { requireVerifiedAuth } from "./bot.js"
 import { loadTeamAgentConfig } from "./botAgentConfig.js"
-import { ai, resolveModel } from "./genkitClient.js"
-import { aiMiddlewares } from "./genkitMiddleware.js"
+import { WORKFLOW_UPDATE_MODES } from "./domain.js"
 import { GENKIT_OPTS } from "./runtimeConfig.js"
 import { anthropicApiKey, geminiApiKey, openaiApiKey } from "./secrets.js"
+import { runStructuredGeneration } from "./structuredGeneration.js"
+import type { WorkspaceNodeScope } from "./types.js"
 
 // ===========================================================================
 // Shared helpers
@@ -147,13 +149,17 @@ const TOOL_BOUNDS = {
 const GENERATION_TEMPERATURE = 0.7
 const MIN_OUTPUT_TOKENS = 2048
 
-/** Resolve the model + per-call generation config from the team's settings. */
+/**
+ * Resolve the team's model wire-name + the per-call sampling knobs.
+ * `runStructuredGeneration` resolves the model + assembles the provider-aware
+ * config from `sampling`, so this returns the raw pieces rather than a
+ * pre-built model/config pair.
+ */
 async function resolveGenerationContext(teamId: string) {
   const agentConfig = await loadTeamAgentConfig(teamId)
   return {
-    model: resolveModel(agentConfig.model),
     modelWireName: agentConfig.model,
-    config: {
+    sampling: {
       temperature: GENERATION_TEMPERATURE,
       topP: agentConfig.topP,
       maxOutputTokens: Math.max(agentConfig.maxOutputTokens, MIN_OUTPUT_TOKENS),
@@ -315,19 +321,16 @@ export const generateTeamAgentConfig = onCall<GenerateConfigRequest>(
 
     await assertAdminRole(teamId, auth.uid)
 
-    const { model, modelWireName, config } =
-      await resolveGenerationContext(teamId)
+    const { modelWireName, sampling } = await resolveGenerationContext(teamId)
 
-    const response = await ai.generate({
-      model,
+    const output = await runStructuredGeneration({
+      model: modelWireName,
       system: AGENT_SYSTEM_INSTRUCTIONS,
       prompt,
-      output: { schema: generatedAgentZod },
-      config,
-      use: aiMiddlewares(),
+      output: generatedAgentZod,
+      sampling,
     })
 
-    const output = response.output
     if (!output) {
       throw new HttpsError(
         "internal",
@@ -508,7 +511,7 @@ type NormalizedAction =
   | { kind: "promptTemplate"; prompt: string; model: string | null }
   | {
       kind: "workspaceSearch"
-      scope: "code" | "write" | null
+      scope: WorkspaceNodeScope | null
       defaultLimit: number
       filterHint: string
     }
@@ -616,19 +619,16 @@ export const generateTeamCustomToolConfig = onCall<GenerateConfigRequest>(
 
     await assertAdminRole(teamId, auth.uid)
 
-    const { model, modelWireName, config } =
-      await resolveGenerationContext(teamId)
+    const { modelWireName, sampling } = await resolveGenerationContext(teamId)
 
-    const response = await ai.generate({
-      model,
+    const output = await runStructuredGeneration({
+      model: modelWireName,
       system: TOOL_SYSTEM_INSTRUCTIONS,
       prompt,
-      output: { schema: generatedToolZod },
-      config,
-      use: aiMiddlewares(),
+      output: generatedToolZod,
+      sampling,
     })
 
-    const output = response.output
     if (!output) {
       throw new HttpsError(
         "internal",
@@ -764,7 +764,7 @@ const generatedWorkflowZod = z
       ),
     trigger: generatedWorkflowTriggerZod.describe("When the workflow runs."),
     updateMode: z
-      .enum(["require_review", "automatic"])
+      .enum(WORKFLOW_UPDATE_MODES)
       .describe(
         "'require_review' (strongly preferred) stages the agent's edits for an " +
           "admin to approve; 'automatic' applies them unattended. Only choose " +
@@ -804,7 +804,7 @@ type GeneratedWorkflowTrigger =
         | { type: "daily"; atMinuteUTC: number }
         | { type: "weekly"; dayOfWeek: number; atMinuteUTC: number }
     }
-  | { type: "event"; scope: "code" | "write"; debounceMinutes: number }
+  | { type: "event"; scope: WorkspaceNodeScope; debounceMinutes: number }
   | { type: "manual" }
 
 interface GeneratedWorkflowConfig {
@@ -814,7 +814,7 @@ interface GeneratedWorkflowConfig {
   instructions: string
   additionalPrompt: string
   /** null = the workspace's default `write` tree. */
-  targetScope: "code" | "write" | null
+  targetScope: WorkspaceNodeScope | null
   trigger: GeneratedWorkflowTrigger
   updateMode: "automatic" | "require_review"
   model: string
@@ -900,19 +900,16 @@ export const generateTeamWorkflowConfig = onCall<GenerateConfigRequest>(
 
     await assertAdminRole(teamId, auth.uid)
 
-    const { model, modelWireName, config } =
-      await resolveGenerationContext(teamId)
+    const { modelWireName, sampling } = await resolveGenerationContext(teamId)
 
-    const response = await ai.generate({
-      model,
+    const output = await runStructuredGeneration({
+      model: modelWireName,
       system: WORKFLOW_SYSTEM_INSTRUCTIONS,
       prompt,
-      output: { schema: generatedWorkflowZod },
-      config,
-      use: aiMiddlewares(),
+      output: generatedWorkflowZod,
+      sampling,
     })
 
-    const output = response.output
     if (!output) {
       throw new HttpsError(
         "internal",

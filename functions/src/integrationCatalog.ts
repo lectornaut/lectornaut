@@ -28,9 +28,11 @@ import {
   BUILT_IN_AGENTS,
   type BuiltInAgentDefinition,
 } from "./builtInAgents.js"
+import type { IntegrationType } from "./domain.js"
+import type { WorkspaceNodeScope } from "./types.js"
 import { WORKFLOW_PRESETS } from "./workflowPresets.js"
 
-export type IntegrationType = "agent" | "tool" | "workflow"
+export type { IntegrationType }
 
 /** Persona payload for an agent catalog entry (resolved for built-in agents). */
 export interface AgentCatalogSpec {
@@ -42,7 +44,7 @@ export interface AgentCatalogSpec {
 
 /** Defaults copied into a materialized workflow instance at install. */
 export interface WorkflowCatalogDefaults {
-  targetScope: "code" | "write" | null
+  targetScope: WorkspaceNodeScope | null
   instructions: string
   additionalPrompt: string
   trigger:
@@ -50,7 +52,7 @@ export interface WorkflowCatalogDefaults {
         type: "schedule"
         schedule: { type: "weekly"; dayOfWeek: number; atMinuteUTC: number }
       }
-    | { type: "event"; scope: "code" | "write"; debounceMinutes?: number }
+    | { type: "event"; scope: WorkspaceNodeScope; debounceMinutes?: number }
   updateMode: "automatic" | "require_review"
 }
 

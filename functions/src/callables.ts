@@ -1,3 +1,5 @@
+import type { DocumentSnapshot, Query } from "firebase-admin/firestore"
+import { FieldValue } from "firebase-admin/firestore"
 import * as logger from "firebase-functions/logger"
 import {
   CallableRequest,
@@ -6,7 +8,7 @@ import {
 } from "firebase-functions/v2/https"
 import { COST_BUDGET } from "./costBudget.js"
 import { sendEmailInternal } from "./email.js"
-import { admin, db } from "./firebase.js"
+import { db } from "./firebase.js"
 import { CALLABLE_OPTS } from "./runtimeConfig.js"
 import { postmarkApiKey } from "./secrets.js"
 import {
@@ -25,7 +27,7 @@ const getUserPreferencesRef = (userId: string) =>
   db.doc(`users/${userId}/settings/preferences`)
 
 function readSelectedTeamId(
-  snapshot: admin.firestore.DocumentSnapshot
+  snapshot: DocumentSnapshot
 ): string | null | undefined {
   if (!snapshot.exists) return undefined
 
@@ -40,7 +42,7 @@ function readSelectedTeamId(
  */
 async function batchUpdateNotifications(
   request: CallableRequest,
-  queryModifier: (q: admin.firestore.Query) => admin.firestore.Query,
+  queryModifier: (q: Query) => Query,
   updateData: Record<string, unknown> | null // null means delete
 ): Promise<{ count: number }> {
   if (!request.auth) {
@@ -54,7 +56,7 @@ async function batchUpdateNotifications(
   const status = request.data?.status as NotificationStatus | undefined
   const batch = db.batch()
 
-  let q: admin.firestore.Query = db.collection(`users/${uid}/notifications`)
+  let q: Query = db.collection(`users/${uid}/notifications`)
   q = queryModifier(q)
 
   if (status) {
@@ -233,7 +235,7 @@ export const sendTestNotification = onCall(
         url: "/settings/notifications",
         status: "inbox",
         read: false,
-        createdAt: admin.firestore.FieldValue.serverTimestamp(),
+        createdAt: FieldValue.serverTimestamp(),
       })
     } else if (channel === "native") {
       // Native notifications are triggered from the client side.
@@ -346,13 +348,13 @@ export const acceptInvitation = onCall(CALLABLE_OPTS, async (request) => {
       role: invitationRole,
       user: userData,
       team: teamSnap.data() ?? {},
-      createdAt: admin.firestore.FieldValue.serverTimestamp(),
-      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      createdAt: FieldValue.serverTimestamp(),
+      updatedAt: FieldValue.serverTimestamp(),
     })
 
     for (const ws of workspacesSnap.docs) {
       transaction.update(ws.ref, {
-        memberUids: admin.firestore.FieldValue.arrayUnion(uid),
+        memberUids: FieldValue.arrayUnion(uid),
       })
     }
 
@@ -363,7 +365,7 @@ export const acceptInvitation = onCall(CALLABLE_OPTS, async (request) => {
         userPreferencesRef,
         {
           currentTeamId: invitation.teamId,
-          updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+          updatedAt: FieldValue.serverTimestamp(),
         },
         { merge: true }
       )

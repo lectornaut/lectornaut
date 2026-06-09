@@ -40,19 +40,21 @@
  * client-side Firestore subscriptions (members can read the collection).
  */
 
+import { FieldValue, Timestamp } from "firebase-admin/firestore"
 import { HttpsError, onCall } from "firebase-functions/v2/https"
 import { z } from "zod"
+import { requireVerifiedAuth } from "./auth.js"
 import { assertAdminRole as assertTeamAdminRole } from "./authGuards.js"
-import { requireVerifiedAuth } from "./bot.js"
-import { admin, db } from "./firebase.js"
+import { NODE_SCOPES, type IntegrationSource } from "./domain.js"
+import { db } from "./firebase.js"
 import {
+  getCatalogEntry,
+  listCatalog,
   type AgentCatalogSpec,
   type CatalogEntry,
-  getCatalogEntry,
-  type IntegrationType,
-  listCatalog,
 } from "./integrationCatalog.js"
 import { CALLABLE_OPTS } from "./runtimeConfig.js"
+import type { WorkspaceNodeScope } from "./types.js"
 
 // ─── Constants ──────────────────────────────────────────────────────────────
 
@@ -111,7 +113,7 @@ type ToolAction =
   | { kind: "promptTemplate"; prompt: string; model: string | null }
   | {
       kind: "workspaceSearch"
-      scope: "code" | "write" | null
+      scope: WorkspaceNodeScope | null
       defaultLimit: number
       filterHint: string
     }
@@ -129,8 +131,6 @@ export interface ToolSpec {
   outputSchema: { fields: ToolField[] }
   action: ToolAction
 }
-
-type IntegrationSource = "builtin" | "custom" | "published"
 
 interface IntegrationDocBase {
   id: string
@@ -174,8 +174,6 @@ export interface ResolvedIntegration {
   updatedAt: FirebaseFirestore.Timestamp
   createdByUid: string
 }
-
-export type { IntegrationType }
 
 // ─── Validation schemas (callable payloads) ──────────────────────────────────
 
@@ -236,7 +234,7 @@ const toolActionSchema = z.discriminatedUnion("kind", [
   }),
   z.object({
     kind: z.literal("workspaceSearch"),
-    scope: z.enum(["code", "write"]).nullable(),
+    scope: z.enum(NODE_SCOPES).nullable(),
     defaultLimit: z.number().int().min(1).max(20),
     filterHint: z.string().max(200),
   }),
@@ -465,18 +463,11 @@ function normalizeIntegrationDoc(
     description: typeof data.description === "string" ? data.description : "",
     avatarSeed: typeof data.avatarSeed === "string" ? data.avatarSeed : "",
     enabled: typeof data.enabled === "boolean" ? data.enabled : true,
-    archivedAt:
-      data.archivedAt instanceof admin.firestore.Timestamp
-        ? data.archivedAt
-        : null,
+    archivedAt: data.archivedAt instanceof Timestamp ? data.archivedAt : null,
     createdAt:
-      data.createdAt instanceof admin.firestore.Timestamp
-        ? data.createdAt
-        : admin.firestore.Timestamp.now(),
+      data.createdAt instanceof Timestamp ? data.createdAt : Timestamp.now(),
     updatedAt:
-      data.updatedAt instanceof admin.firestore.Timestamp
-        ? data.updatedAt
-        : admin.firestore.Timestamp.now(),
+      data.updatedAt instanceof Timestamp ? data.updatedAt : Timestamp.now(),
     createdByUid:
       typeof data.createdByUid === "string" ? data.createdByUid : "",
   }
@@ -546,7 +537,7 @@ function virtualFromCatalog(
   teamId: string,
   entry: Extract<CatalogEntry, { type: "agent" | "tool" }>
 ): ResolvedIntegration {
-  const now = admin.firestore.Timestamp.now()
+  const now = Timestamp.now()
   return {
     id: entry.key,
     teamId,
@@ -776,7 +767,7 @@ async function writeNewCustomDoc(
   }
 ): Promise<string> {
   const ref = db.collection(integrationsCollectionPath(teamId)).doc()
-  const now = admin.firestore.FieldValue.serverTimestamp()
+  const now = FieldValue.serverTimestamp()
   await ref.set({
     type: fields.type,
     source: "custom",
@@ -843,7 +834,7 @@ export const updateIntegration = onCall<UpdateIntegrationRequest>(
     }
 
     const updates: Record<string, unknown> = {
-      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      updatedAt: FieldValue.serverTimestamp(),
     }
 
     if (current.type === "agent") {
@@ -947,7 +938,7 @@ export const setIntegrationEnabled = onCall<SetIntegrationEnabledRequest>(
 
     const ref = await resolveMutableRef(teamId, data)
     await ref.set(
-      { enabled, updatedAt: admin.firestore.FieldValue.serverTimestamp() },
+      { enabled, updatedAt: FieldValue.serverTimestamp() },
       { merge: true }
     )
     invalidateIntegrationsCache(teamId)
@@ -981,7 +972,7 @@ async function resolveMutableRef(
     const ref = db.doc(integrationDocPath(teamId, data.sourceKey))
     const snap = await ref.get()
     if (!snap.exists) {
-      const now = admin.firestore.FieldValue.serverTimestamp()
+      const now = FieldValue.serverTimestamp()
       await ref.set({
         type: entry.type,
         source: "builtin",
@@ -1023,7 +1014,7 @@ export const installIntegration = onCall<InstallIntegrationRequest>(
     const { teamId, type, sourceKey, integrationId } = request.data ?? {}
     requireTeamId(teamId)
     await assertAdminRole(teamId, auth.uid)
-    const now = admin.firestore.FieldValue.serverTimestamp()
+    const now = FieldValue.serverTimestamp()
 
     // Custom (or any existing doc) restore: clear archivedAt by id.
     if (integrationId) {
@@ -1084,8 +1075,8 @@ export const uninstallIntegration = onCall<UninstallIntegrationRequest>(
     const ref = await resolveMutableRef(data.teamId, data)
     await ref.set(
       {
-        archivedAt: admin.firestore.FieldValue.serverTimestamp(),
-        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+        archivedAt: FieldValue.serverTimestamp(),
+        updatedAt: FieldValue.serverTimestamp(),
       },
       { merge: true }
     )

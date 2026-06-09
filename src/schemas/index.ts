@@ -8,7 +8,7 @@
  * Layout:
  *   _primitives  — shared timestamp primitives (Timestamp, FieldValue)
  *   _registry    — Firestore path → schema pair lookup (populated in PR 4)
- *   _utils       — parseSafe, parseOrWarn, assertValid, zodConverter,
+ *   _utils       — parseSafe, assertValid, zodConverter,
  *                  validatePartialUpdate, SchemaValidationError,
  *                  setSchemaViolationSink
  *   domain       — users, teams, workspaces, preferences, billing

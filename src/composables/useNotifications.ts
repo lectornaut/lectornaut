@@ -10,41 +10,28 @@ import {
 import { setBadgeCount } from "@/composables/usePlatform"
 import { withToast } from "@/helpers/toast"
 import { firestore } from "@/modules/firebase"
-import { useSettingsStore } from "@/stores/settingsStore"
 import {
   type INotification,
   type INotificationStatus,
 } from "@/types/notification"
+import { useRunWrite } from "@/utils/firebase/firebase-mutation"
 import {
-  FirestoreErrorCodes,
-  hasFirebaseErrorCode,
-} from "@/utils/firebase/firebase-errors"
-import {
-  cloneState,
-  createPendingSet,
-  mergeOptimisticCollection,
-  withOptimisticBatchUpdate,
-} from "@/utils/firebase/firebase-optimistic"
-import { mutateWithCoordinator } from "@/utils/firebase/firebase-sync-engine"
+  useInfiniteCollectionQuery,
+  type InfiniteCollectionData,
+} from "@/utils/firebase/firebase-query"
+import { mutateUpdateDocument } from "@/utils/firebase/firebase-sync-engine"
+import { useStorage } from "@vueuse/core"
 import {
   collection,
   doc,
-  getDocs,
   limit,
-  onSnapshot,
   orderBy,
   query,
   startAfter,
   Timestamp,
-  type QueryDocumentSnapshot,
 } from "firebase/firestore"
-import { computed, onUnmounted, ref, shallowRef, watch } from "vue"
+import { computed, onUnmounted, watch } from "vue"
 import { useCurrentUser } from "vuefire"
-
-const sortNotifications = (notifications: INotification[]) =>
-  [...notifications].sort(
-    (left, right) => right.createdAt.getTime() - left.createdAt.getTime()
-  )
 
 const toNotification = (
   id: string,
@@ -63,67 +50,67 @@ const toNotification = (
  */
 const NOTIFICATIONS_PAGE_SIZE = 20
 
+/** Newest-first — the order both tiers and the merged view present. */
+const byNewestFirst = (left: INotification, right: INotification) =>
+  right.createdAt.getTime() - left.createdAt.getTime()
+
+type NotificationEntry = InfiniteCollectionData<INotification>
+
+const mapEntryRows = (
+  entry: NotificationEntry,
+  map: (notification: INotification) => INotification
+): NotificationEntry => ({
+  head: entry.head.map(map),
+  tail: entry.tail.map(map),
+})
+
+const filterEntryRows = (
+  entry: NotificationEntry,
+  keep: (notification: INotification) => boolean
+): NotificationEntry => ({
+  head: entry.head.filter(keep),
+  tail: entry.tail.filter(keep),
+})
+
 export function useNotifications() {
   const user = useCurrentUser()
+  const runWrite = useRunWrite("notifications")
 
-  // Two-tier storage: the listener owns the most-recent slice
-  // (so new arrivals appear without manual refresh), while older pages
-  // are fetched on demand via `getDocs` + cursor. This replaces the
-  // earlier "expanding limit" pattern, where each `loadMore()` tore
-  // down the listener and re-fetched the entire window — costing
-  // 20+40+60+... reads for what should be 20+20+20+...
-  const livePageNotifications = ref<INotification[]>([])
-  const olderPagesNotifications = ref<INotification[]>([])
-  const optimisticNotifications = ref<INotification[]>([])
-  const pendingNotificationIds = shallowRef(createPendingSet())
-  const isLoading = ref(false)
-  const isLoadingMore = ref(false)
-  const hasMore = ref(true)
-
-  // Cursor for the next `getDocs` page. `shallowRef` per the project
-  // convention in CLAUDE.md — a plain `ref` would deep-proxy the
-  // Firestore snapshot's internals and break `startAfter()` when the
-  // SDK introspects the cursor (assertion 0xb815, IndexedDB clone
-  // failures, etc.). Same discipline as `usePaginatedLogs`.
-  const olderPagesCursor = shallowRef<QueryDocumentSnapshot | null>(null)
-
-  /**
-   * Merged view of live + older pages. Dedup by id handles the
-   * boundary where a brand-new notification arrives at the top and
-   * displaces the bottom-of-live row, which is now also represented
-   * in `olderPagesNotifications` (the page-2 fetch had captured what
-   * was then page 2, but a row that's since moved across the page
-   * boundary appears in both). Live wins.
-   */
-  const firestoreNotifications = computed<INotification[]>(() => {
-    const seen = new Set<string>()
-    const merged: INotification[] = []
-    for (const notification of livePageNotifications.value) {
-      if (seen.has(notification.id)) continue
-      seen.add(notification.id)
-      merged.push(notification)
+  // Reads live in the TanStack cache as a single `{ head, tail }` entry: a live
+  // first-page `onSnapshot` plus cursor-paginated older pages. Optimism flows
+  // through the same `runWrite({ keys })` hold every other store uses — no
+  // bespoke optimistic overlay or collection-merge. The user-switch teardown and
+  // page-1-reset the old hand-rolled listener did are handled by the primitive.
+  const feed = useInfiniteCollectionQuery<INotification>(() => {
+    if (!user.value) return null
+    const path = `users/${user.value.uid}/notifications`
+    const base = collection(firestore, path)
+    return {
+      path,
+      pageSize: NOTIFICATIONS_PAGE_SIZE,
+      buildQuery: (after) =>
+        after
+          ? query(
+              base,
+              orderBy("createdAt", "desc"),
+              startAfter(after),
+              limit(NOTIFICATIONS_PAGE_SIZE)
+            )
+          : query(
+              base,
+              orderBy("createdAt", "desc"),
+              limit(NOTIFICATIONS_PAGE_SIZE)
+            ),
+      toRow: toNotification,
+      sort: byNewestFirst,
     }
-    for (const notification of olderPagesNotifications.value) {
-      if (seen.has(notification.id)) continue
-      seen.add(notification.id)
-      merged.push(notification)
-    }
-    return merged
   })
 
-  const notifications = computed(() =>
-    mergeOptimisticCollection(
-      firestoreNotifications.value,
-      optimisticNotifications.value,
-      pendingNotificationIds.value,
-      {
-        sort: (left, right) =>
-          right.createdAt.getTime() - left.createdAt.getTime(),
-      }
-    )
-  )
-
-  let unsubscribe: (() => void) | null = null
+  const notifications = feed.data
+  const isLoading = feed.isLoading
+  const isLoadingMore = feed.isLoadingMore
+  const hasMore = feed.hasMore
+  const loadMore = feed.loadMore
 
   const unreadCounts = computed(() => {
     const counts = {
@@ -147,10 +134,6 @@ export function useNotifications() {
   const inboxUnreadCount = computed(() => unreadCounts.value.inbox)
   const savedUnreadCount = computed(() => unreadCounts.value.saved)
   const doneUnreadCount = computed(() => unreadCounts.value.done)
-
-  const setOptimisticNotifications = (next: INotification[]) => {
-    optimisticNotifications.value = sortNotifications(next)
-  }
 
   const getNotificationSnapshot = (notificationId: string) => {
     const notification = notifications.value.find(
@@ -180,34 +163,29 @@ export function useNotifications() {
   ) => {
     if (!user.value) return
 
-    const previousOptimistic = cloneState(optimisticNotifications.value)
+    const notifRef = doc(
+      firestore,
+      `users/${user.value.uid}/notifications`,
+      notificationId
+    )
+    const previous = feed.snapshot()
 
-    await mutateWithCoordinator({
-      id: notificationId,
-      source: "notifications.update",
-      pendingIds: pendingNotificationIds,
-      applyLocal: () => {
-        setOptimisticNotifications(
-          cloneState(notifications.value).map((notification) =>
+    await runWrite({
+      keys: [feed.key.value],
+      apply: () =>
+        feed.update((entry) =>
+          mapEntryRows(entry, (notification) =>
             notification.id === notificationId
               ? ({ ...notification, ...updates } as INotification)
               : notification
           )
-        )
-      },
-      rollbackLocal: () => {
-        optimisticNotifications.value = previousOptimistic
-      },
-      mutation: {
-        source: "notifications.update",
-        targetPath: doc(
-          firestore,
-          `users/${user.value.uid}/notifications`,
-          notificationId
-        ).path,
-        type: "update",
-        data: updates as Record<string, unknown>,
-      },
+        ),
+      rollback: () => feed.update(() => previous),
+      fn: () =>
+        mutateUpdateDocument(notifRef, updates as Record<string, unknown>, {
+          source: "notifications.update",
+        }),
+      source: "notifications.update",
     })
   }
 
@@ -223,24 +201,23 @@ export function useNotifications() {
 
     if (targetIds.length === 0) return
 
-    const previousOptimistic = cloneState(optimisticNotifications.value)
+    const previous = feed.snapshot()
 
-    await withOptimisticBatchUpdate(
-      pendingNotificationIds,
-      targetIds,
-      () => {
-        setOptimisticNotifications(transform(cloneState(notifications.value)))
-      },
-      () => {
-        optimisticNotifications.value = previousOptimistic
-      },
-      async () => {
+    await runWrite({
+      keys: [feed.key.value],
+      // `transform` is a per-row map, so applying it to each tier independently
+      // matches applying it to the merged view.
+      apply: () =>
+        feed.update((entry) => ({
+          head: transform(entry.head),
+          tail: transform(entry.tail),
+        })),
+      rollback: () => feed.update(() => previous),
+      fn: async () => {
         await callable({ status })
       },
-      {
-        source: `notifications.batch.${source}`,
-      }
-    )
+      source: `notifications.batch.${source}`,
+    })
   }
 
   const restoreNotification = async (snapshot: {
@@ -344,41 +321,25 @@ export function useNotifications() {
   const deleteNotificationMutation = async (notificationId: string) => {
     if (!user.value) return
 
-    const previousOptimistic = cloneState(optimisticNotifications.value)
-    const previousLive = cloneState(livePageNotifications.value)
-    const previousOlder = cloneState(olderPagesNotifications.value)
+    const previous = feed.snapshot()
 
-    await withOptimisticBatchUpdate(
-      pendingNotificationIds,
-      [notificationId],
-      () => {
-        // Filter from both tiers — the deleted notification might be
-        // in either (or both — see the dedup contract in
-        // `firestoreNotifications`).
-        livePageNotifications.value = livePageNotifications.value.filter(
-          (notification) => notification.id !== notificationId
-        )
-        olderPagesNotifications.value = olderPagesNotifications.value.filter(
-          (notification) => notification.id !== notificationId
-        )
-        setOptimisticNotifications(
-          cloneState(notifications.value).filter(
+    await runWrite({
+      keys: [feed.key.value],
+      // Filter from both tiers — the row may be in either (or both; see the
+      // head-wins dedup contract in `mergeHeadTail`).
+      apply: () =>
+        feed.update((entry) =>
+          filterEntryRows(
+            entry,
             (notification) => notification.id !== notificationId
           )
-        )
-      },
-      () => {
-        optimisticNotifications.value = previousOptimistic
-        livePageNotifications.value = previousLive
-        olderPagesNotifications.value = previousOlder
-      },
-      async () => {
+        ),
+      rollback: () => feed.update(() => previous),
+      fn: async () => {
         await deleteNotificationFn({ notificationId })
       },
-      {
-        source: "notifications.delete",
-      }
-    )
+      source: "notifications.delete",
+    })
   }
 
   const deleteAllNotificationsMutation = async (
@@ -391,186 +352,39 @@ export function useNotifications() {
 
     if (targetIds.length === 0) return
 
-    const previousOptimistic = cloneState(optimisticNotifications.value)
-    const previousLive = cloneState(livePageNotifications.value)
-    const previousOlder = cloneState(olderPagesNotifications.value)
+    const previous = feed.snapshot()
 
-    await withOptimisticBatchUpdate(
-      pendingNotificationIds,
-      targetIds,
-      () => {
-        livePageNotifications.value = livePageNotifications.value.filter(
-          (notification) => !targetIdSet.has(notification.id)
-        )
-        olderPagesNotifications.value = olderPagesNotifications.value.filter(
-          (notification) => !targetIdSet.has(notification.id)
-        )
-        setOptimisticNotifications(
-          cloneState(notifications.value).filter(
+    await runWrite({
+      keys: [feed.key.value],
+      apply: () =>
+        feed.update((entry) =>
+          filterEntryRows(
+            entry,
             (notification) => !targetIdSet.has(notification.id)
           )
-        )
-      },
-      () => {
-        optimisticNotifications.value = previousOptimistic
-        livePageNotifications.value = previousLive
-        olderPagesNotifications.value = previousOlder
-      },
-      async () => {
+        ),
+      rollback: () => feed.update(() => previous),
+      fn: async () => {
         await deleteAllNotificationsFn({ status })
       },
-      {
-        source: "notifications.batch.deleteAllNotifications",
-      }
-    )
+      source: "notifications.batch.deleteAllNotifications",
+    })
   }
 
-  const setupListener = () => {
-    if (unsubscribe) unsubscribe()
-
-    if (!user.value) {
-      livePageNotifications.value = []
-      olderPagesNotifications.value = []
-      optimisticNotifications.value = []
-      pendingNotificationIds.value = createPendingSet()
-      olderPagesCursor.value = null
-      hasMore.value = true
-      isLoading.value = false
-      isLoadingMore.value = false
-      return
-    }
-
-    // Reset older-pages state — a fresh subscription starts back at
-    // page 1 only. `loadMore()` will re-populate older pages on
-    // demand. This matters at user-switch time and on hot reloads.
-    olderPagesNotifications.value = []
-    olderPagesCursor.value = null
-    hasMore.value = true
-    isLoading.value = true
-
-    const q = query(
-      collection(firestore, `users/${user.value.uid}/notifications`),
-      orderBy("createdAt", "desc"),
-      limit(NOTIFICATIONS_PAGE_SIZE)
-    )
-
-    unsubscribe = onSnapshot(
-      q,
-      (snapshot) => {
-        livePageNotifications.value = snapshot.docs.map((snapshotDoc) =>
-          toNotification(
-            snapshotDoc.id,
-            snapshotDoc.data() as Record<string, unknown>
-          )
-        )
-        // If the live page is full, the next `loadMore()` should start
-        // after the last doc. If it's short, there can't be more —
-        // collapse the load-more affordance.
-        if (snapshot.size === NOTIFICATIONS_PAGE_SIZE) {
-          // Only set the cursor when older pages haven't been loaded
-          // yet — once `loadMore()` has advanced past page 1, its
-          // own cursor is further along, and live emissions
-          // shouldn't rewind it.
-          if (olderPagesNotifications.value.length === 0) {
-            olderPagesCursor.value = snapshot.docs[snapshot.size - 1] ?? null
-          }
-        } else {
-          olderPagesCursor.value = null
-          hasMore.value = false
-        }
-        isLoading.value = false
-      },
-      (error) => {
-        // Benign during sign-out / token rotation: the listener emits
-        // one final permission-denied snapshot before the user watcher
-        // tears it down. Real errors (signed-in user, bad rule, etc.)
-        // still surface.
-        if (
-          !user.value &&
-          hasFirebaseErrorCode(error, FirestoreErrorCodes.PERMISSION_DENIED)
-        ) {
-          isLoading.value = false
-          return
-        }
-        console.error("Error listening to notifications:", error)
-        isLoading.value = false
-      }
-    )
-  }
-
-  watch(user, () => setupListener(), { immediate: true })
-
-  watch(firestoreNotifications, (data) => {
-    if (pendingNotificationIds.value.size === 0) {
-      optimisticNotifications.value = cloneState(data)
-    }
-  })
-
-  onUnmounted(() => {
-    if (unsubscribe) unsubscribe()
-    void setBadgeCount(null)
-  })
-
-  const settingsStore = useSettingsStore()
+  // Dock/taskbar badge toggle. Read straight from its localStorage key
+  // (shared with the preferences settings and main.ts) so this feed composable
+  // doesn't depend on the settings store.
+  const badgeCount = useStorage<boolean>("badgeCount", true)
 
   watch(
-    [() => settingsStore.badgeCount, inboxUnreadCount],
+    [badgeCount, inboxUnreadCount],
     ([showBadge, count]) => void setBadgeCount(showBadge ? count : null),
     { immediate: true }
   )
 
-  /**
-   * Fetch the next page of older notifications via cursor-based
-   * pagination. One-shot `getDocs` (not a listener) — older pages
-   * are static history, only the live page needs to react to new
-   * arrivals.
-   *
-   * No-ops on the leading edge (loading state still in flight, no
-   * more pages, no user) so callers can wire it to a button without
-   * extra guards.
-   */
-  const loadMore = async () => {
-    if (!user.value) return
-    if (isLoadingMore.value) return
-    if (!hasMore.value) return
-    const cursor = olderPagesCursor.value
-    if (!cursor) return
-
-    isLoadingMore.value = true
-    try {
-      const q = query(
-        collection(firestore, `users/${user.value.uid}/notifications`),
-        orderBy("createdAt", "desc"),
-        startAfter(cursor),
-        limit(NOTIFICATIONS_PAGE_SIZE)
-      )
-      const snapshot = await getDocs(q)
-      const next = snapshot.docs.map((snapshotDoc) =>
-        toNotification(
-          snapshotDoc.id,
-          snapshotDoc.data() as Record<string, unknown>
-        )
-      )
-      olderPagesNotifications.value = [
-        ...olderPagesNotifications.value,
-        ...next,
-      ]
-      // Advance the cursor to the last doc of THIS page; if the page
-      // was short, there's nothing left.
-      if (snapshot.size < NOTIFICATIONS_PAGE_SIZE) {
-        hasMore.value = false
-        olderPagesCursor.value = null
-      } else {
-        olderPagesCursor.value = snapshot.docs[snapshot.size - 1] ?? null
-      }
-    } catch (error) {
-      // Don't latch hasMore=false on transient errors — let the user
-      // retry. Mirrors usePaginatedLogs' handling.
-      console.error("Error loading more notifications:", error)
-    } finally {
-      isLoadingMore.value = false
-    }
-  }
+  onUnmounted(() => {
+    void setBadgeCount(null)
+  })
 
   const markAsRead = (id: string) =>
     updateNotificationWithToast(

@@ -36,6 +36,15 @@ import {
   type BotSessionPendingAttachment,
 } from "@/composables/useFunctions"
 import {
+  applyStreamChunk,
+  createMessage,
+  type BotChatMessage,
+  type BotChatRole,
+  type BotChatSegment,
+  type BotChatStreamEffects,
+  type BotChatToolCall,
+} from "@/helpers/botChatStream"
+import {
   botModelProviders,
   botModels,
   type BotModelEntry,
@@ -64,11 +73,16 @@ import { storeToRefs } from "pinia"
 import { computed, ref, watch, type InjectionKey, type Ref } from "vue"
 import { toast } from "vue-sonner"
 
-export type BotChatRole = "user" | "agent"
-
-// Re-export so consumers (composer, side panel) only need to import
-// from `useBotChat`, not also from `useFunctions`.
-export type { BotChatMode, BotChatNodeRef }
+// Re-export so consumers (composer, side panel) only need to import from
+// `useBotChat`, not also from `useFunctions` / `@/helpers/botChatStream`.
+export type {
+  BotChatMessage,
+  BotChatMode,
+  BotChatNodeRef,
+  BotChatRole,
+  BotChatSegment,
+  BotChatToolCall,
+}
 
 /** Cap mirrors `CONTEXT_NODE_MAX` on the server. */
 export const BOT_CHAT_MAX_ATTACHED_NODES = 10
@@ -114,87 +128,6 @@ export const BOT_CHAT_MODE_OPTIONS: readonly BotChatModeOption[] = [
 ] as const
 
 const DEFAULT_BOT_CHAT_MODE: BotChatMode = "auto"
-
-/**
- * Tool invocation captured on an agent message.
- *
- * `output` is `undefined` in two states:
- *   - During streaming, when a normal tool is still running on the
- *     server (rare — execution is fast).
- *   - When `isInterrupt` is true, meaning the chat is paused waiting
- *     for the user to fill in a form. The renderer uses the flag to
- *     pick between a "Running…" spinner and an interactive prompt.
- *
- * `ref` correlates the toolCall stream event with its matching
- * toolResult event (and with the resume callable's input).
- */
-export interface BotChatToolCall {
-  ref?: string
-  name: string
-  input?: unknown
-  output?: unknown
-  /**
-   * Set when this is a paused Human-in-the-Loop interrupt awaiting user
-   * input. Cleared once the user submits an answer (the segment then
-   * carries the answer as `output`).
-   */
-  isInterrupt?: boolean
-}
-
-/**
- * One slice of an agent message: either a text run or a tool invocation.
- * The renderer walks segments in order and switches between markdown
- * bubbles and tool-call cards. User messages stay flat (no segments) —
- * they're always a single text run.
- */
-export type BotChatSegment =
-  | { kind: "text"; text: string }
-  | { kind: "tool"; tool: BotChatToolCall }
-
-export interface BotChatMessage {
-  // Stable client-side id for `v-for :key` and parse-tree memoization in
-  // the chat view. Not persisted — every snapshot reconcile mints fresh
-  // ids, which is fine because the array is rebuilt wholesale at that
-  // point and the WeakMap parse cache resets along with it.
-  id: string
-  role: BotChatRole
-  content: string
-  /** Present on agent messages with tool calls; absent for plain text. */
-  segments?: BotChatSegment[]
-  /**
-   * Firebase uid of the human who sent this message. Only populated for
-   * user-role messages — agent turns have no human author. Drives
-   * per-sender avatar rendering so shared/public sessions, where
-   * multiple admins can post, attribute each turn to the right person.
-   * Undefined on legacy messages (saved before authorship was tracked
-   * server-side); the UI falls back to the session's `ownerUid` then.
-   */
-  authorUid?: string
-}
-
-const createMessage = (m: {
-  role: BotChatRole
-  content: string
-  segments?: BotChatSegment[]
-  authorUid?: string
-}): BotChatMessage => ({
-  id: crypto.randomUUID(),
-  role: m.role,
-  content: m.content,
-  authorUid: m.authorUid,
-  // Deep-clone segments so reactive mutations on this instance don't leak
-  // back into the caller's object (e.g. server snapshot data passed into
-  // `messages.value = serverMessages.map(createMessage)`). The `tool`
-  // spread copies `isInterrupt` automatically so paused HITL prompts
-  // round-trip correctly through Firestore reconciles.
-  segments: m.segments
-    ? m.segments.map((s) =>
-        s.kind === "text"
-          ? { kind: "text", text: s.text }
-          : { kind: "tool", tool: { ...s.tool } }
-      )
-    : undefined,
-})
 
 export interface BotChatContext {
   messages: Ref<BotChatMessage[]>
@@ -1043,140 +976,32 @@ export function useBotChat(): BotChatContext {
     startNewSession()
   })
 
-  // Shared stream-chunk dispatchers for both `sendMessage` (new turn)
-  // and `respondToInterrupt` (resumed turn). Both flows produce chunks
-  // with the same `SendBotMessageStreamChunk` shape and route them into
-  // an in-place agent message identified by `agentIndex`.
+  // Apply the out-of-band effects a streamed chunk implied (see
+  // `applyStreamChunk` in `@/helpers/botChatStream`) to our reactive refs.
+  // Shared by both `sendMessage` (new turn) and `respondToInterrupt`
+  // (resumed turn): the pure reducer mutates the agent message in place and
+  // reports `sessionId` / `agentTransfer` as facts — we own the refs, so
+  // the "write only if changed" guards live here.
   //
-  // The factory takes `agentIndex` (not a ref) so each closed-over
-  // dispatcher always resolves the latest array slot — important if a
-  // Firestore snapshot reconcile rebuilds the array mid-stream.
-  const buildStreamHandlers = (agentIndex: number) => {
-    const appendText = (text: string) => {
-      const agent = messages.value[agentIndex]
-      if (agent?.role !== "agent") return
-      agent.content += text
-      const segments = agent.segments
-      if (!segments) return
-      const last = segments[segments.length - 1]
-      if (last && last.kind === "text") {
-        // Mutate the existing text segment so its identity stays stable —
-        // markdown parse caches downstream key off the message object,
-        // not the segment object, but keeping segment identity stable
-        // also helps Vue's reactive diff skip nodes that didn't change.
-        last.text += text
-      } else {
-        segments.push({ kind: "text", text })
-      }
+  //   - `sessionId`: the server pins it on the first chunk of a brand-new
+  //     chat; flip it early so the chat is linkable before the reply
+  //     finishes streaming.
+  //   - `agentTransfer`: a `transferToAgent` tool call pivots the composer
+  //     badge optimistically — ~100–400ms before the post-turn
+  //     `SessionStore.save` + snapshot would confirm it. The doc-level
+  //     watcher then either no-ops (its equality guard) or, in the rare
+  //     case the server's `availableTransferAgentIds` allowlist rejected
+  //     the target, corrects our guess.
+  const applyStreamEffects = (effects: BotChatStreamEffects) => {
+    if (effects.sessionId && effects.sessionId !== sessionId.value) {
+      sessionId.value = effects.sessionId
     }
-    const pushToolCall = (call: {
-      ref?: string
-      name: string
-      input?: unknown
-      isInterrupt?: boolean
-    }) => {
-      // Optimistic active-agent sync on `transferToAgent`. The
-      // toolCall chunk fires the instant the MODEL emits its
-      // toolRequest — long before the server's post-turn
-      // `SessionStore.save` writes `activeAgentId` to Firestore and
-      // the snapshot makes it back to us (the doc-level snapshot
-      // watcher's normal latency, ~100–400ms of Firestore-roundtrip).
-      // Pivoting the composer badge here cuts that latency to zero;
-      // the snapshot watcher then either confirms our guess (no-op
-      // via its equality guard) or corrects it in the rare case the
-      // server-side `availableTransferAgentIds` allowlist rejected
-      // the target and the transfer never committed.
-      //
-      // `""` is the sentinel for "transfer back to the team default
-      // persona" (matches the server's
-      // `normalizeActiveAgentIdForStorage` mapping).
-      if (
-        call.name === "transferToAgent" &&
-        call.input &&
-        typeof call.input === "object"
-      ) {
-        const rawAgentId = (call.input as { agentId?: unknown }).agentId
-        if (typeof rawAgentId === "string") {
-          const next = rawAgentId === "" ? null : rawAgentId
-          if (activeAgentId.value !== next) {
-            activeAgentId.value = next
-          }
-        }
-      }
-
-      const agent = messages.value[agentIndex]
-      if (agent?.role !== "agent") return
-      const segments = agent.segments
-      if (!segments) return
-      // Dedupe: server sweeps `final.messages` after the live stream and
-      // may resend events. We key on `ref` (always present in practice).
-      if (
-        call.ref &&
-        segments.some((s) => s.kind === "tool" && s.tool.ref === call.ref)
-      ) {
-        return
-      }
-      segments.push({
-        kind: "tool",
-        tool: {
-          ref: call.ref,
-          name: call.name,
-          input: call.input,
-          output: undefined,
-          // Pass through the HITL flag so the renderer draws an
-          // interactive form instead of a spinner. `fillToolResult`
-          // will drop the flag when an answer lands.
-          ...(call.isInterrupt ? { isInterrupt: true } : {}),
-        },
-      })
+    if (
+      effects.agentTransfer &&
+      activeAgentId.value !== effects.agentTransfer.agentId
+    ) {
+      activeAgentId.value = effects.agentTransfer.agentId
     }
-    const fillToolResult = (result: {
-      ref?: string
-      name: string
-      output?: unknown
-    }) => {
-      const agent = messages.value[agentIndex]
-      if (agent?.role !== "agent") return
-      const segments = agent.segments
-      if (!segments) return
-      // Match by ref first (precise); fall back to "newest pending tool
-      // segment with the same name" if ref is missing.
-      const target =
-        (result.ref &&
-          segments.find(
-            (s): s is Extract<BotChatSegment, { kind: "tool" }> =>
-              s.kind === "tool" && s.tool.ref === result.ref
-          )) ||
-        [...segments]
-          .reverse()
-          .find(
-            (s): s is Extract<BotChatSegment, { kind: "tool" }> =>
-              s.kind === "tool" &&
-              s.tool.name === result.name &&
-              s.tool.output === undefined
-          )
-      if (target) {
-        // Mutate output in place so the existing tool-card component
-        // transitions from "running" to "done" without unmounting. If
-        // this was a paused interrupt, the answer lands here and we
-        // drop the flag so the form is replaced by the completed-card
-        // view.
-        target.tool.output = result.output
-        delete target.tool.isInterrupt
-      } else {
-        // Result with no matching call (shouldn't happen in practice).
-        // Push a synthetic completed call so nothing is lost.
-        segments.push({
-          kind: "tool",
-          tool: {
-            ref: result.ref,
-            name: result.name,
-            output: result.output,
-          },
-        })
-      }
-    }
-    return { appendText, pushToolCall, fillToolResult }
   }
 
   const sendMessage = async (
@@ -1228,9 +1053,6 @@ export function useBotChat(): BotChatContext {
     )
     isSending.value = true
 
-    const { appendText, pushToolCall, fillToolResult } =
-      buildStreamHandlers(agentIndex)
-
     const controller = new AbortController()
     inflightController = controller
 
@@ -1281,15 +1103,11 @@ export function useBotChat(): BotChatContext {
         { signal: controller.signal }
       )
 
+      // The first chunk pins the session id (flips the URL early, before
+      // the reply finishes); a `transferToAgent` call may pivot the active
+      // agent. Both land via `applyStreamEffects`.
       for await (const chunk of result.stream) {
-        if (chunk.sessionId && chunk.sessionId !== sessionId.value) {
-          // Server's first chunk pins the session id — flip the URL early
-          // so the chat is linkable before the reply finishes streaming.
-          sessionId.value = chunk.sessionId
-        }
-        if (chunk.chunk) appendText(chunk.chunk)
-        if (chunk.toolCall) pushToolCall(chunk.toolCall)
-        if (chunk.toolResult) fillToolResult(chunk.toolResult)
+        applyStreamEffects(applyStreamChunk(messages.value, agentIndex, chunk))
       }
 
       const final = await result.data
@@ -1371,8 +1189,6 @@ export function useBotChat(): BotChatContext {
     target.tool.isInterrupt = false
 
     isSending.value = true
-    const { appendText, pushToolCall, fillToolResult } =
-      buildStreamHandlers(agentIndex)
 
     const controller = new AbortController()
     inflightController = controller
@@ -1403,12 +1219,7 @@ export function useBotChat(): BotChatContext {
       )
 
       for await (const chunk of result.stream) {
-        if (chunk.sessionId && chunk.sessionId !== sessionId.value) {
-          sessionId.value = chunk.sessionId
-        }
-        if (chunk.chunk) appendText(chunk.chunk)
-        if (chunk.toolCall) pushToolCall(chunk.toolCall)
-        if (chunk.toolResult) fillToolResult(chunk.toolResult)
+        applyStreamEffects(applyStreamChunk(messages.value, agentIndex, chunk))
       }
 
       const final = await result.data

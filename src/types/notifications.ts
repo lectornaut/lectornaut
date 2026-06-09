@@ -4,6 +4,10 @@ import type {
   notificationFrequencySchema,
   userNotificationSettingsSchema,
 } from "@/schemas/notifications"
+import {
+  DEFAULT_NOTIFICATION_SETTINGS,
+  NOTIFICATION_FREQUENCIES,
+} from "@lectornaut/shared/domain"
 import type { z } from "zod"
 
 /**
@@ -18,12 +22,10 @@ import type { z } from "zod"
  * `parseSafe(userNotificationSettingsSchema, …)` instead.
  */
 
-export const NOTIFICATION_FREQUENCIES = [
-  "immediate",
-  "daily",
-  "weekly",
-  "none",
-] as const
+// `DEFAULT_NOTIFICATION_SETTINGS` + `NOTIFICATION_FREQUENCIES` now live in
+// `@lectornaut/shared/domain` (one source for client + server); re-exported
+// here so existing `@/types/notifications` importers are unaffected.
+export { DEFAULT_NOTIFICATION_SETTINGS, NOTIFICATION_FREQUENCIES }
 
 export type NotificationFrequency = z.infer<typeof notificationFrequencySchema>
 
@@ -38,20 +40,6 @@ export type NotificationChannelSettings = z.infer<
 export type UserNotificationSettings = z.infer<
   typeof userNotificationSettingsSchema
 >
-
-export const DEFAULT_NOTIFICATION_SETTINGS: UserNotificationSettings = {
-  categories: {
-    communication: true,
-    marketing: true,
-    security: true,
-  },
-  frequency: "immediate",
-  channels: {
-    email: true,
-    inApp: true,
-    native: true,
-  },
-}
 
 const isObjectRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null && !Array.isArray(value)

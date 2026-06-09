@@ -11,7 +11,7 @@ import {
   defaultCustomAccentColor,
   defaultCustomBaseColor,
 } from "@/helpers/defaults"
-import { useSettingsStore } from "@/stores/settingsStore"
+import { useThemeStore } from "@/stores/themeStore"
 import type { ThemeMode } from "@/types/settings"
 import {
   buildCustomAccentTokens,
@@ -35,8 +35,8 @@ export const initTheme = () => {
   if (hasInitializedTheme) return
   hasInitializedTheme = true
 
-  const settingsStore = useSettingsStore()
-  const { themeSettings } = storeToRefs(settingsStore)
+  const themeStore = useThemeStore()
+  const { themeSettings } = storeToRefs(themeStore)
 
   watch(
     () => themeSettings.value.mode,
@@ -237,78 +237,78 @@ function getCustomAccentSourceColor(
 
 export const accent = computed({
   get: () => {
-    const settingsStore = useSettingsStore()
-    return settingsStore.themeSettings.accent
+    const themeStore = useThemeStore()
+    return themeStore.themeSettings.accent
   },
   set: (value: AccentId) => {
-    const settingsStore = useSettingsStore()
-    settingsStore.themeSettings.accent = value
+    const themeStore = useThemeStore()
+    themeStore.themeSettings.accent = value
   },
 })
 
 export const base = computed({
   get: () => {
-    const settingsStore = useSettingsStore()
-    return settingsStore.themeSettings.base
+    const themeStore = useThemeStore()
+    return themeStore.themeSettings.base
   },
   set: (value: BaseId) => {
-    const settingsStore = useSettingsStore()
-    settingsStore.themeSettings.base = value
+    const themeStore = useThemeStore()
+    themeStore.themeSettings.base = value
   },
 })
 
 export const font = computed({
   get: () => {
-    const settingsStore = useSettingsStore()
-    return settingsStore.themeSettings.font
+    const themeStore = useThemeStore()
+    return themeStore.themeSettings.font
   },
   set: (value: FontId) => {
-    const settingsStore = useSettingsStore()
-    settingsStore.themeSettings.font = value
+    const themeStore = useThemeStore()
+    themeStore.themeSettings.font = value
   },
 })
 
 export const size = computed({
   get: () => {
-    const settingsStore = useSettingsStore()
-    return settingsStore.themeSettings.size
+    const themeStore = useThemeStore()
+    return themeStore.themeSettings.size
   },
   set: (value: SizeId) => {
-    const settingsStore = useSettingsStore()
-    settingsStore.themeSettings.size = value
+    const themeStore = useThemeStore()
+    themeStore.themeSettings.size = value
   },
 })
 
 export const editorTheme = computed({
   get: () => {
-    const settingsStore = useSettingsStore()
-    return settingsStore.themeSettings.editorTheme
+    const themeStore = useThemeStore()
+    return themeStore.themeSettings.editorTheme
   },
   set: (value: EditorThemeId) => {
-    const settingsStore = useSettingsStore()
-    settingsStore.themeSettings.editorTheme = value
+    const themeStore = useThemeStore()
+    themeStore.themeSettings.editorTheme = value
   },
 })
 
 export const editorFontSize = computed({
   get: () => {
-    const settingsStore = useSettingsStore()
-    return settingsStore.themeSettings.editorFontSize
+    const themeStore = useThemeStore()
+    return themeStore.themeSettings.editorFontSize
   },
   set: (value: EditorFontSizeId) => {
-    const settingsStore = useSettingsStore()
-    settingsStore.themeSettings.editorFontSize = value
+    const themeStore = useThemeStore()
+    themeStore.themeSettings.editorFontSize = value
   },
 })
 
 export const customBaseColor = computed({
   get: () => {
-    const settingsStore = useSettingsStore()
-    return settingsStore.themeSettings.customBaseColor
+    const themeStore = useThemeStore()
+    return themeStore.themeSettings.customBaseColor
   },
   set: (value: string) => {
-    const settingsStore = useSettingsStore()
-    settingsStore.themeSettings.customBaseColor = normalizeHexColor(
+    const themeStore = useThemeStore()
+    themeStore.themeSettings.customBaseColor = normalizeHexColor(
       value,
       defaultCustomBaseColor
     )
@@ -317,12 +317,12 @@ export const customBaseColor = computed({
 
 export const customAccentColor = computed({
   get: () => {
-    const settingsStore = useSettingsStore()
-    return settingsStore.themeSettings.customAccentColor
+    const themeStore = useThemeStore()
+    return themeStore.themeSettings.customAccentColor
   },
   set: (value: string) => {
-    const settingsStore = useSettingsStore()
-    settingsStore.themeSettings.customAccentColor = normalizeHexColor(
+    const themeStore = useThemeStore()
+    themeStore.themeSettings.customAccentColor = normalizeHexColor(
       value,
       defaultCustomAccentColor
     )

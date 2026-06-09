@@ -39,12 +39,15 @@
 import * as logger from "firebase-functions/logger"
 import { HttpsError, onCall } from "firebase-functions/v2/https"
 import { z } from "genkit/beta"
-import { getMembershipRole, requireVerifiedAuth } from "./bot.js"
+import { requireVerifiedAuth } from "./auth.js"
+import { getMembershipRole } from "./bot.js"
+import { NODE_SCOPES } from "./domain.js"
 import { db } from "./firebase.js"
 import { ai } from "./genkitClient.js"
 import { redactText } from "./genkitMiddleware.js"
 import { CALLABLE_OPTS } from "./runtimeConfig.js"
 import { extractPlainText } from "./tiptapText.js"
+import type { WorkspaceNodeScope } from "./types.js"
 
 // ===========================================================================
 // Shared types + constants
@@ -97,7 +100,7 @@ const RELEVANCE_DISTANCE_THRESHOLD = 0.55
 const SNIPPET_MAX_LENGTH = 240
 
 const relatedResultSchema = z.object({
-  scope: z.enum(["code", "write"]),
+  scope: z.enum(NODE_SCOPES),
   nodeId: z.string(),
   name: z.string(),
   type: z.enum(["folder", "file"]),
@@ -126,7 +129,7 @@ interface SourceNode {
 async function loadSourceNode(
   teamId: string,
   workspaceId: string,
-  scope: "code" | "write",
+  scope: WorkspaceNodeScope,
   nodeId: string
 ): Promise<SourceNode | null> {
   const snap = await db
@@ -154,7 +157,7 @@ async function loadSourceNode(
 async function queryOneScope(opts: {
   teamId: string
   workspaceId: string
-  scope: "code" | "write"
+  scope: WorkspaceNodeScope
   queryVector: VectorValue
   /** Doc id we should never return (the source) — only relevant for the
    *  scope that owns the source node. */
@@ -218,7 +221,7 @@ interface RunRelatedInput {
   workspaceId: string
   /** Scope of the SOURCE node (always concrete — only the search scope
    *  can be "both"). */
-  sourceScope: "code" | "write"
+  sourceScope: WorkspaceNodeScope
   sourceNodeId: string
   /** Where to search: same scope as source, the other scope, or both. */
   searchScope: RelatedSearchScope
@@ -253,7 +256,7 @@ async function runFindRelated(input: RunRelatedInput): Promise<RelatedOutput> {
     return { results: [], truncated: false }
   }
 
-  const scopes: Array<"code" | "write"> =
+  const scopes: Array<WorkspaceNodeScope> =
     input.searchScope === "both" ? ["code", "write"] : [input.searchScope]
   // Pull a small surplus per scope so self/archived/relevance filtering
   // can't leave us short.
@@ -387,7 +390,7 @@ export const findRelatedNodesTool = ai.defineTool(
 interface FindRelatedNodesRequest {
   teamId: string
   workspaceId: string
-  scope: "code" | "write"
+  scope: WorkspaceNodeScope
   nodeId: string
   searchScope?: RelatedSearchScope
   limit?: number
@@ -396,7 +399,7 @@ interface FindRelatedNodesRequest {
 const findRelatedNodesRequestSchema = z.object({
   teamId: z.string().min(1),
   workspaceId: z.string().min(1),
-  scope: z.enum(["code", "write"]),
+  scope: z.enum(NODE_SCOPES),
   nodeId: z.string().min(1),
   searchScope: z.enum(SCOPE_VALUES).optional(),
   limit: z.number().int().min(1).max(RELATED_LIMIT_MAX).optional(),

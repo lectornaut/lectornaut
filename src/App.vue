@@ -27,9 +27,6 @@ watch(
         typeof route.query?.redirect === "string"
           ? route.query.redirect
           : "/start"
-      console.log(
-        `App.vue: User logged in on guest route, redirecting to ${redirect}`
-      )
       await router.push(redirect)
     }
   },

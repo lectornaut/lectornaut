@@ -1,3 +1,8 @@
+import {
+  CODEMIRROR_COLLAB_FIELD,
+  createCodeMirrorEditorAdapter,
+  type CollabEditorAdapter,
+} from "@/utils/collab/editorAdapter"
 import type { YjsCollabSession } from "@/utils/collab/yjsBinding"
 import type { Extension } from "@codemirror/state"
 import { EditorView } from "@codemirror/view"
@@ -11,6 +16,11 @@ export interface CodeMirrorCollabResult {
   ytext: Y.Text
   /** Current plain-text content of the Y.Text */
   getText: () => string
+  /**
+   * The editor-integration seam for live agent edits — `useCollabPage` applies
+   * server-relayed edits through this instead of writing the Y.Text directly.
+   */
+  adapter: CollabEditorAdapter
   /**
    * Tears down the UndoManager, detaching its observers from the Y.Text/doc.
    * Call this when the session is destroyed (e.g. on file switch) — the
@@ -33,7 +43,7 @@ export function useCodeMirrorCollab(
   session: YjsCollabSession,
   initialContent?: string
 ): CodeMirrorCollabResult {
-  const ytext = session.ydoc.getText("codemirror")
+  const ytext = session.ydoc.getText(CODEMIRROR_COLLAB_FIELD)
 
   if (!session.hasSnapshot && initialContent && ytext.length === 0) {
     ytext.insert(0, initialContent)
@@ -48,10 +58,16 @@ export function useCodeMirrorCollab(
     extensions.push(EditorView.editable.of(false))
   }
 
+  const adapter = createCodeMirrorEditorAdapter({
+    ydoc: session.ydoc,
+    isApplier: session.isAgentApplier,
+  })
+
   return {
     extensions,
     ytext,
     getText: () => ytext.toString(),
+    adapter,
     destroy: () => undoManager.destroy(),
   }
 }

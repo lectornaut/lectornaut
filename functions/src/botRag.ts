@@ -46,12 +46,14 @@ import * as logger from "firebase-functions/logger"
 import { onDocumentWritten } from "firebase-functions/v2/firestore"
 import { Document, z } from "genkit/beta"
 import { createHash } from "node:crypto"
+import { NODE_SCOPES } from "./domain.js"
 import { db } from "./firebase.js"
 import { ai, isAiModelProviderConfigured } from "./genkitClient.js"
 import { redactText } from "./genkitMiddleware.js"
 import { TRIGGER_OPTS } from "./runtimeConfig.js"
 import { geminiApiKey } from "./secrets.js"
 import { extractPlainText } from "./tiptapText.js"
+import type { NodeType, WorkspaceNodeScope } from "./types.js"
 
 // ===========================================================================
 // Embedder + Retriever
@@ -128,7 +130,7 @@ const workspaceNodesRetriever = defineFirestoreRetriever(ai, {
  * inside the handler.
  */
 const WorkspaceNodeIndexerOptionsSchema = z.object({
-  scope: z.enum(["code", "write"]),
+  scope: z.enum(NODE_SCOPES),
   teamId: z.string().min(1),
   workspaceId: z.string().min(1),
   nodeId: z.string().min(1),
@@ -293,7 +295,7 @@ const searchInputSchema = z.object({
 
 const searchResultSchema = z.object({
   nodeId: z.string(),
-  scope: z.enum(["code", "write"]),
+  scope: z.enum(NODE_SCOPES),
   name: z.string(),
   type: z.enum(["folder", "file"]),
   snippet: z.string(),
@@ -409,7 +411,7 @@ export const searchWorkspaceNodesTool = ai.defineTool(
       return { results: [], truncated: false }
     }
 
-    const scopes: Array<"code" | "write"> =
+    const scopes: Array<WorkspaceNodeScope> =
       scope === "both" ? ["code", "write"] : [scope]
     // Pull a few extra per scope so the merged-and-clipped result list
     // can't end up shorter than `limit` when one scope has fewer
@@ -446,7 +448,7 @@ export const searchWorkspaceNodesTool = ai.defineTool(
           const name = typeof meta.name === "string" ? meta.name : nodeId
           const type =
             meta.type === "folder" || meta.type === "file"
-              ? (meta.type as "folder" | "file")
+              ? (meta.type as NodeType)
               : "file"
           const distance =
             typeof meta._distance === "number" ? meta._distance : undefined
@@ -577,9 +579,9 @@ export async function buildAutoContextBlock(opts: {
   try {
     const merged: Array<{
       nodeId: string
-      scope: "code" | "write"
+      scope: WorkspaceNodeScope
       name: string
-      type: "folder" | "file"
+      type: NodeType
       snippet: string
       distance?: number
     }> = []
@@ -603,7 +605,7 @@ export async function buildAutoContextBlock(opts: {
         const name = typeof meta.name === "string" ? meta.name : nodeId
         const type =
           meta.type === "folder" || meta.type === "file"
-            ? (meta.type as "folder" | "file")
+            ? (meta.type as NodeType)
             : "file"
         const distance =
           typeof meta._distance === "number" ? meta._distance : undefined
@@ -715,7 +717,7 @@ const listInputSchema = z.object({
 
 const listResultSchema = z.object({
   nodeId: z.string(),
-  scope: z.enum(["code", "write"]),
+  scope: z.enum(NODE_SCOPES),
   name: z.string(),
   type: z.enum(["folder", "file"]),
   /** Parent folder id; "root" for top-level nodes. */
@@ -762,7 +764,7 @@ export const listWorkspaceNodesTool = ai.defineTool(
       return { nodes: [], truncated: false }
     }
 
-    const scopes: Array<"code" | "write"> =
+    const scopes: Array<WorkspaceNodeScope> =
       scope === "both" ? ["code", "write"] : [scope]
 
     const collected: Array<z.infer<typeof listResultSchema>> = []
@@ -789,7 +791,7 @@ export const listWorkspaceNodesTool = ai.defineTool(
           const name = typeof data.name === "string" ? data.name : doc.id
           const type =
             data.type === "folder" || data.type === "file"
-              ? (data.type as "folder" | "file")
+              ? (data.type as NodeType)
               : "file"
           const parentId =
             typeof data.parentId === "string" && data.parentId
@@ -851,7 +853,7 @@ interface NodeDocPartialShape {
 
 async function clearNodeEmbedding(params: {
   afterRef: FirebaseFirestore.DocumentReference
-  scope: "code" | "write"
+  scope: WorkspaceNodeScope
   teamId: string
   workspaceId: string
   nodeId: string
@@ -883,7 +885,7 @@ async function syncNodeEmbedding(params: {
   // The "after" reference for writing the result back.
   afterRef: FirebaseFirestore.DocumentReference | undefined
   // Used purely in log messages.
-  scope: "code" | "write"
+  scope: WorkspaceNodeScope
   teamId: string
   workspaceId: string
   nodeId: string
@@ -987,7 +989,7 @@ async function syncNodeEmbedding(params: {
  *   that's the canonical case for new content that genuinely needs
  *   indexing.
  */
-function makeEmbedTrigger(scope: "code" | "write") {
+function makeEmbedTrigger(scope: WorkspaceNodeScope) {
   return onDocumentWritten(
     {
       document: `teams/{teamId}/workspaces/{workspaceId}/${scope}/{nodeId}`,

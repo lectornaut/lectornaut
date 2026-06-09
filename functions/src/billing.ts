@@ -1,3 +1,5 @@
+import type { DocumentReference } from "firebase-admin/firestore"
+import { FieldPath, FieldValue, Timestamp } from "firebase-admin/firestore"
 import * as logger from "firebase-functions/logger"
 import {
   onDocumentCreated,
@@ -13,6 +15,7 @@ import {
 import { onSchedule } from "firebase-functions/v2/scheduler"
 import { createHash } from "node:crypto"
 import Stripe from "stripe"
+import { assertAuthenticated } from "./auth.js"
 import {
   BillingInterval,
   PlanKey,
@@ -21,7 +24,7 @@ import {
   mapPriceIdToPlan,
   resolveBillingCatalogFromStripe,
 } from "./billingConfig.js"
-import { admin, db } from "./firebase.js"
+import { db } from "./firebase.js"
 import { makeEventIdempotencyKey } from "./idempotency.js"
 import { can } from "./permissions.js"
 import { CALLABLE_OPTS, SCHEDULED_OPTS, TRIGGER_OPTS } from "./runtimeConfig.js"
@@ -65,7 +68,7 @@ interface TeamBillingContext {
   teamId: string
   uid: string
   teamRole: IMembershipRole
-  teamRef: admin.firestore.DocumentReference
+  teamRef: DocumentReference
   teamData: Record<string, unknown>
 }
 
@@ -118,19 +121,6 @@ function getStripeClient(): Stripe {
     stripeClient = new Stripe(secret)
   }
   return stripeClient
-}
-
-function assertAuthenticated(
-  request: CallableRequest
-): asserts request is CallableRequest & {
-  auth: NonNullable<CallableRequest["auth"]>
-} {
-  if (!request.auth) {
-    throw new HttpsError(
-      "unauthenticated",
-      "The function must be called while authenticated."
-    )
-  }
 }
 
 function getObject(data: unknown): Record<string, unknown> {
@@ -314,7 +304,7 @@ function toBillingFieldUpdates(
 }
 
 async function patchTeamBillingIfExists(args: {
-  teamRef: admin.firestore.DocumentReference
+  teamRef: DocumentReference
   teamId: string
   source: string
   billingPatch: Record<string, unknown>
@@ -510,7 +500,7 @@ async function ensureStripeCustomer(
       {
         billing: {
           stripeCustomerId: customer.id,
-          updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+          updatedAt: FieldValue.serverTimestamp(),
         },
       },
       { merge: true }
@@ -990,7 +980,7 @@ async function syncSubscriptionQuantityToSeats(args: {
       source,
       billingPatch: {
         quantity: seatCount,
-        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+        updatedAt: FieldValue.serverTimestamp(),
       },
       context: { reason: "no_active_subscription" },
     })
@@ -1065,7 +1055,7 @@ async function syncSubscriptionQuantityToSeats(args: {
       cancelAtPeriodEnd: summary.cancelAtPeriodEnd,
       isEntitled: isEntitledStatus(summary.status),
       quantity: persistedQuantity,
-      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      updatedAt: FieldValue.serverTimestamp(),
     },
   })
 
@@ -1203,9 +1193,7 @@ async function markWebhookEventProcessing(eventId: string): Promise<boolean> {
       {
         status: "processing",
         updatedAtMs: nowMs,
-        expiresAt: admin.firestore.Timestamp.fromMillis(
-          nowMs + STRIPE_WEBHOOK_LOCK_TTL_MS
-        ),
+        expiresAt: Timestamp.fromMillis(nowMs + STRIPE_WEBHOOK_LOCK_TTL_MS),
         lastError: null,
       },
       { merge: true }
@@ -1228,9 +1216,7 @@ async function completeWebhookEventProcessing(
     {
       status,
       updatedAtMs: nowMs,
-      expiresAt: admin.firestore.Timestamp.fromMillis(
-        nowMs + STRIPE_WEBHOOK_LOCK_TTL_MS
-      ),
+      expiresAt: Timestamp.fromMillis(nowMs + STRIPE_WEBHOOK_LOCK_TTL_MS),
       lastError,
     },
     { merge: true }
@@ -1241,7 +1227,7 @@ async function cleanupExpiredStripeWebhookLocks(
   options: { batchSize?: number } = {}
 ): Promise<number> {
   const batchSize = Math.max(1, Math.min(450, options.batchSize ?? 450))
-  const now = admin.firestore.Timestamp.now()
+  const now = Timestamp.now()
   let deleted = 0
 
   while (true) {
@@ -1337,7 +1323,7 @@ async function patchTeamBillingFromWebhookEventIfFresh(args: {
             ...billingPatch,
             lastStripeEventId: event.id,
             lastStripeEventCreated: eventCreated,
-            updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+            updatedAt: FieldValue.serverTimestamp(),
           },
         },
         { merge: true }
@@ -1829,7 +1815,7 @@ export const createCheckoutSession = onCall(
       {
         billing: {
           quantity: seatCount,
-          updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+          updatedAt: FieldValue.serverTimestamp(),
         },
       },
       { merge: true }
@@ -2035,7 +2021,7 @@ export const changeSubscriptionPlan = onCall(
             currentPeriodEnd: summary.currentPeriodEnd,
             cancelAtPeriodEnd: summary.cancelAtPeriodEnd,
             isEntitled: isEntitledStatus(summary.status),
-            updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+            updatedAt: FieldValue.serverTimestamp(),
           },
         },
         { merge: true }
@@ -2069,7 +2055,7 @@ export const changeSubscriptionPlan = onCall(
           currentPeriodEnd: summary.currentPeriodEnd,
           cancelAtPeriodEnd: summary.cancelAtPeriodEnd,
           isEntitled: isEntitledStatus(summary.status),
-          updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+          updatedAt: FieldValue.serverTimestamp(),
         },
       },
       { merge: true }
@@ -2174,7 +2160,7 @@ export const cancelSubscription = onCall(
           currentPeriodEnd: summary.currentPeriodEnd,
           cancelAtPeriodEnd: summary.cancelAtPeriodEnd,
           isEntitled: isEntitledStatus(summary.status),
-          updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+          updatedAt: FieldValue.serverTimestamp(),
         },
       },
       { merge: true }
@@ -2257,7 +2243,7 @@ export const restoreSubscription = onCall(
           currentPeriodEnd: summary.currentPeriodEnd,
           cancelAtPeriodEnd: summary.cancelAtPeriodEnd,
           isEntitled: isEntitledStatus(summary.status),
-          updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+          updatedAt: FieldValue.serverTimestamp(),
         },
       },
       { merge: true }
@@ -2357,7 +2343,7 @@ async function reconcileSeatQuantitiesBatch(
     .collection("teams")
     .where("billing.stripeSubscriptionId", "!=", null)
     .orderBy("billing.stripeSubscriptionId")
-    .orderBy(admin.firestore.FieldPath.documentId())
+    .orderBy(FieldPath.documentId())
     .limit(BILLING_RECONCILE_BATCH_SIZE)
 
   if (lastSubscriptionId && lastTeamId) {
@@ -2370,7 +2356,7 @@ async function reconcileSeatQuantitiesBatch(
       {
         lastSubscriptionId: null,
         lastTeamId: null,
-        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+        updatedAt: FieldValue.serverTimestamp(),
       },
       { merge: true }
     )
@@ -2412,7 +2398,7 @@ async function reconcileSeatQuantitiesBatch(
         ? (lastDocBilling.stripeSubscriptionId ?? null)
         : null,
       lastTeamId: hasMore ? lastDoc.id : null,
-      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      updatedAt: FieldValue.serverTimestamp(),
     },
     { merge: true }
   )

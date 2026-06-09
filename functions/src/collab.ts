@@ -1,12 +1,11 @@
+import type { DocumentReference } from "firebase-admin/firestore"
+import { FieldValue, Timestamp } from "firebase-admin/firestore"
 import * as logger from "firebase-functions/logger"
-import {
-  CallableRequest,
-  HttpsError,
-  onCall,
-} from "firebase-functions/v2/https"
+import { HttpsError, onCall } from "firebase-functions/v2/https"
 import { onSchedule } from "firebase-functions/v2/scheduler"
+import { assertAuthenticated } from "./auth.js"
 import { COST_BUDGET } from "./costBudget.js"
-import { admin, db } from "./firebase.js"
+import { db } from "./firebase.js"
 import { can } from "./permissions.js"
 import { CALLABLE_OPTS, SCHEDULED_OPTS } from "./runtimeConfig.js"
 import {
@@ -16,7 +15,7 @@ import {
   WorkspaceNodeScope,
 } from "./types.js"
 import { generateRandomString } from "./utilities.js"
-import { getWorkspaceRoleOverride } from "./workspaceRoles.js"
+import { resolveParticipation } from "./workspaceRoles.js"
 
 const JOIN_TOKEN_TTL_MS = 10 * 60 * 1000
 const STALE_SIGNAL_MAX_AGE_MS = 30 * 60 * 1000 // 30 minutes - signals are cleaned by clients, this is fallback
@@ -31,7 +30,7 @@ interface RoomContext {
   teamId: string
   workspaceId: string
   scope: WorkspaceNodeScope
-  roomRef: admin.firestore.DocumentReference
+  roomRef: DocumentReference
 }
 
 interface PeerSession {
@@ -39,19 +38,6 @@ interface PeerSession {
   userId: string
   joinToken: string
   tokenExpiresAt: number
-}
-
-function assertAuthenticated(
-  request: CallableRequest
-): asserts request is CallableRequest & {
-  auth: NonNullable<CallableRequest["auth"]>
-} {
-  if (!request.auth) {
-    throw new HttpsError(
-      "unauthenticated",
-      "The function must be called while authenticated."
-    )
-  }
 }
 
 function assertString(value: unknown, field: string): string {
@@ -191,15 +177,20 @@ async function resolveCollabRole(
   // Honor a per-workspace role override (elevate-only): a member granted
   // content rights in THIS workspace edits live here even if their team role
   // alone wouldn't allow it. `can` combines the two via `effectiveRole`.
-  const workspaceRole = await getWorkspaceRoleOverride(
-    teamId,
-    workspaceId,
-    userId
-  )
+  const participation = await resolveParticipation(teamId, workspaceId, userId)
+  // An excluded principal is a non-member of this workspace — reject the join
+  // outright (preserving the old throwing resolver's behavior) rather than
+  // silently downgrading to a viewer.
+  if (participation.excluded) {
+    throw new HttpsError(
+      "permission-denied",
+      "You are not a member of this workspace."
+    )
+  }
   return can(userId, Capabilities.MANAGE_WORKSPACE_CONTENT, {
     scope: "workspace",
     teamRole: role,
-    workspaceRole,
+    workspaceRole: participation.role,
   })
     ? "editor"
     : "viewer"
@@ -262,7 +253,7 @@ async function getPeerSession(
   contentId: string,
   peerId: string
 ): Promise<{
-  peerRef: admin.firestore.DocumentReference
+  peerRef: DocumentReference
   data: PeerSession
 }> {
   const peerRef = db.doc(`signaling/${contentId}/peers/${peerId}`)
@@ -359,7 +350,7 @@ async function cleanupCollectionGroup(
   field: "createdAt" | "lastSeenAt",
   maxAgeMs: number
 ): Promise<number> {
-  const cutoff = admin.firestore.Timestamp.fromMillis(Date.now() - maxAgeMs)
+  const cutoff = Timestamp.fromMillis(Date.now() - maxAgeMs)
   let totalDeleted = 0
 
   while (true) {
@@ -423,7 +414,7 @@ export const joinCollabRoom = onCall(CALLABLE_OPTS, async (request) => {
       teamId,
       workspaceId,
       scope,
-      createdAt: admin.firestore.FieldValue.serverTimestamp(),
+      createdAt: FieldValue.serverTimestamp(),
     })
   }
 
@@ -474,8 +465,8 @@ export const createPeer = onCall(CALLABLE_OPTS, async (request) => {
         role,
         joinToken,
         tokenExpiresAt: Date.now() + JOIN_TOKEN_TTL_MS,
-        joinedAt: admin.firestore.FieldValue.serverTimestamp(),
-        lastSeenAt: admin.firestore.FieldValue.serverTimestamp(),
+        joinedAt: FieldValue.serverTimestamp(),
+        lastSeenAt: FieldValue.serverTimestamp(),
       },
       { merge: true }
     )
@@ -500,7 +491,7 @@ export const heartbeatPeer = onCall(CALLABLE_OPTS, async (request) => {
   })
 
   await peerSession.peerRef.update({
-    lastSeenAt: admin.firestore.FieldValue.serverTimestamp(),
+    lastSeenAt: FieldValue.serverTimestamp(),
     tokenExpiresAt: Date.now() + JOIN_TOKEN_TTL_MS,
   })
 
@@ -539,7 +530,7 @@ export const sendSignal = onCall(CALLABLE_OPTS, async (request) => {
       toPeerId,
       type,
       payload: normalizeSignalPayload(request.data?.payload),
-      createdAt: admin.firestore.FieldValue.serverTimestamp(),
+      createdAt: FieldValue.serverTimestamp(),
     })
   } catch (error) {
     logger.error("[collab:sendSignal] Failed to persist signal", {

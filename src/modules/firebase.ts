@@ -52,10 +52,14 @@ console.error = (...data: unknown[]): void => {
  *    Synchronous localStorage hydration for store setup. Fills the cold-start
  *    gap before the async IndexedDB cache resolves. Call from Pinia store setup.
  *
- * L3 `firebase-optimistic.ts` (`withOptimisticUpdate`, pending-id sets)
- *    Pinia-aware optimistic updates with rollback, snapshot guards, retry/backoff.
+ * L3 `firebase-mutation.ts` (`useRunWrite` / `runWrite`)
+ *    The one optimistic-write seam: cache-based optimistic apply + rollback held
+ *    against the live listener (`holdOptimistic` in `firebase-query.ts`) over
+ *    TanStack Query. `firebase-optimistic.ts` retains the shared cloud-sync
+ *    telemetry (drives `SyncIndicator.vue`), pending-id sets, the collection
+ *    merge helper, and `createDebouncedCloudSync`.
  *
- * L4 `firebase-sync-engine.ts` (`mutateWithCoordinator`) — custom mutation
+ * L4 `firebase-sync-engine.ts` (`syncEngine.mutate` / `mutateSetDocument`) — custom mutation
  *    outbox with per-op server ACKs, `baseVersion` optimistic locking, and
  *    observable queue metrics for `SyncIndicator.vue`. Its pure scheduling and
  *    cross-tab merge logic lives in `firebase-sync-queue.ts`. Use for ALL

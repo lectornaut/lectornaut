@@ -1,8 +1,5 @@
-import {
-  DEFAULT_CHILDREN_PAGE_SIZE,
-  useNodes,
-  type ChildrenResult,
-} from "@/composables/useNodes"
+import { DEFAULT_CHILDREN_PAGE_SIZE, useNodes } from "@/composables/useNodes"
+import { queryClient } from "@/modules/queryClient"
 import {
   NODE_NAME_MAX_LENGTH,
   ROOT_PARENT_ID,
@@ -12,15 +9,24 @@ import {
   type WorkspaceNode,
   type WorkspaceNodeScope,
 } from "@/types/nodes"
+import { useRunWrite } from "@/utils/firebase/firebase-mutation"
 import {
   cloneState,
-  createPendingSet,
   generateOperationId,
-  withOptimisticUpdate,
 } from "@/utils/firebase/firebase-optimistic"
-import { Timestamp, type QueryDocumentSnapshot } from "firebase/firestore"
+import { streamIntoCache } from "@/utils/firebase/firebase-query"
+import {
+  queryKeys,
+  type FirestoreQueryKey,
+} from "@/utils/firebase/firebase-query-keys"
+import { hashKey } from "@tanstack/vue-query"
+import {
+  Timestamp,
+  type FirestoreError,
+  type QueryDocumentSnapshot,
+} from "firebase/firestore"
 import { defineStore } from "pinia"
-import { reactive, shallowRef } from "vue"
+import { reactive } from "vue"
 
 interface PaginationState {
   lastDoc: QueryDocumentSnapshot | null
@@ -95,8 +101,34 @@ export const useFileTreeStore = defineStore("fileTree", () => {
   const loadingParents = reactive(new Set<string>())
   const selectedByWorkspace = reactive<Record<string, string | null>>({})
   const workspaceRetainCounts = reactive<Record<string, number>>({})
-  const pendingNodeIds = shallowRef(createPendingSet())
-  const optimisticCreatedIds = new Set<string>()
+  const runWrite = useRunWrite("fileTree.nodes")
+
+  // Per-folder children live in the TanStack cache under `folderNodesKey`; the
+  // reactive `nodesByWorkspace`/`childrenByWorkspace` buckets the UI reads are a
+  // MIRROR rebuilt from the cache by `syncFolderToBuckets` (the bridge below).
+  // Optimism flows through `runWrite({ keys: [folderNodesKey(...)] })`: the hold
+  // stashes inbound listener snapshots so the optimistic bucket edit survives,
+  // then reconciles to server truth on release — replacing the old
+  // pendingNodeIds/applyChildrenResult protection.
+  const folderRegistry = new Map<
+    string,
+    {
+      scope: WorkspaceNodeScope
+      teamId: string
+      workspaceId: string
+      parentId: string
+    }
+  >()
+  const folderNodesKey = (
+    scope: WorkspaceNodeScope,
+    teamId: string,
+    workspaceId: string,
+    parentId: string
+  ): FirestoreQueryKey =>
+    queryKeys.list(`teams/${teamId}/workspaces/${workspaceId}/${scope}`, {
+      parentId,
+      includeArchived: INCLUDE_ARCHIVED,
+    })
 
   const getWorkspaceBuckets = (key: string) => {
     const nodes = (nodesByWorkspace[key] ??= {})
@@ -116,9 +148,6 @@ export const useFileTreeStore = defineStore("fileTree", () => {
     }
     return normalized
   }
-
-  const isProtectedNode = (nodeId: string) =>
-    pendingNodeIds.value.has(nodeId) || optimisticCreatedIds.has(nodeId)
 
   const sortChildIds = (
     scope: WorkspaceNodeScope,
@@ -372,6 +401,45 @@ export const useFileTreeStore = defineStore("fileTree", () => {
     return fetchedNode
   }
 
+  // ── Cache → bucket bridge ───────────────────────────────────────────────────
+  // Each expanded folder's children are streamed into the TanStack cache under
+  // `folderNodesKey`. This mirrors every cache change for a registered folder
+  // back into the reactive buckets the UI reads — replacing the hand-rolled
+  // `applyChildrenResult`. Optimistic edits survive because `runWrite`'s hold
+  // stashes inbound snapshots (no cache update fires while held), so the
+  // optimistic bucket edit is reconciled to server truth only on release.
+  const syncFolderToBuckets = (coords: {
+    scope: WorkspaceNodeScope
+    teamId: string
+    workspaceId: string
+    parentId: string
+  }) => {
+    const { scope, teamId, workspaceId, parentId } = coords
+    const nodes =
+      queryClient.getQueryData<WorkspaceNode[]>(
+        folderNodesKey(scope, teamId, workspaceId, parentId)
+      ) ?? []
+    upsertNodes(scope, teamId, workspaceId, nodes)
+    setChildren(
+      scope,
+      teamId,
+      workspaceId,
+      parentId,
+      nodes.map((node) => node.id)
+    )
+  }
+
+  let cacheBridgeInstalled = false
+  const ensureCacheBridge = () => {
+    if (cacheBridgeInstalled) return
+    cacheBridgeInstalled = true
+    queryClient.getQueryCache().subscribe((event) => {
+      if (event.type !== "updated" && event.type !== "added") return
+      const coords = folderRegistry.get(event.query.queryHash)
+      if (coords) syncFolderToBuckets(coords)
+    })
+  }
+
   const subscribeChildren = (
     scope: WorkspaceNodeScope,
     teamId: string,
@@ -383,11 +451,14 @@ export const useFileTreeStore = defineStore("fileTree", () => {
 
     if (subs[parentId]) return
 
-    // LRU cap on live subscriptions per workspace. `Object.keys` on a
-    // plain object preserves insertion order in V8, so iterating
-    // forward finds the oldest first. Skip ROOT_PARENT_ID — the
-    // workspace navigation depends on it being live; evicting it
-    // would freeze the file tree at the top level.
+    ensureCacheBridge()
+
+    // LRU cap on live subscriptions per workspace. `Object.keys` on a plain
+    // object preserves insertion order in V8, so iterating forward finds the
+    // oldest first. Skip ROOT_PARENT_ID — the workspace navigation depends on it
+    // being live. The evicted folder's last-seen children stay rendered (the
+    // cache entry is dropped, the bucket is not); live updates resume on
+    // re-expand.
     const activeIds = Object.keys(subs)
     if (activeIds.length >= MAX_ACTIVE_SUBSCRIPTIONS_PER_WORKSPACE) {
       const evictableId = activeIds.find((id) => id !== ROOT_PARENT_ID)
@@ -399,101 +470,58 @@ export const useFileTreeStore = defineStore("fileTree", () => {
 
     setParentLoading(scope, teamId, workspaceId, parentId, true)
 
+    const fKey = folderNodesKey(scope, teamId, workspaceId, parentId)
+    folderRegistry.set(hashKey(fKey), { scope, teamId, workspaceId, parentId })
+
     let isActive = true
 
-    const applyChildrenResult = (result: ChildrenResult) => {
-      if (!isActive) return
-
-      setParentLoading(scope, teamId, workspaceId, parentId, false)
-      const { nodes: bucket } = getWorkspaceBuckets(key)
-      const mergedNodes: WorkspaceNode[] = []
-      let mergedChildIds: string[] = []
-      const mergedChildIdSet = new Set<string>()
-
-      result.nodes.forEach((node) => {
-        const local = bucket[node.id]
-        if (isProtectedNode(node.id) && local) {
-          mergedNodes.push(local)
-          if (local.parentId === parentId && !mergedChildIdSet.has(local.id)) {
-            mergedChildIds.push(local.id)
-            mergedChildIdSet.add(local.id)
-          }
-          return
+    // `streamIntoCache` opens the per-folder listener, resolves on the first
+    // snapshot, and streams later snapshots into the cache (stashing them while
+    // an optimistic hold is active). It does NOT write the cache on hydration,
+    // so the resolved first page is written below; both paths fire the bridge.
+    streamIntoCache<WorkspaceNode[]>(fKey, (onNext, onError) =>
+      subscribeChildrenService(
+        scope,
+        teamId,
+        workspaceId,
+        parentId,
+        (result) => {
+          if (!isActive) return
+          setParentLoading(scope, teamId, workspaceId, parentId, false)
+          updatePagination(scope, teamId, workspaceId, parentId, {
+            lastDoc: result.lastDoc,
+            hasMore: result.hasMore,
+          })
+          onNext(result.nodes)
+        },
+        {
+          includeArchived: INCLUDE_ARCHIVED,
+          limit: DEFAULT_CHILDREN_PAGE_SIZE,
+          onError: (error) => onError(error as FirestoreError),
         }
-        mergedNodes.push(node)
-        if (!mergedChildIdSet.has(node.id)) {
-          mergedChildIds.push(node.id)
-          mergedChildIdSet.add(node.id)
-        }
-      })
-
-      Object.values(bucket).forEach((local) => {
-        if (!isProtectedNode(local.id)) return
-        if (local.parentId !== parentId) return
-        if (mergedChildIdSet.has(local.id)) return
-        mergedNodes.push(local)
-        mergedChildIds.push(local.id)
-        mergedChildIdSet.add(local.id)
-      })
-
-      upsertNodes(scope, teamId, workspaceId, mergedNodes)
-
-      if (mergedChildIds.some((id) => isProtectedNode(id))) {
-        mergedChildIds = sortChildIds(
-          scope,
-          teamId,
-          workspaceId,
-          mergedChildIds
-        )
-      }
-      setChildren(scope, teamId, workspaceId, parentId, mergedChildIds)
-
-      if (optimisticCreatedIds.size) {
-        result.nodes.forEach((node) => {
-          if (optimisticCreatedIds.has(node.id)) {
-            optimisticCreatedIds.delete(node.id)
-          }
-        })
-      }
-
-      updatePagination(scope, teamId, workspaceId, parentId, {
-        lastDoc: result.lastDoc,
-        hasMore: result.hasMore,
-      })
-    }
-
-    const handleChildrenError = (error: Error) => {
-      if (!isActive) return
-
-      console.error("[fileTreeStore] Failed to subscribe to children:", error)
-      setParentLoading(scope, teamId, workspaceId, parentId, false)
-      updatePagination(scope, teamId, workspaceId, parentId, {
-        hasMore: false,
-      })
-    }
-
-    const unsubscribeSnapshot = subscribeChildrenService(
-      scope,
-      teamId,
-      workspaceId,
-      parentId,
-      applyChildrenResult,
-      {
-        includeArchived: INCLUDE_ARCHIVED,
-        limit: DEFAULT_CHILDREN_PAGE_SIZE,
-        onError: handleChildrenError,
-      }
+      )
     )
+      .then((firstNodes) => {
+        if (isActive) queryClient.setQueryData(fKey, firstNodes)
+      })
+      .catch((error) => {
+        if (!isActive) return
+        console.error("[fileTreeStore] Failed to subscribe to children:", error)
+        setParentLoading(scope, teamId, workspaceId, parentId, false)
+        updatePagination(scope, teamId, workspaceId, parentId, {
+          hasMore: false,
+        })
+      })
 
     subs[parentId] = () => {
       isActive = false
-      unsubscribeSnapshot()
-      // If we tear the listener down before its first snapshot/error landed,
-      // both callbacks above early-out on `!isActive`, so the loading flag set
-      // when we subscribed would otherwise stay `true` forever — a stranded
-      // spinner on the file tree (e.g. a workspace switch that re-subscribes
-      // while the first load was still in flight). Clear it on teardown so the
-      // next subscribe starts clean. No-op if a result already cleared it.
+      folderRegistry.delete(hashKey(fKey))
+      // Dropping the query triggers `streamIntoCache`'s gc teardown, which
+      // closes the underlying `onSnapshot`. The bucket is left intact so the
+      // last-seen children stay rendered (LRU / collapse semantics). Clearing
+      // the loading flag here avoids a stranded spinner if teardown beat the
+      // first snapshot.
+      queryClient.removeQueries({ queryKey: fKey, exact: true })
       setParentLoading(scope, teamId, workspaceId, parentId, false)
     }
   }
@@ -561,27 +589,20 @@ export const useFileTreeStore = defineStore("fileTree", () => {
         startAfter: pagination.lastDoc ?? undefined,
       })
 
-      const mergedNodes = result.nodes.map((node) => {
-        if (isProtectedNode(node.id)) {
-          const local = getNode(scope, teamId, workspaceId, node.id)
-          if (local) return local
-        }
-        return node
-      })
-
-      upsertNodes(scope, teamId, workspaceId, mergedNodes)
-      const current = getChildrenIds(scope, teamId, workspaceId, parentId)
-      const mergedSet = new Set(current)
-
-      mergedNodes.forEach((node) => {
-        mergedSet.add(node.id)
-      })
-
-      const merged = [...mergedSet]
-      const sorted = merged.some((id) => isProtectedNode(id))
-        ? sortChildIds(scope, teamId, workspaceId, merged)
-        : merged
-      setChildren(scope, teamId, workspaceId, parentId, sorted)
+      // Append the next page into both the cache (so the bridge keeps the bucket
+      // in sync, and a held optimistic edit isn't lost) and dedup by id. A later
+      // live snapshot replaces the entry with the most-recent page, same as
+      // before — loadMore's older rows are best-effort until then.
+      const cached =
+        queryClient.getQueryData<WorkspaceNode[]>(
+          folderNodesKey(scope, teamId, workspaceId, parentId)
+        ) ?? []
+      const byId = new Map(cached.map((node) => [node.id, node]))
+      result.nodes.forEach((node) => byId.set(node.id, node))
+      queryClient.setQueryData(
+        folderNodesKey(scope, teamId, workspaceId, parentId),
+        [...byId.values()]
+      )
       updatePagination(scope, teamId, workspaceId, parentId, {
         lastDoc: result.lastDoc,
         hasMore: result.hasMore,
@@ -673,10 +694,10 @@ export const useFileTreeStore = defineStore("fileTree", () => {
     const hadParent = Object.prototype.hasOwnProperty.call(children, parentId)
     const previousChildren = cloneState(children[parentId] ?? [])
 
-    const nodeId = await withOptimisticUpdate(
-      pendingNodeIds,
-      tempId,
-      () => {
+    let createdId = ""
+    await runWrite({
+      keys: [folderNodesKey(scope, teamId, workspaceId, parentId)],
+      apply: () => {
         nodes[tempId] = optimisticNode
         const next = hadParent ? [...previousChildren] : []
         if (!next.includes(tempId)) {
@@ -684,7 +705,7 @@ export const useFileTreeStore = defineStore("fileTree", () => {
         }
         children[parentId] = sortChildIds(scope, teamId, workspaceId, next)
       },
-      () => {
+      rollback: () => {
         removeNode(scope, teamId, workspaceId, tempId)
         if (hadParent) {
           children[parentId] = previousChildren
@@ -692,7 +713,7 @@ export const useFileTreeStore = defineStore("fileTree", () => {
           delete children[parentId]
         }
       },
-      async () => {
+      fn: async () => {
         const actualId = await createFolder(
           scope,
           teamId,
@@ -701,12 +722,11 @@ export const useFileTreeStore = defineStore("fileTree", () => {
           normalizedName
         )
         replaceNodeId(scope, teamId, workspaceId, tempId, actualId)
-        optimisticCreatedIds.add(actualId)
-        return actualId
-      }
-    )
+        createdId = actualId
+      },
+    })
 
-    return nodeId
+    return createdId
   }
 
   const createFileNode = async (
@@ -742,10 +762,10 @@ export const useFileTreeStore = defineStore("fileTree", () => {
     const hadParent = Object.prototype.hasOwnProperty.call(children, parentId)
     const previousChildren = cloneState(children[parentId] ?? [])
 
-    const nodeId = await withOptimisticUpdate(
-      pendingNodeIds,
-      tempId,
-      () => {
+    let createdId = ""
+    await runWrite({
+      keys: [folderNodesKey(scope, teamId, workspaceId, parentId)],
+      apply: () => {
         nodes[tempId] = optimisticNode
         const next = hadParent ? [...previousChildren] : []
         if (!next.includes(tempId)) {
@@ -753,7 +773,7 @@ export const useFileTreeStore = defineStore("fileTree", () => {
         }
         children[parentId] = sortChildIds(scope, teamId, workspaceId, next)
       },
-      () => {
+      rollback: () => {
         removeNode(scope, teamId, workspaceId, tempId)
         if (hadParent) {
           children[parentId] = previousChildren
@@ -761,7 +781,7 @@ export const useFileTreeStore = defineStore("fileTree", () => {
           delete children[parentId]
         }
       },
-      async () => {
+      fn: async () => {
         const actualId = await createFile(
           scope,
           teamId,
@@ -770,12 +790,11 @@ export const useFileTreeStore = defineStore("fileTree", () => {
           normalizedName
         )
         replaceNodeId(scope, teamId, workspaceId, tempId, actualId)
-        optimisticCreatedIds.add(actualId)
-        return actualId
-      }
-    )
+        createdId = actualId
+      },
+    })
 
-    return nodeId
+    return createdId
   }
 
   const renameNodeAction = async (
@@ -801,10 +820,9 @@ export const useFileTreeStore = defineStore("fileTree", () => {
     const previousChildren = cloneState(children[parentId] ?? [])
     const previousNode = cloneState(existing)
 
-    await withOptimisticUpdate(
-      pendingNodeIds,
-      nodeId,
-      () => {
+    await runWrite({
+      keys: [folderNodesKey(scope, teamId, workspaceId, parentId)],
+      apply: () => {
         updateNode(scope, teamId, workspaceId, nodeId, {
           name: normalizedName,
           nameLower,
@@ -819,7 +837,7 @@ export const useFileTreeStore = defineStore("fileTree", () => {
           )
         }
       },
-      () => {
+      rollback: () => {
         upsertNodes(scope, teamId, workspaceId, [previousNode])
         if (hadParent) {
           children[parentId] = previousChildren
@@ -827,10 +845,10 @@ export const useFileTreeStore = defineStore("fileTree", () => {
           delete children[parentId]
         }
       },
-      async () => {
+      fn: async () => {
         await renameNode(scope, teamId, workspaceId, nodeId, normalizedName)
-      }
-    )
+      },
+    })
   }
 
   const archiveNodeAction = async (
@@ -849,23 +867,22 @@ export const useFileTreeStore = defineStore("fileTree", () => {
     const previousNode = cloneState(existing)
     const now = Timestamp.now()
 
-    await withOptimisticUpdate(
-      pendingNodeIds,
-      nodeId,
-      () => {
+    await runWrite({
+      keys: [folderNodesKey(scope, teamId, workspaceId, existing.parentId)],
+      apply: () => {
         updateNode(scope, teamId, workspaceId, nodeId, {
           isArchived: true,
           archivedAt: now,
           archivedBy: "local",
         })
       },
-      () => {
+      rollback: () => {
         upsertNodes(scope, teamId, workspaceId, [previousNode])
       },
-      async () => {
+      fn: async () => {
         await archiveNodeService(scope, teamId, workspaceId, nodeId)
-      }
-    )
+      },
+    })
   }
 
   const unarchiveNodeAction = async (
@@ -883,23 +900,22 @@ export const useFileTreeStore = defineStore("fileTree", () => {
 
     const previousNode = cloneState(existing)
 
-    await withOptimisticUpdate(
-      pendingNodeIds,
-      nodeId,
-      () => {
+    await runWrite({
+      keys: [folderNodesKey(scope, teamId, workspaceId, existing.parentId)],
+      apply: () => {
         updateNode(scope, teamId, workspaceId, nodeId, {
           isArchived: false,
           archivedAt: undefined,
           archivedBy: undefined,
         })
       },
-      () => {
+      rollback: () => {
         upsertNodes(scope, teamId, workspaceId, [previousNode])
       },
-      async () => {
+      fn: async () => {
         await unarchiveNodeService(scope, teamId, workspaceId, nodeId)
-      }
-    )
+      },
+    })
   }
 
   const collectLoadedSubtreeIds = (
@@ -968,10 +984,9 @@ export const useFileTreeStore = defineStore("fileTree", () => {
     const previousChildren = cloneState(children)
     const previousSelectedId = selectedByWorkspace[key] ?? null
 
-    await withOptimisticUpdate(
-      pendingNodeIds,
-      nodeId,
-      () => {
+    await runWrite({
+      keys: [folderNodesKey(scope, teamId, workspaceId, existing.parentId)],
+      apply: () => {
         loadedIds.forEach((id) => {
           delete nodes[id]
           delete children[id]
@@ -987,7 +1002,7 @@ export const useFileTreeStore = defineStore("fileTree", () => {
           selectedByWorkspace[key] = null
         }
       },
-      () => {
+      rollback: () => {
         previousNodes.forEach((node) => {
           nodes[node.id] = node
         })
@@ -999,10 +1014,10 @@ export const useFileTreeStore = defineStore("fileTree", () => {
         })
         selectedByWorkspace[key] = previousSelectedId
       },
-      async () => {
+      fn: async () => {
         await deleteNodeService(scope, teamId, workspaceId, nodeId)
-      }
-    )
+      },
+    })
   }
 
   const saveFileContent = async (
@@ -1021,19 +1036,18 @@ export const useFileTreeStore = defineStore("fileTree", () => {
 
     const previousNode = cloneState(existing)
 
-    await withOptimisticUpdate(
-      pendingNodeIds,
-      nodeId,
-      () => {
+    await runWrite({
+      keys: [folderNodesKey(scope, teamId, workspaceId, existing.parentId)],
+      apply: () => {
         updateNode(scope, teamId, workspaceId, nodeId, { content })
       },
-      () => {
+      rollback: () => {
         upsertNodes(scope, teamId, workspaceId, [previousNode])
       },
-      async () => {
+      fn: async () => {
         await updateFileContent(scope, teamId, workspaceId, nodeId, content)
-      }
-    )
+      },
+    })
   }
 
   const canMoveNode = async (
@@ -1105,10 +1119,12 @@ export const useFileTreeStore = defineStore("fileTree", () => {
     const previousNewChildren = cloneState(children[newParentId] ?? [])
     const previousNode = cloneState(existing)
 
-    await withOptimisticUpdate(
-      pendingNodeIds,
-      nodeId,
-      () => {
+    await runWrite({
+      keys: [
+        folderNodesKey(scope, teamId, workspaceId, currentParentId),
+        folderNodesKey(scope, teamId, workspaceId, newParentId),
+      ],
+      apply: () => {
         updateNode(scope, teamId, workspaceId, nodeId, {
           parentId: newParentId,
         })
@@ -1130,7 +1146,7 @@ export const useFileTreeStore = defineStore("fileTree", () => {
           nextNewChildren
         )
       },
-      () => {
+      rollback: () => {
         upsertNodes(scope, teamId, workspaceId, [previousNode])
         if (hadOldParent) {
           children[currentParentId] = previousOldChildren
@@ -1143,10 +1159,10 @@ export const useFileTreeStore = defineStore("fileTree", () => {
           delete children[newParentId]
         }
       },
-      async () => {
+      fn: async () => {
         await moveNodeService(scope, teamId, workspaceId, nodeId, newParentId)
-      }
-    )
+      },
+    })
   }
 
   const getFolderOptions = (

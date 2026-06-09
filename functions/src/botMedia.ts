@@ -17,10 +17,12 @@
  * `genkitClient.ts`).
  */
 
+import { FieldValue } from "firebase-admin/firestore"
+import { getStorage } from "firebase-admin/storage"
 import * as logger from "firebase-functions/logger"
 import { HttpsError } from "firebase-functions/v2/https"
 import type { Part } from "genkit/beta"
-import { admin, db } from "./firebase.js"
+import { db } from "./firebase.js"
 import {
   ATTACHMENT_NAME_MAX_LENGTH,
   botSessionAttachmentsCollectionPath,
@@ -80,7 +82,7 @@ export async function buildMediaPartFromStorage(opts: {
   }
 
   try {
-    const [buffer] = await admin.storage().bucket().file(storagePath).download()
+    const [buffer] = await getStorage().bucket().file(storagePath).download()
     // Re-check post-download in case the metadata `size` was missing/stale.
     if (buffer.byteLength > cap) {
       logger.debug(
@@ -229,7 +231,7 @@ export async function materializeSessionAttachments(opts: {
       )
     }
 
-    const file = admin.storage().bucket().file(pending.storagePath)
+    const file = getStorage().bucket().file(pending.storagePath)
     const [exists] = await file.exists()
     if (!exists) {
       throw new HttpsError(
@@ -251,7 +253,7 @@ export async function materializeSessionAttachments(opts: {
         "File"
       ).slice(0, ATTACHMENT_NAME_MAX_LENGTH) || "File"
 
-    const now = admin.firestore.FieldValue.serverTimestamp()
+    const now = FieldValue.serverTimestamp()
     await db.doc(`${collectionPath}/${pending.attachmentId}`).set({
       workspaceId,
       sessionId,

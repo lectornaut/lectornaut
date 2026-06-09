@@ -949,6 +949,11 @@ const handleSubmit = async () => {
         return
       }
 
+      // Commit staged role changes to already-sent invitations (this tab shows
+      // them in invite mode too, so the same flush the edit branch runs is
+      // needed here — otherwise the change is staged and silently dropped).
+      await applyStagedInvitationRoles()
+
       if (members.value.length > 0) {
         const results = await inviteMembers(
           targetTeam.id,

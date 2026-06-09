@@ -1,11 +1,9 @@
-import {
-  CallableRequest,
-  HttpsError,
-  onCall,
-} from "firebase-functions/v2/https"
+import { FieldValue } from "firebase-admin/firestore"
+import { HttpsError, onCall } from "firebase-functions/v2/https"
 import { deleteStorageObjectIfExists, logEvent } from "./audit.js"
+import { assertAuthenticated } from "./auth.js"
 import { getMembershipRole } from "./bot.js"
-import { admin, db } from "./firebase.js"
+import { db } from "./firebase.js"
 import {
   Capabilities,
   can,
@@ -41,19 +39,6 @@ import {
 const GROUP_NAME_MAX_LENGTH = 100
 const GROUP_DESCRIPTION_MAX_LENGTH = 500
 const GROUP_MEMBERS_MAX = 1000
-
-function assertAuthenticated(
-  request: CallableRequest
-): asserts request is CallableRequest & {
-  auth: NonNullable<CallableRequest["auth"]>
-} {
-  if (!request.auth) {
-    throw new HttpsError(
-      "unauthenticated",
-      "The function must be called while authenticated."
-    )
-  }
-}
 
 function assertString(value: unknown, field: string): string {
   if (typeof value !== "string" || !value.trim()) {
@@ -192,8 +177,8 @@ export const createGroup = onCall(CALLABLE_OPTS, async (request) => {
     description,
     memberIds,
     createdByUid: actorId,
-    createdAt: admin.firestore.FieldValue.serverTimestamp(),
-    updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+    createdAt: FieldValue.serverTimestamp(),
+    updatedAt: FieldValue.serverTimestamp(),
   })
 
   // A brand-new group has no workspace grants yet, so there is no `groupRole`
@@ -263,7 +248,7 @@ export const updateGroup = onCall(CALLABLE_OPTS, async (request) => {
     : []
 
   const patch: Record<string, unknown> = {
-    updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+    updatedAt: FieldValue.serverTimestamp(),
   }
   const fields: string[] = []
   if (name !== undefined && name !== before.name) {
@@ -494,7 +479,7 @@ export const assignWorkspaceGroupRole = onCall(
           {
             groupId,
             role,
-            updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+            updatedAt: FieldValue.serverTimestamp(),
           },
           { merge: true }
         )

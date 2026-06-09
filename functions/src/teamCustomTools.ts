@@ -20,6 +20,7 @@ import {
   isAiModelProviderConfigured,
   resolveModel,
 } from "./genkitClient.js"
+import type { WorkspaceNodeScope } from "./types.js"
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -46,7 +47,7 @@ export type CustomToolAction =
   | { kind: "promptTemplate"; prompt: string; model: string | null }
   | {
       kind: "workspaceSearch"
-      scope: "code" | "write" | null
+      scope: WorkspaceNodeScope | null
       defaultLimit: number
       filterHint: string
     }

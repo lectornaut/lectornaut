@@ -70,7 +70,7 @@ const stats = computed(() => {
 </script>
 
 <template>
-  <Teleport defer to="#left-sidebar">
+  <SidebarSlot side="left">
     <Sidebar collapsible="none" class="w-full">
       <SidebarHeader>
         <SidebarGroup>
@@ -160,7 +160,7 @@ const stats = computed(() => {
         </Button>
       </SidebarFooter>
     </Sidebar>
-  </Teleport>
+  </SidebarSlot>
 
   <DataTable
     v-if="canManage"
@@ -184,7 +184,7 @@ const stats = computed(() => {
     {{ t("settings.workflows.adminOnly") }}
   </div>
 
-  <Teleport defer to="#right-sidebar">
+  <SidebarSlot side="right">
     <Sidebar collapsible="none" class="w-full">
       <SidebarContent>
         <OverlayScrollbarsWrapper>
@@ -251,5 +251,5 @@ const stats = computed(() => {
         </OverlayScrollbarsWrapper>
       </SidebarContent>
     </Sidebar>
-  </Teleport>
+  </SidebarSlot>
 </template>

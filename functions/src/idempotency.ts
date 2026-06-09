@@ -1,5 +1,6 @@
+import { Timestamp } from "firebase-admin/firestore"
 import * as logger from "firebase-functions/logger"
-import { admin, db } from "./firebase.js"
+import { db } from "./firebase.js"
 
 const DEFAULT_EVENT_LOCK_TTL_MS = 7 * 24 * 60 * 60 * 1000
 const DEFAULT_STALE_PROCESSING_MS = 10 * 60 * 1000
@@ -9,7 +10,7 @@ type EventLockStatus = "processing" | "done" | "error"
 interface EventLockDoc {
   status: EventLockStatus
   updatedAtMs: number
-  expiresAt: admin.firestore.Timestamp
+  expiresAt: Timestamp
   lastError: string | null
 }
 
@@ -71,7 +72,7 @@ export async function runIdempotentEvent(
       {
         status: "processing" satisfies EventLockStatus,
         updatedAtMs: now,
-        expiresAt: admin.firestore.Timestamp.fromMillis(now + ttlMs),
+        expiresAt: Timestamp.fromMillis(now + ttlMs),
         lastError: null,
       },
       { merge: true }
@@ -89,7 +90,7 @@ export async function runIdempotentEvent(
       {
         status: "done" satisfies EventLockStatus,
         updatedAtMs: Date.now(),
-        expiresAt: admin.firestore.Timestamp.fromMillis(Date.now() + ttlMs),
+        expiresAt: Timestamp.fromMillis(Date.now() + ttlMs),
         lastError: null,
       },
       { merge: true }
@@ -102,7 +103,7 @@ export async function runIdempotentEvent(
       {
         status: "error" satisfies EventLockStatus,
         updatedAtMs: Date.now(),
-        expiresAt: admin.firestore.Timestamp.fromMillis(Date.now() + ttlMs),
+        expiresAt: Timestamp.fromMillis(Date.now() + ttlMs),
         lastError: message,
       },
       { merge: true }
@@ -119,7 +120,7 @@ export async function cleanupExpiredIdempotencyLocks(
   options: { batchSize: number } = { batchSize: 450 }
 ): Promise<number> {
   const batchSize = Math.max(1, Math.min(450, options.batchSize))
-  const now = admin.firestore.Timestamp.now()
+  const now = Timestamp.now()
   let totalDeleted = 0
 
   while (true) {
