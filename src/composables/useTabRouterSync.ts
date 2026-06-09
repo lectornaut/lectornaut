@@ -160,16 +160,28 @@ export function useTabRouterSync({ beginRename }: UseTabRouterSyncOptions) {
     () => activeTab.value?.fullPath,
     (newPath) => {
       if (!isHydrated.value) return
+
+      // An intentionally-emptied strip (no active tab, zero tabs) always resolves
+      // to /start — and must do so even while `isInitialRouteSync` is still true.
+      // That flag is set by the workspace-switch watcher and only cleared once the
+      // Route→Store reconciliation settles; a switch whose persistence is lagging
+      // or failing can leave it stuck true, which previously suppressed this
+      // redirect and stranded the user on the last route with no tabs. The
+      // `!isHydrated` guard above already covers the transient empty window while a
+      // freshly switched workspace hydrates, so this can't fire spuriously
+      // mid-switch.
+      if (!activeTabId.value && tabs.value.length === 0) {
+        if (route.fullPath !== "/start") router.push("/start")
+        return
+      }
+
       // During initial sync the Route→Store watcher is authoritative — don't let
       // a restored tab override a redirect URL.
       if (isInitialRouteSync.value) return
 
-      if (!activeTabId.value) {
-        if (route.fullPath !== "/start" && tabs.value.length === 0) {
-          router.push("/start")
-        }
-        return
-      }
+      // No active tab but the strip isn't empty (shouldn't normally happen) — leave
+      // the route alone rather than guessing a destination.
+      if (!activeTabId.value) return
 
       if (newPath && newPath !== route.fullPath) {
         router.push(newPath)
@@ -218,13 +230,16 @@ export function useTabRouterSync({ beginRename }: UseTabRouterSyncOptions) {
     void handleAddTab()
   }
 
-  async function handleCloseTab(id: string | undefined) {
+  function handleCloseTab(id: string | undefined) {
     if (!id) return
     const tab = tabs.value.find((entry) => entry.id === id)
     if (!tab || tab.pinned) return
-    // closeTab computes the next active tab/path; push it for instant feedback.
-    const result = await closeTab(id)
-    if (result?.nextPath) router.push(result.nextPath)
+    // Fire the optimistic close; the Store→Route watcher reconciles the route off
+    // the resulting active-tab change (closing the last tab routes to /start via
+    // the empty-strip branch, which is immune to a stalled/failed persist).
+    // Swallow a persist rejection so a degraded sync backend can't leak an
+    // unhandled rejection here.
+    void closeTab(id).catch(() => {})
   }
 
   async function handleDuplicateTab(id: string | undefined) {
@@ -297,19 +312,19 @@ export function useTabRouterSync({ beginRename }: UseTabRouterSyncOptions) {
 
   function onTabsCloseOthers(id?: unknown) {
     const keepId = typeof id === "string" ? id : activeTabId.value
-    if (keepId) closeOtherTabs(keepId)
+    // closeOtherTabs makes `keepId` the active tab; the Store→Route watcher follows
+    // it. Swallow a persist rejection from a degraded sync backend.
+    if (keepId) void closeOtherTabs(keepId).catch(() => {})
   }
 
-  async function onTabsCloseAll() {
-    await closeAllTabs()
-    const nextPath = activeTab.value?.fullPath
-    if (nextPath && nextPath !== route.fullPath) {
-      router.push(nextPath)
-      return
-    }
-    if (!activeTabId.value && route.fullPath !== "/start") {
-      router.push("/start")
-    }
+  function onTabsCloseAll() {
+    // Navigation is handled reactively by the Store→Route watcher: emptying the
+    // strip clears the active tab and its empty-strip → /start branch redirects
+    // immediately, independent of the (possibly dead-lettering) Firestore write.
+    // This replaces the old `await closeAllTabs()` → router.push, which froze the
+    // redirect for ~2 min behind the persist and then ran a rollback that snapped
+    // the closed tabs back. Swallow a persist rejection so it can't leak.
+    void closeAllTabs().catch(() => {})
   }
 
   function onTabsSelect(idOrIndex?: unknown) {

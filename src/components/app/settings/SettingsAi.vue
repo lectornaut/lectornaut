@@ -587,6 +587,30 @@ const keepMenuOpen = (event: Event) => {
 
         <FieldSeparator />
 
+        <!-- Memory -->
+        <FieldSet>
+          <Field orientation="horizontal">
+            <FieldContent>
+              <FieldLabel for="agent-memory-enabled">
+                {{ t("settings.agents.memory.label") }}
+              </FieldLabel>
+              <FieldDescription>
+                {{ t("settings.agents.memory.description") }}
+              </FieldDescription>
+            </FieldContent>
+            <Switch
+              id="agent-memory-enabled"
+              :model-value="draft.memoryEnabled"
+              :disabled="!canEdit"
+              @update:model-value="
+                (value) => (draft.memoryEnabled = Boolean(value))
+              "
+            />
+          </Field>
+        </FieldSet>
+
+        <FieldSeparator />
+
         <!-- System prompt -->
         <FieldSet>
           <Field orientation="horizontal">

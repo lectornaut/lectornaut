@@ -119,6 +119,9 @@ import {
   type ResolvedIntegration,
   type ToolSpec,
 } from "./integrations.js"
+import { extractMemoriesFromTurn } from "./memoryExtract.js"
+import { buildMemoryContextBlock } from "./memoryRag.js"
+import { recallMemoryTool, saveMemoryTool } from "./memoryTools.js"
 import { can, Capabilities } from "./permissions.js"
 import { GENKIT_OPTS } from "./runtimeConfig.js"
 import { anthropicApiKey, geminiApiKey, openaiApiKey } from "./secrets.js"
@@ -900,7 +903,10 @@ function pickChatTools(
   // Headless Workflows runs pass `false`: an autonomous turn has no human to
   // answer an `askQuestion` interrupt, so the interrupt tool is withheld
   // rather than letting the run stall on a question nobody can resolve.
-  allowInterrupts: boolean = true
+  allowInterrupts: boolean = true,
+  // The team's master Memory switch. The ONLY gate on the memory tools — there
+  // is deliberately no per-agent or per-feature memory toggle.
+  memoryEnabled: boolean = false
 ) {
   // `browseInternet` and `searchWorkspaceNodes` both run on the server's
   // Gemini key — web-search grounding and workspace embeddings
@@ -986,6 +992,14 @@ function pickChatTools(
   // `manual` mode benefits from the ability to hand off to a more
   // capable persona.
   if (transferTargetCount > 0) tools.push(transferToAgentTool)
+  // Memory tools — gated SOLELY by the team's master `memoryEnabled` toggle (no
+  // per-agent or per-feature memory switch, by design). `recallMemory` embeds
+  // the query so it additionally needs the server Gemini key; `saveMemory`
+  // degrades gracefully without it (near-dup dedup just skips).
+  if (memoryEnabled) {
+    tools.push(saveMemoryTool)
+    if (googleSecretConfigured) tools.push(recallMemoryTool)
+  }
   return tools
 }
 
@@ -2278,6 +2292,8 @@ interface PreparedChatTurn {
   userMediaParts: Part[]
   /** Post-clamp model wire-name used for `chat.model` + persistence. */
   effectiveModel: BotAgentModel
+  /** Team master Memory switch — gates post-generation extraction (§6.2). */
+  memoryEnabled: boolean
 }
 
 /**
@@ -2735,6 +2751,7 @@ async function prepareChatTurn(opts: {
     nodeContext,
     dispatchableToolIntegrations,
     autoContextBlock,
+    memoryContextBlock,
     sessionMediaParts,
   ] = await Promise.all([
     sessionId
@@ -2757,6 +2774,18 @@ async function prepareChatTurn(opts: {
       workspaceId,
       query: message ?? "",
       excludeKeys: new Set(contextNodes.map((n) => `${n.scope}:${n.nodeId}`)),
+    }),
+    // Memory recall: when the team's master `memoryEnabled` toggle is on, recall
+    // the memories most relevant to the user's message (visibility-filtered to
+    // the acting HUMAN inside `recallMemoriesCore`) and fold a compact block
+    // into the system prompt. Best-effort ("" when disabled / no human / on any
+    // failure). Skipped for headless agent principals (no human owner).
+    buildMemoryContextBlock({
+      enabled: agentConfig.memoryEnabled,
+      teamId,
+      workspaceId,
+      actingUid: principal.kind === "user" ? principal.uid : "",
+      query: message ?? "",
     }),
     // Chat-session uploads the user selected for THIS turn → base64 media
     // parts. Same `includeMedia` gate as the node-attachment media above.
@@ -2852,7 +2881,8 @@ async function prepareChatTurn(opts: {
     enabledBuiltInTools,
     activeAgent,
     transferRoster.length,
-    allowInterrupts
+    allowInterrupts,
+    agentConfig.memoryEnabled
   )
   for (const ti of dispatchableCustomToolIntegrations) {
     // Per-agent intersection — mirrors the built-in `agentAllows()`
@@ -2913,6 +2943,7 @@ async function prepareChatTurn(opts: {
     baseSystem,
     nodeContext.block,
     autoContextBlock,
+    memoryContextBlock,
     WORKSPACE_SAFETY_DIRECTIVE,
   ]
     .filter(Boolean)
@@ -2981,6 +3012,7 @@ async function prepareChatTurn(opts: {
     actionContext,
     existingSession,
     effectiveModel,
+    memoryEnabled: agentConfig.memoryEnabled,
     userMediaParts: [...nodeContext.media, ...sessionMediaParts],
   }
 }
@@ -3078,28 +3110,35 @@ async function runAgentTurn(
       )
     : NOOP_RELEASE
   try {
-    const { chat, session, actionContext, existingSession, userMediaParts } =
-      await prepareChatTurn({
-        principal: opts.principal,
-        teamId: opts.teamId,
-        workspaceId: opts.workspaceId,
-        sessionId: opts.sessionId,
-        mode: opts.mode,
-        contextNodes: opts.contextNodes,
-        message: opts.message,
-        attachmentIds: opts.attachmentIds,
-        pendingAttachments: opts.pendingAttachments,
-        activeAgentId: opts.activeAgentId,
-        model: opts.model,
-        pinnedNode: opts.pinnedNode,
-        requireExistingSession: false,
-        archivedSessionMessage,
-        allowInterrupts: opts.allowInterrupts,
-        onUsage: opts.onUsage,
-        captureChanges: opts.captureChanges,
-        targetScope: opts.targetScope,
-        disableTransfer: opts.disableTransfer,
-      })
+    const {
+      chat,
+      session,
+      actionContext,
+      existingSession,
+      effectiveModel,
+      memoryEnabled,
+      userMediaParts,
+    } = await prepareChatTurn({
+      principal: opts.principal,
+      teamId: opts.teamId,
+      workspaceId: opts.workspaceId,
+      sessionId: opts.sessionId,
+      mode: opts.mode,
+      contextNodes: opts.contextNodes,
+      message: opts.message,
+      attachmentIds: opts.attachmentIds,
+      pendingAttachments: opts.pendingAttachments,
+      activeAgentId: opts.activeAgentId,
+      model: opts.model,
+      pinnedNode: opts.pinnedNode,
+      requireExistingSession: false,
+      archivedSessionMessage,
+      allowInterrupts: opts.allowInterrupts,
+      onUsage: opts.onUsage,
+      captureChanges: opts.captureChanges,
+      targetScope: opts.targetScope,
+      disableTransfer: opts.disableTransfer,
+    })
 
     // Capture the thread length BEFORE the first turn appends anything.
     // `runTransferTurnIfRequested` needs this to slice the thread back to
@@ -3179,6 +3218,32 @@ async function runAgentTurn(
         session.id,
         actionContext
       )
+    }
+
+    // Post-generation extraction (spec §6.2): when Memory is on and a HUMAN
+    // drove the turn, mine the exchange for durable memories in the background.
+    // Strictly fire-and-forget — never awaited on the response path, never
+    // throws — so it can't add latency or fail the reply. Skipped for headless
+    // agent principals (no human owner) and empty turns. Auto-extracted
+    // memories are private + `source:"agent"`, routed through near-dup merge.
+    if (
+      memoryEnabled &&
+      opts.principal.kind === "user" &&
+      opts.message &&
+      final.text
+    ) {
+      const ownerUid = opts.principal.uid
+      void extractMemoriesFromTurn({
+        teamId: opts.teamId,
+        workspaceId: opts.workspaceId,
+        ownerUid,
+        agentId: actionContext.activeAgentId,
+        model: effectiveModel,
+        userMessage: opts.message,
+        assistantReply: final.text,
+        onUsage: ({ inputTokens, outputTokens }) =>
+          void incrementTeamTokenUsage(opts.teamId, inputTokens, outputTokens),
+      })
     }
 
     return {

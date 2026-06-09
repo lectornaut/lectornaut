@@ -217,6 +217,16 @@ export const AUDIT_ACTIONS = [
   "group.update",
   "group.delete",
   "group.grant.update",
+  // memory
+  "memory.create",
+  "memory.update",
+  "memory.delete",
+  "memory.archive",
+  "memory.unarchive",
+  "memory.share",
+  "memory.unshare",
+  "memory.merge",
+  "memory.purge",
   // invitation
   "invitation.create",
   "invitation.resend",
@@ -364,6 +374,54 @@ export type BotChatRole = (typeof BOT_CHAT_ROLES)[number]
 
 export const BOT_SESSION_VISIBILITIES = ["private", "shared", "public"] as const
 export type BotSessionVisibility = (typeof BOT_SESSION_VISIBILITIES)[number]
+
+// ============================================================================
+// Memory
+// ============================================================================
+
+/**
+ * Per-memory privacy boundary. Copied verbatim from `botSessions`'
+ * private/shared semantics (deliberately NOT the three-way
+ * {@link BOT_SESSION_VISIBILITIES} — memory has no `"public"` mode): a memory
+ * is readable by its `ownerUid`, by anyone in the workspace once `"shared"`,
+ * and — for the management UI only — by team admins. A missing value is
+ * treated as `"private"` everywhere (the rules check `== "shared"`, so absence
+ * is already the safe default), but the create callable still writes it.
+ */
+export const MEMORY_VISIBILITY = ["private", "shared"] as const
+export type MemoryVisibility = (typeof MEMORY_VISIBILITY)[number]
+
+/** Coarse taxonomy for a memory — drives list facets and recall hints. */
+export const MEMORY_CATEGORIES = [
+  "fact",
+  "preference",
+  "context",
+  "reference",
+  "conversation",
+] as const
+export type MemoryCategory = (typeof MEMORY_CATEGORIES)[number]
+
+/**
+ * How a memory came to exist. `"agent"` is a memory an agent wrote on behalf
+ * of the acting user (still owned by that user) — it is a field, not a scope.
+ */
+export const MEMORY_SOURCES = [
+  "user",
+  "agent",
+  "chat",
+  "document",
+  "workflow",
+  "import",
+] as const
+export type MemorySource = (typeof MEMORY_SOURCES)[number]
+
+/**
+ * Embedding dimension for memory vectors. MUST equal `NODE_EMBEDDING_DIM` in
+ * `functions/src/botRag.ts` — read- and write-side vectors share the single
+ * `NODE_EMBEDDER`, so the index, the indexer dim-guard, and the retriever all
+ * agree on this number. Changing it requires rebuilding the vector index.
+ */
+export const MEMORY_DIM = 768
 
 // ============================================================================
 // Integrations

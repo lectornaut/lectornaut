@@ -6,6 +6,7 @@ import {
   IconBadgeDollarSign,
   IconBell,
   IconBlocks,
+  IconBookmark,
   IconBot,
   IconBox,
   IconBriefcase,
@@ -534,6 +535,7 @@ export const defaultBotAgentConfig: IBotAgentConfig = {
   maxOutputTokens: 2048,
   thinking: true,
   autoContext: false,
+  memoryEnabled: true,
   defaultMode: "auto",
   systemPromptBase:
     "You are a helpful AI assistant embedded in this team's " +
@@ -1452,6 +1454,12 @@ export const defaultSettingsTabs = [
         icon: IconMessageCircleMore,
         id: "sessions",
         description: "settings.descriptions.sessions",
+      },
+      {
+        name: "settings.titles.memory",
+        icon: IconBookmark,
+        id: "memory",
+        description: "settings.descriptions.memory",
       },
       {
         name: "settings.titles.storage",

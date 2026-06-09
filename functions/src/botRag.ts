@@ -85,7 +85,7 @@ export const NODE_EMBEDDING_DIM = 768
  * produce vectors of different shapes and `findNearest()` would never
  * match.
  */
-const NODE_EMBEDDER = googleAI.embedder("gemini-embedding-001", {
+export const NODE_EMBEDDER = googleAI.embedder("gemini-embedding-001", {
   outputDimensionality: NODE_EMBEDDING_DIM,
 })
 
@@ -96,7 +96,7 @@ const NODE_EMBEDDER = googleAI.embedder("gemini-embedding-001", {
  * representation of the file, which is still useful for retrieval since
  * the leading characters typically carry the topic signal.
  */
-const MAX_EMBED_INPUT_BYTES = 30_000
+export const MAX_EMBED_INPUT_BYTES = 30_000
 
 /**
  * One shared retriever — the per-call `options.collection` override lets
@@ -339,7 +339,7 @@ const SNIPPET_MAX_LENGTH = 500
  * returning bad data — it's just less filterable. (Should be rare; the
  * Firestore retriever consistently populates `_distance`.)
  */
-const RELEVANCE_DISTANCE_THRESHOLD = 0.55
+export const RELEVANCE_DISTANCE_THRESHOLD = 0.55
 
 export const searchWorkspaceNodesTool = ai.defineTool(
   {
@@ -839,7 +839,7 @@ export const listWorkspaceNodesTool = ai.defineTool(
 // file transitions to empty, the prior embedding is cleared so stale
 // vectors don't linger and pollute future searches.
 
-function sha256Hex(input: string): string {
+export function sha256Hex(input: string): string {
   return createHash("sha256").update(input).digest("hex")
 }
 

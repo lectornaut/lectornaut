@@ -182,6 +182,11 @@ const tabContentClass = "overflow-auto overscroll-none scroll-smooth h-full"
                 <SettingsSessions />
               </OverlayScrollbarsWrapper>
             </TabsContent>
+            <TabsContent :class="tabContentClass" value="memory">
+              <OverlayScrollbarsWrapper>
+                <SettingsMemory />
+              </OverlayScrollbarsWrapper>
+            </TabsContent>
             <TabsContent :class="tabContentClass" value="storage">
               <OverlayScrollbarsWrapper>
                 <SettingsStorage />

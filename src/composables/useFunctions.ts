@@ -26,6 +26,10 @@ import type {
 import type { IMembershipRole } from "@/types/membership"
 import type { WorkspaceNodeScope } from "@/types/nodes"
 import type { INotificationStatus } from "@/types/notification"
+import type {
+  MemoryCategory,
+  MemoryVisibility,
+} from "@lectornaut/shared/domain"
 import {
   httpsCallable,
   type HttpsCallable,
@@ -2417,6 +2421,135 @@ export const generateTeamWorkflowConfig = createTypedCallable<
  * console.log('Audit log ID:', wsData.logId)
  * ```
  */
+// =============================================================================
+// Memory Functions
+// =============================================================================
+
+export interface CreateMemoryRequest {
+  teamId: string
+  workspaceId: string
+  content: string
+  summary?: string
+  tags?: string[]
+  category?: MemoryCategory
+  importance?: number
+  visibility?: MemoryVisibility
+  metadata?: Record<string, unknown>
+}
+
+export interface CreateMemoryResponse {
+  memoryId: string
+  logId?: string
+}
+
+export interface UpdateMemoryRequest {
+  teamId: string
+  workspaceId: string
+  memoryId: string
+  content?: string
+  summary?: string
+  tags?: string[]
+  category?: MemoryCategory
+  importance?: number
+}
+
+export interface UpdateMemoryResponse {
+  memoryId: string
+  updated: boolean
+  logId?: string
+}
+
+/** Shared target shape for the by-id memory mutations. */
+export interface MemoryTargetRequest {
+  teamId: string
+  workspaceId: string
+  memoryId: string
+}
+
+export interface DeleteMemoryResponse {
+  memoryId: string
+  deleted: boolean
+  logId?: string
+}
+
+export interface ArchiveMemoryResponse {
+  memoryId: string
+  archived: boolean
+  logId?: string
+}
+
+export interface PinMemoryResponse {
+  memoryId: string
+  pinned: boolean
+  logId?: string
+}
+
+export interface ShareMemoryResponse {
+  memoryId: string
+  visibility: MemoryVisibility
+  logId?: string
+}
+
+export const createMemory = createTypedCallable<
+  CreateMemoryRequest,
+  CreateMemoryResponse
+>("createMemory")
+
+export const updateMemory = createTypedCallable<
+  UpdateMemoryRequest,
+  UpdateMemoryResponse
+>("updateMemory")
+
+export const deleteMemory = createTypedCallable<
+  MemoryTargetRequest,
+  DeleteMemoryResponse
+>("deleteMemory")
+
+export const archiveMemory = createTypedCallable<
+  MemoryTargetRequest,
+  ArchiveMemoryResponse
+>("archiveMemory")
+
+export const unarchiveMemory = createTypedCallable<
+  MemoryTargetRequest,
+  ArchiveMemoryResponse
+>("unarchiveMemory")
+
+export const pinMemory = createTypedCallable<
+  MemoryTargetRequest,
+  PinMemoryResponse
+>("pinMemory")
+
+export const unpinMemory = createTypedCallable<
+  MemoryTargetRequest,
+  PinMemoryResponse
+>("unpinMemory")
+
+export const shareMemory = createTypedCallable<
+  MemoryTargetRequest,
+  ShareMemoryResponse
+>("shareMemory")
+
+export const unshareMemory = createTypedCallable<
+  MemoryTargetRequest,
+  ShareMemoryResponse
+>("unshareMemory")
+
+export interface PurgeWorkspaceMemoriesRequest {
+  teamId: string
+  workspaceId: string
+}
+
+export interface PurgeWorkspaceMemoriesResponse {
+  deleted: number
+  logId: string
+}
+
+export const purgeWorkspaceMemories = createTypedCallable<
+  PurgeWorkspaceMemoriesRequest,
+  PurgeWorkspaceMemoriesResponse
+>("purgeWorkspaceMemories")
+
 export function useFunctions() {
   return {
     // Team operations

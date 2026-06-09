@@ -39,6 +39,7 @@
 import {
   IconArchive,
   IconArrowRight,
+  IconBookmark,
   IconColumns,
   IconDices,
   IconFilePlus,
@@ -50,6 +51,7 @@ import {
   IconPencil,
   IconRotateCcw,
   IconSearch,
+  IconSparkles,
   IconSquarePen,
 } from "@/data/icons"
 import type { IBotAgentToolToggles } from "@/types/domain"
@@ -272,8 +274,26 @@ export const BOT_NODE_TOOL_CATALOG: readonly BotNodeToolDescriptor[] =
  * names and tools deliberately omitted from this catalog (e.g.
  * `transferToAgent`).
  */
+/**
+ * Display metadata for the Memory bot tools (`saveMemory` / `recallMemory`,
+ * functions/src/memoryTools.ts). Kept OUTSIDE `CATALOG_BY_NAME` /
+ * `IBotAgentToolToggles` because they aren't per-agent toggles — they're gated
+ * solely by the team-wide `memoryEnabled` switch. Consulted by `botToolLabel` /
+ * `botToolIcon` so their inline tool-call cards (`BotChatToolCall.vue`) show a
+ * friendly name + icon instead of the raw wire name. Keys mirror the tool
+ * `name`s in `memoryTools.ts`.
+ */
+const MEMORY_TOOL_DISPLAY: Readonly<
+  Record<string, { label: string; icon: Component }>
+> = {
+  saveMemory: { label: "Save memory", icon: IconBookmark },
+  recallMemory: { label: "Recall memory", icon: IconSparkles },
+}
+
 export const botToolLabel = (name: string): string | undefined =>
-  CATALOG_BY_NAME[name as BotToolName]?.label ?? NODE_TOOL_DISPLAY[name]?.label
+  CATALOG_BY_NAME[name as BotToolName]?.label ??
+  NODE_TOOL_DISPLAY[name]?.label ??
+  MEMORY_TOOL_DISPLAY[name]?.label
 
 /**
  * Resolve a built-in tool's wire name to its catalog icon component
@@ -282,4 +302,6 @@ export const botToolLabel = (name: string): string | undefined =>
  * generic glyph. Same lenient `string` signature as `botToolLabel`.
  */
 export const botToolIcon = (name: string): Component | undefined =>
-  CATALOG_BY_NAME[name as BotToolName]?.icon ?? NODE_TOOL_DISPLAY[name]?.icon
+  CATALOG_BY_NAME[name as BotToolName]?.icon ??
+  NODE_TOOL_DISPLAY[name]?.icon ??
+  MEMORY_TOOL_DISPLAY[name]?.icon

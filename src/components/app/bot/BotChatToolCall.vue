@@ -702,6 +702,14 @@ const FALLBACK_LABEL_KEYS: Record<string, { input: string; output: string }> = {
     input: "ai.toolCall.labels.request",
     output: "ai.toolCall.labels.related",
   },
+  saveMemory: {
+    input: "ai.toolCall.labels.request",
+    output: "ai.toolCall.labels.result",
+  },
+  recallMemory: {
+    input: "ai.toolCall.labels.search",
+    output: "ai.toolCall.labels.results",
+  },
 }
 
 const inputLabel = computed(() =>

@@ -27,6 +27,7 @@ import {
   membershipDocDataSchema,
   membershipWorkspaceRecordSchema,
 } from "@/schemas/membership"
+import { memorySchema, type IMemory } from "@/schemas/memory"
 import type {
   IBotSession,
   IGroup,
@@ -103,6 +104,15 @@ const botSessionConverter = zodConverter<IBotSession>(
   // from the path so legacy/partial docs that never denormalized them into
   // the body still satisfy the schema (the unfiltered admin Sessions query
   // is the only surface that reads such docs).
+  { teamId: 1, workspaceId: 3 }
+)
+const memoryConverter = zodConverter<IMemory>(
+  memorySchema,
+  "memory",
+  // `teams/{teamId}/workspaces/{workspaceId}/memories/{id}` — same path-field
+  // injection as botSessions: teamId (segment 1) + workspaceId (segment 3) are
+  // canonical from the location, so the admin (unfiltered) memory query parses
+  // cleanly without those fields being denormalized into every doc body.
   { teamId: 1, workspaceId: 3 }
 )
 
@@ -432,6 +442,81 @@ export function createWorkspaceBotSessionsQuery(
 ) {
   return query(
     getBotSessionsCollection(teamId, workspaceId),
+    orderBy("updatedAt", "desc")
+  )
+}
+
+/** Get the memories subcollection for a workspace (validated on read). */
+export const getMemoriesCollection = (teamId: string, workspaceId: string) =>
+  collection(
+    firestore,
+    "teams",
+    teamId,
+    "workspaces",
+    workspaceId,
+    "memories"
+  ).withConverter(memoryConverter)
+
+/** Get a single memory document reference (validated on read). */
+export const getMemoryRef = (
+  teamId: string,
+  workspaceId: string,
+  memoryId: string
+) =>
+  doc(
+    firestore,
+    "teams",
+    teamId,
+    "workspaces",
+    workspaceId,
+    "memories",
+    memoryId
+  ).withConverter(memoryConverter)
+
+/**
+ * Create a query for the signed-in user's own memories in a workspace, sorted
+ * by most-recently updated. Returns the user's memories regardless of
+ * visibility (private + shared). Mirrors `createBotSessionsQuery`.
+ */
+export function createMemoriesQuery(
+  teamId: string,
+  workspaceId: string,
+  ownerUid: string
+) {
+  return query(
+    getMemoriesCollection(teamId, workspaceId),
+    where("ownerUid", "==", ownerUid),
+    orderBy("updatedAt", "desc")
+  )
+}
+
+/**
+ * Create a query for memories in a workspace that other members have shared.
+ * The caller filters out their own rows client-side because Firestore can't OR
+ * across `ownerUid != x` and `visibility == 'shared'` in one query — the
+ * visibility filter is the rule-friendly part, ownership is intersected in the
+ * consumer. Mirrors `createSharedBotSessionsQuery`.
+ */
+export function createSharedMemoriesQuery(teamId: string, workspaceId: string) {
+  return query(
+    getMemoriesCollection(teamId, workspaceId),
+    where("visibility", "==", "shared"),
+    orderBy("updatedAt", "desc")
+  )
+}
+
+/**
+ * Create a query for every memory in a workspace, regardless of owner or
+ * visibility. Backs the admin management view — Firestore rules only return
+ * rows for team owners/admins, so a member subscribing receives an empty
+ * snapshot. Mirrors `createWorkspaceBotSessionsQuery`.
+ */
+export function createWorkspaceMemoriesQuery(
+  teamId: string,
+  workspaceId: string
+) {
+  return query(
+    getMemoriesCollection(teamId, workspaceId),
     orderBy("updatedAt", "desc")
   )
 }

@@ -513,6 +513,10 @@ export const botAgentConfigSchema = z.object({
   // client resilient if a response predates the field (deploy ordering).
   thinking: z.boolean().catch(true),
   autoContext: z.boolean().catch(false),
+  // Master Memory switch (recall + extraction + memory tools). On by default;
+  // `.catch(true)` keeps a pre-field response resilient (deploy ordering) and
+  // mirrors the server's `cappedToolToggle(DEFAULT_BOT_AGENT_CONFIG.memoryEnabled)`.
+  memoryEnabled: z.boolean().catch(true),
   defaultMode: botAgentDefaultModeSchema,
   systemPromptBase: z.string().max(4000),
   promptSuffixes: z.object({

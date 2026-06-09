@@ -288,6 +288,16 @@ export interface BotAgentConfig {
    * message; off by default. Team-scoped.
    */
   autoContext: boolean
+  /**
+   * The single master switch for the Memory subsystem. When false the whole
+   * subsystem is dormant: no pre-generation recall injection, no post-generation
+   * extraction, and the `saveMemory` / `recallMemory` tools are not registered.
+   * Existing memories stay readable/deletable for governance. Team-scoped;
+   * defaults to `true` (see `DEFAULT_BOT_AGENT_CONFIG`). Individual memories are
+   * still private to their author until explicitly shared, so on-by-default
+   * doesn't widen who sees anything — it just lets agents use memory.
+   */
+  memoryEnabled: boolean
   /** Pre-selected mode for new chats; the composer can override per-turn. */
   defaultMode: BotChatMode
   /** Workspace-level system prompt; mode-specific suffix appended at runtime. */
@@ -323,6 +333,10 @@ const DEFAULT_BOT_AGENT_CONFIG: BotAgentConfig = {
   // Automatic RAG grounding is opt-in — it adds an embedding lookup per
   // message, so teams enable it deliberately in Settings → AI.
   autoContext: false,
+  // Memory is ON by default so agents recall + save context out of the box. A
+  // team can turn it off in Settings → AI; individual memories are still
+  // private to their author until shared, so this doesn't widen visibility.
+  memoryEnabled: true,
   defaultMode: "auto",
   systemPromptBase:
     "You are a helpful AI assistant embedded in this team's " +
@@ -416,6 +430,7 @@ const botAgentConfigUpdateSchema = z.object({
     .optional(),
   thinking: z.boolean().optional(),
   autoContext: z.boolean().optional(),
+  memoryEnabled: z.boolean().optional(),
   defaultMode: z.enum(BOT_CHAT_MODES).optional(),
   systemPromptBase: z
     .string()
@@ -630,6 +645,7 @@ const botAgentConfigDocSchema = z
     ),
     thinking: cappedToolToggle(DEFAULT_BOT_AGENT_CONFIG.thinking),
     autoContext: cappedToolToggle(DEFAULT_BOT_AGENT_CONFIG.autoContext),
+    memoryEnabled: cappedToolToggle(DEFAULT_BOT_AGENT_CONFIG.memoryEnabled),
     defaultMode: z
       .enum(BOT_CHAT_MODES)
       .catch(DEFAULT_BOT_AGENT_CONFIG.defaultMode),
@@ -738,6 +754,7 @@ function applyAgentConfigOverrides(
     maxOutputTokens: parsed.maxOutputTokens,
     thinking: parsed.thinking,
     autoContext: parsed.autoContext,
+    memoryEnabled: parsed.memoryEnabled,
     defaultMode: parsed.defaultMode,
     systemPromptBase: parsed.systemPromptBase,
     promptSuffixes: parsed.promptSuffixes,

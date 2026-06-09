@@ -347,6 +347,8 @@ declare module 'vue' {
     SettingsIntegrations: typeof import('./src/components/app/settings/SettingsIntegrations.vue')['default']
     SettingsLogs: typeof import('./src/components/app/settings/SettingsLogs.vue')['default']
     SettingsMembers: typeof import('./src/components/app/settings/SettingsMembers.vue')['default']
+    SettingsMemory: typeof import('./src/components/app/settings/SettingsMemory.vue')['default']
+    SettingsMemoryRowActions: typeof import('./src/components/app/settings/SettingsMemoryRowActions.vue')['default']
     SettingsMenu: typeof import('./src/components/app/layout/SettingsMenu.vue')['default']
     SettingsNotifications: typeof import('./src/components/app/settings/SettingsNotifications.vue')['default']
     SettingsOverview: typeof import('./src/components/app/settings/SettingsOverview.vue')['default']

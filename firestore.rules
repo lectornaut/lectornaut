@@ -512,6 +512,30 @@ service cloud.firestore {
           }
         }
 
+        // Workspace memories — durable, searchable notes. The read predicate
+        // is identical to botSessions:
+        //   - owner: read your own memories, any visibility.
+        //   - team member: read memories explicitly shared with the workspace.
+        //   - team admin/owner: read every memory (the management UI).
+        // A memory written before the visibility field existed has no value,
+        // which evaluates as owner-only (the shared predicate requires the
+        // explicit string match). Writes always happen via Cloud Functions
+        // (createMemory, updateMemory, …) so embedding + audit + authorize live
+        // in the callable path. NOTE: the admin read override is for the
+        // management UI only — server-side recall (functions/src/memory.ts)
+        // deliberately does NOT use it, so a private memory is never injected
+        // into another member's prompt.
+        match /memories/{memoryId} {
+          allow read: if isTeamMember(teamId)
+            && !isWorkspaceExcluded(teamId, workspaceId)
+            && (
+              resource.data.ownerUid == request.auth.uid
+              || resource.data.visibility == "shared"
+              || isTeamAdmin(teamId)
+            );
+          allow write: if false;
+        }
+
         // Workflow run history for this workspace — admin-only read (the Runs
         // page + Settings → Runs). Written only by the dispatcher, event
         // triggers, and worker via the admin SDK.
