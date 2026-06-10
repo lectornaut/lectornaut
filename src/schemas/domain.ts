@@ -96,6 +96,17 @@ export const userPreferencesSchema = z.object({
   // and the hydration cache get discarded. Optional + the read-side `?? false`
   // (authStore) heals them without a migration.
   onboarding: z.boolean().optional(),
+  // Synced app preferences (appPreferencesStore round-trip). All optional:
+  // most docs predate each field, and every reader falls back to its
+  // useStorage default. Must stay in lockstep with the server whitelist in
+  // functions/src/syncSettlement.ts (validateUserPreferencesPayload).
+  badgeCount: z.boolean().optional(),
+  fileDropOverlayDragDrop: z.boolean().optional(),
+  fileDropOverlayShortcut: z.boolean().optional(),
+  // Empty string is meaningful: "shortcut cleared".
+  fileDropOverlayShortcutKeys: z.string().optional(),
+  readAloudEnabled: z.boolean().optional(),
+  dictationEnabled: z.boolean().optional(),
   updatedAt: timestampSchema.optional(),
 })
 

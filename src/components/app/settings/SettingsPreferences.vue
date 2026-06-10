@@ -38,9 +38,28 @@ const {
   dictationEnabled,
   isUpdatingPreferences,
 } = storeToRefs(appPreferencesStore)
-const { updatePreference } = appPreferencesStore
+const { updatePreference, updateShortcutKeys } = appPreferencesStore
 
 const toBoolean = (value: unknown): boolean => value === true
+
+/**
+ * Device-local prefs (useStorage-backed) apply synchronously, so unlike the
+ * Firestore-backed `updatePreference` path there's no async layer that
+ * toasts — confirm here so every switch on this page acknowledges the change.
+ */
+const localPreferenceRefs = {
+  runOnStartup,
+  menuBar,
+  openInDesktopApp,
+  automaticUpdates,
+}
+const updateLocalPreference = (
+  key: keyof typeof localPreferenceRefs,
+  value: unknown
+) => {
+  localPreferenceRefs[key].value = toBoolean(value)
+  toast.success(t("settings.preferences.updateSuccess"))
+}
 
 const version = __APP_VERSION__
 
@@ -77,15 +96,24 @@ const recorderRef = ref<ShortcutRecorderTarget>(null)
 const {
   isRecording,
   startRecording: startRecordingBase,
+  stopRecording,
   handleRecorderFocus,
   handleRecorderBlur,
   handleRecorderClick,
   handleRecorderKeydown,
 } = useShortcutRecorder({
   onRecord: (hotkeys) => {
+    // Recording is done — release the global-hotkey mute and drop focus
+    // BEFORE persisting: the persist gate disables the input, and a focused
+    // element that becomes disabled never fires `blur`, which would leave
+    // global hotkeys muted.
+    stopRecording()
+    const active = document.activeElement
+    if (active instanceof HTMLElement) active.blur()
     // The recorder emits a single Mod-notation combo (e.g. "Mod+Shift+D");
-    // store it verbatim for the Tauri global-shortcut registration.
-    fileDropOverlayShortcutKeys.value = getHotkeyCombos(hotkeys)[0] ?? ""
+    // persist it verbatim for the Tauri global-shortcut registration (the
+    // store applies it optimistically, so the display updates immediately).
+    void updateShortcutKeys(getHotkeyCombos(hotkeys)[0] ?? "")
   },
 })
 
@@ -113,7 +141,7 @@ const isDefaultShortcut = computed(
 )
 
 const restoreDefaultShortcut = () => {
-  fileDropOverlayShortcutKeys.value = defaultFileDropOverlayShortcutKeys
+  void updateShortcutKeys(defaultFileDropOverlayShortcutKeys)
 }
 </script>
 
@@ -140,7 +168,11 @@ const restoreDefaultShortcut = () => {
               {{ t("settings.preferences.runOnStartup.description") }}
             </FieldDescription>
           </FieldContent>
-          <Switch id="run-on-startup" v-model="runOnStartup" />
+          <Switch
+            id="run-on-startup"
+            :model-value="runOnStartup"
+            @update:model-value="updateLocalPreference('runOnStartup', $event)"
+          />
         </Field>
         <Field v-if="isTauri" orientation="horizontal">
           <FieldContent>
@@ -151,7 +183,11 @@ const restoreDefaultShortcut = () => {
               {{ t("settings.preferences.menuBar.description") }}
             </FieldDescription>
           </FieldContent>
-          <Switch id="menu-bar" v-model="menuBar" />
+          <Switch
+            id="menu-bar"
+            :model-value="menuBar"
+            @update:model-value="updateLocalPreference('menuBar', $event)"
+          />
         </Field>
         <Field orientation="horizontal">
           <FieldContent>
@@ -188,7 +224,13 @@ const restoreDefaultShortcut = () => {
               {{ t("settings.preferences.openInDesktopApp.description") }}
             </FieldDescription>
           </FieldContent>
-          <Switch id="open-in-desktop-app" v-model="openInDesktopApp" />
+          <Switch
+            id="open-in-desktop-app"
+            :model-value="openInDesktopApp"
+            @update:model-value="
+              updateLocalPreference('openInDesktopApp', $event)
+            "
+          />
         </Field>
       </FieldSet>
       <FieldSeparator />
@@ -212,7 +254,22 @@ const restoreDefaultShortcut = () => {
               {{ t("settings.preferences.readAloud.description") }}
             </FieldDescription>
           </FieldContent>
-          <Switch id="read-aloud" v-model="readAloudEnabled" />
+          <InputGroupButton
+            v-if="isUpdatingPreferences === 'readAloudEnabled'"
+            variant="ghost"
+            size="icon-xs"
+            disabled
+          >
+            <Spinner />
+          </InputGroupButton>
+          <Switch
+            id="read-aloud"
+            :disabled="isUpdatingPreferences !== null"
+            :model-value="readAloudEnabled"
+            @update:model-value="
+              updatePreference('readAloudEnabled', toBoolean($event))
+            "
+          />
         </Field>
         <Field orientation="horizontal">
           <FieldContent>
@@ -223,7 +280,22 @@ const restoreDefaultShortcut = () => {
               {{ t("settings.preferences.dictation.description") }}
             </FieldDescription>
           </FieldContent>
-          <Switch id="dictation" v-model="dictationEnabled" />
+          <InputGroupButton
+            v-if="isUpdatingPreferences === 'dictationEnabled'"
+            variant="ghost"
+            size="icon-xs"
+            disabled
+          >
+            <Spinner />
+          </InputGroupButton>
+          <Switch
+            id="dictation"
+            :disabled="isUpdatingPreferences !== null"
+            :model-value="dictationEnabled"
+            @update:model-value="
+              updatePreference('dictationEnabled', toBoolean($event))
+            "
+          />
         </Field>
       </FieldSet>
       <template v-if="isTauri">
@@ -476,7 +548,13 @@ const restoreDefaultShortcut = () => {
                 }}
               </FieldDescription>
             </FieldContent>
-            <Switch id="automatic-updates" v-model="automaticUpdates" />
+            <Switch
+              id="automatic-updates"
+              :model-value="automaticUpdates"
+              @update:model-value="
+                updateLocalPreference('automaticUpdates', $event)
+              "
+            />
           </Field>
         </FieldSet>
       </template>

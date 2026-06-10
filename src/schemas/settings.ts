@@ -99,3 +99,14 @@ export const settingsThemeDocSchema = z.object({
  * `useGlobalHotkeys` to (re)register the global hotkeys.
  */
 export const shortcutOverridesSchema = z.record(z.string(), z.string())
+
+/**
+ * The `users/{uid}/settings/shortcuts` doc. Written as a FULL replace
+ * (`merge: false`) by `shortcutsStore` so override deletions (per-row reset /
+ * reset-all) propagate — a set+merge deep-merges the map and can never remove
+ * keys. The server enforces the same contract in
+ * functions/src/syncSettlement.ts (`validateUserShortcutsPayload`).
+ */
+export const settingsShortcutsDocSchema = z.object({
+  overrides: shortcutOverridesSchema,
+})

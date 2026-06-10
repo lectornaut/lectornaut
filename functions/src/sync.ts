@@ -1,675 +1,308 @@
-import type { Transaction } from "firebase-admin/firestore"
+/**
+ * Sync operation settlement — the server half of the client's outbox engine
+ * (`src/utils/firebase/firebase-sync-engine.ts`).
+ *
+ * One shared transaction (`settleSyncOperation`) validates and applies a
+ * client-submitted operation document, reached through TWO entry points:
+ *
+ *  - `onSyncOperationCreated` — the Firestore create trigger. Fires once per
+ *    op doc via Eventarc; the historical (and backstop) path.
+ *  - `applySyncOperation` — a callable the client invokes right after creating
+ *    the op doc (and on every retry). Request/response, so settlement does not
+ *    depend on Eventarc delivery — a lost/wedged create event no longer
+ *    strands the operation until the client dead-letters it.
+ *
+ * Both paths race safely: the transaction re-reads the op doc and only
+ * processes `status == "pending"`, so whichever settles first wins and the
+ * loser no-ops (returning the existing verdict). All parsing/routing/payload
+ * validation lives in `syncSettlement.ts` (pure, `node --test`-covered).
+ */
+import type {
+  DocumentReference,
+  DocumentSnapshot,
+  Transaction,
+} from "firebase-admin/firestore"
 import { FieldValue } from "firebase-admin/firestore"
 import * as logger from "firebase-functions/logger"
 import { onDocumentCreated } from "firebase-functions/v2/firestore"
+import { HttpsError } from "firebase-functions/v2/https"
 import { onSchedule } from "firebase-functions/v2/scheduler"
+import { z } from "zod"
 import { COST_BUDGET } from "./costBudget.js"
+import { defineCallable } from "./defineCallable.js"
 import { db } from "./firebase.js"
 import { cleanupExpiredIdempotencyLocks } from "./idempotency.js"
-import { REGION, SCHEDULED_OPTS, TRIGGER_OPTS } from "./runtimeConfig.js"
 import {
-  normalizeComparable,
-  type NotificationStatus,
-  type SyncBaseVersion,
-  type SyncMutationType,
-  type SyncOperationStatus,
-} from "./types.js"
-const NOTIFICATION_STATUSES = new Set<NotificationStatus>([
-  "inbox",
-  "saved",
-  "done",
-])
-const MAX_SNAPSHOT_BASE64_LENGTH = 1_000_000
+  Capabilities,
+  isMembershipRole,
+  resolveAuthorization,
+} from "./permissions.js"
+import {
+  REGION,
+  SCHEDULED_OPTS,
+  SYNC_CALLABLE_OPTS,
+  TRIGGER_OPTS,
+} from "./runtimeConfig.js"
+import {
+  applyMutation,
+  assertContentManagementAllowed,
+  parseOperation,
+  routeSyncOperation,
+  splitPath,
+  SyncRejectError,
+  toRejectDetails,
+  validateBaseVersion,
+  validateSnapshotBinding,
+  verdictFromOperationData,
+  type SyncOperation,
+  type SyncOperationRoute,
+  type SyncSettlementVerdict,
+} from "./syncSettlement.js"
+import { resolveParticipation } from "./workspaceRoles.js"
 
-interface SyncOperation {
-  id: string
-  userId: string
-  source: string
-  targetPath: string
-  type: SyncMutationType
-  data: Record<string, unknown> | null
-  merge: boolean
-  baseVersion: SyncBaseVersion | null
-  status: SyncOperationStatus
+const operationRefFor = (
+  userId: string,
+  operationId: string
+): DocumentReference => db.doc(`users/${userId}/syncOperations/${operationId}`)
+
+interface SettlementReadPlan {
+  targetRef: DocumentReference
+  membershipRef: DocumentReference | null
+}
+
+const planSettlementReads = (
+  operation: SyncOperation,
+  route: SyncOperationRoute
+): SettlementReadPlan => ({
+  targetRef: db.doc(operation.targetPath),
+  membershipRef: route.membershipTeamId
+    ? db.doc(`teams/${route.membershipTeamId}/memberships/${operation.userId}`)
+    : null,
+})
+
+/**
+ * Rules parity for workspace-content targets (snapshots). Membership existence
+ * alone admits principals the direct-write rules
+ * (`canManageWorkspaceContentIn`) deny — guests and workspace-excluded
+ * members — so resolve the SAME canonical decision the content callables use:
+ * the `resolveAuthorization` scope walk over `MANAGE_WORKSPACE_CONTENT`, with
+ * `resolveParticipation` folding in exclusion and the elevate-only
+ * per-workspace/group overrides (a plain team-role check would falsely reject
+ * elevate-only members). The team role comes from the membership snapshot the
+ * settlement already fetched; the direct override doc is read through the
+ * transaction so it joins the settlement's read set (group grants stay
+ * non-transactional, matching `resolveParticipation`'s documented contract).
+ * Throws `SyncRejectError` on denial, settling as a rejection verdict.
+ */
+const requireContentManagement = async (
+  transaction: Transaction,
+  userId: string,
+  membershipSnap: DocumentSnapshot,
+  target: { teamId: string; workspaceId: string }
+): Promise<void> => {
+  const roleRaw = membershipSnap.data()?.role
+  const decision = await resolveAuthorization(
+    userId,
+    Capabilities.MANAGE_WORKSPACE_CONTENT,
+    {
+      teamRole: isMembershipRole(roleRaw) ? roleRaw : null,
+      resolveParticipation: () =>
+        resolveParticipation(
+          target.teamId,
+          target.workspaceId,
+          userId,
+          transaction
+        ),
+    }
+  )
+  assertContentManagementAllowed(decision)
 }
 
 /**
- * Custom error for sync operation rejections. Uses a subset of HttpsError codes
- * but is intentionally NOT an HttpsError because sync operations run inside
- * Firestore triggers (not HTTP callables). The trigger handler catches these
- * and writes the rejection status back to the operation document.
+ * Validate + apply one pending sync operation in a single transaction and
+ * write its settlement (`ack`/`reject`) back onto the operation document.
+ *
+ * Returns the settlement verdict, the EXISTING verdict when another settler
+ * already won the race, or `null` when the operation document does not exist.
+ *
+ * `operationHint` is the trigger's `event.data` payload: when present, the
+ * target + membership refs are derived from it so every document the
+ * settlement needs is fetched alongside the op doc in ONE transactional
+ * `getAll` round trip. The hint never decides anything — the transactional
+ * re-read of the op doc stays authoritative (op payload fields are immutable
+ * under the security rules, so the prefetch matches; any miss is fetched
+ * again below).
  */
-class SyncRejectError extends Error {
-  constructor(
-    readonly code:
-      | "invalid-argument"
-      | "permission-denied"
-      | "failed-precondition"
-      | "not-found",
-    message: string
-  ) {
-    super(message)
-  }
-}
+export const settleSyncOperation = async (
+  userId: string,
+  operationId: string,
+  operationHint?: FirebaseFirestore.DocumentData
+): Promise<SyncSettlementVerdict | null> => {
+  const operationRef = operationRefFor(userId, operationId)
 
-const reject = (
-  code:
-    | "invalid-argument"
-    | "permission-denied"
-    | "failed-precondition"
-    | "not-found",
-  message: string
-): never => {
-  throw new SyncRejectError(code, message)
-}
+  try {
+    return await db.runTransaction(
+      async (transaction): Promise<SyncSettlementVerdict | null> => {
+        const prefetched = new Map<string, DocumentSnapshot>()
+        let operationSnap: DocumentSnapshot | undefined
 
-const assertString = (value: unknown, field: string): string => {
-  if (typeof value !== "string") {
-    reject("invalid-argument", `${field} must be a string`)
-  }
-  const stringValue = value as string
-  const trimmed = stringValue.trim()
-  if (!trimmed.length) {
-    reject("invalid-argument", `${field} cannot be empty`)
-  }
-  return trimmed
-}
+        if (operationHint) {
+          try {
+            const hintOperation = parseOperation(
+              operationHint,
+              userId,
+              operationId
+            )
+            if (hintOperation.status === "pending") {
+              const plan = planSettlementReads(
+                hintOperation,
+                routeSyncOperation(hintOperation, userId)
+              )
+              const refs = [operationRef, plan.targetRef]
+              if (plan.membershipRef) refs.push(plan.membershipRef)
+              const snaps = await transaction.getAll(...refs)
+              for (const snap of snaps) prefetched.set(snap.ref.path, snap)
+              operationSnap = prefetched.get(operationRef.path)
+            }
+          } catch {
+            // Unusable hint — fall through to the sequential reads below. Any
+            // genuine parse/route violation re-surfaces from the authoritative
+            // copy and settles as a rejection.
+          }
+        }
 
-const assertObjectRecord = (
-  value: unknown,
-  field: string
-): Record<string, unknown> => {
-  if (!value || typeof value !== "object" || Array.isArray(value)) {
-    reject("invalid-argument", `${field} must be an object`)
-  }
-  return value as Record<string, unknown>
-}
+        if (!operationSnap) {
+          operationSnap = await transaction.get(operationRef)
+        }
+        if (!operationSnap.exists) {
+          return null
+        }
 
-const parseOperation = (
-  data: FirebaseFirestore.DocumentData,
-  userIdFromPath: string,
-  operationIdFromPath: string
-): SyncOperation => {
-  const id = assertString(data.id ?? operationIdFromPath, "id")
-  const userId = assertString(data.userId, "userId")
-  const source = assertString(data.source ?? "unknown", "source")
-  const targetPath = assertString(data.targetPath, "targetPath")
+        const operationData = operationSnap.data() ?? {}
+        const operation = parseOperation(operationData, userId, operationId)
+        if (operation.status !== "pending") {
+          // Another settler (trigger vs. callable vs. trigger retry) already
+          // processed this operation — report its verdict instead of
+          // re-applying.
+          return verdictFromOperationData(operationData)
+        }
 
-  if (id !== operationIdFromPath) {
-    reject("invalid-argument", "Operation ID mismatch")
-  }
+        const route = routeSyncOperation(operation, userId)
+        const { targetRef, membershipRef } = planSettlementReads(
+          operation,
+          route
+        )
 
-  if (userId !== userIdFromPath) {
-    reject("permission-denied", "Cannot submit operations for another user")
-  }
+        let targetSnap = prefetched.get(targetRef.path)
+        let membershipSnap = membershipRef
+          ? prefetched.get(membershipRef.path)
+          : null
+        const missing: DocumentReference[] = []
+        if (!targetSnap) missing.push(targetRef)
+        if (membershipRef && !membershipSnap) missing.push(membershipRef)
+        if (missing.length > 0) {
+          const snaps = await transaction.getAll(...missing)
+          for (const snap of snaps) {
+            if (snap.ref.path === targetRef.path) targetSnap = snap
+            else if (snap.ref.path === membershipRef?.path)
+              membershipSnap = snap
+          }
+        }
+        if (!targetSnap) {
+          // Structurally unreachable — getAll returns a snapshot per ref.
+          throw new Error("Sync settlement failed to load the target document")
+        }
 
-  const type = data.type
-  if (type !== "set" && type !== "update" && type !== "delete") {
-    reject("invalid-argument", "Unsupported mutation type")
-  }
+        if (membershipRef && !membershipSnap?.exists) {
+          throw new SyncRejectError(
+            "permission-denied",
+            "User is not a team member"
+          )
+        }
 
-  const status = data.status
-  if (status !== "pending" && status !== "ack" && status !== "reject") {
-    reject("invalid-argument", "Unsupported operation status")
-  }
+        // Membership above only proves the CLAIMED team is real for this user;
+        // this binds the claim to the target document's actual team/workspace.
+        validateSnapshotBinding(targetSnap, operation)
 
-  const merge = data.merge === true
+        // Content targets need more than membership: the full role/exclusion
+        // decision, evaluated against the (now bound) team + workspace pair.
+        // Runs before applyMutation so its transactional override read
+        // precedes the transaction's writes.
+        if (route.contentAuthorization) {
+          if (!membershipSnap) {
+            // Structurally unreachable — a content target always routes a
+            // membership ref, fetched above.
+            throw new Error(
+              "Sync settlement failed to load the membership document"
+            )
+          }
+          await requireContentManagement(
+            transaction,
+            userId,
+            membershipSnap,
+            route.contentAuthorization
+          )
+        }
 
-  let operationData: Record<string, unknown> | null = null
-  if (type !== "delete") {
-    operationData = assertObjectRecord(data.data ?? {}, "data")
-  }
+        validateBaseVersion(targetSnap, operation.baseVersion)
 
-  const baseVersionRaw = data.baseVersion
-  let baseVersion: SyncBaseVersion | null = null
-  if (baseVersionRaw !== null && baseVersionRaw !== undefined) {
-    const parsedBase = assertObjectRecord(baseVersionRaw, "baseVersion")
-    const field = assertString(parsedBase.field, "baseVersion.field")
-    const value = parsedBase.value
-    if (
-      value !== null &&
-      typeof value !== "number" &&
-      typeof value !== "string"
-    ) {
-      reject(
-        "invalid-argument",
-        "baseVersion.value must be number, string, or null"
-      )
-    }
-    baseVersion = {
-      field,
-      value: value as number | string | null,
-    }
-  }
+        applyMutation(
+          transaction,
+          targetRef,
+          operation,
+          targetSnap,
+          splitPath(operation.targetPath),
+          userId
+        )
 
-  return {
-    id,
-    userId,
-    source,
-    targetPath,
-    type,
-    data: operationData,
-    merge,
-    baseVersion,
-    status,
-  }
-}
-
-const splitPath = (path: string): string[] =>
-  path
-    .split("/")
-    .map((segment) => segment.trim())
-    .filter((segment) => segment.length > 0)
-
-const ensureTeamMembership = async (
-  transaction: Transaction,
-  teamId: string,
-  userId: string
-) => {
-  const membershipRef = db.doc(`teams/${teamId}/memberships/${userId}`)
-  const membershipSnap = await transaction.get(membershipRef)
-  if (!membershipSnap.exists) {
-    reject("permission-denied", "User is not a team member")
-  }
-}
-
-const assertNullableString = (value: unknown, field: string) => {
-  if (value !== null && typeof value !== "string") {
-    reject("invalid-argument", `${field} must be a string or null`)
-  }
-}
-
-const assertBoolean = (value: unknown, field: string) => {
-  if (typeof value !== "boolean") {
-    reject("invalid-argument", `${field} must be a boolean`)
-  }
-}
-
-const assertAllowedKeys = (
-  payload: Record<string, unknown>,
-  allowedKeys: Set<string>,
-  errorMessage: string
-) => {
-  const keys = Object.keys(payload)
-  if (keys.some((key) => !allowedKeys.has(key))) {
-    reject("permission-denied", errorMessage)
-  }
-}
-
-const validateUserProfilePayload = (
-  path: string[],
-  operation: SyncOperation
-) => {
-  const payload = operation.data ?? {}
-  assertAllowedKeys(
-    payload,
-    new Set(["uid", "email", "displayName", "photoURL"]),
-    "User profile updates contain blocked fields"
-  )
-
-  if ("uid" in payload && payload.uid !== path[1]) {
-    reject("permission-denied", "User profile uid cannot be changed")
-  }
-  if ("email" in payload) {
-    assertNullableString(payload.email, "users.email")
-  }
-  if ("displayName" in payload) {
-    assertNullableString(payload.displayName, "users.displayName")
-  }
-  if ("photoURL" in payload) {
-    assertNullableString(payload.photoURL, "users.photoURL")
-  }
-}
-
-const validateUserPreferencesPayload = (operation: SyncOperation) => {
-  const payload = operation.data ?? {}
-  assertAllowedKeys(
-    payload,
-    new Set([
-      "currentTeamId",
-      "onboarding",
-      "badgeCount",
-      "fileDropOverlayDragDrop",
-      "fileDropOverlayShortcut",
-    ]),
-    "User preference updates contain blocked fields"
-  )
-
-  if ("currentTeamId" in payload) {
-    assertNullableString(payload.currentTeamId, "preferences.currentTeamId")
-  }
-  if ("onboarding" in payload) {
-    assertBoolean(payload.onboarding, "preferences.onboarding")
-  }
-  if ("badgeCount" in payload) {
-    assertBoolean(payload.badgeCount, "preferences.badgeCount")
-  }
-  if ("fileDropOverlayDragDrop" in payload) {
-    assertBoolean(
-      payload.fileDropOverlayDragDrop,
-      "preferences.fileDropOverlayDragDrop"
-    )
-  }
-  if ("fileDropOverlayShortcut" in payload) {
-    assertBoolean(
-      payload.fileDropOverlayShortcut,
-      "preferences.fileDropOverlayShortcut"
-    )
-  }
-}
-
-const validateMembershipPreferencesPayload = (operation: SyncOperation) => {
-  const payload = operation.data ?? {}
-  assertAllowedKeys(
-    payload,
-    new Set(["currentWorkspaceId"]),
-    "Membership preference updates contain blocked fields"
-  )
-
-  if ("currentWorkspaceId" in payload) {
-    assertNullableString(
-      payload.currentWorkspaceId,
-      "preferences.currentWorkspaceId"
-    )
-  }
-}
-
-const validateUserDocumentMutation = (
-  path: string[],
-  operation: SyncOperation
-) => {
-  if (path.length !== 2) return false
-  if (operation.type === "delete") {
-    reject("permission-denied", "User document cannot be deleted via sync")
-  }
-  validateUserProfilePayload(path, operation)
-  return true
-}
-
-const validateUserLayoutMutation = (
-  path: string[],
-  operation: SyncOperation
-) => {
-  if (path.length !== 4) return false
-  if (path[2] !== "layout") return false
-
-  const layoutId = path[3]
-  if (layoutId !== "navigation") {
-    reject("permission-denied", "Invalid user layout target")
-  }
-
-  if (operation.type === "delete") {
-    reject("permission-denied", "Layout documents cannot be deleted via sync")
-  }
-
-  return true
-}
-
-const validateUserSettingsMutation = (
-  path: string[],
-  operation: SyncOperation
-) => {
-  if (path.length !== 4) return false
-  if (path[2] !== "settings") return false
-
-  const settingId = path[3]
-  if (
-    settingId !== "notifications" &&
-    settingId !== "preferences" &&
-    settingId !== "themes"
-  ) {
-    reject("permission-denied", "Invalid user settings target")
-  }
-
-  if (operation.type === "delete") {
-    reject("permission-denied", "Settings documents cannot be deleted via sync")
-  }
-
-  if (settingId === "preferences") {
-    validateUserPreferencesPayload(operation)
-  }
-
-  return true
-}
-
-const validateNotificationMutation = (
-  path: string[],
-  operation: SyncOperation
-) => {
-  if (path.length !== 4) return false
-  if (path[2] !== "notifications") return false
-
-  if (operation.type === "set") {
-    reject("permission-denied", "Notifications cannot be created via sync")
-  }
-
-  if (operation.type === "delete") {
-    reject("permission-denied", "Notifications cannot be deleted via sync")
-  }
-
-  if (operation.type === "update") {
-    const keys = Object.keys(operation.data ?? {})
-    if (!keys.length) {
-      reject("invalid-argument", "Notification update payload is empty")
-    }
-    const allowed = new Set(["read", "status"])
-    if (keys.some((key) => !allowed.has(key))) {
-      reject("permission-denied", "Notification updates contain blocked fields")
-    }
-    if (
-      "read" in (operation.data ?? {}) &&
-      typeof operation.data?.read !== "boolean"
-    ) {
-      reject("invalid-argument", "notifications.read must be a boolean")
-    }
-    if ("status" in (operation.data ?? {})) {
-      const status = operation.data?.status
-      if (
-        typeof status !== "string" ||
-        !NOTIFICATION_STATUSES.has(status as NotificationStatus)
-      ) {
-        reject("invalid-argument", "notifications.status is invalid")
+        transaction.set(
+          operationRef,
+          {
+            status: "ack",
+            ack: {
+              code: null,
+              message: null,
+              atMs: Date.now(),
+            },
+            processedAt: FieldValue.serverTimestamp(),
+          },
+          { merge: true }
+        )
+        return { status: "ack", code: null, message: null }
       }
-    }
-  }
-
-  return true
-}
-
-const validateTabsLayoutMutation = async (
-  transaction: Transaction,
-  path: string[],
-  operation: SyncOperation,
-  userId: string
-) => {
-  if (path.length !== 8) return false
-  if (path[0] !== "teams" || path[2] !== "memberships") return false
-  if (path[4] !== "workspaces" || path[6] !== "layout" || path[7] !== "tabs") {
-    return false
-  }
-
-  const targetUserId = path[3]
-  if (targetUserId !== userId) {
-    reject("permission-denied", "Cannot mutate another member's tabs")
-  }
-
-  if (operation.type === "delete") {
-    reject("permission-denied", "Tabs layout cannot be deleted via sync")
-  }
-
-  const teamId = path[1]
-  await ensureTeamMembership(transaction, teamId, userId)
-  return true
-}
-
-const validateMembershipSettingsMutation = async (
-  transaction: Transaction,
-  path: string[],
-  operation: SyncOperation,
-  userId: string
-) => {
-  if (path.length !== 6) return false
-  if (path[0] !== "teams" || path[2] !== "memberships") return false
-  if (path[4] !== "settings" || path[5] !== "preferences") return false
-
-  const targetUserId = path[3]
-  if (targetUserId !== userId) {
-    reject("permission-denied", "Cannot mutate another member's preferences")
-  }
-
-  if (operation.type === "delete") {
-    reject(
-      "permission-denied",
-      "Membership preference documents cannot be deleted via sync"
     )
-  }
-
-  validateMembershipPreferencesPayload(operation)
-  await ensureTeamMembership(transaction, path[1], userId)
-  return true
-}
-
-const validateSnapshotMutation = async (
-  transaction: Transaction,
-  path: string[],
-  operation: SyncOperation,
-  userId: string
-) => {
-  if (path.length !== 2 || path[0] !== "snapshots") return false
-
-  if (operation.type === "delete") {
-    reject("permission-denied", "Snapshots cannot be deleted via sync")
-  }
-
-  const payload = operation.data ?? {}
-  assertAllowedKeys(
-    payload,
-    new Set([
-      "contentId",
-      "teamId",
-      "workspaceId",
-      "updatedAt",
-      "updatedBy",
-      "ydocBase64",
-    ]),
-    "Snapshot updates contain blocked fields"
-  )
-
-  const contentId = assertString(payload.contentId, "snapshots.contentId")
-  if (contentId !== path[1]) {
-    reject("permission-denied", "Snapshot contentId does not match target path")
-  }
-
-  const teamId = assertString(payload.teamId, "snapshots.teamId")
-  assertString(payload.workspaceId, "snapshots.workspaceId")
-
-  if (payload.updatedBy !== userId) {
-    reject("permission-denied", "Snapshot updatedBy must match current user")
-  }
-
-  const ydocBase64 = assertString(payload.ydocBase64, "snapshots.ydocBase64")
-  if (ydocBase64.length > MAX_SNAPSHOT_BASE64_LENGTH) {
-    reject("invalid-argument", "Snapshot payload is too large")
-  }
-
-  await ensureTeamMembership(transaction, teamId, userId)
-  return true
-}
-
-const validateBaseVersion = (
-  targetSnap: FirebaseFirestore.DocumentSnapshot,
-  baseVersion: SyncBaseVersion | null
-) => {
-  if (!baseVersion) return
-
-  if (!targetSnap.exists) {
-    reject(
-      "failed-precondition",
-      `Base version check failed because target document does not exist`
+  } catch (error) {
+    const rejectDetails = toRejectDetails(error)
+    // Wrap in a conditional transaction to prevent overwriting a successful
+    // "ack" if this settler races another (trigger retry, callable retry).
+    return await db.runTransaction(
+      async (tx): Promise<SyncSettlementVerdict | null> => {
+        const snap = await tx.get(operationRef)
+        if (!snap.exists) return null
+        const data = snap.data()
+        if (data?.status !== "pending") {
+          return verdictFromOperationData(data)
+        }
+        tx.set(
+          operationRef,
+          {
+            status: "reject",
+            ack: {
+              code: rejectDetails.code,
+              message: rejectDetails.message,
+              atMs: Date.now(),
+            },
+            processedAt: FieldValue.serverTimestamp(),
+          },
+          { merge: true }
+        )
+        return {
+          status: "reject",
+          code: rejectDetails.code,
+          message: rejectDetails.message,
+        }
+      }
     )
-  }
-
-  const actual = normalizeComparable(targetSnap.get(baseVersion.field))
-  if (actual !== baseVersion.value) {
-    reject(
-      "failed-precondition",
-      `Base version mismatch for "${baseVersion.field}"`
-    )
-  }
-}
-
-const validateOperationAccess = async (
-  transaction: Transaction,
-  operation: SyncOperation,
-  userId: string
-) => {
-  const path = splitPath(operation.targetPath)
-  if (path.length < 2) {
-    reject("permission-denied", "Invalid target path")
-  }
-
-  if (path[0] === "users") {
-    if (path[1] !== userId) {
-      reject("permission-denied", "Cannot mutate another user")
-    }
-
-    if (validateUserDocumentMutation(path, operation)) return
-    if (validateUserLayoutMutation(path, operation)) return
-    if (validateUserSettingsMutation(path, operation)) return
-    if (validateNotificationMutation(path, operation)) return
-
-    reject("permission-denied", "Unsupported user mutation target")
-  }
-
-  const handledTabsMutation = await validateTabsLayoutMutation(
-    transaction,
-    path,
-    operation,
-    userId
-  )
-  if (handledTabsMutation) return
-
-  const handledMembershipSettingsMutation =
-    await validateMembershipSettingsMutation(
-      transaction,
-      path,
-      operation,
-      userId
-    )
-  if (handledMembershipSettingsMutation) return
-
-  const handledSnapshotMutation = await validateSnapshotMutation(
-    transaction,
-    path,
-    operation,
-    userId
-  )
-  if (handledSnapshotMutation) return
-
-  reject("permission-denied", "Unsupported sync mutation target")
-}
-
-const isUserRootPathForUser = (path: string[], userId: string): boolean =>
-  path.length === 2 && path[0] === "users" && path[1] === userId
-
-const isUserPreferencesPathForUser = (
-  path: string[],
-  userId: string
-): boolean =>
-  path.length === 4 &&
-  path[0] === "users" &&
-  path[1] === userId &&
-  path[2] === "settings" &&
-  path[3] === "preferences"
-
-const isMembershipPreferencesPathForUser = (
-  path: string[],
-  userId: string
-): boolean =>
-  path.length === 6 &&
-  path[0] === "teams" &&
-  path[2] === "memberships" &&
-  path[3] === userId &&
-  path[4] === "settings" &&
-  path[5] === "preferences"
-
-const isSnapshotPath = (path: string[]): boolean =>
-  path.length === 2 && path[0] === "snapshots"
-
-const withServerManagedFields = (
-  payload: Record<string, unknown>,
-  targetSnap: FirebaseFirestore.DocumentSnapshot,
-  path: string[],
-  userId: string
-): Record<string, unknown> => {
-  const shouldStampUpdatedAt =
-    isUserRootPathForUser(path, userId) ||
-    isUserPreferencesPathForUser(path, userId) ||
-    isMembershipPreferencesPathForUser(path, userId) ||
-    isSnapshotPath(path)
-
-  if (!shouldStampUpdatedAt) {
-    return payload
-  }
-
-  const nextPayload: Record<string, unknown> = {
-    ...payload,
-    updatedAt: FieldValue.serverTimestamp(),
-  }
-
-  if (
-    isUserRootPathForUser(path, userId) &&
-    !targetSnap.exists &&
-    !("createdAt" in nextPayload)
-  ) {
-    nextPayload.createdAt = FieldValue.serverTimestamp()
-    nextPayload.username = null
-    nextPayload.isPublic = false
-  }
-
-  if (isSnapshotPath(path)) {
-    nextPayload.updatedBy = userId
-  }
-
-  return nextPayload
-}
-
-const applyMutation = (
-  transaction: Transaction,
-  targetRef: FirebaseFirestore.DocumentReference,
-  operation: SyncOperation,
-  targetSnap: FirebaseFirestore.DocumentSnapshot,
-  path: string[],
-  userId: string
-) => {
-  if (operation.type === "delete") {
-    transaction.delete(targetRef)
-    return
-  }
-
-  const payload = withServerManagedFields(
-    operation.data ?? {},
-    targetSnap,
-    path,
-    userId
-  )
-  if (operation.type === "set") {
-    transaction.set(targetRef, payload, { merge: operation.merge })
-    return
-  }
-
-  if (Object.keys(payload).length === 0) {
-    reject("invalid-argument", "Update payload cannot be empty")
-  }
-
-  transaction.update(targetRef, payload)
-}
-
-const toRejectDetails = (error: unknown) => {
-  if (error instanceof SyncRejectError) {
-    return {
-      code: error.code,
-      message: error.message,
-    }
-  }
-
-  if (
-    typeof error === "object" &&
-    error !== null &&
-    "code" in error &&
-    "message" in error &&
-    typeof (error as { code?: unknown }).code === "string" &&
-    typeof (error as { message?: unknown }).message === "string"
-  ) {
-    return {
-      code: (error as { code: string }).code,
-      message: (error as { message: string }).message,
-    }
-  }
-
-  return {
-    code: "internal",
-    message: "Unexpected sync error",
   }
 }
 
@@ -688,86 +321,78 @@ export const onSyncOperationCreated = onDocumentCreated(
     if (!snapshot) return
 
     const { userId, operationId } = event.params
-    const operationRef = snapshot.ref
-
-    try {
-      await db.runTransaction(async (transaction) => {
-        const currentOperationSnap = await transaction.get(operationRef)
-        if (!currentOperationSnap.exists) {
-          return
-        }
-
-        const operation = parseOperation(
-          currentOperationSnap.data() ?? {},
-          userId,
-          operationId
-        )
-
-        if (operation.status !== "pending") {
-          return
-        }
-
-        await validateOperationAccess(transaction, operation, userId)
-
-        const targetRef = db.doc(operation.targetPath)
-        const targetPath = splitPath(operation.targetPath)
-        const targetSnap = await transaction.get(targetRef)
-        validateBaseVersion(targetSnap, operation.baseVersion)
-
-        applyMutation(
-          transaction,
-          targetRef,
-          operation,
-          targetSnap,
-          targetPath,
-          userId
-        )
-
-        transaction.set(
-          operationRef,
-          {
-            status: "ack",
-            ack: {
-              code: null,
-              message: null,
-              atMs: Date.now(),
-            },
-            processedAt: FieldValue.serverTimestamp(),
-          },
-          { merge: true }
-        )
-      })
-    } catch (error) {
-      const rejectDetails = toRejectDetails(error)
-      // Wrap in a conditional transaction to prevent overwriting a successful
-      // "ack" if this invocation races with a retry (retry: true is set on trigger)
-      await db.runTransaction(async (tx) => {
-        const snap = await tx.get(operationRef)
-        if (!snap.exists || snap.data()?.status !== "pending") return
-        tx.set(
-          operationRef,
-          {
-            status: "reject",
-            ack: {
-              code: rejectDetails.code,
-              message: rejectDetails.message,
-              atMs: Date.now(),
-            },
-            processedAt: FieldValue.serverTimestamp(),
-          },
-          { merge: true }
-        )
-      })
-    }
+    await settleSyncOperation(userId, operationId, snapshot.data())
   }
 )
+
+const applySyncOperationInput = z.object({
+  operationId: z.string().min(1),
+})
+
+/**
+ * Direct, Eventarc-free settlement path for the client's sync outbox. The
+ * client invokes this immediately after creating the operation document (and
+ * re-invokes it on retry); the response carries the same verdict the ack
+ * listener would eventually observe, so the client settles through one shared
+ * entry point either way.
+ *
+ * The op ref is derived from the CALLER's uid, so cross-user settlement is
+ * structurally impossible. A `"reject"` verdict is a normal return value —
+ * only transport/internal failures surface as errors, which the client
+ * treats as soft (the create trigger remains the backstop).
+ */
+export const applySyncOperation = defineCallable({
+  name: "applySyncOperation",
+  input: applySyncOperationInput,
+  opts: SYNC_CALLABLE_OPTS,
+  handler: async ({ auth, input }): Promise<SyncSettlementVerdict> => {
+    const verdict = await settleSyncOperation(auth.uid, input.operationId)
+    if (!verdict) {
+      throw new HttpsError("not-found", "Sync operation not found")
+    }
+    return verdict
+  },
+})
 
 // ============================================================================
 // Cleanup: Remove settled sync operations older than 24 hours
 // ============================================================================
 
 const SYNC_TTL_MS = 24 * 60 * 60 * 1000 // 24 hours
+/**
+ * Orphaned-pending retention. An op can stay "pending" remotely forever when
+ * its create event was lost AND its client never returned to retry (clients
+ * dead-letter locally in under a minute while online). 7 days is far beyond
+ * any legitimate offline-outbox replay window.
+ */
+const SYNC_PENDING_TTL_MS = 7 * 24 * 60 * 60 * 1000
 const CLEANUP_BATCH_SIZE = COST_BUDGET.MAX_BATCH_SIZE
+
+const deleteQueryBatches = async (
+  buildQuery: () => FirebaseFirestore.Query
+): Promise<number> => {
+  let totalDeleted = 0
+  let hasMore = true
+
+  while (hasMore) {
+    const stale = await buildQuery().limit(CLEANUP_BATCH_SIZE).get()
+
+    if (stale.empty) {
+      break
+    }
+
+    const batch = db.batch()
+    stale.docs.forEach((doc) => batch.delete(doc.ref))
+    await batch.commit()
+    totalDeleted += stale.size
+
+    if (stale.size < CLEANUP_BATCH_SIZE) {
+      hasMore = false
+    }
+  }
+
+  return totalDeleted
+}
 
 /**
  * COST OPTIMIZATION: Uses collectionGroup("syncOperations") to directly
@@ -777,8 +402,9 @@ const CLEANUP_BATCH_SIZE = COST_BUDGET.MAX_BATCH_SIZE
  * Before: O(users) reads to get user list + O(stale_ops) reads to find ops
  * After:  O(stale_ops / batch_size) queries only — skips reading user docs entirely
  *
- * Requires a composite index on the "syncOperations" collection group:
- *   status (ASC) + processedAt (ASC)
+ * Requires composite indexes on the "syncOperations" collection group:
+ *   status (ASC) + processedAt (ASC)   — settled sweep
+ *   status (ASC) + createdAt (ASC)     — orphaned-pending sweep
  */
 export const cleanupSyncOperations = onSchedule(
   {
@@ -788,41 +414,31 @@ export const cleanupSyncOperations = onSchedule(
     ...SCHEDULED_OPTS,
   },
   async () => {
-    const cutoff = new Date(Date.now() - SYNC_TTL_MS)
-    let totalDeleted = 0
-    let hasMore = true
-
-    while (hasMore) {
-      // Query directly across all users' syncOperations subcollections
-      const staleOps = await db
+    const settledCutoff = new Date(Date.now() - SYNC_TTL_MS)
+    const totalDeleted = await deleteQueryBatches(() =>
+      db
         .collectionGroup("syncOperations")
         .where("status", "in", ["ack", "reject"])
-        .where("processedAt", "<", cutoff)
-        .limit(CLEANUP_BATCH_SIZE)
-        .get()
+        .where("processedAt", "<", settledCutoff)
+    )
 
-      if (staleOps.empty) {
-        hasMore = false
-        break
-      }
-
-      const batch = db.batch()
-      staleOps.docs.forEach((doc) => batch.delete(doc.ref))
-      await batch.commit()
-      totalDeleted += staleOps.size
-
-      // If we got fewer than the batch size, no more stale ops remain
-      if (staleOps.size < CLEANUP_BATCH_SIZE) {
-        hasMore = false
-      }
-    }
+    // Orphaned-pending sweep: ops whose create event was lost are stuck at
+    // "pending" with no settler left to touch them — the settled sweep above
+    // never matches, so without this they accumulate unboundedly.
+    const pendingCutoff = new Date(Date.now() - SYNC_PENDING_TTL_MS)
+    const orphanedDeleted = await deleteQueryBatches(() =>
+      db
+        .collectionGroup("syncOperations")
+        .where("status", "==", "pending")
+        .where("createdAt", "<", pendingCutoff)
+    )
 
     const deletedEventLocks = await cleanupExpiredIdempotencyLocks({
       batchSize: CLEANUP_BATCH_SIZE,
     })
 
     logger.info(
-      `[cleanupSyncOperations] Deleted ${totalDeleted} stale sync operations and ${deletedEventLocks} stale event locks`
+      `[cleanupSyncOperations] Deleted ${totalDeleted} stale sync operations, ${orphanedDeleted} orphaned pending operations, and ${deletedEventLocks} stale event locks`
     )
   }
 )

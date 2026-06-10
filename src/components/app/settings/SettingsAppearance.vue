@@ -24,6 +24,7 @@ import { useThemeStore } from "@/stores/themeStore"
 import type { ThemeMode } from "@/types/settings"
 import { normalizeHexColor } from "@/utils/theme/customTheme"
 import { storeToRefs } from "pinia"
+import { toast } from "vue-sonner"
 
 const { t } = useI18n()
 
@@ -119,6 +120,17 @@ const selectedReducedMotion = computed({
     themeSettings.value.reducedMotion = value
   },
 })
+
+// Boolean prefs persist immediately (no unsaved bar) — confirm with a toast.
+const handleToggleTranslucentSidebar = (value: unknown) => {
+  selectedTranslucentSidebar.value = value === true
+  toast.success(t("settings.appearance.updateSuccess"))
+}
+
+const handleToggleReducedMotion = (value: unknown) => {
+  selectedReducedMotion.value = value === true
+  toast.success(t("settings.appearance.updateSuccess"))
+}
 
 const groupedBaseOptions = bases.filter(
   (color) => color.id === "accent" || color.id === "custom"
@@ -462,7 +474,8 @@ const getAccentOptionStyle = (optionId: AccentId) =>
           </FieldContent>
           <Switch
             id="translucent-sidebar"
-            v-model="selectedTranslucentSidebar"
+            :model-value="selectedTranslucentSidebar"
+            @update:model-value="handleToggleTranslucentSidebar"
           />
         </Field>
         <Field orientation="horizontal">
@@ -474,7 +487,11 @@ const getAccentOptionStyle = (optionId: AccentId) =>
               {{ t("settings.appearance.reducedMotion.description") }}
             </FieldDescription>
           </FieldContent>
-          <Switch id="reduced-motion" v-model="selectedReducedMotion" />
+          <Switch
+            id="reduced-motion"
+            :model-value="selectedReducedMotion"
+            @update:model-value="handleToggleReducedMotion"
+          />
         </Field>
       </FieldSet>
       <FieldSeparator />

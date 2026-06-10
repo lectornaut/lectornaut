@@ -32,6 +32,7 @@ import {
   type FirestoreError,
   type Query,
   type QueryDocumentSnapshot,
+  type SnapshotOptions,
   type Unsubscribe,
 } from "firebase/firestore"
 import {
@@ -55,6 +56,22 @@ import {
  * listener exists per distinct key no matter how many components observe it.
  */
 const liveListeners = new Map<string, Unsubscribe>()
+
+/**
+ * Snapshot materialization options for every read seam in this module.
+ *
+ * `serverTimestamps: "estimate"` matters because the local cache is shared
+ * across tabs (`persistentMultipleTabManager`): a pending client-side
+ * `serverTimestamp()` write — ours or a sibling tab's — surfaces in
+ * latency-compensated snapshots BEFORE the server ack, and the default
+ * (`"none"`) materializes those fields as `null`. Strict read schemas
+ * (`timestampSchema`) then report a violation on perfectly healthy docs
+ * (e.g. the device-session heartbeat's `lastActiveAt`). `"estimate"`
+ * substitutes a local-clock Timestamp until the ack lands, so required
+ * Timestamp fields stay Timestamps through the converters. `"previous"`
+ * would not cover freshly created docs (no previous value → still null).
+ */
+const SNAPSHOT_OPTIONS: SnapshotOptions = { serverTimestamps: "estimate" }
 
 const teardownListener = (queryHash: string): void => {
   const unsubscribe = liveListeners.get(queryHash)
@@ -269,7 +286,10 @@ export function useDocumentQuery<T>(
             ref,
             // `null` (not `undefined`) for a missing doc, so callers can tell a
             // confirmed-absent document apart from the still-loading state.
-            (snapshot) => onNext(snapshot.exists() ? snapshot.data() : null),
+            (snapshot) =>
+              onNext(
+                snapshot.exists() ? snapshot.data(SNAPSHOT_OPTIONS) : null
+              ),
             onError
           )
       )
@@ -341,7 +361,7 @@ export function useCollectionQuery<T>(
               // primitive's `T[]` contract holds for every consumer.
               onNext(
                 snapshot.docs
-                  .map((entry) => entry.data())
+                  .map((entry) => entry.data(SNAPSHOT_OPTIONS))
                   .filter((row): row is T => row != null)
               ),
             onError
@@ -500,7 +520,10 @@ export function useInfiniteCollectionQuery<T extends { id: string }>(
             current.buildQuery(null),
             (snap) => {
               const head = snap.docs.map((entry) =>
-                current.toRow(entry.id, entry.data() as Record<string, unknown>)
+                current.toRow(
+                  entry.id,
+                  entry.data(SNAPSHOT_OPTIONS) as Record<string, unknown>
+                )
               )
               // The live listener owns the cursor/hasMore ONLY while no older
               // pages are loaded — once `loadMore` advances past page 1, its
@@ -559,7 +582,10 @@ export function useInfiniteCollectionQuery<T extends { id: string }>(
     try {
       const snap = await getDocs(current.buildQuery(after))
       const next = snap.docs.map((entry) =>
-        current.toRow(entry.id, entry.data() as Record<string, unknown>)
+        current.toRow(
+          entry.id,
+          entry.data(SNAPSHOT_OPTIONS) as Record<string, unknown>
+        )
       )
       update((entry) => ({ head: entry.head, tail: [...entry.tail, ...next] }))
       if (snap.size < current.pageSize) {

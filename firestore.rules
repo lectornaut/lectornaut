@@ -322,7 +322,7 @@ service cloud.firestore {
 
       match /settings/{settingId} {
         allow read: if isSelf(userId)
-          && settingId in ["notifications", "preferences", "themes"];
+          && settingId in ["notifications", "preferences", "themes", "shortcuts"];
         allow write: if false;
       }
 

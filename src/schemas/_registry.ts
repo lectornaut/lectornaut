@@ -16,7 +16,7 @@ import {
   membershipDocDataWriteSchema,
 } from "./membership"
 import { userNotificationSettingsSchema } from "./notifications"
-import { settingsThemeDocSchema } from "./settings"
+import { settingsShortcutsDocSchema, settingsThemeDocSchema } from "./settings"
 
 /**
  * Firestore path → schema pair registry.
@@ -71,6 +71,14 @@ const registry: RegistryEntry[] = [
       read: settingsThemeDocSchema,
       write: settingsThemeDocSchema,
       name: "settingsThemes",
+    },
+  },
+  {
+    pattern: /^users\/[^/]+\/settings\/shortcuts$/,
+    schemas: {
+      read: settingsShortcutsDocSchema,
+      write: settingsShortcutsDocSchema,
+      name: "settingsShortcuts",
     },
   },
   {

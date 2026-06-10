@@ -4,24 +4,32 @@
  *
  * Owns the per-user application + device preferences. Two flavors live here:
  *
- *  - **Native / Tauri integration** (backed by `users/{uid}/settings/preferences`):
- *    run-on-startup, menu-bar/tray visibility, dock badge count, automatic
- *    updates, the file-drop overlay (drag-drop + an OS-level global shortcut),
- *    and open-in-desktop-app. These drive real Tauri side-effects (autostart,
- *    tray, global-shortcut register/unregister).
- *  - **Device-local speech toggles**: read-aloud + dictation. localStorage only
- *    (a mic you have here you may not have elsewhere) — never synced to Firestore.
- *
- * Only `badgeCount` / `fileDropOverlayDragDrop` / `fileDropOverlayShortcut`
- * round-trip to Firestore (inbound watch + `updatePreference`, a direct
- * single-flight `mutateSetDocument` — not the optimistic `runWrite` seam); the
- * rest are localStorage-authoritative via `useStorage`.
+ *  - **User-level prefs** (round-trip `users/{uid}/settings/preferences`):
+ *    dock badge count, the file-drop overlay (drag-drop toggle, global-shortcut
+ *    toggle AND its recorded key combo), and the speech toggles (read-aloud +
+ *    dictation). Outbound via `updatePreference` / `updateShortcutKeys` (a
+ *    direct single-flight `mutateSetDocument` — not the optimistic `runWrite`
+ *    seam), inbound via the doc watch — so changes propagate live to every
+ *    running instance. The `useStorage` refs double as the local mirror /
+ *    cold-start cache. The server whitelists these fields per-key in
+ *    functions/src/syncSettlement.ts (`validateUserPreferencesPayload`):
+ *    adding a synced field means extending that whitelist AND
+ *    `userPreferencesSchema` (src/schemas/domain.ts — the authStore's
+ *    converted listener owns the shared cache entry, and zod strips unknown
+ *    fields on read), and deploying functions BEFORE the client ships, or
+ *    those writes settle as immediate permission-denied rejects (optimistic
+ *    rollback + error toast).
+ *  - **Device-local prefs** (localStorage only, deliberately never synced):
+ *    run-on-startup (this machine's autostart), menu-bar/tray visibility,
+ *    automatic updates + last-check (this install's updater), and
+ *    open-in-desktop-app (this browser's link handling, read pre-auth by
+ *    `deepLink.ts`). All per-machine/per-browser semantics.
  *
  * Extracted from the former `settingsStore` monolith as phase 3 of its split.
  * Store consumers: `SettingsPreferences.vue`, `useDictation`, `useReadAloud`.
- * (Several keys are also read directly via `useStorage` elsewhere — `main.ts`,
- * `FileDropOverlay.vue`, `deepLink.ts`, and `useNotifications` for `badgeCount`
- * after phase 2 severed that edge — those readers don't depend on this store.)
+ * (Several keys are also read via independent `useStorage` re-declarations —
+ * `main.ts` for `automaticUpdates`/`lastUpdateCheck`, `useNotifications` for
+ * `badgeCount` — sharing state through the localStorage key, not this store.)
  */
 
 import { isTauri } from "@/composables/usePlatform"
@@ -79,37 +87,63 @@ export const useAppPreferencesStore = defineStore("appPreferences", () => {
 
   const openInDesktopApp = useStorage<boolean>("openInDesktopApp", true)
 
-  // Speech features (read-aloud playback, voice dictation). Device-local —
-  // a microphone you have here you may not have elsewhere — so localStorage
-  // only, no Firestore sync. Default on to preserve the always-available
+  // Speech features (read-aloud playback, voice dictation). User-level intent,
+  // synced via the preferences doc like badgeCount; whether the feature can
+  // run on THIS device stays a separate runtime gate (`isSupported` in
+  // useReadAloud/useDictation). Default on to preserve the always-available
   // behavior these features had before the toggles existed.
   const readAloudEnabled = useStorage<boolean>("readAloudEnabled", true)
   const dictationEnabled = useStorage<boolean>("dictationEnabled", true)
+
+  // Declared before the inbound watch (immediate:true can run synchronously
+  // against cached query data) — it gates which doc fields the watch copies.
+  const isUpdatingPreferences = ref<string | null>(null)
+
+  // Copy one doc field into its local mirror — unless that key's own write is
+  // in flight: the snapshot still carries the pre-write value until the op
+  // settles (and unrelated writers like `currentTeamId` share this doc), so
+  // copying it would visibly revert the optimistic toggle mid-flight.
+  const applyDocField = <T extends boolean | string>(
+    docData: Record<string, unknown>,
+    key: string,
+    type: "boolean" | "string",
+    target: { value: T }
+  ) => {
+    if (isUpdatingPreferences.value === key) return
+    const value = docData[key]
+    if (typeof value === type) {
+      target.value = value as T
+    }
+  }
 
   watch(
     preferencesDocData,
     (docData) => {
       if (!isRecord(docData)) return
-      if ("badgeCount" in docData && typeof docData.badgeCount === "boolean") {
-        badgeCount.value = docData.badgeCount
-      }
-      if (
-        "fileDropOverlayDragDrop" in docData &&
-        typeof docData.fileDropOverlayDragDrop === "boolean"
-      ) {
-        fileDropOverlayDragDrop.value = docData.fileDropOverlayDragDrop
-      }
-      if (
-        "fileDropOverlayShortcut" in docData &&
-        typeof docData.fileDropOverlayShortcut === "boolean"
-      ) {
-        fileDropOverlayShortcut.value = docData.fileDropOverlayShortcut
-      }
+      applyDocField(docData, "badgeCount", "boolean", badgeCount)
+      applyDocField(
+        docData,
+        "fileDropOverlayDragDrop",
+        "boolean",
+        fileDropOverlayDragDrop
+      )
+      applyDocField(
+        docData,
+        "fileDropOverlayShortcut",
+        "boolean",
+        fileDropOverlayShortcut
+      )
+      applyDocField(
+        docData,
+        "fileDropOverlayShortcutKeys",
+        "string",
+        fileDropOverlayShortcutKeys
+      )
+      applyDocField(docData, "readAloudEnabled", "boolean", readAloudEnabled)
+      applyDocField(docData, "dictationEnabled", "boolean", dictationEnabled)
     },
     { immediate: true }
   )
-
-  const isUpdatingPreferences = ref<string | null>(null)
 
   async function applyTauriPreference(
     key: "runOnStartup" | "menuBar",
@@ -284,24 +318,23 @@ export const useAppPreferencesStore = defineStore("appPreferences", () => {
     | "badgeCount"
     | "fileDropOverlayDragDrop"
     | "fileDropOverlayShortcut"
+    | "readAloudEnabled"
+    | "dictationEnabled"
 
-  async function updatePreference(
-    key: BooleanPreferenceKey,
-    value: boolean
+  // Optimistic single-flight write of one synced preference field: set the
+  // local mirror, persist, roll back on failure. Every key written here must
+  // be whitelisted server-side in syncSettlement's
+  // `validateUserPreferencesPayload` or the op settles as permission-denied.
+  async function persistPreference<T extends boolean | string>(
+    key: string,
+    prefRef: { value: T },
+    value: T
   ): Promise<boolean> {
     if (!preferencesDocRef.value || isUpdatingPreferences.value !== null)
       return false
 
-    const prefMap = {
-      badgeCount,
-      fileDropOverlayDragDrop,
-      fileDropOverlayShortcut,
-    }
-    const prefRef = prefMap[key]
     const previousValue = prefRef.value
-
     prefRef.value = value
-
     isUpdatingPreferences.value = key
 
     try {
@@ -310,10 +343,14 @@ export const useAppPreferencesStore = defineStore("appPreferences", () => {
         { [key]: value },
         { source: "settings.preferences.persist", merge: true }
       )
-      toast.success("Preference updated")
+      toast.success("Preference updated.")
       return true
     } catch (error) {
-      prefRef.value = previousValue
+      // Roll back only if our optimistic value is still in place — an inbound
+      // snapshot may have applied a fresher remote value mid-flight.
+      if (prefRef.value === value) {
+        prefRef.value = previousValue
+      }
       toast.error("Failed to update preference", {
         description: getErrorMessage(error),
       })
@@ -322,6 +359,28 @@ export const useAppPreferencesStore = defineStore("appPreferences", () => {
       isUpdatingPreferences.value = null
     }
   }
+
+  async function updatePreference(
+    key: BooleanPreferenceKey,
+    value: boolean
+  ): Promise<boolean> {
+    const prefMap = {
+      badgeCount,
+      fileDropOverlayDragDrop,
+      fileDropOverlayShortcut,
+      readAloudEnabled,
+      dictationEnabled,
+    }
+    return persistPreference(key, prefMap[key], value)
+  }
+
+  /** Persist the recorded global-shortcut combo ("" = shortcut cleared). */
+  const updateShortcutKeys = (keys: string): Promise<boolean> =>
+    persistPreference(
+      "fileDropOverlayShortcutKeys",
+      fileDropOverlayShortcutKeys,
+      keys
+    )
 
   const isPreferencesLoading = computed(() => preferencesPending.value)
 
@@ -340,5 +399,6 @@ export const useAppPreferencesStore = defineStore("appPreferences", () => {
     isUpdatingPreferences,
     isPreferencesLoading,
     updatePreference,
+    updateShortcutKeys,
   }
 })

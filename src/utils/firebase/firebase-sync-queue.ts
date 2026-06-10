@@ -13,12 +13,23 @@ import type { SyncOutboxOperation } from "@/schemas/sync"
 export const OUTBOX_SETTLED_RETENTION_MS = 60 * 60 * 1000
 
 /**
- * Hard cap on send attempts before an operation is dead-lettered. With the
- * engine's exponential backoff (1s base, capped at 30s) this works out to a
- * couple of minutes of retrying before we give up — rather than retrying a
- * doomed write forever, which would also head-of-line-block its path.
+ * Base delay before an in-flight ("sent") operation becomes eligible to retry.
+ * A retry re-invokes the `applySyncOperation` callable (idempotent — the
+ * server only processes still-pending ops), so this is really an ACK timeout:
+ * it must comfortably cover a warm end-to-end settle AND most function cold
+ * starts, otherwise retries fire against a backend that is merely slow.
  */
-export const OUTBOX_MAX_ATTEMPTS = 8
+export const OUTBOX_RETRY_BASE_DELAY_MS = 3_000
+
+/**
+ * Hard cap on settlement attempts before an operation is dead-lettered. With
+ * the engine's exponential backoff (3s base, capped at 30s) a genuinely
+ * unreachable backend surfaces as a terminal failure in roughly 45s — rather
+ * than retrying a doomed write forever, which would also head-of-line-block
+ * its path. Attempts only burn while online (the loop is gated on
+ * `isOnline`), so an offline outbox never consumes this budget.
+ */
+export const OUTBOX_MAX_ATTEMPTS = 4
 
 const isUnsettled = (operation: SyncOutboxOperation): boolean =>
   operation.status === "pending" || operation.status === "sent"
@@ -54,19 +65,23 @@ export const computeRetryInMs = (
   return Math.max(0, retryDelayFor(operation.attempts) - elapsed)
 }
 
-export interface NextSyncWork {
-  /** The oldest operation ready to send right now, or null if none. */
-  ready: SyncOutboxOperation | null
+export interface ReadySyncWork {
   /**
-   * When `ready` is null but operations are still backing off, the soonest
-   * delay (ms) after which one becomes ready — so the caller can schedule a
-   * wake-up instead of stalling. Null when there is genuinely nothing to do.
+   * Up to `limit` operations ready to send right now, in causal order, at
+   * most one per `targetPath`. Empty when nothing is currently eligible.
+   */
+  ready: SyncOutboxOperation[]
+  /**
+   * When operations are still backing off, the soonest delay (ms) after which
+   * one becomes ready — so the caller can schedule a wake-up instead of
+   * stalling. Null when there is genuinely nothing waiting.
    */
   nextRetryInMs: number | null
 }
 
 /**
- * Pick the next operation to send for `userId`, preserving two invariants:
+ * Pick the operations to send for `userId` this pass, preserving two
+ * invariants:
  *
  *  1. **Per-path FIFO** — only the earliest unsettled op on a given
  *     `targetPath` may run; later same-path ops wait behind it so writes to
@@ -76,16 +91,24 @@ export interface NextSyncWork {
  *     not stall ready ops on *other* paths. We skip it and report when it
  *     becomes ready via `nextRetryInMs`.
  *
- * Scans in causal (array) order, so the returned op is the oldest eligible
- * one. O(n) with a small Set.
+ * Distinct-path heads are independent, so the engine sends the returned batch
+ * concurrently — a burst of N ops on N documents costs one round trip of
+ * wall-clock instead of N. Ready ops beyond `limit` are left for the next
+ * pass (the engine reschedules immediately after a send), so they neither
+ * register a wake-up nor get dropped.
+ *
+ * Scans in causal (array) order, so the returned ops are the oldest eligible
+ * ones. O(n) with a small Set.
  */
-export const selectNextOperation = (
+export const selectReadyOperations = (
   operations: readonly SyncOutboxOperation[],
   userId: string,
   now: number,
-  retryDelayFor: (attempts: number) => number
-): NextSyncWork => {
+  retryDelayFor: (attempts: number) => number,
+  limit: number
+): ReadySyncWork => {
   const claimedPaths = new Set<string>()
+  const ready: SyncOutboxOperation[] = []
   let nextRetryInMs: number | null = null
 
   for (const operation of operations) {
@@ -97,7 +120,11 @@ export const selectNextOperation = (
 
     const retryInMs = computeRetryInMs(operation, now, retryDelayFor)
     if (retryInMs === 0) {
-      return { ready: operation, nextRetryInMs: null }
+      if (ready.length < limit) {
+        ready.push(operation)
+      }
+      // Over the cap: ready now, picked up next pass — no wake-up needed.
+      continue
     }
 
     // Invariant 2: backing off — remember the soonest wake and keep scanning
@@ -107,7 +134,7 @@ export const selectNextOperation = (
     }
   }
 
-  return { ready: null, nextRetryInMs }
+  return { ready, nextRetryInMs }
 }
 
 /** True once an op has exhausted its send attempts and must be dead-lettered. */

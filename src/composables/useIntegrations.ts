@@ -173,6 +173,14 @@ export function useIntegrations() {
     enabled: boolean
   ): Promise<void> =>
     run(() => integrationsStore.setEnabled(target, enabled), {
+      // Success copy needs the integration kind; id-only callers stay silent.
+      ...(target.type
+        ? {
+            success: t(
+              `settings.integrations.${target.type}s.${enabled ? "enableSuccess" : "disableSuccess"}`
+            ),
+          }
+        : {}),
       error: t("settings.integrations.permissionRequired"),
     })
 

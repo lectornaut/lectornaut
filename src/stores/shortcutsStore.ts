@@ -9,11 +9,16 @@
  *
  * Persistence is bidirectional and localStorage-first: every edit lands in a
  * `useStorage` ref instantly (offline-safe), an inbound watch hydrates from
- * Firestore (guarded by `isShortcutSyncPending` so an applied snapshot can't
- * echo straight back out through the outbound watcher), and an outbound
- * `watchDebounced` mirrors settled local state to Firestore. The OS-level
- * re-registration of hotkeys is handled reactively by `useGlobalHotkeys`, which
- * observes `shortcutOverrides`; this store only owns the data.
+ * Firestore, and an outbound `watchDebounced` mirrors settled local state to
+ * Firestore as a FULL-document replace (`merge: false`) — a merge write can
+ * never delete map keys, so per-row resets and reset-all would silently fail
+ * to propagate and resurrect on the next snapshot. The server enforces the
+ * full-replace contract (`validateUserShortcutsPayload` in
+ * functions/src/syncSettlement.ts), and an inbound-content compare keeps
+ * applied snapshots from echoing back out through the outbound watcher. The
+ * OS-level re-registration of hotkeys is handled reactively by
+ * `useGlobalHotkeys`, which observes `shortcutOverrides`; this store only
+ * owns the data.
  *
  * Extracted from the former `settingsStore` "user settings" monolith as phase 1
  * of its split, mirroring the layoutStore → tabs/nav/ui split. Its Firestore
@@ -66,36 +71,43 @@ export const useShortcutsStore = defineStore("shortcuts", () => {
   // Bidirectional sync (re-entrancy-guarded)
   // ==========================================================================
 
-  // While true, an inbound snapshot is being applied to local state; the
-  // outbound watcher skips it so the apply doesn't echo straight back out.
-  let isShortcutSyncPending = false
+  // Serialized form of the last overrides map applied FROM Firestore. The
+  // outbound watcher skips payloads matching it, so inbound applies (and the
+  // settle-echo of our own writes) don't bounce back out. A boolean flag
+  // cleared on nextTick can't do this job: the outbound watcher is debounced
+  // 500ms and would read the flag long after it reset.
+  let lastInboundOverridesJson: string | null = null
 
-  // Incoming sync: Firestore → localStorage.
+  // Incoming sync: Firestore → localStorage (wholesale replace — the doc's
+  // `overrides` field always carries the complete map, see outbound below).
   watch(
     shortcutsDocData,
     (docData) => {
       if (!isRecord(docData)) return
       if ("overrides" in docData && isRecord(docData.overrides)) {
-        isShortcutSyncPending = true
-        shortcutOverrides.value = docData.overrides as Record<string, string>
-        nextTick(() => {
-          isShortcutSyncPending = false
-        })
+        const overrides = docData.overrides as Record<string, string>
+        lastInboundOverridesJson = JSON.stringify(overrides)
+        shortcutOverrides.value = overrides
       }
     },
     { immediate: true }
   )
 
-  // Outgoing sync: localStorage → Firestore (debounced).
+  // Outgoing sync: localStorage → Firestore (debounced), as a FULL replace.
+  // `merge: true` would deep-merge the map server-side: key DELETIONS (per-row
+  // reset / reset-all) would never reach the remote doc, and the inbound
+  // wholesale-replace would resurrect them locally on the next snapshot. The
+  // payload always carries the complete map, and the server rejects merge
+  // writes to this doc (`validateUserShortcutsPayload`).
   watchDebounced(
     shortcutOverrides,
     (overrides) => {
-      if (isShortcutSyncPending) return
       if (!shortcutsDocRef.value) return
+      if (JSON.stringify(overrides) === lastInboundOverridesJson) return
       void mutateSetDocument(
         shortcutsDocRef.value,
         { overrides },
-        { source: "settings.shortcuts.persist", merge: true }
+        { source: "settings.shortcuts.persist", merge: false }
       ).catch((error: unknown) => {
         console.error(
           "[shortcutsStore] Failed to sync shortcut overrides:",

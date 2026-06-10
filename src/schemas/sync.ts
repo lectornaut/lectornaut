@@ -51,6 +51,14 @@ export const syncOutboxOperationSchema = syncMutatePayloadSchema.extend({
   sentAt: z.number().optional(),
   settledAt: z.number().optional(),
   errorMessage: z.string().optional(),
+  /**
+   * True once the remote operation document was successfully created. Retries
+   * of a created op re-invoke the `applySyncOperation` callable instead of
+   * rewriting the doc (a rewrite is an update — `onDocumentCreated` never
+   * re-fires for it, so it can't help). Optional so entries persisted by
+   * older app versions still parse.
+   */
+  remoteCreated: z.boolean().optional(),
 })
 
 /**

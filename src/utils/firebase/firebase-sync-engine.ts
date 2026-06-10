@@ -1,5 +1,5 @@
 import { generateId } from "@/helpers/utilities"
-import { auth, firestore } from "@/modules/firebase"
+import { auth, firestore, functions } from "@/modules/firebase"
 import { lookupSchema } from "@/schemas/_registry"
 import { assertValid, validatePartialUpdate } from "@/schemas/_utils"
 import {
@@ -18,9 +18,10 @@ import { getBackoffDelay } from "@/utils/firebase/firebase-optimistic"
 import {
   compareByCreatedOrder,
   mergeOutboxSnapshots,
+  OUTBOX_RETRY_BASE_DELAY_MS,
   outboxSnapshotsEqual,
   pruneExpiredOperations,
-  selectNextOperation,
+  selectReadyOperations,
   shouldDeadLetter,
 } from "@/utils/firebase/firebase-sync-queue"
 import { onIdTokenChanged } from "firebase/auth"
@@ -38,6 +39,7 @@ import {
   type FieldValue,
   type Unsubscribe,
 } from "firebase/firestore"
+import { httpsCallable, type HttpsCallable } from "firebase/functions"
 import type { ComputedRef } from "vue"
 
 const OUTBOX_STORAGE_KEY = "lectornaut.sync.outbox.v1"
@@ -49,7 +51,14 @@ const CLIENT_ID_STORAGE_KEY = "lectornaut.sync.client.v1"
 // each get their own leader instead of starving one another.
 const SYNC_LEADER_LOCK_PREFIX = "lectornaut.sync.leader.v1:"
 const OUTBOX_MAX_PENDING_PER_USER = 2_000
-const RETRY_BASE_DELAY_MS = 1_000
+// Reschedule delay after a transient ack-listener error. Unrelated to the
+// per-operation retry policy, which lives in `firebase-sync-queue.ts`
+// (`OUTBOX_RETRY_BASE_DELAY_MS` / `OUTBOX_MAX_ATTEMPTS`).
+const ACK_LISTENER_RETRY_DELAY_MS = 1_000
+// Concurrent sends per loop pass. Distinct-path heads are independent
+// (per-path FIFO is enforced at selection time), so a small fan-out drains
+// bursts in one round trip of wall-clock instead of N.
+const MAX_PARALLEL_SENDS = 4
 // Canonical wait kept as a safety net for stragglers — but never blocks the
 // caller promise. See `settleAckAfterCanonical` for the non-blocking semantics.
 const CANONICAL_WAIT_TIMEOUT_MS = 1_500
@@ -100,12 +109,28 @@ interface SyncEngineState {
   pendingCount: ComputedRef<number>
 }
 
+/**
+ * Where a settlement (or terminal failure) was first observed:
+ *  - `listener`   — the clientId-scoped ack `onSnapshot`
+ *  - `callable`   — the `applySyncOperation` direct-settlement response
+ *  - `inspect`    — the post-send-failure remote-document inspection
+ *  - `deadLetter` — the local retry budget ran out
+ * Diagnostic: a healthy deploy settles mostly via `callable`; a fleet stuck
+ * on `listener` means the callable path is failing (soft) somewhere.
+ */
+export type SyncSettleSource =
+  | "listener"
+  | "callable"
+  | "inspect"
+  | "deadLetter"
+
 interface SyncMetricsState {
   outboxSize: ComputedRef<number>
   pendingCount: ComputedRef<number>
   averageAckLatencyMs: ComputedRef<number>
   totalRetries: ComputedRef<number>
   quarantineCount: ComputedRef<number>
+  settledBySource: ComputedRef<Record<SyncSettleSource, number>>
 }
 
 export interface SyncAckEvent {
@@ -503,10 +528,29 @@ const canonicalSubscribers = new Set<CanonicalSubscriber>()
 const totalAckLatencyMs = ref(0)
 const totalAckCount = ref(0)
 const totalRetries = ref(0)
+const settledBySource = ref<Record<SyncSettleSource, number>>({
+  listener: 0,
+  callable: 0,
+  inspect: 0,
+  deadLetter: 0,
+})
+
+const recordSettleSource = (source: SyncSettleSource) => {
+  settledBySource.value = {
+    ...settledBySource.value,
+    [source]: settledBySource.value[source] + 1,
+  }
+}
 
 let authUnsubscribe: Unsubscribe | null = null
 let ackUnsubscribe: Unsubscribe | null = null
 let syncTimer: ReturnType<typeof setTimeout> | null = null
+// Re-attach backoff for the ack listener: `onSnapshot` tears its listener down
+// on error, so we must explicitly re-establish it (see ensureAckListener) or
+// acks stop arriving entirely. The attempt counter drives an escalating backoff
+// and is reset on the first healthy snapshot.
+let ackRetryTimer: ReturnType<typeof setTimeout> | null = null
+let ackRetryAttempts = 0
 let storageSyncCleanup: (() => void) | null = null
 // Per-user leader election (Web Locks). Only the leader tab for the active
 // user sends; other tabs enqueue + persist and the leader adopts those ops.
@@ -709,8 +753,10 @@ const pruneSettledOperations = () => {
 
 const getRetryDelay = (attempts: number): number =>
   Math.max(
-    RETRY_BASE_DELAY_MS,
-    Math.round(getBackoffDelay(Math.max(attempts - 1, 0), RETRY_BASE_DELAY_MS))
+    OUTBOX_RETRY_BASE_DELAY_MS,
+    Math.round(
+      getBackoffDelay(Math.max(attempts - 1, 0), OUTBOX_RETRY_BASE_DELAY_MS)
+    )
   )
 
 const scheduleSync = (delay = SYNC_BATCH_WINDOW_MS) => {
@@ -815,7 +861,8 @@ const settleAckAfterCanonical = (
 
 const applyRemoteSettlement = (
   operationId: string,
-  data?: Partial<RemoteSyncOperationDocument>
+  data?: Partial<RemoteSyncOperationDocument>,
+  source: SyncSettleSource = "listener"
 ): boolean => {
   const status = data?.status
   if (status !== "ack" && status !== "reject") return false
@@ -826,7 +873,18 @@ const applyRemoteSettlement = (
     (outboxOperation.status === "acked" ||
       outboxOperation.status === "rejected")
   ) {
+    // Duplicate report (the callable response and the ack snapshot both
+    // describe the same settlement) — first one counted, the rest no-op.
     return true
+  }
+
+  // Count only settlements that transition a LIVE outbox entry. The ack
+  // listener replays every retained remote doc (24h server TTL) on each
+  // (re)attach, while settled outbox entries prune after 1h — counting those
+  // replays would inflate `listener` on healthy deploys and invert the
+  // callable-vs-listener diagnostic this metric exists for.
+  if (outboxOperation) {
+    recordSettleSource(source)
   }
 
   const message = data?.ack?.message ?? undefined
@@ -885,7 +943,15 @@ const applyRemoteSettlement = (
   return true
 }
 
+const clearAckRetry = () => {
+  if (ackRetryTimer) {
+    clearTimeout(ackRetryTimer)
+    ackRetryTimer = null
+  }
+}
+
 const ensureAckListener = (userId: string) => {
+  clearAckRetry()
   if (ackUnsubscribe) {
     ackUnsubscribe()
     ackUnsubscribe = null
@@ -901,6 +967,9 @@ const ensureAckListener = (userId: string) => {
   ackUnsubscribe = onSnapshot(
     ackQuery,
     (snapshot) => {
+      // A healthy snapshot means the listener is alive — reset the re-attach
+      // backoff so a later transient error starts from the base delay.
+      ackRetryAttempts = 0
       snapshot.docChanges().forEach((change) => {
         applyRemoteSettlement(
           change.doc.id,
@@ -923,9 +992,96 @@ const ensureAckListener = (userId: string) => {
         return
       }
       console.error("[syncEngine] Failed to listen for operation acks:", error)
-      scheduleSync(RETRY_BASE_DELAY_MS)
+      // `onSnapshot` tears the listener down on error, so without an explicit
+      // re-attach acks would never arrive again — the send loop keeps running
+      // but nothing settles, so every op rides the retry ladder to a
+      // dead-letter — until the next auth change. Re-establish the listener
+      // after an escalating backoff, but only while we're still running for
+      // this same user, so a transient read error self-heals instead of
+      // silently wedging sync.
+      clearAckRetry()
+      const delay = getBackoffDelay(
+        ackRetryAttempts++,
+        ACK_LISTENER_RETRY_DELAY_MS
+      )
+      ackRetryTimer = setTimeout(() => {
+        ackRetryTimer = null
+        if (!isRunning.value || activeUserId.value !== userId) return
+        ensureAckListener(userId)
+      }, delay)
+      scheduleSync(ACK_LISTENER_RETRY_DELAY_MS)
     }
   )
+}
+
+interface ApplySyncOperationRequest {
+  operationId: string
+}
+
+/** Mirrors the server's `SyncSettlementVerdict` (functions/src/syncSettlement.ts). */
+interface ApplySyncOperationResponse {
+  status: "ack" | "reject"
+  code: string | null
+  message: string | null
+}
+
+let applySyncOperationCallable: HttpsCallable<
+  ApplySyncOperationRequest,
+  ApplySyncOperationResponse
+> | null = null
+
+const getApplySyncOperationCallable = () => {
+  applySyncOperationCallable ??= httpsCallable<
+    ApplySyncOperationRequest,
+    ApplySyncOperationResponse
+  >(functions, "applySyncOperation")
+  return applySyncOperationCallable
+}
+
+/**
+ * Ask the server to settle `operation` NOW via the `applySyncOperation`
+ * callable instead of waiting on the create-trigger (Eventarc) → ack-listener
+ * chain. The verdict flows through `applyRemoteSettlement` — the same
+ * idempotent entry point the ack listener uses — so whichever path reports
+ * first wins and the other no-ops.
+ *
+ * Transport errors are SOFT by design: the create trigger remains the
+ * backstop, the ack listener may still deliver, and the backoff loop
+ * re-invokes this callable. Rejecting on a transport failure would turn an
+ * offline blip, a cold function, or a not-yet-deployed callable into a
+ * rolled-back write. Only an explicit `"reject"` VERDICT rejects an op.
+ */
+const requestDirectSettlement = async (
+  operation: SyncOutboxOperation
+): Promise<void> => {
+  try {
+    const result = await getApplySyncOperationCallable()({
+      operationId: operation.id,
+    })
+    const verdict = result.data
+    if (verdict?.status !== "ack" && verdict?.status !== "reject") return
+    applyRemoteSettlement(
+      operation.id,
+      {
+        status: verdict.status,
+        ack: {
+          code: verdict.code ?? null,
+          message: verdict.message ?? null,
+          atMs: Date.now(),
+        },
+      },
+      "callable"
+    )
+    // The settled op may have been blocking same-path successors — re-run the
+    // loop now instead of waiting for the ack snapshot (which mirrors this
+    // via its own scheduleSync) or the head's backoff wake.
+    scheduleSync()
+  } catch (error) {
+    console.warn(
+      "[syncEngine] Direct settlement request failed (non-fatal):",
+      error
+    )
+  }
 }
 
 const sendOperation = async (operation: SyncOutboxOperation): Promise<void> => {
@@ -946,73 +1102,94 @@ const sendOperation = async (operation: SyncOutboxOperation): Promise<void> => {
   const next = outbox.value.find((candidate) => candidate.id === operation.id)
   if (!next) return
 
-  const operationRef = doc(
-    firestore,
-    "users",
-    operation.userId,
-    "syncOperations",
-    operation.id
-  )
+  if (!next.remoteCreated) {
+    const operationRef = doc(
+      firestore,
+      "users",
+      operation.userId,
+      "syncOperations",
+      operation.id
+    )
 
-  try {
-    await setDoc(operationRef, toRemoteDocument(next), { merge: true })
-  } catch (error) {
-    const errorCode =
-      typeof error === "object" &&
-      error &&
-      "code" in error &&
-      typeof (error as { code?: unknown }).code === "string"
-        ? (error as { code: string }).code
-        : null
+    try {
+      await setDoc(operationRef, toRemoteDocument(next), { merge: true })
+    } catch (error) {
+      const errorCode =
+        typeof error === "object" &&
+        error &&
+        "code" in error &&
+        typeof (error as { code?: unknown }).code === "string"
+          ? (error as { code: string }).code
+          : null
 
-    if (errorCode === "permission-denied" || errorCode === "invalid-argument") {
-      try {
-        const remoteOperation = await getDoc(operationRef)
-        if (
-          remoteOperation.exists() &&
-          applyRemoteSettlement(
-            operation.id,
-            remoteOperation.data() as Partial<RemoteSyncOperationDocument>
+      if (
+        errorCode === "permission-denied" ||
+        errorCode === "invalid-argument"
+      ) {
+        try {
+          const remoteOperation = await getDoc(operationRef)
+          if (
+            remoteOperation.exists() &&
+            applyRemoteSettlement(
+              operation.id,
+              remoteOperation.data() as Partial<RemoteSyncOperationDocument>,
+              "inspect"
+            )
+          ) {
+            return
+          }
+        } catch (readError) {
+          console.warn(
+            "[syncEngine] Failed to inspect remote operation state:",
+            readError
           )
-        ) {
-          return
         }
-      } catch (readError) {
-        console.warn(
-          "[syncEngine] Failed to inspect remote operation state:",
-          readError
-        )
+
+        const rejectError = new Error(getFirestoreErrorMessage(error))
+        const settledAt = Date.now()
+        upsertOperation(operation.id, (current) => ({
+          ...current,
+          status: "rejected",
+          updatedAt: settledAt,
+          settledAt,
+          errorMessage: rejectError.message,
+        }))
+        settleWaiters(operation.id, rejectError)
+        return
       }
 
-      const rejectError = new Error(getFirestoreErrorMessage(error))
-      const settledAt = Date.now()
-      upsertOperation(operation.id, (current) => ({
-        ...current,
-        status: "rejected",
-        updatedAt: settledAt,
-        settledAt,
-        errorMessage: rejectError.message,
-      }))
-      settleWaiters(operation.id, rejectError)
-      return
+      if (!isRetryableFirebaseError(error)) {
+        const rejectError = new Error(getFirestoreErrorMessage(error))
+        const settledAt = Date.now()
+        upsertOperation(operation.id, (current) => ({
+          ...current,
+          status: "rejected",
+          updatedAt: settledAt,
+          settledAt,
+          errorMessage: rejectError.message,
+        }))
+        settleWaiters(operation.id, rejectError)
+        console.warn("[syncEngine] Non-retryable sync submission error:", error)
+        return
+      }
+      throw error
     }
 
-    if (!isRetryableFirebaseError(error)) {
-      const rejectError = new Error(getFirestoreErrorMessage(error))
-      const settledAt = Date.now()
-      upsertOperation(operation.id, (current) => ({
-        ...current,
-        status: "rejected",
-        updatedAt: settledAt,
-        settledAt,
-        errorMessage: rejectError.message,
-      }))
-      settleWaiters(operation.id, rejectError)
-      console.warn("[syncEngine] Non-retryable sync submission error:", error)
-      return
-    }
-    throw error
+    // Created (or merged onto a doc surviving from a prior session). From
+    // here on, retries go through the callable ONLY: rewriting the doc is an
+    // update, which `onDocumentCreated` never re-fires for — so a rewrite
+    // can't recover a lost create event, it just burns a Firestore write.
+    upsertOperation(operation.id, (current) => ({
+      ...current,
+      remoteCreated: true,
+      updatedAt: Date.now(),
+    }))
   }
+
+  // Direct settlement — fire-and-forget so the send loop never serializes
+  // behind the settlement round trip; the waiter settles via
+  // `applyRemoteSettlement` whichever path reports first.
+  void requestDirectSettlement(next)
 }
 
 const deadLetterOperation = (
@@ -1031,6 +1208,7 @@ const deadLetterOperation = (
   // quarantine) and fail the caller's waiter with a terminal error instead of
   // leaving it hanging forever.
   appendQuarantinedOutboxEntries([{ ...operation, deadLetterReason: reason }])
+  recordSettleSource("deadLetter")
   settleWaiters(operation.id, new Error(reason))
 }
 
@@ -1043,14 +1221,15 @@ const processSyncLoop = async () => {
   // leader adopts those ops via the storage listener.
   if (!isLeader) return
 
-  const { ready, nextRetryInMs } = selectNextOperation(
+  const { ready, nextRetryInMs } = selectReadyOperations(
     outbox.value,
     userId,
     Date.now(),
-    getRetryDelay
+    getRetryDelay,
+    MAX_PARALLEL_SENDS
   )
 
-  if (!ready) {
+  if (ready.length === 0) {
     // Nothing ready now. If something is mid-backoff, wake when it is due
     // rather than stalling the queue.
     if (nextRetryInMs !== null) scheduleSync(nextRetryInMs)
@@ -1059,22 +1238,38 @@ const processSyncLoop = async () => {
 
   // A write that has burned through its retry budget is dead-lettered rather
   // than retried forever — which would also head-of-line-block its path.
-  if (shouldDeadLetter(ready)) {
-    deadLetterOperation(
-      ready,
-      `Sync operation failed after ${ready.attempts} attempts`
-    )
-    scheduleSync()
-    return
+  const sendable: SyncOutboxOperation[] = []
+  for (const operation of ready) {
+    if (shouldDeadLetter(operation)) {
+      deadLetterOperation(
+        operation,
+        `Sync operation failed after ${operation.attempts} attempts`
+      )
+    } else {
+      sendable.push(operation)
+    }
   }
 
-  isSyncing.value = true
-  try {
-    await sendOperation(ready)
-  } catch (error) {
-    console.error("[syncEngine] Failed to submit operation:", error)
-  } finally {
-    isSyncing.value = false
+  if (sendable.length > 0) {
+    isSyncing.value = true
+    try {
+      // Selection returned at most one op per target path, so these are
+      // independent — send concurrently and a burst across N documents costs
+      // one round trip of wall-clock instead of N.
+      const results = await Promise.allSettled(
+        sendable.map((operation) => sendOperation(operation))
+      )
+      for (const result of results) {
+        if (result.status === "rejected") {
+          console.error(
+            "[syncEngine] Failed to submit operation:",
+            result.reason
+          )
+        }
+      }
+    } finally {
+      isSyncing.value = false
+    }
   }
 
   // Re-evaluate immediately; the next pass schedules a backoff wake if needed.
@@ -1094,6 +1289,7 @@ const handleUserChange = (nextUserId: string | null) => {
     ackUnsubscribe()
     ackUnsubscribe = null
   }
+  clearAckRetry()
 
   if (!isRunning.value || !nextUserId) {
     releaseLeadership()
@@ -1371,6 +1567,7 @@ export function stopSync(): void {
     ackUnsubscribe()
     ackUnsubscribe = null
   }
+  clearAckRetry()
   if (onlineCleanup) {
     onlineCleanup()
     onlineCleanup = null
@@ -1459,6 +1656,7 @@ export function useSyncMetricsState(): SyncMetricsState {
     pendingCount,
     averageAckLatencyMs,
     totalRetries: computed(() => totalRetries.value),
+    settledBySource: computed(() => settledBySource.value),
     quarantineCount: computed(() => {
       try {
         const raw = window.localStorage.getItem(OUTBOX_QUARANTINE_STORAGE_KEY)

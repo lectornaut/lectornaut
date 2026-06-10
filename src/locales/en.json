@@ -548,6 +548,8 @@
         "addError": "Couldn't add the agent.",
         "removeSuccess": "Agent removed.",
         "removeError": "Couldn't remove the agent.",
+        "enableSuccess": "Agent enabled.",
+        "disableSuccess": "Agent disabled.",
         "empty": "No pre-built agents available."
       },
       "tools": {
@@ -557,6 +559,8 @@
         "addError": "Couldn't add the tool.",
         "removeSuccess": "Tool removed.",
         "removeError": "Couldn't remove the tool.",
+        "enableSuccess": "Tool enabled.",
+        "disableSuccess": "Tool disabled.",
         "empty": "No pre-built tools available."
       },
       "workflows": {
@@ -828,6 +832,7 @@
       }
     },
     "preferences": {
+      "updateSuccess": "Preference updated.",
       "theme": {
         "label": "Theme",
         "description": "Choose the light, dark, or system theme.",
@@ -1396,6 +1401,7 @@
       }
     },
     "appearance": {
+      "updateSuccess": "Appearance updated.",
       "customization": {
         "label": "Customization",
         "description": "Adjust theme, colors, fonts, and display preferences."
