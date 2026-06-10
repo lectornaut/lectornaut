@@ -546,7 +546,10 @@ watch(selectedCreateFiles, async (files) => {
           {{ readOnlyMessage }}
         </div>
 
-        <div v-if="uploadStates.length" class="space-y-2 rounded-xl border p-2">
+        <div
+          v-if="uploadStates.length"
+          class="space-y-2 rounded-2xl border p-2"
+        >
           <div class="flex items-center justify-between gap-2">
             <p class="text-xs font-medium">
               {{ t("components.nodeAttachments.uploadsTitle") }}
@@ -564,7 +567,7 @@ watch(selectedCreateFiles, async (files) => {
           <div
             v-for="item in uploadStates"
             :key="item.id"
-            class="flex items-start gap-2 rounded-xl border p-2"
+            class="flex items-start gap-2 rounded-2xl border p-2"
           >
             <Spinner v-if="item.status === 'uploading'" />
             <IconCircleAlert v-else class="text-destructive shrink-0" />
@@ -596,7 +599,7 @@ watch(selectedCreateFiles, async (files) => {
           :label="t('components.nodeAttachments.loadingAttachments')"
         />
 
-        <div v-else-if="error" class="space-y-2 rounded-xl border p-2">
+        <div v-else-if="error" class="space-y-2 rounded-2xl border p-2">
           <div class="text-destructive flex items-start gap-2 text-xs">
             <IconAlertTriangle />
             <span>{{ error }}</span>

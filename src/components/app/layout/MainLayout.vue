@@ -387,7 +387,7 @@ const closeTab = (id: string) => {
           >
             <div
               id="left-dock"
-              class="shadow-muted-foreground/5 bg-background flex max-w-80 shrink-0 flex-col overflow-clip rounded-xl border shadow empty:hidden"
+              class="shadow-muted-foreground/5 bg-background flex max-w-80 shrink-0 flex-col overflow-clip rounded-2xl border shadow empty:hidden"
             ></div>
             <ResizablePanelGroup
               :style="{ overflow: 'clip' }"
@@ -505,7 +505,7 @@ const closeTab = (id: string) => {
                           <SubNavigation />
                           <!-- Scrollable content area -->
                           <div
-                            class="mx-2 mb-2 flex min-h-0 min-w-0 grow flex-col rounded-2xl border"
+                            class="mx-2 mb-2 flex min-h-0 min-w-0 grow flex-col overflow-clip rounded-2xl border"
                           >
                             <OverlayScrollbarsWrapper>
                               <RouterView />
@@ -892,7 +892,7 @@ const closeTab = (id: string) => {
                               height: `${observedSize.height}px`,
                             }
                       "
-                      class="bg-background pointer-events-auto absolute flex min-w-64 flex-col overflow-clip rounded-xl border will-change-transform"
+                      class="bg-background pointer-events-auto absolute flex min-w-64 flex-col overflow-clip rounded-2xl border will-change-transform"
                       :class="
                         isPoppedOutMinimized
                           ? 'border-foreground shadow ring-1'
@@ -986,7 +986,7 @@ const closeTab = (id: string) => {
             </Transition>
             <div
               id="right-dock"
-              class="shadow-muted-foreground/5 bg-background flex max-w-80 shrink-0 flex-col overflow-clip rounded-xl border shadow empty:hidden"
+              class="shadow-muted-foreground/5 bg-background flex max-w-80 shrink-0 flex-col overflow-clip rounded-2xl border shadow empty:hidden"
             ></div>
           </div>
         </div>

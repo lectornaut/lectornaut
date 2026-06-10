@@ -92,6 +92,7 @@ import {
 } from "./botRag.js"
 import { summarizeNodeTool } from "./botSummarize.js"
 import {
+  buildTransferRoster,
   buildTurnConfig,
   deliveryToSendArgs,
   getMissingToolName,
@@ -1007,65 +1008,6 @@ function pickChatTools(
 // Transfer helpers — shared by both `sendBotMessageFlow` and
 // `respondToBotInterruptFlow`.
 // ===========================================================================
-
-/**
- * Build the "you can transfer to…" roster for the current turn. Each
- * entry is `{ id, name, description }` — passed to
- * `buildAgentSystemPrompt` (to enumerate targets in the system prompt)
- * and projected to ids only for `actionContext.availableTransferAgentIds`
- * (the runtime allowlist enforced inside the tool handler).
- *
- *   - When a custom agent is active: roster = every OTHER active
- *     custom agent + a synthetic team-default entry with `id: ""`.
- *     The default is included so the model can hand back to the
- *     generic persona without needing to know any other custom id.
- *
- *   - When no agent is active (default persona): roster = every
- *     active custom agent. The synthetic default is excluded — you
- *     can't transfer to where you already are.
- *
- *   - Always empty when `customAgents` is empty AND no agent is
- *     active (nothing to transfer to). The caller checks
- *     `length === 0` and skips the directive + the tool entirely.
- */
-function buildTransferRoster(
-  activeAgent: TeamAgentDoc | null,
-  customAgents: ReadonlyArray<TeamAgentDoc>
-): { id: string; name: string; description: string }[] {
-  const roster: { id: string; name: string; description: string }[] = []
-  for (const candidate of customAgents) {
-    // Transfer targets must be SELECTABLE — enabled and non-archived.
-    // Disabled agents are gated out by `resolveActiveAgent` anyway,
-    // so transferring to one would just bounce back to default; not
-    // useful to advertise as a target. Archived agents still
-    // dispatch for chats that ALREADY reference them, but the whole
-    // point of archive-as-deprecate is to discourage new selections —
-    // so we don't advertise them as transfer targets either.
-    if (candidate.enabled === false) continue
-    if (candidate.archivedAt) continue
-    if (activeAgent && candidate.id === activeAgent.id) continue
-    roster.push({
-      id: candidate.id,
-      name: candidate.name,
-      description: candidate.description,
-    })
-  }
-  // Synthetic "back to default" target — id is the empty string so
-  // `normalizeActiveAgentIdForStorage` translates it to `null` on the doc
-  // write below. Hardcoded English label/description here because the
-  // directive lives in the system prompt (server-side, not user-facing
-  // i18n). Skipped when the Default agent is ITSELF the active persona
-  // (e.g. a headless workflow run as `_default`) — transferring to default
-  // would be a no-op self-handoff.
-  if (activeAgent && activeAgent.id !== DEFAULT_AGENT_ID) {
-    roster.push({
-      id: "",
-      name: "Default Assistant",
-      description: "The team's default persona — broad-purpose helper.",
-    })
-  }
-  return roster
-}
 
 /**
  * Safety-net write that commits the model's `transferToAgent` request
@@ -2809,9 +2751,12 @@ async function prepareChatTurn(opts: {
     : []
 
   // Transfer roster — other agents the active one can hand off to.
-  // When a custom agent is active we include the team default
-  // (`id: ""`) so the model has a way back to the generic assistant.
-  // When no agent is active, only custom agents are eligible targets.
+  // Advertisability only (resolution still sees ALL of
+  // `availableAgents`): the pure builder excludes disabled/archived
+  // agents, the active agent itself, and applies the one-default-per-
+  // context rule — interactive turns are offered the `""` team-default
+  // sentinel, headless agent runs are offered the `_default` automation
+  // persona, never both (see `buildTransferRoster` in botTurn.ts).
   //
   // `disableTransfer` zeroes the roster — used by the transfer-induced
   // second turn (`runTransferTurnIfRequested`) so a handoff chain can't
@@ -2823,7 +2768,12 @@ async function prepareChatTurn(opts: {
   //     transfer in prose
   const transferRoster = disableTransfer
     ? []
-    : buildTransferRoster(activeAgent, availableAgents)
+    : buildTransferRoster({
+        candidates: availableAgents,
+        activeAgentId: activeAgent?.id ?? null,
+        principalKind: principal.kind,
+        defaultAgentId: DEFAULT_AGENT_ID,
+      })
 
   // Action context fed into `chat({ context })`. `availableTransferAgentIds`
   // is the runtime allowlist enforced by `transferToAgent`'s handler;

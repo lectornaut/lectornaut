@@ -162,7 +162,7 @@ const formatCreatedAt = (
         <Field orientation="horizontal">
           <FieldContent>
             <LoadingState v-if="isLoading" />
-            <div v-else class="overflow-clip rounded-xl border">
+            <div v-else class="overflow-clip rounded-2xl border">
               <Table>
                 <TableHeader>
                   <TableRow>

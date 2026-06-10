@@ -38,8 +38,8 @@
  */
 
 import { googleAI } from "@genkit-ai/google-genai"
-import { HttpsError } from "firebase-functions/v2/https"
 import { z } from "genkit/beta"
+import { resolveTransferOutcome } from "./botTurn.js"
 import { ai, isAiModelProviderConfigured } from "./genkitClient.js"
 // Type-only imports (erased at runtime — no import cycle with botNodeTools).
 import type { CapturedNodeChange } from "./botNodeTools.js"
@@ -404,9 +404,17 @@ export const browseInternetTool = ai.defineTool(
 //
 // The handler validates against `context.availableTransferAgentIds`
 // so the model can't transfer to an agent that doesn't exist (or to
-// itself). Validation errors throw — Genkit surfaces the message to
-// the model as a tool error, and it can choose a different target or
-// just keep going.
+// itself). Validation failures are RETURNED as the tool's string
+// output, never thrown: Genkit's tool runner catches only
+// `ToolInterruptError` — any other handler throw aborts the entire
+// turn, so a thrown "unknown target" used to fail the whole
+// `sendBotMessage` callable (client saw `Unknown transfer target
+// "_code"` + an unhandled rejection, and the user's message was
+// rolled back). Returning the failure keeps the turn alive so the
+// model can pick a valid id or continue without transferring — the
+// same narratable-failure pattern as `browseInternet` above. The
+// decision itself lives in `resolveTransferOutcome` (botTurn.ts),
+// pinned by node:test.
 //
 // `""` as a `agentId` means "team default persona" — separate from
 // `undefined` so the model has a concrete way to ask for the default
@@ -421,7 +429,10 @@ export const transferToAgentTool = ai.defineTool(
       "when the user's request is better suited to another agent " +
       "available on the team. Use the agent's id from the list given " +
       "in your system prompt (or the empty string '' to transfer back " +
-      "to the team's default assistant). The handoff happens in this " +
+      "to the team's default assistant). Never pass the id of the " +
+      "currently active agent: if the user asks for the persona you " +
+      "already are, answer directly instead of transferring. The " +
+      "handoff happens in this " +
       "same turn — the new agent will reply to the user's message " +
       "immediately after this tool call. Do not produce any text " +
       "alongside the call (a transfer preamble would just clutter the " +
@@ -445,21 +456,17 @@ export const transferToAgentTool = ai.defineTool(
   },
   async (input, { context }) => {
     const ctx = context as BotActionContext | undefined
-    const allowed = ctx?.availableTransferAgentIds ?? []
-    if (!allowed.includes(input.agentId)) {
-      // Throw so Genkit surfaces an error part to the model; it can
-      // then pick a valid id from the system prompt or abandon the
-      // transfer. The list is in the error message so the model has
-      // the information it needs to retry without guessing.
-      throw new HttpsError(
-        "invalid-argument",
-        `Unknown transfer target "${input.agentId}". Available ids: ` +
-          (allowed.length === 0
-            ? "(no other agents available)"
-            : allowed
-                .map((id) => (id === "" ? "'' (team default)" : `"${id}"`))
-                .join(", "))
-      )
+    const outcome = resolveTransferOutcome({
+      requestedAgentId: input.agentId,
+      availableAgentIds: ctx?.availableTransferAgentIds ?? [],
+      activeAgentId: ctx?.activeAgentId,
+    })
+    if (outcome.kind === "rejected") {
+      // Returned, NOT thrown — a handler throw would abort the whole
+      // turn (see the module comment above the tool). The message
+      // carries the full roster + a recovery steer so the model can
+      // retry without guessing, or just keep answering.
+      return outcome.message
     }
     if (ctx?.transferRequest) {
       // Last-call-wins: a model that makes two transfer calls in one

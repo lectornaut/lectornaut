@@ -1103,6 +1103,14 @@ export function useBotChat(): BotChatContext {
         { signal: controller.signal }
       )
 
+      // The SDK mirrors a turn failure onto BOTH `result.stream` and
+      // `result.data`. The for-await below throws first, jumping to the
+      // catch — so `await result.data` is never reached and its rejection
+      // would surface as a console "Unhandled Promise Rejection" alongside
+      // the one we actually handle. Pre-observe it with a no-op; awaiting
+      // the same promise on the success path below still works normally.
+      void result.data.catch(() => {})
+
       // The first chunk pins the session id (flips the URL early, before
       // the reply finishes); a `transferToAgent` call may pivot the active
       // agent. Both land via `applyStreamEffects`.
@@ -1217,6 +1225,11 @@ export function useBotChat(): BotChatContext {
         },
         { signal: controller.signal }
       )
+
+      // Same dual-channel failure mirroring as `sendMessage` above — see
+      // the comment there. Observe `data` so a mid-stream failure
+      // surfaces once (via the loop's throw), not twice.
+      void result.data.catch(() => {})
 
       for await (const chunk of result.stream) {
         applyStreamEffects(applyStreamChunk(messages.value, agentIndex, chunk))

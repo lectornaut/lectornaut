@@ -341,7 +341,7 @@ useHotkeys(
             <Button
               variant="ghost"
               size="icon-xs"
-              class="absolute top-1 left-1"
+              class="absolute top-1.5 left-1.5"
               @click.stop
             >
               <Spinner v-if="isLoading" />

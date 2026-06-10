@@ -20,11 +20,23 @@
  *     assembly shared by the streaming turn and (eventually) the one-shot
  *     structured generations, with the optional temperature clamp the
  *     summary path needs.
+ *   - `resolveTransferOutcome` — `transferToAgent`'s target-validation
+ *     decision. The rejection branches RETURN a message (never throw):
+ *     a tool-handler throw is fatal to the whole turn, so the failure
+ *     must travel as the tool's output string for the model to read and
+ *     recover in-turn.
+ *   - `buildTransferRoster` — which agents a turn ADVERTISES as transfer
+ *     targets (system-prompt enumeration + the runtime allowlist).
+ *     Advertisability is narrower than resolvability: `_default` stays
+ *     dispatchable for headless runs and persisted sessions, but each
+ *     context is offered exactly one "default" — `''` interactively,
+ *     `_default` headlessly.
  *
- * Keeping these pure means the four documented Genkit sharp edges
+ * Keeping these pure means the five documented Genkit sharp edges
  * (stream-abort mirrored on both channels; tool-arg `INVALID_ARGUMENT`;
- * `output:{schema}` -> `INTERNAL` masking; lazy session persist) are pinned
- * by a `node --test` truth table rather than by reviewer vigilance.
+ * `output:{schema}` -> `INTERNAL` masking; lazy session persist;
+ * tool-handler throws aborting the turn) are pinned by a `node --test`
+ * truth table rather than by reviewer vigilance.
  */
 
 import type { Part, ResumeOptions } from "genkit/beta"
@@ -163,6 +175,199 @@ export function isToolInputValidationError(err: unknown): boolean {
   const e = err as GenkitErrorLike
   if (e.status !== "INVALID_ARGUMENT") return false
   return errorMessage(e).includes("Schema validation failed")
+}
+
+// ===========================================================================
+// Transfer roster — what a turn ADVERTISES as transfer targets
+// ===========================================================================
+
+/**
+ * The slice of an agent doc the roster decision needs. Structural on
+ * purpose: `TeamAgentDoc` satisfies it directly, while tests build
+ * candidates without dragging in Firestore `Timestamp`s (`archivedAt`
+ * is only ever truthiness-checked here).
+ */
+export interface TransferCandidate {
+  id: string
+  name: string
+  description: string
+  enabled?: boolean
+  /** Truthy = archived. `Timestamp | null` on the real doc. */
+  archivedAt?: unknown
+}
+
+/** One enumerated target: id for the tool call, name+description for the prompt. */
+export interface TransferRosterEntry {
+  id: string
+  name: string
+  description: string
+}
+
+/**
+ * Build the "you can transfer to…" roster for the current turn. Each
+ * entry is passed to `buildAgentSystemPrompt` (to enumerate targets in
+ * the system prompt) and projected to ids for
+ * `actionContext.availableTransferAgentIds` (the runtime allowlist
+ * `resolveTransferOutcome` checks).
+ *
+ * This decides **advertisability**, which is deliberately narrower than
+ * **resolvability**: `availableAgents` (the `candidates` here) keeps
+ * every dispatchable persona — including `_default` and archived
+ * agents — so `resolveActiveAgent` can keep serving sessions that
+ * already reference them (deprecate-but-run). The roster only controls
+ * what the model is OFFERED:
+ *
+ *   - Disabled agents are gated out of dispatch anyway — transferring
+ *     to one would just bounce back to default; not useful to
+ *     advertise. Archived agents still dispatch for chats that ALREADY
+ *     reference them, but the whole point of archive-as-deprecate is to
+ *     discourage new selections — so they aren't advertised either.
+ *   - The active agent is excluded — transfer-to-self is a no-op the
+ *     model shouldn't be tempted into (and used to crash the turn; see
+ *     `resolveTransferOutcome`).
+ *   - **Exactly one "default" per context.** The Default agent
+ *     (`defaultAgentId`, `_default`) is an automation persona whose
+ *     prompt assumes an unattended run ("there is no human to ask") and
+ *     which the chat composer's picker can't represent (it models
+ *     default as `null`). The synthetic `""` sentinel is the opposite:
+ *     it clears `activeAgentId` back to the team's base persona — an
+ *     interactive concept. Advertising both (as interactive turns did
+ *     until 2026-06-10) gave the model two near-synonymous defaults and
+ *     let it move a live chat onto the headless persona. So: user
+ *     principals are offered `""` (when an agent is active to come back
+ *     FROM), agent principals are offered `_default` — never both.
+ *
+ * The `""` entry's id flows through `normalizeActiveAgentIdForStorage`
+ * to a `null` activeAgentId on the session doc. Its label/description
+ * are hardcoded English because the directive lives in the server-side
+ * system prompt, not user-facing i18n. It's skipped when the Default
+ * agent is itself active — transferring "back to default" from the
+ * Default persona would be a self-handoff.
+ *
+ * Returns `[]` when nothing is advertisable; the caller then withholds
+ * the `transferToAgent` tool entirely and the system prompt emits the
+ * "you are the only agent" guard instead.
+ */
+export function buildTransferRoster(args: {
+  candidates: ReadonlyArray<TransferCandidate>
+  /** Active agent's id, or `null` when the team-default persona drives. */
+  activeAgentId: string | null
+  /** `"user"` = interactive chat; `"agent"` = headless workflow run. */
+  principalKind: "user" | "agent"
+  /** The Default agent's reserved id (`DEFAULT_AGENT_ID`, `"_default"`). */
+  defaultAgentId: string
+}): TransferRosterEntry[] {
+  const { candidates, activeAgentId, principalKind, defaultAgentId } = args
+  const roster: TransferRosterEntry[] = []
+  for (const candidate of candidates) {
+    if (candidate.enabled === false) continue
+    if (candidate.archivedAt) continue
+    if (activeAgentId !== null && candidate.id === activeAgentId) continue
+    if (candidate.id === defaultAgentId && principalKind === "user") continue
+    roster.push({
+      id: candidate.id,
+      name: candidate.name,
+      description: candidate.description,
+    })
+  }
+  if (
+    principalKind === "user" &&
+    activeAgentId !== null &&
+    activeAgentId !== defaultAgentId
+  ) {
+    roster.push({
+      id: "",
+      name: "Default Assistant",
+      description: "The team's default persona — broad-purpose helper.",
+    })
+  }
+  return roster
+}
+
+// ===========================================================================
+// Transfer target validation
+// ===========================================================================
+
+/**
+ * Outcome of validating a `transferToAgent` call against the turn's
+ * allowlist. `transfer` means commit the handoff; `rejected` carries the
+ * string the tool must RETURN as its output.
+ *
+ * Why return-not-throw is load-bearing: Genkit's tool runner
+ * (`resolve-tool-requests.ts`) catches only `ToolInterruptError` — any
+ * other handler throw propagates and aborts the entire generate turn.
+ * The original handler threw `HttpsError("invalid-argument")` on a bad
+ * target, believing Genkit would surface it to the model as a tool
+ * error; instead the whole `sendBotMessage` callable failed and the
+ * client saw `Unknown transfer target "_code"` plus an unhandled
+ * promise rejection, with the user's message rolled back. Returning the
+ * rejection as the tool's output keeps the turn alive: the model reads
+ * it and picks a valid id or just answers.
+ */
+export type TransferOutcome =
+  | { kind: "transfer"; agentId: string }
+  | { kind: "rejected"; message: string }
+
+/**
+ * Render a transfer-target id for model-facing messages. The empty
+ * string is the "back to team default" sentinel — spelled out so the
+ * model understands `''` is a deliberate, passable value rather than a
+ * formatting accident.
+ */
+function formatTransferAgentId(id: string): string {
+  return id === "" ? "'' (team default)" : `"${id}"`
+}
+
+/**
+ * Decide what a `transferToAgent({ agentId })` call should do given the
+ * turn's allowlist (`availableTransferAgentIds` on the action context)
+ * and the currently active agent.
+ *
+ * Decision order is load-bearing:
+ *
+ *   1. **Allowlist hit → transfer.** The allowlist is the single
+ *      authority; even a (theoretically unreachable) self-entry is
+ *      honored rather than second-guessed here.
+ *   2. **Requested id IS the active agent → "already active" rejection.**
+ *      The roster excludes the active agent by construction, and the
+ *      persona prompt doesn't state its own id — so a model asked for
+ *      "the code helper" while BEING the code helper guesses `_code`
+ *      from the sibling naming pattern and lands here (the 2026-06-10
+ *      production incident). The wording tells it to just answer.
+ *   3. **Anything else → unknown-target rejection** with the full
+ *      roster and an explicit "or continue without transferring" steer,
+ *      so the model can retry without guessing.
+ */
+export function resolveTransferOutcome(args: {
+  requestedAgentId: string
+  availableAgentIds: ReadonlyArray<string>
+  activeAgentId?: string
+}): TransferOutcome {
+  const { requestedAgentId, availableAgentIds, activeAgentId } = args
+  if (availableAgentIds.includes(requestedAgentId)) {
+    return { kind: "transfer", agentId: requestedAgentId }
+  }
+  const available =
+    availableAgentIds.length === 0
+      ? "(no other agents available)"
+      : availableAgentIds.map(formatTransferAgentId).join(", ")
+  if (activeAgentId !== undefined && requestedAgentId === activeAgentId) {
+    return {
+      kind: "rejected",
+      message:
+        `Transfer skipped: ${formatTransferAgentId(requestedAgentId)} is ` +
+        "the currently active agent — you are already handling this " +
+        "conversation, so answer the user directly. Available transfer " +
+        `targets: ${available}.`,
+    }
+  }
+  return {
+    kind: "rejected",
+    message:
+      `Transfer failed: unknown target ${formatTransferAgentId(requestedAgentId)}. ` +
+      `Available ids: ${available}. Pick one of these ids exactly as ` +
+      "written, or continue the conversation without transferring.",
+  }
 }
 
 // ===========================================================================

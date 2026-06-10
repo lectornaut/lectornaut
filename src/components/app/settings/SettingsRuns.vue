@@ -139,7 +139,7 @@ const {
                 :data="allRows"
                 :columns="columns"
                 :column-pinning="{ left: ['select'], right: ['actions'] }"
-                class="overflow-clip rounded-xl border"
+                class="overflow-clip rounded-2xl border"
               >
                 <template #expanded="{ row }">
                   <RunDetails :run="row.original.run" />

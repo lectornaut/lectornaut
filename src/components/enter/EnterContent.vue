@@ -205,7 +205,7 @@ const authenticateApple = () =>
           </Button>
         </div>
       </TabsContent>
-      <div class="bg-background grid gap-4 rounded-xl border p-2">
+      <div class="bg-background grid gap-4 rounded-4xl border p-2">
         <!-- Email input -->
         <div class="grid gap-2">
           <InputGroup>
@@ -223,7 +223,7 @@ const authenticateApple = () =>
                 type="email"
                 :disabled="continueWithEmailInProgress"
                 required
-                class="text-foreground"
+                class="text-foreground pl-0"
                 @keydown.enter="continueWithEmail"
               />
             </InputGroupAddon>
@@ -291,11 +291,7 @@ const authenticateApple = () =>
             <TooltipProvider v-if="lastAuthProvider === 'microsoft'">
               <Tooltip>
                 <TooltipTrigger as-child>
-                  <Badge
-                    variant="destructive"
-                    tabindex="-1"
-                    class="absolute -top-3 right-3 text-current"
-                  >
+                  <Badge tabindex="-1" class="absolute -top-3 right-3">
                     <IconDisc /> {{ t("enter.magicLink.recent") }}
                   </Badge>
                 </TooltipTrigger>
@@ -322,11 +318,7 @@ const authenticateApple = () =>
             <TooltipProvider v-if="lastAuthProvider === 'apple'">
               <Tooltip>
                 <TooltipTrigger as-child>
-                  <Badge
-                    variant="destructive"
-                    tabindex="-1"
-                    class="absolute -top-3 right-3 text-current"
-                  >
+                  <Badge tabindex="-1" class="absolute -top-3 right-3">
                     <IconDisc /> {{ t("enter.magicLink.recent") }}
                   </Badge>
                 </TooltipTrigger>
@@ -376,7 +368,7 @@ const authenticateApple = () =>
         {{ t("enter.signIn") }}
       </h2>
     </TabsContent>
-    <div class="bg-background grid gap-4 rounded-xl border p-2">
+    <div class="bg-background grid gap-4 rounded-4xl border p-2">
       <div class="flex flex-col gap-2">
         <!-- Email display with back button -->
         <div class="flex items-center gap-2">
@@ -501,7 +493,6 @@ const authenticateApple = () =>
               </InputGroupAddon>
               <InputGroupAddon align="block-start" class="pt-0">
                 <IconLock />
-
                 <InputGroupInput
                   id="password"
                   v-model="password"
@@ -512,7 +503,7 @@ const authenticateApple = () =>
                     signinViaEmailPasswordInProgress
                   "
                   required
-                  class="text-foreground"
+                  class="text-foreground pl-0"
                 />
                 <TooltipProvider>
                   <Tooltip>
@@ -567,11 +558,7 @@ const authenticateApple = () =>
                 <TooltipProvider v-if="lastAuthProvider === 'email-password'">
                   <Tooltip>
                     <TooltipTrigger as-child>
-                      <Badge
-                        variant="destructive"
-                        tabindex="-1"
-                        class="absolute -top-3 right-3 text-current"
-                      >
+                      <Badge tabindex="-1" class="absolute -top-3 right-3">
                         <IconDisc /> {{ t("enter.magicLink.recent") }}
                       </Badge>
                     </TooltipTrigger>
@@ -595,11 +582,7 @@ const authenticateApple = () =>
                     <TooltipProvider v-if="lastAuthProvider === 'email-link'">
                       <Tooltip>
                         <TooltipTrigger as-child>
-                          <Badge
-                            variant="destructive"
-                            tabindex="-1"
-                            class="absolute -top-3 right-3 text-current"
-                          >
+                          <Badge tabindex="-1" class="absolute -top-3 right-3">
                             <IconDisc /> {{ t("enter.magicLink.recent") }}
                           </Badge>
                         </TooltipTrigger>

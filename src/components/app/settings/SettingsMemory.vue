@@ -705,7 +705,7 @@ const submitPurge = async () => {
                 :data="memories"
                 :columns="columns"
                 :column-pinning="{ left: ['select'], right: ['actions'] }"
-                class="overflow-clip rounded-xl border"
+                class="overflow-clip rounded-2xl border"
               >
                 <template #selection-actions>
                   <DropdownMenuLabel class="text-muted-foreground tabular-nums">

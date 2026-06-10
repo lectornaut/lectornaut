@@ -166,9 +166,11 @@ export function buildAgentSystemPrompt(args: {
    * regardless of whether `transferToAgent` is in the tool list.
    *
    * The active agent itself is excluded by the caller (transfer to
-   * self would be a no-op the model shouldn't be tempted to attempt).
-   * The synthetic team-default is included as `id: ""` so the model
-   * can transfer back even when no real agent is the "default" yet.
+   * self would be a no-op the model shouldn't be tempted to attempt),
+   * and each context gets exactly one "default" target: interactive
+   * turns the synthetic `id: ""` (back to the team-base persona),
+   * headless runs the `_default` automation persona — see
+   * `buildTransferRoster` in botTurn.ts.
    */
   otherAgents?: ReadonlyArray<{
     id: string
@@ -216,7 +218,15 @@ export function buildAgentSystemPrompt(args: {
   // `bot.ts` AFTER the context block so it reads last (see
   // WORKSPACE_SAFETY_DIRECTIVE).
   const directives = [
-    buildTransferDirective(otherAgents),
+    buildTransferDirective(
+      otherAgents,
+      // Self-identity for the directive: the persona prompt never states
+      // its own id (and the roster excludes self), so without this a
+      // model asked for "the code helper" while BEING the code helper
+      // guesses `_code` from the sibling id pattern and self-transfers.
+      // `null` for the team-default persona — it has no id to misuse.
+      agent ? { id: agent.id, name: agent.name } : null
+    ),
     args.canManageNodes ? buildNodeEditingDirective(!!args.canReadNodes) : "",
     // Autonomous run with no human to answer — append AFTER the mode suffix
     // so it overrides any "ask via askQuestion" steer the persona carries.
@@ -257,7 +267,19 @@ export function buildTransferDirective(
     id: string
     name: string
     description: string
-  }>
+  }>,
+  /**
+   * The currently active agent's own identity, when a non-default
+   * persona is driving. Personas' `systemPromptBase` deliberately
+   * doesn't state a name or id, and the roster excludes self — which
+   * left the model unable to recognize "transfer to the code helper"
+   * as a self-reference while running AS the code helper; it guessed
+   * `_code` from the sibling naming convention and self-transferred
+   * (rejected by the allowlist). Naming the active persona here closes
+   * that gap at the prompt layer; `resolveTransferOutcome` stays the
+   * runtime backstop.
+   */
+  self?: { id: string; name: string } | null
 ): string {
   if (!otherAgents || otherAgents.length === 0) {
     // No transfer targets in this turn — the `transferToAgent` tool
@@ -290,7 +312,16 @@ export function buildTransferDirective(
       return `- ${agent.name} (id: ${idLabel})${description}`
     })
     .join("\n")
+  // Identity line first, so the roster below is unambiguously "everyone
+  // but you". Without it the model has no way to map a user's "switch to
+  // <its own persona>" onto itself and will invent a plausible id.
+  const selfLine = self
+    ? `You are currently ${self.name} (id: \`${self.id}\`). If the user ` +
+      "asks for this persona, you are already it — answer directly and " +
+      "never call `transferToAgent` with your own id.\n\n"
+    : ""
   return (
+    selfLine +
     "You can hand the conversation off to a teammate agent when a " +
     "different persona is better suited to the user's request. Call " +
     "`transferToAgent({ agentId, reason })` with one of these ids:\n\n" +
