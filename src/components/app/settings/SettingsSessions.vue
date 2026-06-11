@@ -11,7 +11,7 @@ import {
   IconArchive,
   IconGlobe,
   IconLock,
-  IconMessageCircleMore,
+  IconMessagesSquare,
   IconRotateCcw,
   IconTrash2,
   IconUsers,
@@ -659,7 +659,7 @@ const submitDelete = async () => {
               >
                 <EmptyHeader>
                   <EmptyMedia variant="icon">
-                    <IconMessageCircleMore />
+                    <IconMessagesSquare />
                   </EmptyMedia>
                   <EmptyTitle>
                     {{ t("settings.sessions.emptyTitle") }}
@@ -752,14 +752,17 @@ const submitDelete = async () => {
           <DialogClose as-child>
             <Button variant="outline" :disabled="isMutating">
               {{ t("actions.cancel") }}
+              <Kbd aria-hidden="true">Esc</Kbd>
             </Button>
           </DialogClose>
           <Button
+            data-dialog-action
             :disabled="isMutating || !renameInput.trim()"
             @click="submitRename"
           >
             <Spinner v-if="isMutating" />
             {{ t("actions.save") }}
+            <Kbd aria-hidden="true">↩</Kbd>
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -780,6 +783,7 @@ const submitDelete = async () => {
         <AlertDialogFooter>
           <AlertDialogCancel :disabled="isMutating">
             {{ t("actions.cancel") }}
+            <Kbd aria-hidden="true">Esc</Kbd>
           </AlertDialogCancel>
           <AlertDialogAction
             :disabled="isMutating"
@@ -787,6 +791,7 @@ const submitDelete = async () => {
           >
             <Spinner v-if="isMutating" />
             {{ t("actions.delete") }}
+            <Kbd aria-hidden="true">↩</Kbd>
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>
@@ -814,6 +819,7 @@ const submitDelete = async () => {
         <AlertDialogFooter>
           <AlertDialogCancel :disabled="bulkBusy">
             {{ t("actions.cancel") }}
+            <Kbd aria-hidden="true">Esc</Kbd>
           </AlertDialogCancel>
           <AlertDialogAction
             :disabled="bulkBusy || selectionCount === 0"
@@ -821,6 +827,7 @@ const submitDelete = async () => {
           >
             <Spinner v-if="bulkBusy" />
             {{ t("actions.delete") }}
+            <Kbd aria-hidden="true">↩</Kbd>
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>

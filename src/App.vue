@@ -1,5 +1,6 @@
 <script lang="ts" setup>
 import { resumeSessionWatcher } from "@/composables/useDeviceSessions"
+import { useDialogActionHotkey } from "@/composables/useDialogActionHotkey"
 import { useGlobalHotkeys } from "@/composables/useGlobalHotkeys"
 import { useCurrentUser } from "vuefire"
 
@@ -9,6 +10,10 @@ const route = useRoute()
 
 // Register all global application hotkeys for the app's lifetime.
 useGlobalHotkeys()
+
+// Enter fires the proceed button ([data-dialog-action], or shadcn's
+// AlertDialogAction) of whichever dialog the keystroke originates in.
+useDialogActionHotkey()
 
 // Only handle redirecting logged-in users away from guest-only pages.
 // Logout redirects are NOT handled here - the router beforeEach guard

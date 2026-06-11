@@ -4,11 +4,11 @@ import {
   IconArrowDown,
   IconArrowUp,
   IconArrowUpDown,
-  IconGroup,
   IconMoreHorizontal,
   IconPencil,
   IconPlus,
   IconTrash,
+  IconUsers2,
   IconX,
 } from "@/data/icons"
 import { useMembershipStore } from "@/stores/membershipStore"
@@ -418,6 +418,7 @@ onMounted(() => {
                                   <AlertDialogFooter>
                                     <AlertDialogCancel>
                                       {{ t("actions.cancel") }}
+                                      <Kbd aria-hidden="true">Esc</Kbd>
                                     </AlertDialogCancel>
                                     <AlertDialogAction
                                       :disabled="isDeleting(group.id)"
@@ -425,6 +426,7 @@ onMounted(() => {
                                     >
                                       <Spinner v-if="isDeleting(group.id)" />
                                       {{ t("settings.groups.delete") }}
+                                      <Kbd aria-hidden="true">↩</Kbd>
                                     </AlertDialogAction>
                                   </AlertDialogFooter>
                                 </AlertDialogContent>
@@ -443,7 +445,7 @@ onMounted(() => {
                       <Empty>
                         <EmptyHeader>
                           <EmptyMedia variant="icon">
-                            <IconGroup />
+                            <IconUsers2 />
                           </EmptyMedia>
                           <EmptyTitle>
                             {{ t("settings.groups.empty") }}

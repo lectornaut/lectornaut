@@ -13,15 +13,14 @@
  *   - agent / tool     → the globally-mounted editor dialogs (mitt events,
  *                        mounted in `layouts/app.vue`)
  *   - workflow         → a globally-mounted editor dialog (mitt event)
- *   - workspace / team → the always-mounted switcher dialogs (mitt events the
- *                        switchers listen for)
+ *   - workspace        → the always-mounted switcher dialog (a mitt event the
+ *                        switcher listens for)
  *
  * `CreateMenu` only renders inside `MainLayout`, which already gates on an
  * active team + workspace, so the node/workflow flows always have a workspace.
  */
 
 import { useNodes } from "@/composables/useNodes"
-import { useTeamActions } from "@/composables/useTeamActions"
 import { useWorkspaceActions } from "@/composables/useWorkspaceActions"
 import {
   defaultCreateMenu,
@@ -57,7 +56,6 @@ export function useCreateActions() {
   const router = useRouter()
   const { createFile } = useNodes()
 
-  const { canCreateTeam, getCannotCreateTeamReason } = useTeamActions()
   const {
     canCreateWorkspace,
     getCannotCreateWorkspaceReason,
@@ -116,7 +114,6 @@ export function useCreateActions() {
     tool: () => emitter.emit("Dialog.CustomTools.Open", "new"),
     workflow: () => emitter.emit("Dialog.CustomWorkflow.Open"),
     workspace: () => emitter.emit("Dialog.CreateWorkspace.Open"),
-    team: () => emitter.emit("Dialog.CreateTeam.Open"),
   }
 
   // Per-intent reactive gate. Evaluated inside the `groups` computed so the
@@ -145,10 +142,6 @@ export function useCreateActions() {
     workspace: () => ({
       disabled: !canCreateWorkspace.value,
       reason: getCannotCreateWorkspaceReason.value,
-    }),
-    team: () => ({
-      disabled: !canCreateTeam.value,
-      reason: getCannotCreateTeamReason.value,
     }),
   }
 

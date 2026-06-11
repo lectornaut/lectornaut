@@ -42,9 +42,9 @@ const shared = computed(() => props.memory.visibility === "shared")
   <span v-if="!manageable" class="text-muted-foreground text-xs">
     {{ t("ai.visibilityShared") }}
   </span>
-  <DropdownMenu v-else>
-    <TooltipProvider>
-      <Tooltip>
+  <TooltipProvider v-else>
+    <Tooltip>
+      <DropdownMenu>
         <TooltipTrigger as-child>
           <DropdownMenuTrigger as-child>
             <Button
@@ -59,32 +59,39 @@ const shared = computed(() => props.memory.visibility === "shared")
           </DropdownMenuTrigger>
         </TooltipTrigger>
         <TooltipContent>{{ t("settings.memory.rowActions") }}</TooltipContent>
-      </Tooltip>
-    </TooltipProvider>
-    <DropdownMenuContent align="end">
-      <DropdownMenuItem v-if="editable" @click="emit('edit', memory)">
-        <IconPencil />
-        {{ t("actions.edit") }}
-      </DropdownMenuItem>
-      <DropdownMenuItem v-if="canShare" @click="emit('share', memory)">
-        <Component :is="shared ? IconLock : IconUsers" />
-        {{ shared ? t("settings.memory.unshare") : t("settings.memory.share") }}
-      </DropdownMenuItem>
-      <DropdownMenuItem @click="emit('pin', memory)">
-        <Component :is="pinned ? IconPinOff : IconPin" />
-        {{ pinned ? t("settings.memory.unpin") : t("settings.memory.pin") }}
-      </DropdownMenuItem>
-      <DropdownMenuItem @click="emit('archive', memory)">
-        <Component :is="archived ? IconRotateCcw : IconArchive" />
-        {{
-          archived ? t("settings.memory.restore") : t("settings.memory.archive")
-        }}
-      </DropdownMenuItem>
-      <DropdownMenuSeparator />
-      <DropdownMenuItem variant="destructive" @click="emit('delete', memory)">
-        <IconTrash2 />
-        {{ t("actions.delete") }}
-      </DropdownMenuItem>
-    </DropdownMenuContent>
-  </DropdownMenu>
+        <DropdownMenuContent align="end">
+          <DropdownMenuItem v-if="editable" @click="emit('edit', memory)">
+            <IconPencil />
+            {{ t("actions.edit") }}
+          </DropdownMenuItem>
+          <DropdownMenuItem v-if="canShare" @click="emit('share', memory)">
+            <Component :is="shared ? IconLock : IconUsers" />
+            {{
+              shared ? t("settings.memory.unshare") : t("settings.memory.share")
+            }}
+          </DropdownMenuItem>
+          <DropdownMenuItem @click="emit('pin', memory)">
+            <Component :is="pinned ? IconPinOff : IconPin" />
+            {{ pinned ? t("settings.memory.unpin") : t("settings.memory.pin") }}
+          </DropdownMenuItem>
+          <DropdownMenuItem @click="emit('archive', memory)">
+            <Component :is="archived ? IconRotateCcw : IconArchive" />
+            {{
+              archived
+                ? t("settings.memory.restore")
+                : t("settings.memory.archive")
+            }}
+          </DropdownMenuItem>
+          <DropdownMenuSeparator />
+          <DropdownMenuItem
+            variant="destructive"
+            @click="emit('delete', memory)"
+          >
+            <IconTrash2 />
+            {{ t("actions.delete") }}
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+    </Tooltip>
+  </TooltipProvider>
 </template>

@@ -122,9 +122,12 @@ const onDelete = (): Promise<void> => wrap(() => removeRun(props.run.id))
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogCancel>{{ t("actions.cancel") }}</AlertDialogCancel>
+          <AlertDialogCancel
+            >{{ t("actions.cancel") }}<Kbd aria-hidden="true">Esc</Kbd>
+          </AlertDialogCancel>
           <AlertDialogAction variant="destructive" @click="onDelete">
             {{ t("actions.delete") }}
+            <Kbd aria-hidden="true">↩</Kbd>
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>

@@ -7,8 +7,8 @@ import {
   IconArrowDown,
   IconArrowUp,
   IconArrowUpDown,
-  IconBriefcase,
   IconCheck,
+  IconLayoutGrid,
   IconMoreHorizontal,
   IconPencil,
   IconPlus,
@@ -410,7 +410,7 @@ const formatCreatedAt = (value: IWorkspace["createdAt"] | null | undefined) => {
                       <Empty>
                         <EmptyHeader>
                           <EmptyMedia variant="icon">
-                            <IconBriefcase />
+                            <IconLayoutGrid />
                           </EmptyMedia>
                           <EmptyTitle>
                             {{ t("settings.workspacesList.noWorkspaces") }}
@@ -447,7 +447,9 @@ const formatCreatedAt = (value: IWorkspace["createdAt"] | null | undefined) => {
         </AlertDialogDescription>
       </AlertDialogHeader>
       <AlertDialogFooter>
-        <AlertDialogCancel>{{ t("actions.cancel") }}</AlertDialogCancel>
+        <AlertDialogCancel
+          >{{ t("actions.cancel") }}<Kbd aria-hidden="true">Esc</Kbd>
+        </AlertDialogCancel>
         <AlertDialogAction
           :disabled="
             deleteWorkspaceDialog.item.value &&
@@ -466,6 +468,7 @@ const formatCreatedAt = (value: IWorkspace["createdAt"] | null | undefined) => {
             "
           />
           {{ t("settings.workspacesList.deleteTitle") }}
+          <Kbd aria-hidden="true">↩</Kbd>
         </AlertDialogAction>
       </AlertDialogFooter>
     </AlertDialogContent>

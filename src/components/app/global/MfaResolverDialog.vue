@@ -284,13 +284,19 @@ onUnmounted(() => {
         class="flex-row justify-between sm:justify-between"
       >
         <div class="flex gap-2">
-          <Button :disabled="otpCode.length < 6 || loading" @click="verifyCode">
+          <Button
+            data-dialog-action
+            :disabled="otpCode.length < 6 || loading"
+            @click="verifyCode"
+          >
             <Spinner v-if="loading" />
             {{ t("settings.account.mfa.verify") }}
+            <Kbd aria-hidden="true"> ↩ </Kbd>
           </Button>
           <DialogClose as-child>
             <Button variant="outline">
               {{ t("common.cancel") }}
+              <Kbd aria-hidden="true">Esc</Kbd>
             </Button>
           </DialogClose>
         </div>

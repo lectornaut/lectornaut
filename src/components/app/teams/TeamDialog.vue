@@ -1818,9 +1818,11 @@ const handleSubmit = async () => {
         <DialogClose as-child>
           <Button variant="outline" :disabled="isLoading">
             {{ t("common.actions.cancel") }}
+            <Kbd aria-hidden="true">Esc</Kbd>
           </Button>
         </DialogClose>
         <Button
+          data-dialog-action
           :disabled="isLoading || (!canUpdateTeam && mode === 'edit')"
           @click="handleSubmit"
         >
@@ -1832,6 +1834,7 @@ const handleSubmit = async () => {
                 ? t("components.teamDialog.actions.save")
                 : t("components.teamDialog.actions.invite")
           }}
+          <Kbd aria-hidden="true">↩</Kbd>
         </Button>
       </DialogFooter>
     </DialogContent>

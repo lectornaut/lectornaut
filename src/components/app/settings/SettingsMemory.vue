@@ -888,14 +888,17 @@ const submitPurge = async () => {
           <DialogClose as-child>
             <Button variant="outline" :disabled="isMutating">
               {{ t("actions.cancel") }}
+              <Kbd aria-hidden="true">Esc</Kbd>
             </Button>
           </DialogClose>
           <Button
+            data-dialog-action
             :disabled="isMutating || !form.content.trim()"
             @click="submitForm"
           >
             <Spinner v-if="isMutating" />
             {{ t("actions.save") }}
+            <Kbd aria-hidden="true">↩</Kbd>
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -915,6 +918,7 @@ const submitPurge = async () => {
         <AlertDialogFooter>
           <AlertDialogCancel :disabled="isMutating">
             {{ t("actions.cancel") }}
+            <Kbd aria-hidden="true">Esc</Kbd>
           </AlertDialogCancel>
           <AlertDialogAction
             :disabled="isMutating"
@@ -922,6 +926,7 @@ const submitPurge = async () => {
           >
             <Spinner v-if="isMutating" />
             {{ t("actions.delete") }}
+            <Kbd aria-hidden="true">↩</Kbd>
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>
@@ -947,6 +952,7 @@ const submitPurge = async () => {
         <AlertDialogFooter>
           <AlertDialogCancel :disabled="bulkBusy">
             {{ t("actions.cancel") }}
+            <Kbd aria-hidden="true">Esc</Kbd>
           </AlertDialogCancel>
           <AlertDialogAction
             :disabled="bulkBusy || selectionCount === 0"
@@ -954,6 +960,7 @@ const submitPurge = async () => {
           >
             <Spinner v-if="bulkBusy" />
             {{ t("actions.delete") }}
+            <Kbd aria-hidden="true">↩</Kbd>
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>
@@ -973,6 +980,7 @@ const submitPurge = async () => {
         <AlertDialogFooter>
           <AlertDialogCancel :disabled="isMutating">
             {{ t("actions.cancel") }}
+            <Kbd aria-hidden="true">Esc</Kbd>
           </AlertDialogCancel>
           <AlertDialogAction
             :disabled="isMutating"
@@ -980,6 +988,7 @@ const submitPurge = async () => {
           >
             <Spinner v-if="isMutating" />
             {{ t("settings.memory.purgeAll") }}
+            <Kbd aria-hidden="true">↩</Kbd>
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>

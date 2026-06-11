@@ -348,15 +348,21 @@ const handleSubmit = async () => {
         <DialogClose as-child>
           <Button variant="outline" :disabled="isSaving">
             {{ t("actions.cancel") }}
+            <Kbd aria-hidden="true">Esc</Kbd>
           </Button>
         </DialogClose>
-        <Button :disabled="isSaving || !groupName.trim()" @click="handleSubmit">
+        <Button
+          data-dialog-action
+          :disabled="isSaving || !groupName.trim()"
+          @click="handleSubmit"
+        >
           <Spinner v-if="isSaving" />
           {{
             mode === "create"
               ? t("components.groupDialog.create")
               : t("components.groupDialog.saveChanges")
           }}
+          <Kbd aria-hidden="true">↩</Kbd>
         </Button>
       </DialogFooter>
     </DialogContent>

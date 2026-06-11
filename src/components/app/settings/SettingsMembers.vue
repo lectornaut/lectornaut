@@ -403,6 +403,7 @@ const formatCreatedAt = (
                               <AlertDialogFooter>
                                 <AlertDialogCancel>
                                   {{ t("actions.cancel") }}
+                                  <Kbd aria-hidden="true">Esc</Kbd>
                                 </AlertDialogCancel>
                                 <AlertDialogAction
                                   :disabled="isAgentRemovalPending(member)"
@@ -412,6 +413,7 @@ const formatCreatedAt = (
                                     v-if="isAgentRemovalPending(member)"
                                   />
                                   {{ t("settings.members.remove") }}
+                                  <Kbd aria-hidden="true">↩</Kbd>
                                 </AlertDialogAction>
                               </AlertDialogFooter>
                             </AlertDialogContent>
@@ -503,6 +505,7 @@ const formatCreatedAt = (
                                       <AlertDialogFooter>
                                         <AlertDialogCancel>
                                           {{ t("actions.cancel") }}
+                                          <Kbd aria-hidden="true">Esc</Kbd>
                                         </AlertDialogCancel>
                                         <AlertDialogAction
                                           :disabled="
@@ -526,6 +529,7 @@ const formatCreatedAt = (
                                               ? t("settings.members.exit")
                                               : t("settings.members.remove")
                                           }}
+                                          <Kbd aria-hidden="true">↩</Kbd>
                                         </AlertDialogAction>
                                       </AlertDialogFooter>
                                     </AlertDialogContent>

@@ -636,10 +636,16 @@ onBeforeUnmount(() => {
           <DialogClose as-child>
             <Button variant="outline">
               {{ t("actions.cancel") }}
+              <Kbd aria-hidden="true">Esc</Kbd>
             </Button>
           </DialogClose>
-          <Button type="submit" :disabled="isCreating || !createName.trim()">
+          <Button
+            type="submit"
+            data-dialog-action
+            :disabled="isCreating || !createName.trim()"
+          >
             {{ isCreating ? t("states.creating") : t("actions.create") }}
+            <Kbd aria-hidden="true"> ↩ </Kbd>
           </Button>
         </DialogFooter>
       </form>
@@ -671,10 +677,16 @@ onBeforeUnmount(() => {
           <DialogClose as-child>
             <Button variant="outline">
               {{ t("actions.cancel") }}
+              <Kbd aria-hidden="true">Esc</Kbd>
             </Button>
           </DialogClose>
-          <Button type="submit" :disabled="isRenaming || !renameName.trim()">
+          <Button
+            type="submit"
+            data-dialog-action
+            :disabled="isRenaming || !renameName.trim()"
+          >
             {{ isRenaming ? t("states.saving") : t("actions.save") }}
+            <Kbd aria-hidden="true"> ↩ </Kbd>
           </Button>
         </DialogFooter>
       </form>
@@ -699,12 +711,14 @@ onBeforeUnmount(() => {
       <AlertDialogFooter>
         <AlertDialogCancel>
           {{ t("actions.cancel") }}
+          <Kbd aria-hidden="true">Esc</Kbd>
         </AlertDialogCancel>
         <AlertDialogAction
           :disabled="isArchiving"
           @click="handleArchiveConfirm"
         >
           {{ isArchiving ? t("states.archiving") : t("fileTree.archive") }}
+          <Kbd aria-hidden="true">↩</Kbd>
         </AlertDialogAction>
       </AlertDialogFooter>
     </AlertDialogContent>
@@ -728,9 +742,11 @@ onBeforeUnmount(() => {
       <AlertDialogFooter>
         <AlertDialogCancel>
           {{ t("actions.cancel") }}
+          <Kbd aria-hidden="true">Esc</Kbd>
         </AlertDialogCancel>
         <AlertDialogAction :disabled="isDeleting" @click="handleDeleteConfirm">
           {{ isDeleting ? t("states.deleting") : t("actions.delete") }}
+          <Kbd aria-hidden="true">↩</Kbd>
         </AlertDialogAction>
       </AlertDialogFooter>
     </AlertDialogContent>

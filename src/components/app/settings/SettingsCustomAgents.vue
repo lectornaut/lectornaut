@@ -1069,6 +1069,7 @@ const handleEditorSave = async (): Promise<void> => {
           -->
           <Button variant="outline" :disabled="isSaving">
             {{ t("common.cancel") }}
+            <Kbd aria-hidden="true">Esc</Kbd>
           </Button>
         </DialogClose>
         <!--
@@ -1078,9 +1079,14 @@ const handleEditorSave = async (): Promise<void> => {
           reads symmetrically with the inline save buttons in
           `SettingsAi` / `SettingsAgents` (`:disabled="isSaving"`).
         -->
-        <Button :disabled="!canSave || isSaving" @click="handleEditorSave">
+        <Button
+          data-dialog-action
+          :disabled="!canSave || isSaving"
+          @click="handleEditorSave"
+        >
           <Spinner v-if="isSaving" />
           {{ isNew ? t("settings.agents.custom.create") : t("common.save") }}
+          <Kbd aria-hidden="true">↩</Kbd>
         </Button>
       </DialogFooter>
     </DialogContent>

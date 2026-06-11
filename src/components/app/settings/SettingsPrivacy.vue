@@ -175,6 +175,7 @@ const isDisabled = computed(() => bulkBusy.value || isMutatingSession.value)
         <AlertDialogFooter>
           <AlertDialogCancel :disabled="bulkBusy">
             {{ t("actions.cancel") }}
+            <Kbd aria-hidden="true">Esc</Kbd>
           </AlertDialogCancel>
           <AlertDialogAction
             :disabled="bulkBusy || activeOwnedCount === 0"
@@ -182,6 +183,7 @@ const isDisabled = computed(() => bulkBusy.value || isMutatingSession.value)
           >
             <Spinner v-if="bulkBusy" />
             {{ t("settings.privacy.archiveAll.action") }}
+            <Kbd aria-hidden="true">↩</Kbd>
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>
@@ -204,6 +206,7 @@ const isDisabled = computed(() => bulkBusy.value || isMutatingSession.value)
         <AlertDialogFooter>
           <AlertDialogCancel :disabled="bulkBusy">
             {{ t("actions.cancel") }}
+            <Kbd aria-hidden="true">Esc</Kbd>
           </AlertDialogCancel>
           <AlertDialogAction
             :disabled="bulkBusy || totalOwnedCount === 0"
@@ -211,6 +214,7 @@ const isDisabled = computed(() => bulkBusy.value || isMutatingSession.value)
           >
             <Spinner v-if="bulkBusy" />
             {{ t("settings.privacy.deleteAll.action") }}
+            <Kbd aria-hidden="true">↩</Kbd>
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>

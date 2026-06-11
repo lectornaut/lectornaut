@@ -75,11 +75,15 @@ const remove = () => {
         </Button>
         <div class="flex gap-2">
           <DialogClose as-child>
-            <Button variant="outline">{{ t("actions.cancel") }}</Button>
+            <Button variant="outline">
+              {{ t("actions.cancel") }}
+              <Kbd aria-hidden="true">Esc</Kbd>
+            </Button>
           </DialogClose>
-          <Button @click="submit">
+          <Button data-dialog-action @click="submit">
             <IconLink />
             {{ t("components.textEditor.linkDialog.apply") }}
+            <Kbd aria-hidden="true">↩</Kbd>
           </Button>
         </div>
       </DialogFooter>

@@ -37,6 +37,7 @@ onUnmounted(() => {
       <AlertDialogFooter>
         <AlertDialogAction @click="handleLogout">
           {{ t("settings.account.devices.revokedAction") }}
+          <Kbd aria-hidden="true">↩</Kbd>
         </AlertDialogAction>
       </AlertDialogFooter>
     </AlertDialogContent>

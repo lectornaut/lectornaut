@@ -7,7 +7,7 @@ import {
 } from "@/composables/useFunctions"
 import { usePhotoUpload } from "@/composables/usePhotoUpload"
 import { useWorkspaceActions } from "@/composables/useWorkspaceActions"
-import { IconGroup, IconUsers, IconX, IconUsersRound } from "@/data/icons"
+import { IconUsers2, IconUsers, IconX, IconUsersRound } from "@/data/icons"
 import { useMembershipStore } from "@/stores/membershipStore"
 import { useTeamGroupsStore } from "@/stores/teamGroupsStore"
 import type { IWorkspace } from "@/types/domain"
@@ -834,7 +834,7 @@ const handleSubmit = async () => {
                 >
                   <EmptyHeader>
                     <EmptyMedia variant="icon">
-                      <IconGroup />
+                      <IconUsers2 />
                     </EmptyMedia>
                     <EmptyTitle>
                       {{ t("components.workspaceDialog.groups.empty") }}
@@ -921,9 +921,11 @@ const handleSubmit = async () => {
         <DialogClose as-child>
           <Button variant="outline" :disabled="isLoading">
             {{ t("common.actions.cancel") }}
+            <Kbd aria-hidden="true">Esc</Kbd>
           </Button>
         </DialogClose>
         <Button
+          data-dialog-action
           :disabled="isLoading || (!canEditThisWorkspace && mode === 'edit')"
           @click="handleSubmit"
         >
@@ -933,6 +935,7 @@ const handleSubmit = async () => {
               ? t("components.workspaceDialog.createTitle")
               : t("components.workspaceDialog.saveChanges")
           }}
+          <Kbd aria-hidden="true">↩</Kbd>
         </Button>
       </DialogFooter>
     </DialogContent>

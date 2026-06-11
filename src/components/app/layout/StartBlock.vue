@@ -73,7 +73,9 @@ const actionItems: ActionItem[] = [
           </ItemContent>
           <ItemActions class="pl-16">
             <KbdGroup>
-              <Kbd v-for="key in item.keys" :key="key">{{ key }}</Kbd>
+              <Kbd v-for="key in item.keys" :key="key" aria-hidden="true">{{
+                key
+              }}</Kbd>
             </KbdGroup>
           </ItemActions>
         </Item>

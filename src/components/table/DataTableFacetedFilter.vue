@@ -92,7 +92,11 @@ const selectedValues = computed(
               {{ option.label }}
               <CommandShortcut>
                 <KbdGroup>
-                  <Kbd v-if="facets?.get(option.value)" class="ml-auto">
+                  <Kbd
+                    v-if="facets?.get(option.value)"
+                    class="ml-auto"
+                    aria-hidden="true"
+                  >
                     {{ facets.get(option.value) }}
                   </Kbd>
                 </KbdGroup>

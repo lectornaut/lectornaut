@@ -1,10 +1,10 @@
 <script lang="ts" setup>
 import { useTeamActions } from "@/composables/useTeamActions"
 import {
+  IconBuilding,
   IconCheck,
   IconChevronsUpDown,
   IconCirclePlus,
-  IconComponent,
   IconSwitchHorizontal,
   IconUsersRound,
 } from "@/data/icons"
@@ -26,14 +26,6 @@ const {
 } = useTeamActions()
 
 const isCreateTeamDialogOpen = ref(false)
-
-// Allow other surfaces (e.g. the sidebar "Create New" menu) to open the
-// create-team dialog without re-mounting it.
-const openCreateTeam = () => {
-  isCreateTeamDialogOpen.value = true
-}
-emitter.on("Dialog.CreateTeam.Open", openCreateTeam)
-onUnmounted(() => emitter.off("Dialog.CreateTeam.Open", openCreateTeam))
 
 const teams = computed(() =>
   memberships.value.map((m) => ({
@@ -176,7 +168,7 @@ const currentPlanLabel = computed(() => {
                 <DropdownMenuItem
                   @click="emitter.emit('Dialog.Settings.Open', 'teams')"
                 >
-                  <IconComponent />
+                  <IconBuilding />
                   {{ t("components.teamSwitcher.menu.settings") }}
                   <DropdownMenuShortcut>⌘;</DropdownMenuShortcut>
                 </DropdownMenuItem>
@@ -274,7 +266,7 @@ const currentPlanLabel = computed(() => {
             <ContextMenuItem
               @click="emitter.emit('Dialog.Settings.Open', 'teams')"
             >
-              <IconComponent />
+              <IconBuilding />
               {{ t("components.teamSwitcher.menu.settings") }}
               <ContextMenuShortcut>⌘;</ContextMenuShortcut>
             </ContextMenuItem>

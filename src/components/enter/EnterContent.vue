@@ -481,10 +481,16 @@ const authenticateApple = () =>
                       <AlertDialogFooter>
                         <AlertDialogCancel>
                           {{ t("enter.cancel") }}
+                          <Kbd aria-hidden="true">Esc</Kbd>
                         </AlertDialogCancel>
-                        <Button :disabled="!email" @click="resetPassword">
+                        <Button
+                          data-dialog-action
+                          :disabled="!email"
+                          @click="resetPassword"
+                        >
                           <Spinner v-if="resettingPassword" />
                           {{ t("enter.forgotPassword.send") }}
+                          <Kbd aria-hidden="true">↩</Kbd>
                         </Button>
                       </AlertDialogFooter>
                     </AlertDialogContent>
@@ -612,10 +618,16 @@ const authenticateApple = () =>
                   <AlertDialogFooter>
                     <AlertDialogCancel>
                       {{ t("enter.cancel") }}
+                      <Kbd aria-hidden="true">Esc</Kbd>
                     </AlertDialogCancel>
-                    <Button :disabled="!email" @click="authenticateEmail">
+                    <Button
+                      data-dialog-action
+                      :disabled="!email"
+                      @click="authenticateEmail"
+                    >
                       <Spinner v-if="authenticateEmailInProgress" />
                       {{ t("enter.magicLink.send") }}
+                      <Kbd aria-hidden="true">↩</Kbd>
                     </Button>
                   </AlertDialogFooter>
                 </AlertDialogContent>

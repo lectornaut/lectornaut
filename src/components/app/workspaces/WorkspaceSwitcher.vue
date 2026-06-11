@@ -2,10 +2,10 @@
 import { useTeamActions } from "@/composables/useTeamActions"
 import { useWorkspaceActions } from "@/composables/useWorkspaceActions"
 import {
-  IconBlocks,
   IconCheck,
   IconChevronDown,
   IconCirclePlus,
+  IconLayoutGrid,
 } from "@/data/icons"
 import { emitter } from "@/modules/mitt"
 
@@ -66,7 +66,7 @@ onUnmounted(() => {
                     </span>
                   </template>
                   <template v-else>
-                    <IconBlocks />
+                    <IconLayoutGrid />
                     <span class="truncate">
                       {{ t("components.workspaceSwitcher.selectWorkspace") }}
                     </span>
@@ -134,7 +134,7 @@ onUnmounted(() => {
             <ContextMenuItem
               @click="emitter.emit('Dialog.Settings.Open', 'workspaces')"
             >
-              <IconBlocks />
+              <IconLayoutGrid />
               {{ t("components.workspaceSwitcher.menu.settings") }}
             </ContextMenuItem>
           </ContextMenuGroup>

@@ -80,7 +80,7 @@ const filteredShortcuts = computed(() =>
                     v-for="keys in shortcut.keys"
                     :key="keys.toString()"
                   >
-                    <Kbd v-for="key in keys" :key="key">
+                    <Kbd v-for="key in keys" :key="key" aria-hidden="true">
                       {{ key }}
                     </Kbd>
                   </KbdGroup>

@@ -874,9 +874,13 @@ const handleDeleteSso = () => deleteSsoDialog.confirm(() => deleteSsoConfig())
               </Button>
               <div class="flex gap-2">
                 <DialogClose as-child>
-                  <Button variant="outline">{{ t("actions.cancel") }}</Button>
+                  <Button variant="outline">
+                    {{ t("actions.cancel") }}
+                    <Kbd aria-hidden="true">Esc</Kbd>
+                  </Button>
                 </DialogClose>
                 <Button
+                  data-dialog-action
                   :disabled="saving || !canSaveSso"
                   @click="handleSaveSso"
                 >
@@ -886,6 +890,7 @@ const handleDeleteSso = () => deleteSsoDialog.confirm(() => deleteSsoConfig())
                       ? t("settings.security.sso.updateSso")
                       : t("settings.security.sso.enableSso")
                   }}
+                  <Kbd aria-hidden="true">↩</Kbd>
                 </Button>
               </div>
             </DialogFooter>
@@ -905,13 +910,16 @@ const handleDeleteSso = () => deleteSsoDialog.confirm(() => deleteSsoConfig())
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogCancel>{{ t("actions.cancel") }}</AlertDialogCancel>
+          <AlertDialogCancel
+            >{{ t("actions.cancel") }}<Kbd aria-hidden="true">Esc</Kbd>
+          </AlertDialogCancel>
           <AlertDialogAction
             :disabled="deleting"
             @click.prevent="handleDeleteSso"
           >
             <Spinner v-if="deleting" />
             {{ t("settings.security.sso.removeLabel") }}
+            <Kbd aria-hidden="true">↩</Kbd>
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>

@@ -420,6 +420,7 @@ const isDisabled = computed(() => bulkBusy.value || isLoadingCounts.value)
         <AlertDialogFooter>
           <AlertDialogCancel :disabled="bulkBusy">
             {{ t("actions.cancel") }}
+            <Kbd aria-hidden="true">Esc</Kbd>
           </AlertDialogCancel>
           <AlertDialogAction
             :disabled="bulkBusy || codeActiveCount === 0"
@@ -427,6 +428,7 @@ const isDisabled = computed(() => bulkBusy.value || isLoadingCounts.value)
           >
             <Spinner v-if="bulkBusy" />
             {{ t("settings.storage.archiveCodes.action") }}
+            <Kbd aria-hidden="true">↩</Kbd>
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>
@@ -449,6 +451,7 @@ const isDisabled = computed(() => bulkBusy.value || isLoadingCounts.value)
         <AlertDialogFooter>
           <AlertDialogCancel :disabled="bulkBusy">
             {{ t("actions.cancel") }}
+            <Kbd aria-hidden="true">Esc</Kbd>
           </AlertDialogCancel>
           <AlertDialogAction
             :disabled="bulkBusy || writeActiveCount === 0"
@@ -456,6 +459,7 @@ const isDisabled = computed(() => bulkBusy.value || isLoadingCounts.value)
           >
             <Spinner v-if="bulkBusy" />
             {{ t("settings.storage.archiveWrites.action") }}
+            <Kbd aria-hidden="true">↩</Kbd>
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>
@@ -478,6 +482,7 @@ const isDisabled = computed(() => bulkBusy.value || isLoadingCounts.value)
         <AlertDialogFooter>
           <AlertDialogCancel :disabled="bulkBusy">
             {{ t("actions.cancel") }}
+            <Kbd aria-hidden="true">Esc</Kbd>
           </AlertDialogCancel>
           <AlertDialogAction
             :disabled="bulkBusy || codeRootCount === 0"
@@ -485,6 +490,7 @@ const isDisabled = computed(() => bulkBusy.value || isLoadingCounts.value)
           >
             <Spinner v-if="bulkBusy" />
             {{ t("settings.storage.deleteCodes.action") }}
+            <Kbd aria-hidden="true">↩</Kbd>
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>
@@ -507,6 +513,7 @@ const isDisabled = computed(() => bulkBusy.value || isLoadingCounts.value)
         <AlertDialogFooter>
           <AlertDialogCancel :disabled="bulkBusy">
             {{ t("actions.cancel") }}
+            <Kbd aria-hidden="true">Esc</Kbd>
           </AlertDialogCancel>
           <AlertDialogAction
             :disabled="bulkBusy || writeRootCount === 0"
@@ -514,6 +521,7 @@ const isDisabled = computed(() => bulkBusy.value || isLoadingCounts.value)
           >
             <Spinner v-if="bulkBusy" />
             {{ t("settings.storage.deleteWrites.action") }}
+            <Kbd aria-hidden="true">↩</Kbd>
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>

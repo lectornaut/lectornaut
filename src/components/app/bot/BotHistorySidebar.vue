@@ -232,7 +232,10 @@ const onArchiveToggle = (session: IBotSession) => {
         <!-- button (`w-auto`) and only expands to a full input on click. -->
         <!-- DOM order matches visual/tab order; the trailing addon keeps a -->
         <!-- stable key so the filter menu instance survives the toggle. -->
-        <InputGroup :class="searchExpanded ? undefined : 'w-auto'">
+        <InputGroup
+          class="border-border border"
+          :class="searchExpanded ? undefined : 'w-auto'"
+        >
           <!-- Collapsed: tooltipped button standing in for the search field. -->
           <InputGroupAddon v-if="!searchExpanded" key="search-compact">
             <TooltipProvider>
@@ -661,10 +664,12 @@ const onArchiveToggle = (session: IBotSession) => {
       <AlertDialogFooter>
         <AlertDialogCancel :disabled="isMutating">
           {{ t("actions.cancel") }}
+          <Kbd aria-hidden="true">Esc</Kbd>
         </AlertDialogCancel>
         <AlertDialogAction :disabled="isMutating" @click.prevent="submitDelete">
           <Spinner v-if="isMutating" />
           {{ t("actions.delete") }}
+          <Kbd aria-hidden="true">↩</Kbd>
         </AlertDialogAction>
       </AlertDialogFooter>
     </AlertDialogContent>

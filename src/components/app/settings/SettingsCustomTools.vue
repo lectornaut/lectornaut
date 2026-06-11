@@ -1490,13 +1490,19 @@ const handleEditorSave = async (): Promise<void> => {
         <DialogClose as-child>
           <Button variant="outline" :disabled="isSaving">
             {{ t("common.cancel") }}
+            <Kbd aria-hidden="true">Esc</Kbd>
           </Button>
         </DialogClose>
-        <Button :disabled="!canSave || isSaving" @click="handleEditorSave">
+        <Button
+          data-dialog-action
+          :disabled="!canSave || isSaving"
+          @click="handleEditorSave"
+        >
           <Spinner v-if="isSaving" />
           {{
             isNew ? t("settings.agents.customTools.create") : t("common.save")
           }}
+          <Kbd aria-hidden="true">↩</Kbd>
         </Button>
       </DialogFooter>
     </DialogContent>

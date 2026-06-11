@@ -4090,7 +4090,6 @@
       "tool": "Tool",
       "workflow": "Workflow",
       "workspace": "Workspace",
-      "team": "Team",
       "newDocumentName": "Untitled document",
       "newCodeName": "Untitled file",
       "createError": "Couldn't create that. Please try again.",

@@ -100,13 +100,15 @@ const insertFromUrl = () => {
         </div>
 
         <div class="flex justify-end gap-2">
-          <Button variant="ghost" @click="closeDialog">{{
-            t("actions.cancel")
-          }}</Button>
-          <Button @click="insertFromUrl">
+          <Button variant="ghost" @click="closeDialog">
+            {{ t("actions.cancel") }}
+            <Kbd aria-hidden="true">Esc</Kbd>
+          </Button>
+          <Button data-dialog-action @click="insertFromUrl">
             <IconLink />
             <IconImage />
             {{ t("components.textEditor.imageDialog.insertButton") }}
+            <Kbd aria-hidden="true">↩</Kbd>
           </Button>
         </div>
       </div>

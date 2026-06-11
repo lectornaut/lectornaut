@@ -401,7 +401,11 @@ const isEditing = (shortcut: Shortcut): boolean =>
                           v-for="keys in shortcut.keys"
                           :key="keys.toString()"
                         >
-                          <Kbd v-for="key in keys" :key="key">
+                          <Kbd
+                            v-for="key in keys"
+                            :key="key"
+                            aria-hidden="true"
+                          >
                             {{ key }}
                           </Kbd>
                         </KbdGroup>

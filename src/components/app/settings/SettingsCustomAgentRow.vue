@@ -206,9 +206,12 @@ const onToggleEnabled = (value: boolean | string): void => {
         </AlertDialogDescription>
       </AlertDialogHeader>
       <AlertDialogFooter>
-        <AlertDialogCancel>{{ t("common.cancel") }}</AlertDialogCancel>
+        <AlertDialogCancel
+          >{{ t("common.cancel") }}<Kbd aria-hidden="true">Esc</Kbd>
+        </AlertDialogCancel>
         <AlertDialogAction @click="handleDeleteConfirmed">
           {{ t("settings.agents.custom.deleteForever") }}
+          <Kbd aria-hidden="true">↩</Kbd>
         </AlertDialogAction>
       </AlertDialogFooter>
     </AlertDialogContent>
