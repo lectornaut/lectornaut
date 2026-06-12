@@ -234,7 +234,7 @@ const onArchiveToggle = (session: IBotSession) => {
         <!-- stable key so the filter menu instance survives the toggle. -->
         <InputGroup
           class="border-border border"
-          :class="searchExpanded ? undefined : 'w-auto'"
+          :class="searchExpanded ? 'max-w-64' : 'w-auto'"
         >
           <!-- Collapsed: tooltipped button standing in for the search field. -->
           <InputGroupAddon v-if="!searchExpanded" key="search-compact">

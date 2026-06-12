@@ -18,11 +18,29 @@ import {
 } from "@lectornaut/shared/domain"
 import type { Component } from "vue"
 
+/**
+ * Directory facets for the Connections page's category filter. Display-only
+ * taxonomy (the server never reads it) — that's why it lives here with
+ * name/description/logo and NOT in `shared/domain.ts`. An app can belong to
+ * several; the filter ORs selected categories. Labels come from
+ * `settings.connections.categories.*`, mapped exhaustively in
+ * SettingsConnections.vue so adding a value here forces a label there.
+ */
+export const CONNECTION_CATEGORIES = [
+  "ai-integrations",
+  "link-previews",
+  "database-sync",
+  "automations",
+] as const
+export type ConnectionCategory = (typeof CONNECTION_CATEGORIES)[number]
+
 export interface ConnectionAppDescriptor {
   provider: ConnectionProvider
   name: string
   description: string
   avatarSeed: string
+  /** Directory facets for the category filter — an app can hold several. */
+  categories: ConnectionCategory[]
   /** Full-color provider logo (`~icons/logos/*`) for the Connections page. */
   logo: Component
   /**
@@ -43,6 +61,7 @@ const GOOGLE_CALENDAR_APP: ConnectionAppDescriptor = {
     "Let agents look up — and, with per-write confirmation, schedule — " +
     "events on members' connected Google Calendars.",
   avatarSeed: "google-calendar",
+  categories: ["ai-integrations", "link-previews"],
   logo: IconLogosGoogleCalendar,
   // P2 upgraded `calendar.events.readonly` → `calendar.events` (read+write).
   // Members who connected under P1 keep read access; the binding row shows a
@@ -63,6 +82,12 @@ const GOOGLE_DRIVE_APP: ConnectionAppDescriptor = {
     "come back as markdown — and, with per-write confirmation, save files " +
     "back to Drive.",
   avatarSeed: "google-drive",
+  categories: [
+    "ai-integrations",
+    "link-previews",
+    "database-sync",
+    "automations",
+  ],
   logo: IconLogosGoogleDrive,
   // The least-privilege pair: `drive.readonly` for search/read +
   // `drive.file` for the confirm-gated writes (app-created/picked files

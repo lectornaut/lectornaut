@@ -94,7 +94,7 @@ const {
                       </template>
                     </Button>
                   </PopoverTrigger>
-                  <PopoverContent class="w-auto p-0">
+                  <PopoverContent class="w-auto">
                     <RunsCalendar v-model="dateRange" :markers="dayMarkers" />
                   </PopoverContent>
                 </Popover>

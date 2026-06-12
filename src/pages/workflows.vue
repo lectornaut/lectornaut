@@ -197,7 +197,7 @@ const formatWhen = (ts: unknown): string =>
           </Button>
           <InputGroup
             class="border-border border"
-            :class="searchExpanded ? undefined : 'w-auto'"
+            :class="searchExpanded ? 'max-w-64' : 'w-auto'"
           >
             <InputGroupAddon v-if="!searchExpanded" key="search-compact">
               <TooltipProvider>
