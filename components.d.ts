@@ -111,6 +111,7 @@ declare module 'vue' {
     CommandInput: typeof import('./src/components/ui/command/CommandInput.vue')['default']
     CommandItem: typeof import('./src/components/ui/command/CommandItem.vue')['default']
     CommandK: typeof import('./src/components/app/global/CommandK.vue')['default']
+    CommandKBridge: typeof import('./src/components/app/global/CommandKBridge.vue')['default']
     CommandKTrigger: typeof import('./src/components/app/global/CommandKTrigger.vue')['default']
     CommandList: typeof import('./src/components/ui/command/CommandList.vue')['default']
     CommandSeparator: typeof import('./src/components/ui/command/CommandSeparator.vue')['default']

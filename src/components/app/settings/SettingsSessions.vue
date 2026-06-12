@@ -23,7 +23,7 @@ import { isUserMembership, type IMembership } from "@/types/membership"
 import type { Column, ColumnDef, Table as VueTable } from "@tanstack/vue-table"
 import { Timestamp } from "firebase/firestore"
 import { storeToRefs } from "pinia"
-import { computed, h, nextTick, ref } from "vue"
+import { computed, h, ref } from "vue"
 
 const { t } = useI18n()
 
@@ -171,7 +171,6 @@ const toUnknownColumn = (column: Column<IBotSession, unknown>) =>
 const renameDialogOpen = ref(false)
 const renameTarget = ref<IBotSession | null>(null)
 const renameInput = ref("")
-const renameInputEl = ref<HTMLInputElement | null>(null)
 
 const deleteDialogOpen = ref(false)
 const deleteTarget = ref<IBotSession | null>(null)
@@ -181,8 +180,8 @@ const deleteTarget = ref<IBotSession | null>(null)
 const openRename = (session: IBotSession) => {
   renameTarget.value = session
   renameInput.value = session.title ?? ""
+  // Reka-ui's DialogContent autofocuses the first tabbable (the input) on open.
   renameDialogOpen.value = true
-  nextTick(() => renameInputEl.value?.focus())
 }
 
 const handleRowArchiveToggle = (session: IBotSession) => {
@@ -741,7 +740,6 @@ const submitDelete = async () => {
           </Label>
           <Input
             id="settings-sessions-rename-input"
-            ref="renameInputEl"
             v-model="renameInput"
             :placeholder="t('ai.chatTitlePlaceholder')"
             maxlength="120"

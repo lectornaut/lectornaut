@@ -161,13 +161,12 @@ const isFilteredEmpty = computed(
 const renameDialogOpen = ref(false)
 const renameTarget = ref<IBotSession | null>(null)
 const renameInput = ref("")
-const renameInputEl = ref<HTMLInputElement | null>(null)
 
 const openRename = (session: IBotSession) => {
   renameTarget.value = session
   renameInput.value = session.title ?? ""
+  // Reka-ui's DialogContent autofocuses the first tabbable (the input) on open.
   renameDialogOpen.value = true
-  nextTick(() => renameInputEl.value?.focus())
 }
 
 const submitRename = async () => {
@@ -649,7 +648,6 @@ const onArchiveToggle = (session: IBotSession) => {
         <Label for="bot-rename-input">{{ t("ai.chatTitle") }}</Label>
         <Input
           id="bot-rename-input"
-          ref="renameInputEl"
           v-model="renameInput"
           :placeholder="t('ai.chatTitlePlaceholder')"
           maxlength="120"

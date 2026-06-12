@@ -1,9 +1,8 @@
 import {
   IconBuilding,
   IconCheckSquare2,
-  IconCircleUser,
+  IconCircleDotDashed,
   IconCopy,
-  IconCreditCard,
   IconHelpCircle,
   IconHistory,
   IconKeyboard,
@@ -12,7 +11,6 @@ import {
   IconMinusSquare,
   IconMonitor,
   IconMoon,
-  IconPalette,
   IconPanelBottom,
   IconPanelLeft,
   IconPanelRight,
@@ -359,11 +357,18 @@ const generateTabSelectionShortcuts = (): Shortcut[] =>
  *
  * Categories are ordered by frequency of use:
  * 1. General - Most common actions
- * 2. Navigation - Tab and panel management
+ * 2. Tabs - Tab management (desktop hotkeys)
  * 3. Layout - UI arrangement
- * 4. Settings - Configuration access
+ * 4. Team - Team settings hotkeys
  * 5. Appearance - Theme switching (commands only)
  * 6. Account - User actions
+ *
+ * This file is the registry for *keyboard-bound* and *curated* commands only.
+ * The command palette (`useCommandPalette`) composes these with commands
+ * derived from other single sources — navigation from `defaultMenu`, every
+ * settings panel from `defaultSettingsTabs`, create intents from
+ * `useCreateActions`, plus live tab/workspace/team state — so don't add
+ * palette entries here for things those sources already describe.
  */
 export const shortcuts: ShortcutCategory[] = [
   // ──────────────────────────────────────────────────────────────────────────
@@ -422,6 +427,19 @@ export const shortcuts: ShortcutCategory[] = [
         event: "Menu.Help.Toggle",
         icon: IconHelpCircle,
         tags: ["help", "support", "documentation", "faq"],
+      },
+      {
+        description: ["What's new"],
+        event: "Dialog.Changelog.Open",
+        icon: IconCircleDotDashed,
+        tags: [
+          "changelog",
+          "what's new",
+          "updates",
+          "release notes",
+          "version",
+        ],
+        visibility: { hideFrom: ["hotkeys", "shortcuts"] },
       },
     ],
   },
@@ -554,41 +572,6 @@ export const shortcuts: ShortcutCategory[] = [
         event: "Panel.Bottom.Toggle",
         icon: IconPanelBottom,
         tags: ["panel", "toggle", "layout", "bottom", "terminal"],
-      },
-    ],
-  },
-
-  // ──────────────────────────────────────────────────────────────────────────
-  // Settings - Quick access to settings panels
-  // ──────────────────────────────────────────────────────────────────────────
-  {
-    title: "Settings",
-    id: "settings",
-    shortcuts: [
-      // Command palette only (no keyboard shortcuts)
-      {
-        description: ["Settings", "Account"],
-        event: "Dialog.Settings.Open",
-        parameters: "account",
-        icon: IconCircleUser,
-        tags: ["settings", "account", "profile", "user"],
-        visibility: { hideFrom: ["hotkeys", "shortcuts"] },
-      },
-      {
-        description: ["Settings", "Appearance"],
-        event: "Dialog.Settings.Open",
-        parameters: "appearance",
-        icon: IconPalette,
-        tags: ["settings", "appearance", "theme", "look"],
-        visibility: { hideFrom: ["hotkeys", "shortcuts"] },
-      },
-      {
-        description: ["Settings", "Billing"],
-        event: "Dialog.Settings.Open",
-        parameters: "billing",
-        icon: IconCreditCard,
-        tags: ["settings", "billing", "payment", "subscription"],
-        visibility: { hideFrom: ["hotkeys", "shortcuts"] },
       },
     ],
   },

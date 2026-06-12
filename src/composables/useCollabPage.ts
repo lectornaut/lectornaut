@@ -42,8 +42,11 @@ export interface UseCollabPageOptions {
     fileContent: string
   ) => string | void
   /**
-   * Called when the collab session is about to be torn down (file switch
-   * or unmount). Use to clean up editor-specific state.
+   * Called when an existing collab session is about to be torn down (file
+   * switch). Use to clean up editor-specific state. Fires only after a
+   * matching {@link onSessionCreated} — never during composable
+   * initialization, so callbacks may safely reference bindings destructured
+   * from the `useCollabPage()` return value.
    */
   onSessionDestroyed?: () => void
   /**
@@ -318,7 +321,17 @@ export function useCollabPage(
 
       const previousSession = collabSession.value
       collabSession.value = null
-      options.onSessionDestroyed?.()
+      // Only signal teardown when a session was actually created — pairs each
+      // `onSessionDestroyed` with a prior `onSessionCreated`. Crucially, the
+      // `{ immediate: true }` first run executes synchronously INSIDE the
+      // useCollabPage() call, where invoking the callback would hit the
+      // caller's not-yet-initialized destructured bindings (TDZ — code.vue's
+      // `registerEditorAdapter` threw "Cannot access ... before
+      // initialization" on every mount). `previousSession` is always null in
+      // that window, so the guard also keeps the sync prefix callback-free.
+      if (previousSession) {
+        options.onSessionDestroyed?.()
+      }
 
       // Tear down the previous file's agent-relay subscription and drop the
       // previous editor's adapter (the new editor re-registers on mount).

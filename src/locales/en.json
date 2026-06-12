@@ -4067,7 +4067,20 @@
       "commandK": {
         "placeholder": "Search or run a command",
         "tooltip": "Search and run commands",
-        "noResults": "No matches found."
+        "noResults": "No matches found.",
+        "groups": {
+          "navigate": "Go to",
+          "tabs": "Tabs",
+          "workspaces": "Workspaces",
+          "teams": "Teams",
+          "settings": "Settings"
+        },
+        "closeTab": "Close current tab",
+        "switchTab": "Switch to tab",
+        "reopenTab": "Reopen tab",
+        "switchWorkspace": "Switch workspace",
+        "switchTeam": "Switch team",
+        "urlCopied": "Copied URL to clipboard"
       }
     },
     "sidebars": {

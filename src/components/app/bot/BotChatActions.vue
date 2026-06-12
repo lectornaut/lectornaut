@@ -17,7 +17,7 @@ import {
   IconUsers,
 } from "@/data/icons"
 import type { IBotSessionVisibility } from "@/types/domain"
-import { computed, inject, nextTick, ref, type Component } from "vue"
+import { computed, inject, ref, type Component } from "vue"
 
 const botChat = inject(BotChatContextKey)
 const { t } = useI18n()
@@ -145,13 +145,12 @@ const handleShareDialogOpenChange = (value: boolean) => {
 
 const renameDialogOpen = ref(false)
 const renameInput = ref("")
-const renameInputEl = ref<HTMLInputElement | null>(null)
 
 const openRename = () => {
   if (!sessionId.value || !canManage.value) return
   renameInput.value = activeSession.value?.title ?? ""
+  // Reka-ui's DialogContent autofocuses the first tabbable (the input) on open.
   renameDialogOpen.value = true
-  nextTick(() => renameInputEl.value?.focus())
 }
 
 const submitRename = async () => {
@@ -377,7 +376,6 @@ const submitDelete = async () => {
         <Label for="bot-actions-rename-input">{{ t("ai.chatTitle") }}</Label>
         <Input
           id="bot-actions-rename-input"
-          ref="renameInputEl"
           v-model="renameInput"
           :placeholder="t('ai.chatTitlePlaceholder')"
           maxlength="120"
