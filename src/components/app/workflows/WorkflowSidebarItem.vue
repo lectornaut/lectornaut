@@ -190,13 +190,23 @@ const toggleIcon = computed(() =>
           <TooltipContent>{{ t("settings.workflows.actions") }}</TooltipContent>
           <DropdownMenuContent align="end" class="w-44">
             <template v-if="!isArchived">
-              <DropdownMenuItem :disabled="!canManage" @click="emit('runNow')">
+              <DropdownMenuItem
+                :disabled="!canManage"
+                data-hotkey="r"
+                @click="emit('runNow')"
+              >
                 <IconPlay />
                 {{ t("settings.workflows.runNow") }}
+                <DropdownMenuShortcut>R</DropdownMenuShortcut>
               </DropdownMenuItem>
-              <DropdownMenuItem :disabled="!canManage" @click="emit('edit')">
+              <DropdownMenuItem
+                :disabled="!canManage"
+                data-hotkey="e"
+                @click="emit('edit')"
+              >
                 <IconPencil />
                 {{ t("settings.workflows.edit") }}
+                <DropdownMenuShortcut>E</DropdownMenuShortcut>
               </DropdownMenuItem>
               <DropdownMenuItem
                 :disabled="!canManage"
@@ -213,33 +223,44 @@ const toggleIcon = computed(() =>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem
                   :disabled="!canManage"
+                  data-hotkey="a"
                   @click="emit('archive')"
                 >
                   <IconArchive />
                   {{ t("settings.workflows.archive") }}
+                  <DropdownMenuShortcut>A</DropdownMenuShortcut>
                 </DropdownMenuItem>
                 <DropdownMenuItem
                   variant="destructive"
                   :disabled="!canManage"
+                  data-hotkey="backspace delete"
                   @click="emit('remove')"
                 >
                   <IconTrash2 />
                   {{ t("settings.workflows.delete") }}
+                  <DropdownMenuShortcut>⌫</DropdownMenuShortcut>
                 </DropdownMenuItem>
               </template>
             </template>
             <template v-else>
-              <DropdownMenuItem :disabled="!canManage" @click="emit('restore')">
+              <DropdownMenuItem
+                :disabled="!canManage"
+                data-hotkey="a"
+                @click="emit('restore')"
+              >
                 <IconRotateCcw />
                 {{ t("settings.workflows.restore") }}
+                <DropdownMenuShortcut>A</DropdownMenuShortcut>
               </DropdownMenuItem>
               <DropdownMenuItem
                 variant="destructive"
                 :disabled="!canManage"
+                data-hotkey="backspace delete"
                 @click="emit('remove')"
               >
                 <IconTrash2 />
                 {{ t("settings.workflows.delete") }}
+                <DropdownMenuShortcut>⌫</DropdownMenuShortcut>
               </DropdownMenuItem>
             </template>
           </DropdownMenuContent>

@@ -310,9 +310,13 @@ const rowDescription = (wf: IWorkflow): string =>
                     {{ t("settings.workflows.configure") }}
                   </TooltipContent>
                   <DropdownMenuContent align="end" class="w-44">
-                    <DropdownMenuItem @select="editPreset(preset)">
+                    <DropdownMenuItem
+                      data-hotkey="e"
+                      @select="editPreset(preset)"
+                    >
                       <IconPencil />
                       {{ t("settings.workflows.edit") }}
+                      <DropdownMenuShortcut>E</DropdownMenuShortcut>
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>

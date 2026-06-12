@@ -85,19 +85,29 @@ const onDelete = (): void => {
   <DropdownMenuSeparator />
 
   <template v-if="hasReviewable">
-    <DropdownMenuItem :disabled="!canManage || busy" @click="onApprove">
+    <DropdownMenuItem
+      :disabled="!canManage || busy"
+      data-hotkey="a"
+      @click="onApprove"
+    >
       <IconCheck />
       {{ t("settings.workflows.approve") }}
       <span class="text-muted-foreground ml-auto tabular-nums">
         {{ reviewable.length }}
       </span>
+      <DropdownMenuShortcut class="ml-0">A</DropdownMenuShortcut>
     </DropdownMenuItem>
-    <DropdownMenuItem :disabled="!canManage || busy" @click="onReject">
+    <DropdownMenuItem
+      :disabled="!canManage || busy"
+      data-hotkey="x"
+      @click="onReject"
+    >
       <IconX />
       {{ t("settings.workflows.reject") }}
       <span class="text-muted-foreground ml-auto tabular-nums">
         {{ reviewable.length }}
       </span>
+      <DropdownMenuShortcut class="ml-0">X</DropdownMenuShortcut>
     </DropdownMenuItem>
     <DropdownMenuSeparator />
   </template>
@@ -105,16 +115,19 @@ const onDelete = (): void => {
   <DropdownMenuItem
     variant="destructive"
     :disabled="!canManage || busy"
+    data-hotkey="backspace delete"
     @click="onDelete"
   >
     <IconTrash2 />
     {{ t("actions.delete") }}
+    <DropdownMenuShortcut>⌫</DropdownMenuShortcut>
   </DropdownMenuItem>
 
   <DropdownMenuSeparator />
 
-  <DropdownMenuItem :disabled="busy" @click="clear">
+  <DropdownMenuItem :disabled="busy" data-hotkey="c" @click="clear">
     <IconSquareX />
     {{ t("components.dataTable.clearSelection") }}
+    <DropdownMenuShortcut>C</DropdownMenuShortcut>
   </DropdownMenuItem>
 </template>

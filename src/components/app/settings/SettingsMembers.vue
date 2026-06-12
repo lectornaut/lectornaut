@@ -463,13 +463,19 @@ const formatCreatedAt = (
                                 <DropdownMenuContent>
                                   <AlertDialog>
                                     <AlertDialogTrigger as-child>
-                                      <DropdownMenuItem @select.prevent>
+                                      <DropdownMenuItem
+                                        data-hotkey="x"
+                                        @select.prevent
+                                      >
                                         <IconLogOut />
                                         {{
                                           member.userId === user?.uid
                                             ? t("settings.members.exit")
                                             : t("settings.members.remove")
                                         }}
+                                        <DropdownMenuShortcut>
+                                          X
+                                        </DropdownMenuShortcut>
                                       </DropdownMenuItem>
                                     </AlertDialogTrigger>
                                     <AlertDialogContent>

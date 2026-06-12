@@ -401,18 +401,30 @@ const onArchiveToggle = (session: IBotSession) => {
                               t("ai.chatActions")
                             }}</TooltipContent>
                             <DropdownMenuContent align="end">
-                              <DropdownMenuItem @click="openRename(item)">
+                              <DropdownMenuItem
+                                data-hotkey="r"
+                                @click="openRename(item)"
+                              >
                                 <IconPencil />
                                 {{ t("actions.rename") }}
+                                <DropdownMenuShortcut>R</DropdownMenuShortcut>
                               </DropdownMenuItem>
-                              <DropdownMenuItem @click="onArchiveToggle(item)">
+                              <DropdownMenuItem
+                                data-hotkey="a"
+                                @click="onArchiveToggle(item)"
+                              >
                                 <IconArchive />
                                 {{ t("ai.archive") }}
+                                <DropdownMenuShortcut>A</DropdownMenuShortcut>
                               </DropdownMenuItem>
                               <DropdownMenuSeparator />
-                              <DropdownMenuItem @click="openDelete(item)">
+                              <DropdownMenuItem
+                                data-hotkey="backspace delete"
+                                @click="openDelete(item)"
+                              >
                                 <IconTrash2 />
                                 {{ t("actions.delete") }}
+                                <DropdownMenuShortcut>⌫</DropdownMenuShortcut>
                               </DropdownMenuItem>
                             </DropdownMenuContent>
                           </DropdownMenu>
@@ -584,18 +596,30 @@ const onArchiveToggle = (session: IBotSession) => {
                               t("ai.chatActions")
                             }}</TooltipContent>
                             <DropdownMenuContent align="end">
-                              <DropdownMenuItem @click="onArchiveToggle(item)">
+                              <DropdownMenuItem
+                                data-hotkey="a"
+                                @click="onArchiveToggle(item)"
+                              >
                                 <IconRotateCcw />
                                 {{ t("ai.restore") }}
+                                <DropdownMenuShortcut>A</DropdownMenuShortcut>
                               </DropdownMenuItem>
-                              <DropdownMenuItem @click="openRename(item)">
+                              <DropdownMenuItem
+                                data-hotkey="r"
+                                @click="openRename(item)"
+                              >
                                 <IconPencil />
                                 {{ t("actions.rename") }}
+                                <DropdownMenuShortcut>R</DropdownMenuShortcut>
                               </DropdownMenuItem>
                               <DropdownMenuSeparator />
-                              <DropdownMenuItem @click="openDelete(item)">
+                              <DropdownMenuItem
+                                data-hotkey="backspace delete"
+                                @click="openDelete(item)"
+                              >
                                 <IconTrash2 />
                                 {{ t("actions.delete") }}
+                                <DropdownMenuShortcut>⌫</DropdownMenuShortcut>
                               </DropdownMenuItem>
                             </DropdownMenuContent>
                           </DropdownMenu>

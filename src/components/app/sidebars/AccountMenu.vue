@@ -62,22 +62,26 @@ const { t } = useI18n()
               </DropdownMenuLabel>
               <DropdownMenuSeparator />
               <DropdownMenuGroup>
-                <DropdownMenuItem as-child>
+                <DropdownMenuItem as-child data-hotkey="p">
                   <RouterLink to="/profile">
                     <IconUserRound />
                     {{ t("accountMenu.profile") }}
+                    <DropdownMenuShortcut>P</DropdownMenuShortcut>
                   </RouterLink>
                 </DropdownMenuItem>
                 <DropdownMenuItem
+                  data-hotkey="a"
                   @click="emitter.emit('Dialog.Settings.Open', 'account')"
                 >
                   <IconUserCog />
                   {{ t("accountMenu.account") }}
+                  <DropdownMenuShortcut>A</DropdownMenuShortcut>
                 </DropdownMenuItem>
-                <DropdownMenuItem as-child>
+                <DropdownMenuItem as-child data-hotkey="i">
                   <RouterLink to="/invitations">
                     <IconUserRoundPlus />
                     Invitations
+                    <DropdownMenuShortcut>I</DropdownMenuShortcut>
                   </RouterLink>
                 </DropdownMenuItem>
               </DropdownMenuGroup>
@@ -94,22 +98,26 @@ const { t } = useI18n()
         </ContextMenuTrigger>
         <ContextMenuContent>
           <ContextMenuGroup>
-            <ContextMenuItem as-child>
+            <ContextMenuItem as-child data-hotkey="p">
               <RouterLink to="/profile">
                 <IconUserRound />
                 {{ t("accountMenu.profile") }}
+                <ContextMenuShortcut>P</ContextMenuShortcut>
               </RouterLink>
             </ContextMenuItem>
             <ContextMenuItem
+              data-hotkey="a"
               @click="emitter.emit('Dialog.Settings.Open', 'account')"
             >
               <IconUserCog />
               {{ t("accountMenu.account") }}
+              <ContextMenuShortcut>A</ContextMenuShortcut>
             </ContextMenuItem>
-            <ContextMenuItem as-child>
+            <ContextMenuItem as-child data-hotkey="i">
               <RouterLink to="/invitations">
                 <IconUserRoundPlus />
                 Invitations
+                <ContextMenuShortcut>I</ContextMenuShortcut>
               </RouterLink>
             </ContextMenuItem>
           </ContextMenuGroup>

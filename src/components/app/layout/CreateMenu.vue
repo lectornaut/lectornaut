@@ -53,9 +53,16 @@ const { groups } = useCreateActions()
                       {{ action.disabledReason }}
                     </TooltipContent>
                   </Tooltip>
-                  <DropdownMenuItem v-else @click="action.run()">
+                  <DropdownMenuItem
+                    v-else
+                    :data-hotkey="action.hotkey"
+                    @click="action.run()"
+                  >
                     <Component :is="action.icon" :class="action.iconClass" />
                     {{ action.label }}
+                    <DropdownMenuShortcut>
+                      {{ action.hotkey.toUpperCase() }}
+                    </DropdownMenuShortcut>
                   </DropdownMenuItem>
                 </template>
               </DropdownMenuGroup>

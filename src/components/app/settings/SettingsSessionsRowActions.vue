@@ -53,18 +53,24 @@ const archived = computed(() => !!props.session.archivedAt)
       </Tooltip>
     </TooltipProvider>
     <DropdownMenuContent align="end">
-      <DropdownMenuItem @click="emit('rename', session)">
+      <DropdownMenuItem data-hotkey="r" @click="emit('rename', session)">
         <IconPencil />
         {{ t("actions.rename") }}
+        <DropdownMenuShortcut>R</DropdownMenuShortcut>
       </DropdownMenuItem>
-      <DropdownMenuItem @click="emit('archive', session)">
+      <DropdownMenuItem data-hotkey="a" @click="emit('archive', session)">
         <Component :is="archived ? IconRotateCcw : IconArchive" />
         {{ archived ? t("ai.restore") : t("ai.archive") }}
+        <DropdownMenuShortcut>A</DropdownMenuShortcut>
       </DropdownMenuItem>
       <DropdownMenuSeparator />
-      <DropdownMenuItem @click="emit('delete', session)">
+      <DropdownMenuItem
+        data-hotkey="backspace delete"
+        @click="emit('delete', session)"
+      >
         <IconTrash2 />
         {{ t("actions.delete") }}
+        <DropdownMenuShortcut>⌫</DropdownMenuShortcut>
       </DropdownMenuItem>
     </DropdownMenuContent>
   </DropdownMenu>

@@ -1125,17 +1125,21 @@ const onToolMenuCloseAutoFocus = (event: Event) => {
               <DropdownMenuContent align="start">
                 <DropdownMenuItem
                   :disabled="!canUploadFiles"
+                  data-hotkey="u"
                   @select="triggerSessionUpload"
                 >
                   <IconUpload />
                   {{ t("ai.uploadFiles") }}
+                  <DropdownMenuShortcut>U</DropdownMenuShortcut>
                 </DropdownMenuItem>
                 <DropdownMenuItem
                   :disabled="!canOpenAttachSheet"
+                  data-hotkey="c"
                   @select="attachSheetOpen = true"
                 >
                   <IconAtSign />
                   {{ t("ai.attachContext") }}
+                  <DropdownMenuShortcut>C</DropdownMenuShortcut>
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>

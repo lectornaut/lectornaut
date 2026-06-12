@@ -2,6 +2,7 @@
 import { resumeSessionWatcher } from "@/composables/useDeviceSessions"
 import { useDialogActionHotkey } from "@/composables/useDialogActionHotkey"
 import { useGlobalHotkeys } from "@/composables/useGlobalHotkeys"
+import { useMenuActionHotkey } from "@/composables/useMenuActionHotkey"
 import { useCurrentUser } from "vuefire"
 
 const user = useCurrentUser()
@@ -14,6 +15,10 @@ useGlobalHotkeys()
 // Enter fires the proceed button ([data-dialog-action], or shadcn's
 // AlertDialogAction) of whichever dialog the keystroke originates in.
 useDialogActionHotkey()
+
+// Bare keys fire the [data-hotkey] item of whichever open menu the
+// keystroke originates in (the menu-item counterpart of the above).
+useMenuActionHotkey()
 
 // Only handle redirecting logged-in users away from guest-only pages.
 // Logout redirects are NOT handled here - the router beforeEach guard

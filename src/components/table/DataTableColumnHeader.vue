@@ -29,18 +29,24 @@ defineOptions({
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent>
-        <DropdownMenuItem @click="column.toggleSorting(false)">
+        <DropdownMenuItem data-hotkey="a" @click="column.toggleSorting(false)">
           <IconArrowUp />
           Ascending
+          <DropdownMenuShortcut>A</DropdownMenuShortcut>
         </DropdownMenuItem>
-        <DropdownMenuItem @click="column.toggleSorting(true)">
+        <DropdownMenuItem data-hotkey="d" @click="column.toggleSorting(true)">
           <IconArrowDown />
           Descending
+          <DropdownMenuShortcut>D</DropdownMenuShortcut>
         </DropdownMenuItem>
         <DropdownMenuSeparator />
-        <DropdownMenuItem @click="column.toggleVisibility(false)">
+        <DropdownMenuItem
+          data-hotkey="h"
+          @click="column.toggleVisibility(false)"
+        >
           <IconEyeOff />
           Hide
+          <DropdownMenuShortcut>H</DropdownMenuShortcut>
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

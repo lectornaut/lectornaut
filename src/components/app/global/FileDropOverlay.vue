@@ -1431,10 +1431,12 @@ const isFullscreen = useIsFullscreen()
                 <DropdownMenuContent>
                   <DropdownMenuItem
                     :disabled="!hasQueuedFiles || isMoving"
+                    data-hotkey="backspace delete"
                     @click="clearQueuedFiles()"
                   >
                     <IconTrash />
                     {{ t("components.fileDropOverlay.buttons.deleteAll") }}
+                    <DropdownMenuShortcut>⌫</DropdownMenuShortcut>
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>

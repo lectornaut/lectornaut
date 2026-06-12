@@ -339,6 +339,7 @@ const formatCreatedAt = (
                                         <div>
                                           <DropdownMenuItem
                                             :disabled="!canExitTeam(membership)"
+                                            data-hotkey="x"
                                             @click="
                                               exitTeamDialog.open(
                                                 membership.team!
@@ -347,6 +348,9 @@ const formatCreatedAt = (
                                           >
                                             <IconLogOut />
                                             {{ t("settings.members.exit") }}
+                                            <DropdownMenuShortcut>
+                                              X
+                                            </DropdownMenuShortcut>
                                           </DropdownMenuItem>
                                         </div>
                                       </TooltipTrigger>
@@ -364,6 +368,7 @@ const formatCreatedAt = (
                                         <div>
                                           <DropdownMenuItem
                                             :disabled="!canEditTeam(membership)"
+                                            data-hotkey="e"
                                             @click="
                                               openTeamDialog(
                                                 'edit',
@@ -373,6 +378,9 @@ const formatCreatedAt = (
                                           >
                                             <IconPencil />
                                             {{ t("actions.edit") }}
+                                            <DropdownMenuShortcut>
+                                              E
+                                            </DropdownMenuShortcut>
                                           </DropdownMenuItem>
                                         </div>
                                       </TooltipTrigger>
@@ -391,6 +399,7 @@ const formatCreatedAt = (
                                             :disabled="
                                               !canDeleteTeam(membership)
                                             "
+                                            data-hotkey="backspace delete"
                                             @click="
                                               deleteTeamDialog.open(
                                                 membership.team!
@@ -399,6 +408,9 @@ const formatCreatedAt = (
                                           >
                                             <IconTrash />
                                             {{ t("actions.delete") }}
+                                            <DropdownMenuShortcut>
+                                              ⌫
+                                            </DropdownMenuShortcut>
                                           </DropdownMenuItem>
                                         </div>
                                       </TooltipTrigger>

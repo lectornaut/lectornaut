@@ -565,6 +565,7 @@ watch(copied, (isCopied) => {
                       <DropdownMenuGroup>
                         <DropdownMenuItem
                           :disabled="!activeTabId"
+                          data-hotkey="p"
                           @click="handleToggleTabPinned(activeTabId)"
                         >
                           <Component
@@ -575,6 +576,7 @@ watch(copied, (isCopied) => {
                               ? t("actions.unpin")
                               : t("actions.pin")
                           }}
+                          <DropdownMenuShortcut>P</DropdownMenuShortcut>
                         </DropdownMenuItem>
                       </DropdownMenuGroup>
                       <DropdownMenuSeparator />

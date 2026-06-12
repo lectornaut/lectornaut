@@ -134,25 +134,29 @@ const onToggleEnabled = (value: boolean | string): void => {
               {{ t("settings.agents.customTools.actions") }}
             </TooltipContent>
             <DropdownMenuContent align="end" class="w-44">
-              <DropdownMenuItem @select="emit('edit')">
+              <DropdownMenuItem data-hotkey="e" @select="emit('edit')">
                 <IconPencil />
                 {{ t("settings.agents.customTools.edit") }}
+                <DropdownMenuShortcut>E</DropdownMenuShortcut>
               </DropdownMenuItem>
-              <DropdownMenuItem @select="handleArchiveFromMenu">
+              <DropdownMenuItem data-hotkey="a" @select="handleArchiveFromMenu">
                 <Component :is="isArchived ? IconRotateCcw : IconArchive" />
                 {{
                   isArchived
                     ? t("settings.agents.customTools.restore")
                     : t("settings.agents.customTools.archive")
                 }}
+                <DropdownMenuShortcut>A</DropdownMenuShortcut>
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem
                 variant="destructive"
+                data-hotkey="backspace delete"
                 @select="deleteConfirmOpen = true"
               >
                 <IconTrash />
                 {{ t("settings.agents.customTools.deleteForever") }}
+                <DropdownMenuShortcut>⌫</DropdownMenuShortcut>
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>

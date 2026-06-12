@@ -60,35 +60,49 @@ const shared = computed(() => props.memory.visibility === "shared")
         </TooltipTrigger>
         <TooltipContent>{{ t("settings.memory.rowActions") }}</TooltipContent>
         <DropdownMenuContent align="end">
-          <DropdownMenuItem v-if="editable" @click="emit('edit', memory)">
+          <DropdownMenuItem
+            v-if="editable"
+            data-hotkey="e"
+            @click="emit('edit', memory)"
+          >
             <IconPencil />
             {{ t("actions.edit") }}
+            <DropdownMenuShortcut>E</DropdownMenuShortcut>
           </DropdownMenuItem>
-          <DropdownMenuItem v-if="canShare" @click="emit('share', memory)">
+          <DropdownMenuItem
+            v-if="canShare"
+            data-hotkey="s"
+            @click="emit('share', memory)"
+          >
             <Component :is="shared ? IconLock : IconUsers" />
             {{
               shared ? t("settings.memory.unshare") : t("settings.memory.share")
             }}
+            <DropdownMenuShortcut>S</DropdownMenuShortcut>
           </DropdownMenuItem>
-          <DropdownMenuItem @click="emit('pin', memory)">
+          <DropdownMenuItem data-hotkey="p" @click="emit('pin', memory)">
             <Component :is="pinned ? IconPinOff : IconPin" />
             {{ pinned ? t("settings.memory.unpin") : t("settings.memory.pin") }}
+            <DropdownMenuShortcut>P</DropdownMenuShortcut>
           </DropdownMenuItem>
-          <DropdownMenuItem @click="emit('archive', memory)">
+          <DropdownMenuItem data-hotkey="a" @click="emit('archive', memory)">
             <Component :is="archived ? IconRotateCcw : IconArchive" />
             {{
               archived
                 ? t("settings.memory.restore")
                 : t("settings.memory.archive")
             }}
+            <DropdownMenuShortcut>A</DropdownMenuShortcut>
           </DropdownMenuItem>
           <DropdownMenuSeparator />
           <DropdownMenuItem
             variant="destructive"
+            data-hotkey="backspace delete"
             @click="emit('delete', memory)"
           >
             <IconTrash2 />
             {{ t("actions.delete") }}
+            <DropdownMenuShortcut>⌫</DropdownMenuShortcut>
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>

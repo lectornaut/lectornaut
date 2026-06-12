@@ -923,10 +923,12 @@ const openInfoDialog = (provider: ConnectionProvider): void => {
                             </TooltipTrigger>
                             <DropdownMenuContent align="end">
                               <DropdownMenuItem
+                                data-hotkey="i"
                                 @click="openInfoDialog(row.app.provider)"
                               >
                                 <IconInfo />
                                 {{ t("settings.connections.infoButton") }}
+                                <DropdownMenuShortcut>I</DropdownMenuShortcut>
                               </DropdownMenuItem>
                               <DropdownMenuSeparator />
                               <!-- Admin-gated, with the reason on hover —
@@ -937,6 +939,7 @@ const openInfoDialog = (provider: ConnectionProvider): void => {
                                   <div>
                                     <DropdownMenuItem
                                       :disabled="!canManage"
+                                      data-hotkey="u"
                                       @click="
                                         handleAppAction(row.app, row.installed)
                                       "
@@ -950,6 +953,9 @@ const openInfoDialog = (provider: ConnectionProvider): void => {
                                             )
                                           : t("settings.connections.installApp")
                                       }}
+                                      <DropdownMenuShortcut>
+                                        U
+                                      </DropdownMenuShortcut>
                                     </DropdownMenuItem>
                                   </div>
                                 </TooltipTrigger>
@@ -1020,6 +1026,7 @@ const openInfoDialog = (provider: ConnectionProvider): void => {
                                 <DropdownMenuSeparator />
                                 <DropdownMenuItem
                                   v-if="showConnectAction(row)"
+                                  data-hotkey="c"
                                   @click="handleConnect(row.app.provider)"
                                 >
                                   <IconLink />
@@ -1028,13 +1035,16 @@ const openInfoDialog = (provider: ConnectionProvider): void => {
                                       ? t("settings.connections.reconnect")
                                       : t("settings.connections.connect")
                                   }}
+                                  <DropdownMenuShortcut>C</DropdownMenuShortcut>
                                 </DropdownMenuItem>
                                 <DropdownMenuItem
                                   v-if="showDisconnectAction(row)"
+                                  data-hotkey="x"
                                   @click="disconnectDialog.open(row.app)"
                                 >
                                   <IconUnlink />
                                   {{ t("settings.connections.disconnect") }}
+                                  <DropdownMenuShortcut>X</DropdownMenuShortcut>
                                 </DropdownMenuItem>
                               </template>
                             </DropdownMenuContent>

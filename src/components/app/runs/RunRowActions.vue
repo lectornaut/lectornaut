@@ -73,27 +73,33 @@ const onDelete = (): Promise<void> => wrap(() => removeRun(props.run.id))
             <template v-if="isReview">
               <DropdownMenuItem
                 :disabled="!canManage || busy"
+                data-hotkey="a"
                 @click="onApprove"
               >
                 <IconCheck />
                 {{ t("settings.workflows.approve") }}
+                <DropdownMenuShortcut>A</DropdownMenuShortcut>
               </DropdownMenuItem>
               <DropdownMenuItem
                 :disabled="!canManage || busy"
+                data-hotkey="x"
                 @click="onReject"
               >
                 <IconX />
                 {{ t("settings.workflows.reject") }}
+                <DropdownMenuShortcut>X</DropdownMenuShortcut>
               </DropdownMenuItem>
               <DropdownMenuSeparator />
             </template>
 
             <DropdownMenuItem
               :disabled="!canManage || busy || !workflowExists"
+              data-hotkey="r"
               @click="onRunAgain"
             >
               <IconRepeat />
               {{ t("settings.workflows.runAgain") }}
+              <DropdownMenuShortcut>R</DropdownMenuShortcut>
             </DropdownMenuItem>
 
             <DropdownMenuSeparator />
@@ -101,10 +107,12 @@ const onDelete = (): Promise<void> => wrap(() => removeRun(props.run.id))
             <DropdownMenuItem
               variant="destructive"
               :disabled="!canManage || busy"
+              data-hotkey="backspace delete"
               @click="confirmOpen = true"
             >
               <IconTrash2 />
               {{ t("settings.workflows.deleteRun") }}
+              <DropdownMenuShortcut>⌫</DropdownMenuShortcut>
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>

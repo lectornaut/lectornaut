@@ -135,30 +135,40 @@ const onToggleEnabled = (value: boolean | string): void => {
               {{ t("settings.workflows.configure") }}
             </TooltipContent>
             <DropdownMenuContent align="end" class="w-44">
-              <DropdownMenuItem @select="emit('edit')">
+              <DropdownMenuItem data-hotkey="e" @select="emit('edit')">
                 <IconPencil />
                 {{ t("settings.workflows.edit") }}
+                <DropdownMenuShortcut>E</DropdownMenuShortcut>
               </DropdownMenuItem>
               <template v-if="canArchive || isArchived || canDelete">
                 <DropdownMenuSeparator />
-                <DropdownMenuItem v-if="isArchived" @select="emit('restore')">
+                <DropdownMenuItem
+                  v-if="isArchived"
+                  data-hotkey="a"
+                  @select="emit('restore')"
+                >
                   <IconRotateCcw />
                   {{ t("settings.workflows.restore") }}
+                  <DropdownMenuShortcut>A</DropdownMenuShortcut>
                 </DropdownMenuItem>
                 <DropdownMenuItem
                   v-else-if="canArchive"
+                  data-hotkey="a"
                   @select="emit('archive')"
                 >
                   <IconArchive />
                   {{ t("settings.workflows.archive") }}
+                  <DropdownMenuShortcut>A</DropdownMenuShortcut>
                 </DropdownMenuItem>
                 <DropdownMenuItem
                   v-if="canDelete"
                   variant="destructive"
+                  data-hotkey="backspace delete"
                   @select="deleteConfirmOpen = true"
                 >
                   <IconTrash />
                   {{ t("settings.workflows.delete") }}
+                  <DropdownMenuShortcut>⌫</DropdownMenuShortcut>
                 </DropdownMenuItem>
               </template>
             </DropdownMenuContent>

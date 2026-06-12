@@ -391,15 +391,25 @@ onMounted(() => {
                               </DropdownMenuTrigger>
                             </TooltipTrigger>
                             <DropdownMenuContent>
-                              <DropdownMenuItem @click="openEdit(group)">
+                              <DropdownMenuItem
+                                data-hotkey="e"
+                                @click="openEdit(group)"
+                              >
                                 <IconPencil />
                                 {{ t("settings.groups.edit") }}
+                                <DropdownMenuShortcut>E</DropdownMenuShortcut>
                               </DropdownMenuItem>
                               <AlertDialog>
                                 <AlertDialogTrigger as-child>
-                                  <DropdownMenuItem @select.prevent>
+                                  <DropdownMenuItem
+                                    data-hotkey="backspace delete"
+                                    @select.prevent
+                                  >
                                     <IconTrash />
                                     {{ t("settings.groups.delete") }}
+                                    <DropdownMenuShortcut>
+                                      ⌫
+                                    </DropdownMenuShortcut>
                                   </DropdownMenuItem>
                                 </AlertDialogTrigger>
                                 <AlertDialogContent>

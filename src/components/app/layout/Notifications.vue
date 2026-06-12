@@ -217,17 +217,29 @@ useInfiniteScroll(
                       </DropdownMenuSubTrigger>
                     </DropdownMenuItem>
                     <DropdownMenuSubContent>
-                      <DropdownMenuItem @click="markAllInbox(activeTab)">
+                      <DropdownMenuItem
+                        data-hotkey="i"
+                        @click="markAllInbox(activeTab)"
+                      >
                         <IconInbox />
                         {{ t("components.notifications.inbox") }}
+                        <DropdownMenuShortcut>I</DropdownMenuShortcut>
                       </DropdownMenuItem>
-                      <DropdownMenuItem @click="markAllSaved(activeTab)">
+                      <DropdownMenuItem
+                        data-hotkey="s"
+                        @click="markAllSaved(activeTab)"
+                      >
                         <IconBookmark />
                         {{ t("components.notifications.saved") }}
+                        <DropdownMenuShortcut>S</DropdownMenuShortcut>
                       </DropdownMenuItem>
-                      <DropdownMenuItem @click="markAllDone(activeTab)">
+                      <DropdownMenuItem
+                        data-hotkey="d"
+                        @click="markAllDone(activeTab)"
+                      >
                         <IconCheck />
                         {{ t("components.notifications.done") }}
+                        <DropdownMenuShortcut>D</DropdownMenuShortcut>
                       </DropdownMenuItem>
                     </DropdownMenuSubContent>
                   </DropdownMenuSub>
@@ -239,20 +251,32 @@ useInfiniteScroll(
                       </DropdownMenuSubTrigger>
                     </DropdownMenuItem>
                     <DropdownMenuSubContent>
-                      <DropdownMenuItem @click="markAllRead(activeTab)">
+                      <DropdownMenuItem
+                        data-hotkey="r"
+                        @click="markAllRead(activeTab)"
+                      >
                         <IconEye />
                         {{ t("components.notifications.read") }}
+                        <DropdownMenuShortcut>R</DropdownMenuShortcut>
                       </DropdownMenuItem>
-                      <DropdownMenuItem @click="markAllUnread(activeTab)">
+                      <DropdownMenuItem
+                        data-hotkey="u"
+                        @click="markAllUnread(activeTab)"
+                      >
                         <IconEyeOff />
                         {{ t("components.notifications.unread") }}
+                        <DropdownMenuShortcut>U</DropdownMenuShortcut>
                       </DropdownMenuItem>
                     </DropdownMenuSubContent>
                   </DropdownMenuSub>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem @click="deleteAllNotifications(activeTab)">
+                  <DropdownMenuItem
+                    data-hotkey="backspace delete"
+                    @click="deleteAllNotifications(activeTab)"
+                  >
                     <IconTrash />
                     {{ t("components.notifications.deleteAll") }}
+                    <DropdownMenuShortcut>⌫</DropdownMenuShortcut>
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>

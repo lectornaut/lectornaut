@@ -43,6 +43,8 @@ export interface CreateAction {
   iconClass: string
   disabled: boolean
   disabledReason: string | null
+  /** Single-letter menu accelerator (see `useMenuActionHotkey`), lowercase. */
+  hotkey: string
   run: () => void | Promise<void>
 }
 
@@ -116,6 +118,17 @@ export function useCreateActions() {
     workspace: () => emitter.emit("Dialog.CreateWorkspace.Open"),
   }
 
+  // Per-intent menu accelerator — first letter of the label ("Document",
+  // "Code file", …) except Workspace, which yields W to Workflow.
+  const hotkeyById: Record<CreateMenuId, string> = {
+    write: "d",
+    code: "c",
+    agent: "a",
+    tool: "t",
+    workflow: "w",
+    workspace: "s",
+  }
+
   // Per-intent reactive gate. Evaluated inside the `groups` computed so the
   // menu re-reads it as permissions / toggles change.
   const gateById: Record<
@@ -161,6 +174,7 @@ export function useCreateActions() {
             iconClass: item.style.text,
             disabled,
             disabledReason: reason,
+            hotkey: hotkeyById[item.id],
             run: runById[item.id],
           }
         }),

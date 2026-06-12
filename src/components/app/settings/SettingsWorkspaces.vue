@@ -343,6 +343,7 @@ const formatCreatedAt = (value: IWorkspace["createdAt"] | null | undefined) => {
                                             :disabled="
                                               !canUpdateWorkspace(workspace.id)
                                             "
+                                            data-hotkey="e"
                                             @click="
                                               openWorkspaceDialog(
                                                 'edit',
@@ -352,6 +353,9 @@ const formatCreatedAt = (value: IWorkspace["createdAt"] | null | undefined) => {
                                           >
                                             <IconPencil />
                                             {{ t("actions.edit") }}
+                                            <DropdownMenuShortcut>
+                                              E
+                                            </DropdownMenuShortcut>
                                           </DropdownMenuItem>
                                         </div>
                                       </TooltipTrigger>
@@ -372,6 +376,7 @@ const formatCreatedAt = (value: IWorkspace["createdAt"] | null | undefined) => {
                                             :disabled="
                                               !canDeleteWorkspace(workspace.id)
                                             "
+                                            data-hotkey="backspace delete"
                                             @click="
                                               deleteWorkspaceDialog.open(
                                                 workspace
@@ -380,6 +385,9 @@ const formatCreatedAt = (value: IWorkspace["createdAt"] | null | undefined) => {
                                           >
                                             <IconTrash />
                                             {{ t("actions.delete") }}
+                                            <DropdownMenuShortcut>
+                                              ⌫
+                                            </DropdownMenuShortcut>
                                           </DropdownMenuItem>
                                         </div>
                                       </TooltipTrigger>
