@@ -28,6 +28,11 @@ import { ref } from "vue"
  * AVAILABLE; per-workspace enable/configure lives on the Workflows settings
  * page — a separate axis, like agents'/tools' enable/disable.
  *
+ * External-account apps (Connections) live on their own page —
+ * `SettingsConnections`, under the Team section: they're credentialed
+ * third-party links with member-level account binding, not catalog
+ * membership, so they don't belong behind this page's admin wall.
+ *
  * Owner/admin only: members who can view settings but can't manage see an
  * admin wall (mirrors SettingsSecurity); guests get `SettingsRestricted`.
  */

@@ -21,7 +21,7 @@ import { useAuthStore } from "@/stores/authStore"
 import { useMembershipStore } from "@/stores/membershipStore"
 import { useTeamAgentsStore } from "@/stores/teamAgentsStore"
 import type { IWorkflow } from "@/types/domain"
-import { isAgentMembership } from "@/types/membership"
+import { isAgentMembership, isUserMembership } from "@/types/membership"
 import { storeToRefs } from "pinia"
 import { computed, ref, watch } from "vue"
 
@@ -81,7 +81,8 @@ const agentAvatarSeed = (agent: {
 }): string => agent.avatarSeed.trim() || agent.name.trim() || agent.id
 
 const authStore = useAuthStore()
-const { currentTeamId, currentWorkspaceId } = storeToRefs(authStore)
+const { currentTeamId, currentWorkspaceId, currentUser } =
+  storeToRefs(authStore)
 
 interface WorkflowFormDraft {
   name: string
@@ -100,6 +101,8 @@ interface WorkflowFormDraft {
   targetScope: "code" | "write"
   updateMode: "automatic" | "require_review"
   contextNodes: WorkflowNodeRefInput[]
+  /** P3 — member whose connection bindings headless runs act through. */
+  actsAsUid: string | null
 }
 
 const emptyDraft = (): WorkflowFormDraft => ({
@@ -119,6 +122,7 @@ const emptyDraft = (): WorkflowFormDraft => ({
   targetScope: "write",
   updateMode: "require_review",
   contextNodes: [],
+  actsAsUid: null,
 })
 
 const draft = ref<WorkflowFormDraft>(emptyDraft())
@@ -158,6 +162,32 @@ const selectedAgent = computed<{
   }
   return pickerAgents.value.find((agent) => agent.id === id) ?? null
 })
+
+// ── Connections access (P3) ─────────────────────────────────────────────────
+// "Run with my connected accounts": headless runs may read connection-backed
+// tools (e.g. Google Calendar) through the binding owner's account. Consent
+// is structural — the server accepts only the CALLER's own uid — so the
+// toggle always writes MY uid; turning it on over someone else's binding
+// replaces it with mine (their grant is surfaced in the hint below). OFF
+// clears (`null`) — any editor may revoke.
+const actsAsBindingOn = computed(() => draft.value.actsAsUid !== null)
+const actsAsIsOther = computed(
+  () =>
+    draft.value.actsAsUid !== null &&
+    draft.value.actsAsUid !== (currentUser.value?.uid ?? null)
+)
+const actsAsOtherName = computed<string>(() => {
+  const uid = draft.value.actsAsUid
+  if (!uid) return ""
+  const member = teamMembers.value.find(
+    (m) => isUserMembership(m) && m.userId === uid
+  )
+  if (!member || !isUserMembership(member)) return ""
+  return member.user?.displayName || member.user?.email || ""
+})
+const handleToggleActsAs = (on: boolean): void => {
+  draft.value.actsAsUid = on ? (currentUser.value?.uid ?? null) : null
+}
 
 const ctxScope = ref<"code" | "write">("code")
 const ctxNodeId = ref("")
@@ -233,6 +263,7 @@ const initDraft = (): void => {
   d.targetScope = wf.targetScope ?? "write"
   d.updateMode = wf.updateMode ?? "require_review"
   d.contextNodes = (wf.contextNodes ?? []).map((n) => ({ ...n }))
+  d.actsAsUid = wf.actsAsUid ?? null
   const trig = wf.trigger
   d.triggerType = trig.type
   if (trig.type === "event") {
@@ -418,6 +449,7 @@ const handleSave = async (): Promise<void> => {
     updateMode: d.updateMode,
     trigger: buildTrigger(d),
     contextNodes: d.contextNodes,
+    actsAsUid: d.actsAsUid,
   }
   if (editingId.value) {
     const ok = await update(editingId.value, shared)
@@ -1142,6 +1174,37 @@ const handleSave = async (): Promise<void> => {
                     draft.updateMode === "automatic"
                       ? t("settings.workflows.modeAutomaticHint")
                       : t("settings.workflows.modeReviewHint")
+                  }}
+                </p>
+              </div>
+
+              <!-- ── Connections access (P3) ─────────────────────────── -->
+              <div class="flex flex-col gap-1.5">
+                <Label for="wf-acts-as">
+                  {{ t("settings.workflows.connectionsLabel") }}
+                </Label>
+                <div class="flex items-center justify-between gap-2">
+                  <span class="text-sm">
+                    {{ t("settings.workflows.connectionsToggle") }}
+                  </span>
+                  <Switch
+                    id="wf-acts-as"
+                    :model-value="actsAsBindingOn"
+                    @update:model-value="(v) => handleToggleActsAs(Boolean(v))"
+                  />
+                </div>
+                <p class="text-muted-foreground text-xs">
+                  {{ t("settings.workflows.connectionsHint") }}
+                </p>
+                <!-- Bound by ANOTHER member: their consented grant powers
+                     runs; toggling replaces it with yours, off revokes. -->
+                <p v-if="actsAsIsOther" class="text-muted-foreground text-xs">
+                  {{
+                    t("settings.workflows.connectionsOther", {
+                      name:
+                        actsAsOtherName ||
+                        t("settings.workflows.connectionsOtherFallback"),
+                    })
                   }}
                 </p>
               </div>

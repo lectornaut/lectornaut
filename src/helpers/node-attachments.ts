@@ -1,27 +1,15 @@
 import { type WorkspaceNodeScope } from "@/types/nodes"
 
-export const NODE_ATTACHMENT_MAX_FILE_SIZE_BYTES = 25 * 1024 * 1024
+// Size + blocked-type gates live in the shared domain contract — the
+// server-side Drive import must apply the SAME limits (admin SDK bypasses
+// storage.rules), so both TS sides read one source. storage.rules keeps a
+// manual copy (rules can't import TS).
+export {
+  isBlockedAttachmentMimeType,
+  NODE_ATTACHMENT_MAX_FILE_SIZE_BYTES,
+} from "@lectornaut/shared/domain"
+
 export const NODE_ATTACHMENTS_STORAGE_ROOT = "attachments"
-
-// Mirrors storage.rules `isBlockedAttachmentType()`. Keep in sync.
-const BLOCKED_ATTACHMENT_MIME_PATTERNS: readonly RegExp[] = [
-  /^text\/html$/i,
-  /^application\/xhtml.*/i,
-  /^image\/svg.*/i,
-  /^application\/x-shockwave-flash$/i,
-  /^text\/javascript$/i,
-  /^application\/javascript$/i,
-]
-
-export const isBlockedAttachmentMimeType = (
-  mimeType: string | null | undefined
-): boolean => {
-  if (!mimeType) return false
-  const normalized = mimeType.trim().toLowerCase()
-  return BLOCKED_ATTACHMENT_MIME_PATTERNS.some((pattern) =>
-    pattern.test(normalized)
-  )
-}
 
 const INVALID_STORAGE_FILENAME_CHARS = /[\\/:*?"<>|]+/g
 

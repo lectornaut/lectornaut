@@ -3,13 +3,23 @@ import { useCanViewTeamSettings } from "@/composables/useCanViewTeamSettings"
 import { useAgentConfig } from "@/composables/useAgentConfig"
 import { useIntegrations } from "@/composables/useIntegrations"
 import { useTeamCustomTools } from "@/composables/useTeamCustomTools"
+import { CONNECTION_APPS } from "@/data/connectionApps"
 import { IconChevronDown, IconCirclePlus, IconWrench } from "@/data/icons"
 import { emitter } from "@/modules/mitt"
+import type { IConnection } from "@/schemas/connections"
+import { useAuthStore } from "@/stores/authStore"
 import { useIntegrationsStore } from "@/stores/integrationsStore"
+import { getConnectionsCollection } from "@/utils/firebase/firebase-helpers"
+import {
+  useCollectionQuery,
+  type CollectionQuerySource,
+} from "@/utils/firebase/firebase-query"
+import { CONNECTION_TOOL_KEYS } from "@lectornaut/shared/domain"
 import type { ITeamCustomTool } from "@/types/domain"
+import { storeToRefs } from "pinia"
 
 /**
- * SettingsTools — two sibling sections, top-to-bottom:
+ * SettingsTools — three sibling sections, top-to-bottom:
  *
  *   1. **Built-in tools** — enable/disable the bot's installed
  *      first-party model-callable tools (rollDice, browseInternet,
@@ -18,7 +28,16 @@ import type { ITeamCustomTool } from "@/types/domain"
  *      per-integration write, and an uninstalled tool drops out of the
  *      list entirely (install/remove lives on the Integrations page).
  *
- *   2. **Custom tools** — admin-authored Genkit tools. Inline list
+ *   2. **Connection tools** — tools contributed by connection apps
+ *      (Google Calendar, Google Drive). Same immediate per-integration
+ *      enable write as built-ins, but the install default inverts: they're
+ *      doc-backed opt-ins, so the whole section (separator included) hides
+ *      until a connection app is installed on the Integrations page — no
+ *      empty state, that page is the discovery surface. Rows are key-driven
+ *      (one per installed `CONNECTION_TOOL_KEYS` entry), so a new app needs
+ *      only its `settings.agents.tools.{key}.*` locale entries.
+ *
+ *   3. **Custom tools** — admin-authored Genkit tools. Inline list
  *      with active / disabled / archived collapsibles, row actions,
  *      and dialog editor. The team-wide `customTools` gate sits at
  *      the top of this section.
@@ -110,6 +129,63 @@ const isToolInstalled = (name: string): boolean =>
   builtInToolState.value.get(name)?.installed ?? true
 const isBuiltInToolEnabled = (name: string): boolean =>
   builtInToolState.value.get(name)?.enabled ?? true
+/**
+ * Connection-contributed tools invert the default: they're doc-backed
+ * (opt-in), so "no doc" means NOT installed — the row appears only while the
+ * connection app is installed on the Integrations page. (Built-ins above use
+ * `?? true` because absence means "never diverged from the shipped default".)
+ */
+const isConnectionToolInstalled = (name: string): boolean =>
+  builtInToolState.value.get(name)?.installed ?? false
+// Drives both the section gate and the per-tool rows. Keys come from the
+// shared vocabulary (the app directory's `toolKeys` mirror it), so a new
+// connection app surfaces here without touching this component's logic.
+const installedConnectionToolKeys = computed(() =>
+  CONNECTION_TOOL_KEYS.filter((name) => isConnectionToolInstalled(name))
+)
+const hasConnectionTools = computed(
+  () => installedConnectionToolKeys.value.length > 0
+)
+
+/**
+ * Team-wide kill switch reflection (Settings → Connections → info dialog →
+ * "Enabled for the team"). While the OWNING connection is `status:
+ * "disabled"`, the server force-drops its tools from dispatch regardless of
+ * the per-tool enable bit — so the rows below lock their Switch and show a
+ * badge instead of silently lying. A plain connections-doc read, NOT
+ * `useConnections` (which would pull binding listeners + the GIS preload
+ * onto this page); the underlying subscription dedupes with the Connections
+ * page's via the query cache.
+ */
+const authStore = useAuthStore()
+const { currentTeamId } = storeToRefs(authStore)
+const connectionsQuery = useCollectionQuery<IConnection>(
+  (): CollectionQuerySource | null => {
+    const teamId = currentTeamId.value
+    if (!teamId) return null
+    return {
+      query: getConnectionsCollection(teamId),
+      path: `teams/${teamId}/connections`,
+    }
+  }
+)
+const PROVIDER_BY_TOOL_KEY = new Map(
+  CONNECTION_APPS.flatMap((app) =>
+    app.toolKeys.map((key) => [key, app.provider] as const)
+  )
+)
+const disabledConnectionProviders = computed<Set<string>>(
+  () =>
+    new Set(
+      (connectionsQuery.data.value ?? [])
+        .filter((c) => c?.status === "disabled")
+        .map((c) => c!.provider)
+    )
+)
+const isConnectionToolKilled = (name: string): boolean => {
+  const provider = PROVIDER_BY_TOOL_KEY.get(name)
+  return !!provider && disabledConnectionProviders.value.has(provider)
+}
 const handleToggleBuiltInTool = async (
   name: string,
   value: boolean
@@ -326,6 +402,62 @@ const handleRemoveTool = async (tool: ITeamCustomTool): Promise<void> => {
           </EmptyHeader>
         </Empty>
       </FieldSet>
+
+      <!-- ── Connection tools ───────────────────────────────────── -->
+      <!--
+          Doc-backed opt-ins contributed by connection apps. The section
+          (separator included) renders only while at least one app is
+          installed on Integrations — no empty state here; that page is
+          the discovery surface. One row per installed tool key, labels
+          from the same `settings.agents.tools.{key}.*` locale entries the
+          connection info dialog's Overview tab reads — a new app's tool
+          surfaces here with locale entries alone.
+        -->
+      <template v-if="hasConnectionTools">
+        <FieldSeparator />
+
+        <FieldSet>
+          <Field orientation="horizontal">
+            <FieldContent>
+              <FieldLabel>
+                {{ t("settings.agents.tools.connectionTools.label") }}
+              </FieldLabel>
+              <FieldDescription>
+                {{ t("settings.agents.tools.connectionTools.description") }}
+              </FieldDescription>
+            </FieldContent>
+          </Field>
+
+          <Field
+            v-for="toolKey in installedConnectionToolKeys"
+            :key="toolKey"
+            orientation="horizontal"
+          >
+            <FieldContent>
+              <FieldLabel :for="`agent-tool-connection-${toolKey}`">
+                {{ t(`settings.agents.tools.${toolKey}.label`) }}
+                <!-- Connection-level kill switch outranks this per-tool
+                     enable: the server won't dispatch the tool either way,
+                     so the Switch locks to avoid posing a dead control. -->
+                <Badge v-if="isConnectionToolKilled(toolKey)" variant="outline">
+                  {{ t("settings.agents.tools.disabledForTeam") }}
+                </Badge>
+              </FieldLabel>
+              <FieldDescription>
+                {{ t(`settings.agents.tools.${toolKey}.description`) }}
+              </FieldDescription>
+            </FieldContent>
+            <Switch
+              :id="`agent-tool-connection-${toolKey}`"
+              :model-value="isBuiltInToolEnabled(toolKey)"
+              :disabled="!canEdit || isConnectionToolKilled(toolKey)"
+              @update:model-value="
+                (v) => handleToggleBuiltInTool(toolKey, Boolean(v))
+              "
+            />
+          </Field>
+        </FieldSet>
+      </template>
 
       <FieldSeparator />
 

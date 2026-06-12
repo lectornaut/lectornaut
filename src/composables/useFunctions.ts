@@ -1958,6 +1958,12 @@ export interface CreateWorkflowDraft {
   /** `require_review` (default) stages edits for approval; `automatic` applies. */
   updateMode?: WorkflowUpdateModeInput
   enabled?: boolean
+  /**
+   * P3 — run headless turns with this member's connection bindings ("runs
+   * with {member}'s connected accounts"). The server accepts only the
+   * CALLER's own uid (consent is structural); null clears.
+   */
+  actsAsUid?: string | null
 }
 
 /** Update can change anything except the immutable agent/workspace binding. */
@@ -2160,6 +2166,162 @@ export const deleteIntegration = createTypedCallable<
   DeleteIntegrationRequest,
   DeleteIntegrationResponse
 >("deleteIntegration")
+
+// =============================================================================
+// Connection Functions (docs/connections-feature.prompt.md)
+// =============================================================================
+
+/** Install/uninstall target an app by its provider key (admin-only). */
+export interface ConnectionRequest {
+  teamId: string
+  provider: string
+}
+
+export interface ConnectionMutationResponse {
+  ok: true
+}
+
+/**
+ * Exchange the GIS popup's one-time authorization code for the caller's own
+ * binding (member-gated; the server holds the OAuth client secret).
+ */
+export interface CompleteConnectionBindingRequest extends ConnectionRequest {
+  code: string
+  /**
+   * Desktop (Tauri) system-browser flow only: the loopback redirect the
+   * authorization used. The server allowlists loopback hosts and falls back
+   * to the web flow's `postmessage` when omitted.
+   */
+  redirectUri?: string
+}
+
+export interface CompleteConnectionBindingResponse {
+  ok: true
+  /** The bound Google account's email, when the id_token carried one. */
+  email: string | null
+}
+
+export const installConnection = createTypedCallable<
+  ConnectionRequest,
+  ConnectionMutationResponse
+>("installConnection")
+
+export const uninstallConnection = createTypedCallable<
+  ConnectionRequest,
+  ConnectionMutationResponse
+>("uninstallConnection")
+
+export interface SetConnectionDisabledRequest extends ConnectionRequest {
+  /** true = team-wide kill switch on; false = re-enable. */
+  disabled: boolean
+}
+
+/**
+ * Owner/Admin team-wide kill switch — pauses the app (tool registration,
+ * token minting, new connects) without touching bindings or integration
+ * docs. Distinct from `uninstallConnection`, which removes them.
+ */
+export const setConnectionDisabled = createTypedCallable<
+  SetConnectionDisabledRequest,
+  ConnectionMutationResponse
+>("setConnectionDisabled")
+
+export const completeConnectionBinding = createTypedCallable<
+  CompleteConnectionBindingRequest,
+  CompleteConnectionBindingResponse
+>("completeConnectionBinding")
+
+export const removeConnectionBinding = createTypedCallable<
+  ConnectionRequest,
+  ConnectionMutationResponse
+>("removeConnectionBinding")
+
+/**
+ * Drive picker backend (docs/connections-google-drive-d3.prompt.md): browse
+ * the CALLER's connected Google Drive server-side — the in-app replacement
+ * for Google's Picker widget, so OAuth tokens never reach the browser.
+ */
+export interface DriveFileRow {
+  id: string
+  name: string
+  mimeType: string
+  modifiedTime: string | null
+  owner: string | null
+  link: string | null
+  /** Bytes; null for native Google files. */
+  size: number | null
+}
+
+export interface ListDriveFilesRequest {
+  teamId: string
+  query?: string
+  mimeClass?: string
+  /** Restrict to a folder (id or Drive URL). */
+  folderId?: string
+  pageToken?: string
+}
+
+export interface ListDriveFilesResponse {
+  files: DriveFileRow[]
+  nextPageToken: string | null
+}
+
+export const listDriveFiles = createTypedCallable<
+  ListDriveFilesRequest,
+  ListDriveFilesResponse
+>("listDriveFiles")
+
+/**
+ * Import one Drive file as a chat-session attachment. Bytes move
+ * Google→Functions→Storage server-side; Docs arrive as markdown, Sheets as
+ * CSV, everything else (PDFs, images) as raw bytes — same size/blocked-type
+ * gates as direct uploads.
+ */
+export interface ImportDriveSessionAttachmentRequest {
+  teamId: string
+  workspaceId: string
+  sessionId: string
+  /** Drive file id or URL from a listDriveFiles row. */
+  fileId: string
+}
+
+export interface ImportDriveSessionAttachmentResponse {
+  attachmentId: string
+  displayName: string
+  mimeType: string
+  size: number
+}
+
+export const importDriveSessionAttachment = createTypedCallable<
+  ImportDriveSessionAttachmentRequest,
+  ImportDriveSessionAttachmentResponse
+>("importDriveSessionAttachment")
+
+/**
+ * Import one Drive file as a WORKSPACE NODE attachment — same server-side
+ * byte path and gates as the session variant, landing in the node's
+ * attachments subcollection (audit-logged like direct uploads).
+ */
+export interface ImportDriveNodeAttachmentRequest {
+  teamId: string
+  workspaceId: string
+  scope: WorkspaceNodeScope
+  nodeId: string
+  /** Drive file id or URL from a listDriveFiles row. */
+  fileId: string
+}
+
+export interface ImportDriveNodeAttachmentResponse {
+  attachmentId: string
+  displayName: string
+  mimeType: string
+  size: number
+}
+
+export const importDriveNodeAttachment = createTypedCallable<
+  ImportDriveNodeAttachmentRequest,
+  ImportDriveNodeAttachmentResponse
+>("importDriveNodeAttachment")
 
 /**
  * Materialize a predefined catalog workflow as a `presetKey != null` instance.

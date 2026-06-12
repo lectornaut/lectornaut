@@ -41,6 +41,7 @@ import { NODE_SCOPES } from "./domain.js"
 import { db } from "./firebase.js"
 import { ai } from "./genkitClient.js"
 import { redactText } from "./genkitMiddleware.js"
+import { pickCodeFence } from "./nodeAttachments.js"
 import { runStructuredGeneration } from "./structuredGeneration.js"
 import { extractPlainText } from "./tiptapText.js"
 import type { NodeType, WorkspaceNodeScope } from "./types.js"
@@ -205,29 +206,6 @@ async function loadOneNode(
     isArchived: data.isArchived === true,
     content,
   }
-}
-
-/**
- * Pick a code-fence length that the content can't escape. Mirrors
- * `botContext.ts::pickCodeFence` — CommonMark requires the closing fence
- * to have at least as many backticks as the opening, so by scanning for
- * the longest backtick run inside `content` and using one more we
- * guarantee no node body can prematurely close the fence and inject
- * text at the prompt level. Duplicated rather than imported to keep
- * `botCompare.ts`'s import graph independent from `botContext.ts`.
- */
-function pickCodeFence(content: string): string {
-  let longestRun = 0
-  let currentRun = 0
-  for (let i = 0; i < content.length; i += 1) {
-    if (content.charCodeAt(i) === 0x60 /* ` */) {
-      currentRun += 1
-      if (currentRun > longestRun) longestRun = currentRun
-    } else {
-      currentRun = 0
-    }
-  }
-  return "`".repeat(Math.max(3, longestRun + 1))
 }
 
 /**

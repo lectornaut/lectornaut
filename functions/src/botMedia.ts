@@ -1,10 +1,12 @@
 /**
- * Multimodal media parts for chat turns.
+ * Attachment parts for chat turns — media (image/PDF) AND inline text.
  *
  * Builds Genkit `media` Parts (base64 `data:` URLs) from files in Firebase
- * Storage so the model can actually see image/PDF attachments. Used by:
+ * Storage so the model can actually see image/PDF attachments, and inlines
+ * TEXT-LIKE bodies (markdown, CSV, JSON, … — including the Drive-import
+ * export types) as flagged text Parts. Used by:
  *   - `botContext.ts` — image/PDF attachments of attached context nodes.
- *   - (Phase 2) chat-session uploads selected for a turn.
+ *   - chat-session uploads selected for a turn (direct + Drive imports).
  *
  * Why base64 `data:` URLs (not `gs://`/`https`): it's the ONLY form accepted
  * across all three installed providers — Gemini, Anthropic/Claude, and
@@ -26,7 +28,9 @@ import { db } from "./firebase.js"
 import {
   ATTACHMENT_NAME_MAX_LENGTH,
   botSessionAttachmentsCollectionPath,
+  buildAttachmentInlineText,
   isBotSessionAttachmentStoragePath,
+  isTextLikeAttachmentMimeType,
   normalizeAttachmentDisplayName,
 } from "./nodeAttachments.js"
 
@@ -105,19 +109,82 @@ export async function buildMediaPartFromStorage(opts: {
 }
 
 /**
- * Max chat-session uploads turned into media parts on a single turn. Bounds
+ * Max chat-session uploads turned into prompt parts on a single turn. Bounds
  * request size + token cost; the per-turn selection on the client should keep
  * this well under the cap in practice.
  */
 const MAX_SESSION_MEDIA_PARTS_PER_TURN = 6
 
 /**
- * Resolve the chat-session attachment ids the user selected for this turn into
- * labeled media parts (text label + media) for the user prompt. Best-effort:
- * missing/unsupported/oversized/failed entries are skipped. Returns `[]` when
- * media is disabled, there's no session yet, or nothing was selected.
+ * Source-size gate for text inlining. Deliberately larger than the inline
+ * char budget: a big CSV/log still yields a useful truncated head, and a
+ * bounded few-MB download is cheap. Bodies beyond this fall back to the
+ * metadata-only note.
  */
-export async function loadSessionAttachmentMediaParts(opts: {
+const MAX_TEXT_SOURCE_BYTES = 2 * 1024 * 1024
+
+/**
+ * Metadata key flagging model-facing text Parts that carry attachment
+ * CONTENT (inlined file bodies / can't-inline notes). The chat-history
+ * extractor (`extractMessagesFromSessionData`) hides flagged parts from the
+ * user bubble — the user sees only their own text plus the short
+ * `[Uploaded file …]` labels, while the model sees everything. Genkit
+ * persists Part metadata in the session blob but providers never receive it.
+ */
+export const ATTACHMENT_CONTENT_PART_FLAG = "attachmentContent"
+
+/**
+ * Inline a text-like attachment body as a flagged text Part. Returns `null`
+ * when the type isn't text-like, the source is too big, the bytes aren't
+ * actually text (NUL check), or the download fails — callers fall back to a
+ * metadata-only note. Best-effort by design — never throws.
+ */
+export async function buildTextPartFromStorage(opts: {
+  storagePath: string
+  contentType: string | null
+  size: number | null
+  displayName: string
+}): Promise<Part | null> {
+  const { storagePath, contentType, size, displayName } = opts
+  if (!contentType || !isTextLikeAttachmentMimeType(contentType)) return null
+  if (typeof size === "number" && size > MAX_TEXT_SOURCE_BYTES) {
+    logger.debug(
+      `[botMedia] skip oversized text attachment path=${storagePath} size=${size} cap=${MAX_TEXT_SOURCE_BYTES}`
+    )
+    return null
+  }
+  try {
+    const [buffer] = await getStorage().bucket().file(storagePath).download()
+    // Re-check post-download in case the metadata `size` was missing/stale.
+    if (buffer.byteLength > MAX_TEXT_SOURCE_BYTES) return null
+    const text = buffer.toString("utf8")
+    // Binary masquerading under a text mime — inlining mojibake helps no one.
+    if (text.includes("\u0000")) return null
+    return {
+      text: buildAttachmentInlineText({ displayName, contentType, text }),
+      metadata: { [ATTACHMENT_CONTENT_PART_FLAG]: true },
+    }
+  } catch (err) {
+    logger.warn("[botMedia] text attachment load failed", {
+      err: String(err),
+      storagePath,
+    })
+    return null
+  }
+}
+
+/**
+ * Resolve the chat-session attachment ids the user selected for this turn
+ * into labeled prompt parts. Three shapes per attachment:
+ *   - image/PDF  → `[Uploaded file …]` label + base64 media part
+ *   - text-like  → label + flagged inline-content text part
+ *   - everything else (or an oversized/failed body) → label + a flagged
+ *     note saying the content couldn't be included — so the model never
+ *     gaslights the user with "no files attached" when a file plainly is.
+ * Missing/malformed docs are skipped. Returns `[]` when media is disabled
+ * (internal turns), there's no session yet, or nothing was selected.
+ */
+export async function loadSessionAttachmentParts(opts: {
   teamId: string
   workspaceId: string
   sessionId: string | null
@@ -157,14 +224,36 @@ export async function loadSessionAttachmentMediaParts(opts: {
           ? data.displayName
           : "file"
 
+      // Mime classes are disjoint, so at most ONE of these downloads.
       const media = await buildMediaPartFromStorage({
         storagePath,
         contentType,
         size,
       })
-      if (!media) continue
+      const inline = media
+        ? null
+        : await buildTextPartFromStorage({
+            storagePath,
+            contentType,
+            size,
+            displayName: name,
+          })
+
       parts.push({ text: `[Uploaded file "${name}"]` })
-      parts.push(media)
+      if (media) {
+        parts.push(media)
+      } else if (inline) {
+        parts.push(inline)
+      } else {
+        parts.push({
+          text:
+            `[The uploaded file "${name}" (${contentType ?? "unknown type"}) ` +
+            "is attached, but its content couldn't be included inline — the " +
+            "type or size isn't supported for viewing. Tell the user that " +
+            "if they ask about its contents.]",
+          metadata: { [ATTACHMENT_CONTENT_PART_FLAG]: true },
+        })
+      }
       count += 1
     } catch (err) {
       logger.warn("[botMedia] session attachment load failed", {

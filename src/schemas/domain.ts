@@ -997,6 +997,12 @@ export const workflowSchema = z.object({
   contextNodes: z.array(workflowNodeRefSchema).default([]),
   updateMode: workflowUpdateModeSchema.default("require_review"),
   enabled: z.boolean(),
+  /**
+   * P3 — the member whose connection bindings headless runs act through
+   * ("runs with {member}'s connected accounts"). Self-only at write time;
+   * `.optional()` keeps docs from before the field shipped readable.
+   */
+  actsAsUid: z.string().nullable().optional(),
   archivedAt: timestampSchema.nullable().optional(),
   nextRunAt: timestampSchema.nullable().optional(),
   lastRunAt: timestampSchema.nullable().optional(),

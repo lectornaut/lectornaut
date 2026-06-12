@@ -27,6 +27,7 @@ export * from "./_primitives"
 export * from "./_registry"
 export * from "./_utils"
 
+export * from "./connections"
 export * from "./domain"
 export * from "./invitation"
 export * from "./logs"

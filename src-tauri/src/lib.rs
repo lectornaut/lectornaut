@@ -1,10 +1,10 @@
+#[cfg(target_os = "macos")]
+use tauri::menu::{AboutMetadata, Submenu};
 use tauri::{
     menu::{Menu, MenuItem, PredefinedMenuItem},
     tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent},
     Emitter, Manager,
 };
-#[cfg(target_os = "macos")]
-use tauri::menu::{AboutMetadata, Submenu};
 #[cfg(any(target_os = "macos", target_os = "windows"))]
 use window_vibrancy::*;
 
@@ -64,9 +64,7 @@ fn create_tray_menu<R: tauri::Runtime>(
 /// `control_flow = Exit` and exits the event loop without ever touching
 /// `windowShouldClose:`.
 #[cfg(target_os = "macos")]
-fn create_app_menu<R: tauri::Runtime>(
-    handle: &tauri::AppHandle<R>,
-) -> tauri::Result<Menu<R>> {
+fn create_app_menu<R: tauri::Runtime>(handle: &tauri::AppHandle<R>) -> tauri::Result<Menu<R>> {
     let pkg_info = handle.package_info();
     let config = handle.config();
     let about_metadata = AboutMetadata {
@@ -173,6 +171,7 @@ pub fn run() {
         }))
         .invoke_handler(tauri::generate_handler![
             oauth::login_oauth,
+            oauth::authorize_oauth,
             app_check::build_app_check_proof,
             downloads::download_url_to_path,
             file_capture::keep_file_capture_window_open,
@@ -309,8 +308,8 @@ pub fn run() {
                         let _ = window.set_focus();
                     }
                     if let Some(tray) = _app_handle.tray_by_id("main") {
-                        let _ = create_tray_menu(_app_handle, false)
-                            .map(|m| tray.set_menu(Some(m)));
+                        let _ =
+                            create_tray_menu(_app_handle, false).map(|m| tray.set_menu(Some(m)));
                     }
                 }
             }

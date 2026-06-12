@@ -1,5 +1,8 @@
 <script lang="ts" setup>
+import DriveFilePicker from "@/components/app/sidebars/DriveFilePicker.vue"
 import { BotChatContextKey } from "@/composables/useBotChat"
+import { useMyConnectionFeature } from "@/composables/useConnections"
+import { importDriveSessionAttachment } from "@/composables/useFunctions"
 import {
   useSessionAttachmentsState,
   type BotSessionAttachmentContext,
@@ -12,6 +15,7 @@ import {
   IconFileImage,
   IconFilePdf,
   IconFileText,
+  IconLogosGoogleDrive,
   IconPencil,
   IconRefreshCcw,
   IconTrash2,
@@ -85,6 +89,31 @@ const deletingId = ref<string | null>(null)
 
 const { files: selectedFiles, open: openFileDialog } = useFileDialog({
   multiple: true,
+})
+
+// "Add from Drive" — the in-app picker (docs/connections-google-drive-d3
+// .prompt.md). Offered only while the Drive feature is actually usable:
+// app installed + admin kill switch off + the member's own account linked
+// (Settings → Connections is the discovery surface for the rest).
+const { available: driveAvailable } = useMyConnectionFeature("google-drive")
+const drivePickerOpen = ref(false)
+const importDriveFile = async (fileId: string) => {
+  const context = attachmentContext.value
+  // Unreachable in practice — the button is disabled without a session.
+  if (!context) throw new Error("Send a message to start this chat first.")
+  const { data } = await importDriveSessionAttachment({ ...context, fileId })
+  return data
+}
+const onDriveImported = (attachmentId: string, displayName: string) => {
+  // Auto-include in the next send, mirroring fresh uploads.
+  if (!isSelected(attachmentId)) toggleSelected(attachmentId)
+  showSuccessToast(`Imported "${displayName}" from Google Drive.`)
+}
+// Close the picker on session switch — the import callable reads
+// `attachmentContext` reactively, so a pick made after a switch would land
+// the file in the NEW chat.
+watch(sessionId, () => {
+  drivePickerOpen.value = false
 })
 
 const editDialogOpen = ref(false)
@@ -258,7 +287,25 @@ const handleDelete = async (attachment: IBotSessionAttachment) => {
         <IconUpload />
         <span>Upload files</span>
       </Button>
+      <Button
+        v-if="driveAvailable"
+        variant="outline"
+        size="sm"
+        :disabled="!canEdit || uploadInProgress"
+        @click="drivePickerOpen = true"
+      >
+        <IconLogosGoogleDrive />
+        <span class="sr-only">Add from Google Drive</span>
+      </Button>
     </ButtonGroup>
+
+    <DriveFilePicker
+      v-if="driveAvailable"
+      v-model:open="drivePickerOpen"
+      :team-id="attachmentContext?.teamId ?? null"
+      :import-file="importDriveFile"
+      @imported="onDriveImported"
+    />
 
     <OverlayScrollbarsWrapper>
       <div>

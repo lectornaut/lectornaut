@@ -173,6 +173,9 @@ export const LOG_RESOURCE_TYPES = [
   "membership",
   "group",
   "security",
+  "connection",
+  "integration",
+  "workflow",
 ] as const
 export type LogResourceType = (typeof LOG_RESOURCE_TYPES)[number]
 
@@ -233,6 +236,35 @@ export const AUDIT_ACTIONS = [
   "invitation.update",
   "invitation.delete",
   "invitation.decline",
+  // connection (team-level app lifecycle + per-member account bindings;
+  // resource id == provider key, e.g. "google-calendar")
+  "connection.install",
+  "connection.uninstall",
+  "connection.enable",
+  "connection.disable",
+  "connection.binding.create",
+  "connection.binding.delete",
+  // integration (agent/tool lifecycle in teams/{t}/integrations; resource id
+  // == doc id — catalog sourceKey for built-ins, auto-id for customs)
+  "integration.create",
+  "integration.update",
+  "integration.install",
+  "integration.uninstall",
+  "integration.enable",
+  "integration.disable",
+  "integration.delete",
+  // workflow (per-workspace automations + the team-tier preset availability;
+  // run.* audit the human decisions on run history, not executions)
+  "workflow.create",
+  "workflow.update",
+  "workflow.enable",
+  "workflow.disable",
+  "workflow.archive",
+  "workflow.unarchive",
+  "workflow.delete",
+  "workflow.availability.update",
+  "workflow.run.review",
+  "workflow.run.delete",
   // security
   "sso.configured",
   "sso.deleted",
@@ -437,6 +469,170 @@ export type IntegrationType = (typeof INTEGRATION_TYPES)[number]
 
 export const INTEGRATION_SOURCES = ["builtin", "custom", "published"] as const
 export type IntegrationSource = (typeof INTEGRATION_SOURCES)[number]
+
+// ============================================================================
+// Connections (installable apps backed by external accounts)
+// ============================================================================
+// See docs/connections-feature.prompt.md. A connection is the team-scoped
+// credentialed link to an external provider (doc id == provider key at
+// teams/{teamId}/connections/{provider}); the capabilities it contributes are
+// ordinary integration docs with the reserved `source: "published"`.
+
+export const CONNECTION_PROVIDERS = ["google-calendar", "google-drive"] as const
+export type ConnectionProvider = (typeof CONNECTION_PROVIDERS)[number]
+
+/**
+ * Provider-level lifecycle. `disabled` is the Owner/Admin team-wide kill
+ * switch: bindings and contributed integration docs stay intact, but the
+ * server stops registering the app's tools, refuses to mint binding access
+ * tokens, and rejects new connects until re-enabled. Absent field = active
+ * (pre-kill-switch docs).
+ */
+export const CONNECTION_STATUSES = ["active", "disabled"] as const
+export type ConnectionStatus = (typeof CONNECTION_STATUSES)[number]
+
+/**
+ * Per-member account-link health. `needs_reauth` is set server-side when a
+ * token refresh comes back `invalid_grant`; reconnecting re-runs the same
+ * OAuth popup and flips it back to `connected`.
+ */
+export const CONNECTION_BINDING_STATUSES = [
+  "connected",
+  "needs_reauth",
+] as const
+export type ConnectionBindingStatus =
+  (typeof CONNECTION_BINDING_STATUSES)[number]
+
+/**
+ * Wire-names of connection-contributed tools (integration `sourceKey`s with
+ * `source: "published"`). NOT members of `IBotAgentToolToggles` / the slash
+ * menu catalog (memory-tools precedent): they're gated by the integration
+ * doc's installed+enabled state plus a per-user binding at call time, never
+ * by a per-agent toggle (P1).
+ */
+export const GOOGLE_CALENDAR_TOOL_KEY = "googleCalendar"
+export const GOOGLE_DRIVE_TOOL_KEY = "googleDrive"
+export const CONNECTION_TOOL_KEYS = [
+  GOOGLE_CALENDAR_TOOL_KEY,
+  GOOGLE_DRIVE_TOOL_KEY,
+] as const
+export type ConnectionToolKey = (typeof CONNECTION_TOOL_KEYS)[number]
+
+/**
+ * Companion read tool to `googleDrive` (content fetch). NOT a sourceKey —
+ * no integration doc of its own; it rides the googleDrive doc's install +
+ * enable gate, the same one-gate-per-app rule as the calendar write tools.
+ */
+export const GOOGLE_DRIVE_READ_FILE_TOOL_NAME = "readDriveFile"
+
+/**
+ * Genkit wire-names of each app's confirm-gated WRITE tools (no integration
+ * docs — they ride the app's one install gate). Shared because three
+ * consumers must agree on the exact strings: the server's resume-flow
+ * dispatch + live-stream interrupt marking (connectionTools.ts / bot.ts),
+ * the client's confirm-card branch (BotChatToolCall.vue — previously a
+ * hardcoded keep-in-sync mirror), and the custom-tool wire-name collision
+ * guard (connectionProviders.ts → assertWireNameUnique).
+ */
+export const GOOGLE_CALENDAR_WRITE_TOOL_NAMES = [
+  "createCalendarEvent",
+  "updateCalendarEvent",
+] as const
+/**
+ * Drive D2 write tools — reserved in the collision guard from D1 so a team
+ * can't create a custom tool that collides the day the write tools land
+ * (which would force a rename-or-reinstall migration).
+ */
+export const GOOGLE_DRIVE_WRITE_TOOL_NAMES = [
+  "createDriveFile",
+  "updateDriveFile",
+] as const
+
+// ── OAuth scope hierarchy ───────────────────────────────────────────────────
+// Shared so the server's write gate (`hasGrantedScope` in connectionTools)
+// and the client's "reconnect for new permissions" hint
+// (`needsScopeUpgrade` in useConnections) agree: a broader grant satisfies a
+// narrower requirement, so a `calendar` grant must NOT be flagged as missing
+// `calendar.events`.
+
+export const GOOGLE_CALENDAR_FULL_SCOPE =
+  "https://www.googleapis.com/auth/calendar"
+export const GOOGLE_CALENDAR_EVENTS_SCOPE =
+  "https://www.googleapis.com/auth/calendar.events"
+export const GOOGLE_CALENDAR_EVENTS_READONLY_SCOPE =
+  "https://www.googleapis.com/auth/calendar.events.readonly"
+
+export const GOOGLE_DRIVE_FULL_SCOPE = "https://www.googleapis.com/auth/drive"
+export const GOOGLE_DRIVE_READONLY_SCOPE =
+  "https://www.googleapis.com/auth/drive.readonly"
+export const GOOGLE_DRIVE_FILE_SCOPE =
+  "https://www.googleapis.com/auth/drive.file"
+
+/** Granted scopes (key) that satisfy a required scope (value). */
+const SCOPE_SATISFIERS: Readonly<Record<string, readonly string[]>> = {
+  [GOOGLE_CALENDAR_EVENTS_SCOPE]: [
+    GOOGLE_CALENDAR_EVENTS_SCOPE,
+    GOOGLE_CALENDAR_FULL_SCOPE,
+  ],
+  [GOOGLE_CALENDAR_EVENTS_READONLY_SCOPE]: [
+    GOOGLE_CALENDAR_EVENTS_READONLY_SCOPE,
+    GOOGLE_CALENDAR_EVENTS_SCOPE,
+    GOOGLE_CALENDAR_FULL_SCOPE,
+  ],
+  // Drive's two chains are PARALLEL: `drive.file` (read+write, but only
+  // files the app created or the user picked) and `drive.readonly` (read
+  // EVERYTHING) don't satisfy each other; only full `drive` tops both.
+  [GOOGLE_DRIVE_READONLY_SCOPE]: [
+    GOOGLE_DRIVE_READONLY_SCOPE,
+    GOOGLE_DRIVE_FULL_SCOPE,
+  ],
+  [GOOGLE_DRIVE_FILE_SCOPE]: [GOOGLE_DRIVE_FILE_SCOPE, GOOGLE_DRIVE_FULL_SCOPE],
+}
+
+/**
+ * Whether `granted` includes a scope that satisfies `required` (exact match
+ * or anything broader up the hierarchy). Unknown requirements fall back to
+ * exact match.
+ */
+export function hasGrantedScope(
+  granted: readonly string[] | undefined,
+  required: string
+): boolean {
+  const satisfiers = SCOPE_SATISFIERS[required] ?? [required]
+  return (granted ?? []).some((scope) => satisfiers.includes(scope))
+}
+
+// ============================================================================
+// Attachments (upload + server-side import gates)
+// ============================================================================
+// One source for the limits THREE enforcement points must agree on: the
+// client upload helpers (`src/helpers/node-attachments.ts`), the server-side
+// Drive import (`functions/src/nodeAttachments.ts` — the admin SDK bypasses
+// storage.rules, so the server re-applies these), and storage.rules itself
+// (rules can't import TS — its copy stays manual; update it when these
+// change).
+
+export const NODE_ATTACHMENT_MAX_FILE_SIZE_BYTES = 25 * 1024 * 1024
+
+/** Types that could execute in a browser if served from storage URLs. */
+const BLOCKED_ATTACHMENT_MIME_PATTERNS: readonly RegExp[] = [
+  /^text\/html$/i,
+  /^application\/xhtml.*/i,
+  /^image\/svg.*/i,
+  /^application\/x-shockwave-flash$/i,
+  /^text\/javascript$/i,
+  /^application\/javascript$/i,
+]
+
+export const isBlockedAttachmentMimeType = (
+  mimeType: string | null | undefined
+): boolean => {
+  if (!mimeType) return false
+  const normalized = mimeType.trim().toLowerCase()
+  return BLOCKED_ATTACHMENT_MIME_PATTERNS.some((pattern) =>
+    pattern.test(normalized)
+  )
+}
 
 // ============================================================================
 // Billing

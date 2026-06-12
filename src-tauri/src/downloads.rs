@@ -1,5 +1,5 @@
-use tauri_plugin_http::reqwest::Url;
 use tauri::command;
+use tauri_plugin_http::reqwest::Url;
 use tokio::io::AsyncWriteExt;
 
 async fn remove_partial_download(target_path: &str) {

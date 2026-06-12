@@ -40,11 +40,13 @@ import {
   IconArchive,
   IconArrowRight,
   IconBookmark,
+  IconCalendar,
   IconColumns,
   IconDices,
   IconFilePlus,
   IconFileText,
   IconGlobe,
+  IconHardDrive,
   IconHelpCircle,
   IconLink,
   IconList,
@@ -290,10 +292,37 @@ const MEMORY_TOOL_DISPLAY: Readonly<
   recallMemory: { label: "Recall memory", icon: IconSparkles },
 }
 
+/**
+ * Display metadata for connection-contributed tools
+ * (docs/connections-feature.prompt.md). Like the memory tools, these are
+ * deliberately OUTSIDE `CATALOG_BY_NAME` / `IBotAgentToolToggles`: they're
+ * gated by their published integration doc (installed via the Connections
+ * section) plus a per-member account binding at call time — no per-agent
+ * toggle, no slash-menu entry in P1. This map only feeds the inline
+ * tool-call cards via `botToolLabel` / `botToolIcon`. Keys mirror
+ * `CONNECTION_TOOL_KEYS` in `@lectornaut/shared/domain`.
+ */
+const CONNECTION_TOOL_DISPLAY: Readonly<
+  Record<string, { label: string; icon: Component }>
+> = {
+  googleCalendar: { label: "Google Calendar", icon: IconCalendar },
+  // P2 confirm-gated write tools — registered server-side under the same
+  // googleCalendar install gate, so they carry no own catalog entry either.
+  createCalendarEvent: { label: "Create calendar event", icon: IconCalendar },
+  updateCalendarEvent: { label: "Update calendar event", icon: IconCalendar },
+  // Google Drive — companion read tool and the D2 confirm-gated writes all
+  // ride the googleDrive install gate.
+  googleDrive: { label: "Google Drive", icon: IconHardDrive },
+  readDriveFile: { label: "Read Drive file", icon: IconFileText },
+  createDriveFile: { label: "Create Drive file", icon: IconFilePlus },
+  updateDriveFile: { label: "Update Drive file", icon: IconSquarePen },
+}
+
 export const botToolLabel = (name: string): string | undefined =>
   CATALOG_BY_NAME[name as BotToolName]?.label ??
   NODE_TOOL_DISPLAY[name]?.label ??
-  MEMORY_TOOL_DISPLAY[name]?.label
+  MEMORY_TOOL_DISPLAY[name]?.label ??
+  CONNECTION_TOOL_DISPLAY[name]?.label
 
 /**
  * Resolve a built-in tool's wire name to its catalog icon component
@@ -304,4 +333,5 @@ export const botToolLabel = (name: string): string | undefined =>
 export const botToolIcon = (name: string): Component | undefined =>
   CATALOG_BY_NAME[name as BotToolName]?.icon ??
   NODE_TOOL_DISPLAY[name]?.icon ??
-  MEMORY_TOOL_DISPLAY[name]?.icon
+  MEMORY_TOOL_DISPLAY[name]?.icon ??
+  CONNECTION_TOOL_DISPLAY[name]?.icon

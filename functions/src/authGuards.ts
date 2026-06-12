@@ -11,6 +11,7 @@
 import { HttpsError } from "firebase-functions/v2/https"
 import { getMembershipRole } from "./bot.js"
 import { isAdminRole } from "./permissions.js"
+import type { IMembershipRole } from "./types.js"
 
 /**
  * Assert the caller is a team owner or admin; throw `permission-denied`
@@ -19,14 +20,17 @@ import { isAdminRole } from "./permissions.js"
  * what the client's UI affordances allow.
  *
  * @param message — surfaced to the client; pass a domain-specific string.
+ * @returns the verified role — callers that audit-log the mutation reuse it
+ *   as the log entry's `actor.role` instead of re-reading the membership.
  */
 export async function assertAdminRole(
   teamId: string,
   uid: string,
   message = "Only team owners and admins can manage this team."
-): Promise<void> {
+): Promise<IMembershipRole> {
   const role = await getMembershipRole(teamId, uid)
   if (!isAdminRole(role)) {
     throw new HttpsError("permission-denied", message)
   }
+  return role
 }

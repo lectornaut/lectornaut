@@ -43,8 +43,15 @@ import type { WorkspaceNodeScope } from "./types.js"
 // Shared helpers
 // ===========================================================================
 
-/** Owner/admin gate (shared role logic — see authGuards.ts + shared/permissions). */
-const assertAdminRole = (teamId: string, uid: string): Promise<void> =>
+/**
+ * Owner/admin gate (shared role logic — see authGuards.ts + shared/permissions).
+ *
+ * Generation callables are deliberately NOT audit-logged: they return a
+ * draft and mutate nothing — the lifecycle mutation that eventually persists
+ * a generated config (createIntegration / createTeamWorkflow) carries the
+ * audit entry.
+ */
+const assertAdminRole = (teamId: string, uid: string) =>
   assertTeamAdminRole(
     teamId,
     uid,

@@ -43,8 +43,18 @@
 import { FieldValue, Timestamp } from "firebase-admin/firestore"
 import { HttpsError, onCall } from "firebase-functions/v2/https"
 import { z } from "zod"
+// Call-time-only use (lifecycle audit entries) — the indirect cycle
+// integrations → audit → connections → integrations is init-safe: every edge
+// is touched only inside handlers, never during module evaluation (same
+// class as audit.ts's blessed call-time import from connections.ts).
+import { buildContext, logEvent } from "./audit.js"
 import { requireVerifiedAuth } from "./auth.js"
 import { assertAdminRole as assertTeamAdminRole } from "./authGuards.js"
+import {
+  CONNECTION_PROVIDER_BY_SOURCE_KEY,
+  CONNECTION_TOOL_WIRE_NAMES,
+} from "./connectionProviders.js"
+import { isConnectionDisabled } from "./connectionsCore.js"
 import { NODE_SCOPES, type IntegrationSource } from "./domain.js"
 import { db } from "./firebase.js"
 import {
@@ -282,7 +292,7 @@ const toolPatchSchema = z
 // ─── Auth + path helpers ──────────────────────────────────────────────────────
 
 /** Owner/admin gate (shared role logic — see authGuards.ts + shared/permissions). */
-const assertAdminRole = (teamId: string, uid: string): Promise<void> =>
+const assertAdminRole = (teamId: string, uid: string) =>
   assertTeamAdminRole(
     teamId,
     uid,
@@ -292,7 +302,8 @@ const assertAdminRole = (teamId: string, uid: string): Promise<void> =>
 const integrationsCollectionPath = (teamId: string): string =>
   `teams/${teamId}/integrations`
 
-const integrationDocPath = (teamId: string, id: string): string =>
+/** Exported for `connections.ts`, which writes published tool docs on install. */
+export const integrationDocPath = (teamId: string, id: string): string =>
   `${integrationsCollectionPath(teamId)}/${id}`
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -601,6 +612,42 @@ export async function listIntegrations(
     const doc = byTypeKey.get(`${entry.type}:${entry.key}`)
     resolved.push(doc ? resolveDoc(doc) : virtualFromCatalog(teamId, entry))
   }
+  // Published (connection-contributed) integrations are doc-backed — opt-in
+  // by construction: no virtual synthesis, a row exists only after
+  // `installConnection` writes it. Without this walk they'd land in
+  // `byTypeKey` and silently never resolve.
+  //
+  // Team-wide kill switch (setConnectionDisabled): while the OWNING
+  // connection doc is `status: "disabled"`, its published docs force-resolve
+  // to `enabled: false` — dropped from `listDispatchable` (so neither chat
+  // turns nor headless workflow runs register the tools) without being
+  // dropped from listings, and the per-tool `enabled` bits underneath stay
+  // untouched for when the admin re-enables the app. The connections read
+  // piggybacks this function's 5s cache and is skipped entirely for the
+  // common no-connections team.
+  const publishedDocs = docs.filter((d) => d.source === "published")
+  let disabledProviders: ReadonlySet<string> = new Set()
+  if (publishedDocs.length > 0) {
+    const connectionsSnap = await db
+      .collection(`teams/${teamId}/connections`)
+      .get()
+    disabledProviders = new Set(
+      connectionsSnap.docs
+        .filter((d) => isConnectionDisabled(d.data()))
+        .map((d) => d.id)
+    )
+  }
+  for (const doc of publishedDocs) {
+    const provider = doc.sourceKey
+      ? CONNECTION_PROVIDER_BY_SOURCE_KEY.get(doc.sourceKey)
+      : undefined
+    const entry = resolveDoc(doc)
+    resolved.push(
+      provider && disabledProviders.has(provider)
+        ? { ...entry, enabled: false }
+        : entry
+    )
+  }
   // Custom integrations always have a doc.
   for (const doc of customs) resolved.push(resolveDoc(doc))
 
@@ -657,6 +704,14 @@ async function assertWireNameUnique(
       `A built-in tool already uses the name "${wireName}".`
     )
   }
+  // Connection-contributed tools occupy their wire-names too (their published
+  // docs live at id == sourceKey), whether or not the app is installed yet.
+  if (CONNECTION_TOOL_WIRE_NAMES.has(wireName)) {
+    throw new HttpsError(
+      "already-exists",
+      `A connection tool already uses the name "${wireName}".`
+    )
+  }
   const snap = await db
     .collection(integrationsCollectionPath(teamId))
     .where("type", "==", "tool")
@@ -692,7 +747,19 @@ export const createIntegration = onCall<CreateIntegrationRequest>(
         "type must be 'agent' or 'tool' (workflows are created via workflow callables)."
       )
     }
-    await assertAdminRole(teamId, auth.uid)
+    const role = await assertAdminRole(teamId, auth.uid)
+
+    // Post-commit (direct doc write, no transaction to ride) — shared by
+    // both type branches below.
+    const logCreate = (id: string, name: string) =>
+      logEvent({
+        teamId,
+        actor: { userId: auth.uid, email: auth.token.email ?? undefined, role },
+        action: "integration.create",
+        resource: { type: "integration", id, parentId: teamId },
+        context: buildContext(request),
+        changes: { fields: ["type", "name"], after: { type, name } },
+      })
 
     if (type === "agent") {
       const parsed = agentDraftSchema.safeParse(draft ?? {})
@@ -727,6 +794,7 @@ export const createIntegration = onCall<CreateIntegrationRequest>(
         avatarSeed: parsed.data.avatarSeed ?? "",
         spec,
       })
+      await logCreate(id, parsed.data.name)
       return { integration: await loadResolved(teamId, id) }
     }
 
@@ -751,6 +819,7 @@ export const createIntegration = onCall<CreateIntegrationRequest>(
       avatarSeed: parsed.data.avatarSeed ?? "",
       spec: parsed.data.spec as ToolSpec,
     })
+    await logCreate(id, parsed.data.name ?? "")
     return { integration: await loadResolved(teamId, id) }
   }
 )
@@ -813,7 +882,7 @@ export const updateIntegration = onCall<UpdateIntegrationRequest>(
     if (typeof integrationId !== "string" || !integrationId) {
       throw new HttpsError("invalid-argument", "integrationId is required.")
     }
-    await assertAdminRole(teamId, auth.uid)
+    const role = await assertAdminRole(teamId, auth.uid)
 
     const ref = db.doc(integrationDocPath(teamId, integrationId))
     const existing = await ref.get()
@@ -898,6 +967,33 @@ export const updateIntegration = onCall<UpdateIntegrationRequest>(
 
     await ref.set(updates, { merge: true })
     invalidateIntegrationsCache(teamId)
+    // Changed-field NAMES always; before/after VALUES for the display
+    // envelope only. Spec contents are deliberately never logged — a custom
+    // tool's action can carry webhook headers (secrets) and an agent's spec
+    // its full prompts; "spec" in `fields` records THAT it changed.
+    const changedFields = Object.keys(updates).filter((k) => k !== "updatedAt")
+    if (changedFields.length > 0) {
+      const envelopeBefore: Record<string, unknown> = {}
+      const envelopeAfter: Record<string, unknown> = {}
+      for (const key of ["name", "description", "avatarSeed"] as const) {
+        if (key in updates) {
+          envelopeBefore[key] = current[key]
+          envelopeAfter[key] = updates[key]
+        }
+      }
+      await logEvent({
+        teamId,
+        actor: { userId: auth.uid, email: auth.token.email ?? undefined, role },
+        action: "integration.update",
+        resource: { type: "integration", id: integrationId, parentId: teamId },
+        context: buildContext(request),
+        changes: {
+          fields: changedFields,
+          before: envelopeBefore,
+          after: envelopeAfter,
+        },
+      })
+    }
     return { integration: await loadResolved(teamId, integrationId) }
   }
 )
@@ -934,7 +1030,7 @@ export const setIntegrationEnabled = onCall<SetIntegrationEnabledRequest>(
     if (typeof enabled !== "boolean") {
       throw new HttpsError("invalid-argument", "enabled must be a boolean.")
     }
-    await assertAdminRole(teamId, auth.uid)
+    const role = await assertAdminRole(teamId, auth.uid)
 
     const ref = await resolveMutableRef(teamId, data)
     await ref.set(
@@ -942,6 +1038,14 @@ export const setIntegrationEnabled = onCall<SetIntegrationEnabledRequest>(
       { merge: true }
     )
     invalidateIntegrationsCache(teamId)
+    await logEvent({
+      teamId,
+      actor: { userId: auth.uid, email: auth.token.email ?? undefined, role },
+      action: enabled ? "integration.enable" : "integration.disable",
+      resource: { type: "integration", id: ref.id, parentId: teamId },
+      context: buildContext(request),
+      changes: { fields: ["enabled"], after: { enabled } },
+    })
     return { integration: await loadResolved(teamId, ref.id) }
   }
 )
@@ -967,8 +1071,25 @@ async function resolveMutableRef(
     typeof data.sourceKey === "string"
   ) {
     const entry = getCatalogEntry(data.type, data.sourceKey)
-    if (!entry)
+    if (!entry) {
+      // Not a catalog built-in — a published (connection-contributed) doc
+      // lives at id == sourceKey too, but is NEVER materialized here: it
+      // exists only while its connection is installed (installConnection
+      // writes it). Mutate it when present; otherwise the key is unknown.
+      const publishedRef = db.doc(integrationDocPath(teamId, data.sourceKey))
+      const publishedSnap = await publishedRef.get()
+      const published = publishedSnap.exists
+        ? normalizeIntegrationDoc(teamId, publishedRef.id, publishedSnap.data())
+        : null
+      if (
+        published &&
+        published.source === "published" &&
+        published.type === data.type
+      ) {
+        return publishedRef
+      }
       throw new HttpsError("not-found", "Unknown built-in integration.")
+    }
     const ref = db.doc(integrationDocPath(teamId, data.sourceKey))
     const snap = await ref.get()
     if (!snap.exists) {
@@ -1013,8 +1134,18 @@ export const installIntegration = onCall<InstallIntegrationRequest>(
     const auth = requireVerifiedAuth(request.auth)
     const { teamId, type, sourceKey, integrationId } = request.data ?? {}
     requireTeamId(teamId)
-    await assertAdminRole(teamId, auth.uid)
+    const role = await assertAdminRole(teamId, auth.uid)
     const now = FieldValue.serverTimestamp()
+
+    const logInstall = (id: string) =>
+      logEvent({
+        teamId,
+        actor: { userId: auth.uid, email: auth.token.email ?? undefined, role },
+        action: "integration.install",
+        resource: { type: "integration", id, parentId: teamId },
+        context: buildContext(request),
+        changes: { fields: ["archivedAt"], after: { archivedAt: null } },
+      })
 
     // Custom (or any existing doc) restore: clear archivedAt by id.
     if (integrationId) {
@@ -1024,6 +1155,7 @@ export const installIntegration = onCall<InstallIntegrationRequest>(
       }
       await ref.set({ archivedAt: null, updatedAt: now }, { merge: true })
       invalidateIntegrationsCache(teamId)
+      await logInstall(integrationId)
       return { integration: await loadResolved(teamId, integrationId) }
     }
 
@@ -1045,12 +1177,14 @@ export const installIntegration = onCall<InstallIntegrationRequest>(
     const snap = await ref.get()
     if (!snap.exists) {
       // No divergence doc exists → already installed-by-default (overlay).
-      // Writing nothing keeps the opt-out semantics; return the virtual entry.
+      // Writing nothing keeps the opt-out semantics; return the virtual
+      // entry. Nothing changed, so nothing is logged either.
       return { integration: virtualFromCatalog(teamId, entry) }
     }
     // A divergence doc exists (uninstalled/disabled) → restore to installed.
     await ref.set({ archivedAt: null, updatedAt: now }, { merge: true })
     invalidateIntegrationsCache(teamId)
+    await logInstall(sourceKey)
     return { integration: await loadResolved(teamId, sourceKey) }
   }
 )
@@ -1070,7 +1204,7 @@ export const uninstallIntegration = onCall<UninstallIntegrationRequest>(
     const auth = requireVerifiedAuth(request.auth)
     const data = request.data ?? ({} as UninstallIntegrationRequest)
     requireTeamId(data.teamId)
-    await assertAdminRole(data.teamId, auth.uid)
+    const role = await assertAdminRole(data.teamId, auth.uid)
 
     const ref = await resolveMutableRef(data.teamId, data)
     await ref.set(
@@ -1081,6 +1215,16 @@ export const uninstallIntegration = onCall<UninstallIntegrationRequest>(
       { merge: true }
     )
     invalidateIntegrationsCache(data.teamId)
+    // Field name only — the archive stamp is a server timestamp the log
+    // can't carry; the action verb says which way it flipped.
+    await logEvent({
+      teamId: data.teamId,
+      actor: { userId: auth.uid, email: auth.token.email ?? undefined, role },
+      action: "integration.uninstall",
+      resource: { type: "integration", id: ref.id, parentId: data.teamId },
+      context: buildContext(request),
+      changes: { fields: ["archivedAt"] },
+    })
     return { integration: await loadResolved(data.teamId, ref.id) }
   }
 )
@@ -1101,11 +1245,12 @@ export const deleteIntegration = onCall<DeleteIntegrationRequest>(
     if (typeof integrationId !== "string" || !integrationId) {
       throw new HttpsError("invalid-argument", "integrationId is required.")
     }
-    await assertAdminRole(teamId, auth.uid)
+    const role = await assertAdminRole(teamId, auth.uid)
 
     const ref = db.doc(integrationDocPath(teamId, integrationId))
     const existing = await ref.get()
     if (!existing.exists) {
+      // Idempotent no-op (already gone) — nothing changed, nothing logged.
       invalidateIntegrationsCache(teamId)
       return { integrationId, deleted: true as const }
     }
@@ -1118,6 +1263,19 @@ export const deleteIntegration = onCall<DeleteIntegrationRequest>(
     }
     await ref.delete()
     invalidateIntegrationsCache(teamId)
+    // `before` preserves what the hard delete destroyed — the doc is gone,
+    // so the log row is the only remaining record of what it was.
+    await logEvent({
+      teamId,
+      actor: { userId: auth.uid, email: auth.token.email ?? undefined, role },
+      action: "integration.delete",
+      resource: { type: "integration", id: integrationId, parentId: teamId },
+      context: buildContext(request),
+      changes: {
+        fields: ["type", "name"],
+        before: { type: doc?.type ?? null, name: doc?.name ?? null },
+      },
+    })
     return { integrationId, deleted: true as const }
   }
 )

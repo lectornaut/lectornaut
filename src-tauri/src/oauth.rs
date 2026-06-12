@@ -1,6 +1,6 @@
-use tauri_plugin_http::reqwest::Client;
 use serde::{Deserialize, Serialize};
 use tauri::{command, AppHandle, Runtime};
+use tauri_plugin_http::reqwest::Client;
 use tauri_plugin_opener::OpenerExt;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::TcpListener;
@@ -32,14 +32,30 @@ pub struct OAuthConfig {
     pub extra_params: Option<std::collections::HashMap<String, String>>,
 }
 
-#[command]
-pub async fn login_oauth<R: Runtime>(
-    app: AppHandle<R>,
-    config: OAuthConfig,
-) -> Result<OAuthResponse, String> {
+/// Authorization code (+ optional `state` echo) captured off the loopback
+/// redirect — the shared first half of both OAuth commands.
+struct CapturedAuthorization {
+    code: String,
+    state: Option<String>,
+}
+
+/// Drive the system-browser authorization leg: bind the loopback listener,
+/// open the consent page in the default browser, wait for the redirect, parse
+/// `code`/`state` (or the provider error), and answer the browser tab with
+/// the success/failure page. Shared by `login_oauth` (which then exchanges
+/// the code locally — Firebase sign-in) and `authorize_oauth` (which returns
+/// the raw code for a SERVER-side exchange — Connections).
+async fn run_loopback_authorization<R: Runtime>(
+    app: &AppHandle<R>,
+    auth_url: &str,
+    client_id: &str,
+    redirect_uri: &str,
+    scopes: &str,
+    extra_params: Option<&std::collections::HashMap<String, String>>,
+) -> Result<CapturedAuthorization, String> {
     // 0. Parse port from redirect_uri
     let redirect_url =
-        Url::parse(&config.redirect_uri).map_err(|e| format!("Invalid redirect_uri: {}", e))?;
+        Url::parse(redirect_uri).map_err(|e| format!("Invalid redirect_uri: {}", e))?;
     let port = redirect_url.port().unwrap_or(7878);
     let host = redirect_url.host_str().unwrap_or("127.0.0.1");
 
@@ -50,16 +66,16 @@ pub async fn login_oauth<R: Runtime>(
         .map_err(|e| format!("Port {} is already in use. Please ensure no other instance of the app is running and try again. Error: {}", port, e))?;
 
     // 2. Construct Auth URL
-    let mut url = Url::parse(&config.auth_url).map_err(|e| e.to_string())?;
+    let mut url = Url::parse(auth_url).map_err(|e| e.to_string())?;
     {
         let mut query_pairs = url.query_pairs_mut();
         query_pairs
-            .append_pair("client_id", &config.client_id)
-            .append_pair("redirect_uri", &config.redirect_uri)
+            .append_pair("client_id", client_id)
+            .append_pair("redirect_uri", redirect_uri)
             .append_pair("response_type", "code")
-            .append_pair("scope", &config.scopes);
+            .append_pair("scope", scopes);
 
-        if let Some(extra) = &config.extra_params {
+        if let Some(extra) = extra_params {
             for (key, value) in extra {
                 query_pairs.append_pair(key, value);
             }
@@ -94,6 +110,11 @@ pub async fn login_oauth<R: Runtime>(
     let code_pair = parsed_url.query_pairs().find(|(key, _)| key == "code");
 
     if let Some((_, code)) = code_pair {
+        let state = parsed_url
+            .query_pairs()
+            .find(|(key, _)| key == "state")
+            .map(|(_, v)| v.to_string());
+
         // 6. Send response to browser
         let response_body = include_str!("oauth_success.html");
         let response = format!(
@@ -107,41 +128,9 @@ pub async fn login_oauth<R: Runtime>(
             .map_err(|e| e.to_string())?;
         stream.flush().await.map_err(|e| e.to_string())?;
 
-        // 7. Exchange code for token
-        let client = Client::new();
-        let mut params = std::collections::HashMap::new();
-        params.insert("client_id", config.client_id.as_str());
-        if let Some(secret) = &config.client_secret {
-            params.insert("client_secret", secret.as_str());
-        }
-        params.insert("code", &code);
-        params.insert("grant_type", "authorization_code");
-        params.insert("redirect_uri", config.redirect_uri.as_str());
-
-        let res = client
-            .post(&config.token_url)
-            .form(&params)
-            .send()
-            .await
-            .map_err(|e| e.to_string())?;
-
-        if !res.status().is_success() {
-            let error_text = res
-                .text()
-                .await
-                .unwrap_or_else(|_| "Unknown error".to_string());
-            return Err(format!("Token exchange failed: {}", error_text));
-        }
-
-        let token_res = res
-            .json::<TokenExchangeResponse>()
-            .await
-            .map_err(|e| format!("Failed to parse token response: {}", e))?;
-
-        Ok(OAuthResponse {
-            id_token: token_res.id_token,
-            access_token: token_res.access_token,
-            refresh_token: token_res.refresh_token,
+        Ok(CapturedAuthorization {
+            code: code.to_string(),
+            state,
         })
     } else {
         // Check for error
@@ -180,4 +169,101 @@ pub async fn login_oauth<R: Runtime>(
 
         Err(format!("OAuth failed: {}", error_message))
     }
+}
+
+#[command]
+pub async fn login_oauth<R: Runtime>(
+    app: AppHandle<R>,
+    config: OAuthConfig,
+) -> Result<OAuthResponse, String> {
+    let captured = run_loopback_authorization(
+        &app,
+        &config.auth_url,
+        &config.client_id,
+        &config.redirect_uri,
+        &config.scopes,
+        config.extra_params.as_ref(),
+    )
+    .await?;
+
+    // 7. Exchange code for token
+    let client = Client::new();
+    let mut params = std::collections::HashMap::new();
+    params.insert("client_id", config.client_id.as_str());
+    if let Some(secret) = &config.client_secret {
+        params.insert("client_secret", secret.as_str());
+    }
+    params.insert("code", captured.code.as_str());
+    params.insert("grant_type", "authorization_code");
+    params.insert("redirect_uri", config.redirect_uri.as_str());
+
+    let res = client
+        .post(&config.token_url)
+        .form(&params)
+        .send()
+        .await
+        .map_err(|e| e.to_string())?;
+
+    if !res.status().is_success() {
+        let error_text = res
+            .text()
+            .await
+            .unwrap_or_else(|_| "Unknown error".to_string());
+        return Err(format!("Token exchange failed: {}", error_text));
+    }
+
+    let token_res = res
+        .json::<TokenExchangeResponse>()
+        .await
+        .map_err(|e| format!("Failed to parse token response: {}", e))?;
+
+    Ok(OAuthResponse {
+        id_token: token_res.id_token,
+        access_token: token_res.access_token,
+        refresh_token: token_res.refresh_token,
+    })
+}
+
+/// Config for the authorization-only flow — no `token_url`/`client_secret`:
+/// the captured code is exchanged SERVER-side (Cloud Functions hold the
+/// client secret and persist the refresh token). Used by Connections.
+#[derive(Debug, Deserialize)]
+pub struct AuthorizeOnlyConfig {
+    pub auth_url: String,
+    pub client_id: String,
+    pub redirect_uri: String,
+    pub scopes: String,
+    pub extra_params: Option<std::collections::HashMap<String, String>>,
+}
+
+#[derive(Debug, Serialize)]
+pub struct AuthorizationCodeResponse {
+    pub code: String,
+    /// Echo of the caller-supplied `state` — the frontend MUST verify it
+    /// matches what it sent (CSRF binding) before using the code.
+    pub state: Option<String>,
+}
+
+/// System-browser authorization WITHOUT a local token exchange: returns the
+/// one-time authorization code for the webview to forward to the backend.
+/// Tokens never exist inside the app.
+#[command]
+pub async fn authorize_oauth<R: Runtime>(
+    app: AppHandle<R>,
+    config: AuthorizeOnlyConfig,
+) -> Result<AuthorizationCodeResponse, String> {
+    let captured = run_loopback_authorization(
+        &app,
+        &config.auth_url,
+        &config.client_id,
+        &config.redirect_uri,
+        &config.scopes,
+        config.extra_params.as_ref(),
+    )
+    .await?;
+
+    Ok(AuthorizationCodeResponse {
+        code: captured.code,
+        state: captured.state,
+    })
 }

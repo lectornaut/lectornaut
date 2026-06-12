@@ -46,6 +46,10 @@ import {
   NodeType,
   WorkspaceNodeScope,
 } from "./types.js"
+// Call-time-only use (post-removal cascade) — the module cycle
+// audit → connections → bot → botNodeTools → audit is init-safe, same class
+// as the existing authGuards ↔ bot edge.
+import { cleanupMemberConnectionBindings } from "./connections.js"
 import { removeMemberFromWorkspaces } from "./workspaceMembership.js"
 
 // =============================================================================
@@ -63,7 +67,13 @@ function mapAuthType(provider?: string): Context["authType"] | undefined {
   return "sso"
 }
 
-function buildContext(request: CallableRequest): Context | undefined {
+/**
+ * Derive the request-context slice of a log entry (IP / user-agent / auth
+ * type) from the callable request. Exported for callables that wire
+ * `logEvent` by hand outside this module (e.g. the connection lifecycle in
+ * connections.ts).
+ */
+export function buildContext(request: CallableRequest): Context | undefined {
   const raw = request.rawRequest
   const ip =
     (raw?.headers?.["x-forwarded-for"] as string | undefined) ??
@@ -2173,6 +2183,128 @@ export const updateWorkspaceNodeContent = defineMutation({
   },
 })
 
+/**
+ * Transactional core of node-attachment creation — shared by the direct
+ * upload callable below and the Drive import (`importDriveNodeAttachment` in
+ * driveImport.ts) so both apply the same gates (node exists, not archived,
+ * no attachment-id collision), the same node touch, and the same
+ * `content.attachment.create` audit entry. `mimeType`/`size` come from the
+ * caller: the upload path re-reads them from Storage metadata (never trusts
+ * the client), while the Drive import wrote the blob itself so its values
+ * are authoritative. Capability checks are the CALLER's responsibility.
+ */
+export async function createNodeAttachmentDoc(opts: {
+  teamId: string
+  workspaceId: string
+  scope: WorkspaceNodeScope
+  nodeId: string
+  attachmentId: string
+  displayName: string
+  originalName: string
+  storagePath: string
+  mimeType: string | null
+  size: number | null
+  actorId: string
+  actorEmail: string | undefined
+  role: IMembershipRole | undefined
+  context: Context | undefined
+}): Promise<{ attachmentId: string; logId: string }> {
+  const {
+    teamId,
+    workspaceId,
+    scope,
+    nodeId,
+    attachmentId,
+    displayName,
+    originalName,
+    storagePath,
+    actorId,
+  } = opts
+
+  return db.runTransaction(async (transaction) => {
+    const nodeRef = db.doc(
+      `${workspaceNodesCollectionPath(teamId, workspaceId, scope)}/${nodeId}`
+    )
+    const nodeSnap = await transaction.get(nodeRef)
+
+    if (!nodeSnap.exists) {
+      throw new HttpsError("not-found", "Node not found.")
+    }
+
+    const nodeData = nodeSnap.data() ?? {}
+    if (nodeData.isArchived) {
+      throw new HttpsError(
+        "failed-precondition",
+        "Cannot add attachments to an archived node."
+      )
+    }
+
+    const attachmentRef = db.doc(
+      workspaceNodeAttachmentDocumentPath(
+        teamId,
+        workspaceId,
+        scope,
+        nodeId,
+        attachmentId
+      )
+    )
+    const attachmentSnap = await transaction.get(attachmentRef)
+
+    if (attachmentSnap.exists) {
+      throw new HttpsError("already-exists", "Attachment already exists.")
+    }
+
+    const now = FieldValue.serverTimestamp()
+
+    transaction.set(attachmentRef, {
+      workspaceId,
+      nodeId,
+      scope,
+      displayName,
+      originalName,
+      storagePath,
+      mimeType: opts.mimeType,
+      size: opts.size,
+      createdAt: now,
+      createdBy: actorId,
+      updatedAt: now,
+      updatedBy: actorId,
+    })
+    transaction.update(nodeRef, {
+      updatedAt: now,
+      updatedBy: actorId,
+    })
+
+    const logRef = await logEvent(
+      {
+        teamId,
+        workspaceId,
+        actor: { userId: actorId, email: opts.actorEmail, role: opts.role },
+        action: "content.attachment.create",
+        resource: { type: "content", id: nodeId, parentId: workspaceId },
+        context: opts.context,
+        changes: {
+          fields: [
+            "attachmentId",
+            "displayName",
+            "originalName",
+            "storagePath",
+          ],
+          after: {
+            attachmentId,
+            displayName,
+            originalName,
+            storagePath,
+          },
+        },
+      },
+      { transaction }
+    )
+
+    return { attachmentId, logId: logRef.id }
+  })
+}
+
 export const createWorkspaceNodeAttachment = onCall(
   CALLABLE_OPTS,
   async (request) => {
@@ -2215,92 +2347,28 @@ export const createWorkspaceNodeAttachment = onCall(
 
     const storageMetadata = await readStorageObjectMetadata(storagePath)
 
-    return db.runTransaction(async (transaction) => {
-      const nodeRef = db.doc(
-        `${workspaceNodesCollectionPath(teamId, workspaceId, scope)}/${nodeId}`
-      )
-      const nodeSnap = await transaction.get(nodeRef)
-
-      if (!nodeSnap.exists) {
-        throw new HttpsError("not-found", "Node not found.")
-      }
-
-      const nodeData = nodeSnap.data() ?? {}
-      if (nodeData.isArchived) {
-        throw new HttpsError(
-          "failed-precondition",
-          "Cannot add attachments to an archived node."
-        )
-      }
-
-      const attachmentRef = db.doc(
-        workspaceNodeAttachmentDocumentPath(
-          teamId,
-          workspaceId,
-          scope,
-          nodeId,
-          attachmentId
-        )
-      )
-      const attachmentSnap = await transaction.get(attachmentRef)
-
-      if (attachmentSnap.exists) {
-        throw new HttpsError("already-exists", "Attachment already exists.")
-      }
-
-      const now = FieldValue.serverTimestamp()
-
-      transaction.set(attachmentRef, {
-        workspaceId,
-        nodeId,
-        scope,
-        displayName,
-        originalName,
-        storagePath,
-        mimeType: storageMetadata.mimeType,
-        size: storageMetadata.size,
-        createdAt: now,
-        createdBy: actorId,
-        updatedAt: now,
-        updatedBy: actorId,
-      })
-      transaction.update(nodeRef, {
-        updatedAt: now,
-        updatedBy: actorId,
-      })
-
-      const logRef = await logEvent(
-        {
-          teamId,
-          workspaceId,
-          actor: { userId: actorId, email: actorEmail, role },
-          action: "content.attachment.create",
-          resource: { type: "content", id: nodeId, parentId: workspaceId },
-          context: buildContext(request),
-          changes: {
-            fields: [
-              "attachmentId",
-              "displayName",
-              "originalName",
-              "storagePath",
-            ],
-            after: {
-              attachmentId,
-              displayName,
-              originalName,
-              storagePath,
-            },
-          },
-        },
-        { transaction }
-      )
-
-      return {
-        attachmentId,
-        created: true,
-        logId: logRef.id,
-      }
+    const created = await createNodeAttachmentDoc({
+      teamId,
+      workspaceId,
+      scope,
+      nodeId,
+      attachmentId,
+      displayName,
+      originalName,
+      storagePath,
+      mimeType: storageMetadata.mimeType,
+      size: storageMetadata.size,
+      actorId,
+      actorEmail,
+      role,
+      context: buildContext(request),
     })
+
+    return {
+      attachmentId: created.attachmentId,
+      created: true,
+      logId: created.logId,
+    }
   }
 )
 
@@ -2637,8 +2705,10 @@ function assertBotSessionAttachmentStoragePath(
  * shared/public session, or a team admin may modify its attachments. Runs
  * inside the transaction where the session doc is available; the team-level
  * `MANAGE_WORKSPACE_CONTENT` capability is checked separately by each callable.
+ * Exported for the Drive import callable (driveImport.ts), which creates
+ * session attachments server-side and must apply the SAME access model.
  */
-function assertBotSessionAttachmentWritable(
+export function assertBotSessionAttachmentWritable(
   sessionData: Record<string, unknown>,
   actorId: string,
   role: unknown
@@ -3414,8 +3484,14 @@ export const removeMember = onCall(CALLABLE_OPTS, async (request) => {
     }
   })
 
-  // Drop the removed member from every workspace's participation list.
-  await removeMemberFromWorkspaces(teamId, targetUserId)
+  // Post-removal cascades (best-effort, outside the authoritative txn):
+  // drop the removed member from every workspace's participation list, and
+  // tear down their connection OAuth bindings (revoke + delete tokens —
+  // connections.ts; never throws).
+  await Promise.all([
+    removeMemberFromWorkspaces(teamId, targetUserId),
+    cleanupMemberConnectionBindings(teamId, targetUserId),
+  ])
 
   return result
 })
@@ -3586,11 +3662,14 @@ export const removeMembers = onCall(CALLABLE_OPTS, async (request) => {
     }
   })
 
-  // Drop every removed member from the workspaces' participation lists.
+  // Post-removal cascades (best-effort, outside the authoritative txn):
+  // workspace participation lists + connection OAuth binding teardown for
+  // every removed member (revoke + delete tokens — connections.ts).
   await Promise.all(
-    (userIds as string[]).map((userId) =>
-      removeMemberFromWorkspaces(teamId, userId)
-    )
+    (userIds as string[]).flatMap((userId) => [
+      removeMemberFromWorkspaces(teamId, userId),
+      cleanupMemberConnectionBindings(teamId, userId),
+    ])
   )
 
   return result

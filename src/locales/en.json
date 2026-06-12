@@ -185,6 +185,39 @@
       "send": "Send",
       "malformedInterrupt": "The assistant tried to ask a question but didn't include valid choices. Send another message to continue.",
       "waitingForReturn": "Waiting for tool to return...",
+      "calendarWrite": {
+        "createTitle": "Create Calendar Event",
+        "updateTitle": "Update Calendar Event",
+        "confirmHint": "Nothing is written to your Google Calendar until you approve.",
+        "approve": "Approve",
+        "cancel": "Cancel",
+        "attendees": "{count} attendee | {count} attendees",
+        "eventId": "Event",
+        "unconfirmed": "Not confirmed — the conversation moved on. Nothing was written.",
+        "executing": "Applying your decision...",
+        "written": "Added to your Google Calendar.",
+        "declined": "You declined this. Nothing was written.",
+        "failed": "Couldn't update your Google Calendar.",
+        "openEvent": "Open in Google Calendar"
+      },
+      "driveWrite": {
+        "createTitle": "Create Drive File",
+        "updateTitle": "Update Drive File",
+        "confirmHint": "Nothing is written to your Google Drive until you approve.",
+        "approve": "Approve",
+        "cancel": "Cancel",
+        "kindDocument": "Google Doc",
+        "kindText": "Markdown file",
+        "contentChars": "{count} character | {count} characters",
+        "folder": "Folder",
+        "file": "File",
+        "unconfirmed": "Not confirmed - the conversation moved on. Nothing was written.",
+        "executing": "Applying your decision...",
+        "written": "Saved to your Google Drive.",
+        "declined": "You declined this. Nothing was written.",
+        "failed": "Couldn't write to your Google Drive.",
+        "openFile": "Open in Google Drive"
+      },
       "labels": {
         "request": "Request",
         "response": "Response",
@@ -573,6 +606,69 @@
         "empty": "No pre-built workflows available."
       }
     },
+    "connections": {
+      "label": "Connections",
+      "description": "Install apps backed by external accounts. Installed apps add tools agents can use; each member connects their own account.",
+      "permissionRequired": "Only team owners and admins can install or uninstall apps.",
+      "installApp": "Install app",
+      "uninstallApp": "Uninstall app",
+      "addSuccess": "App installed.",
+      "addError": "Couldn't install the app.",
+      "removeSuccess": "App uninstalled.",
+      "removeError": "Couldn't uninstall the app.",
+      "uninstallConfirmTitle": "Uninstall app?",
+      "uninstallConfirmBody": "Uninstalling {name} disconnects every member's account and revokes its access, and agents lose the app's tools. Reinstalling later means every member connects again.",
+      "connect": "Connect",
+      "reconnect": "Reconnect",
+      "disconnect": "Disconnect",
+      "connectSuccess": "Account connected.",
+      "connectError": "Couldn't connect the account.",
+      "popupBlocked": "Couldn't open the Google sign-in popup. Allow popups for this site and try again.",
+      "disconnectSuccess": "Account disconnected.",
+      "disconnectError": "Couldn't disconnect the account.",
+      "disconnectConfirmTitle": "Disconnect account?",
+      "disconnectConfirmBody": "Your {name} account will be unlinked and its access revoked. Agents can no longer use {name} on your behalf until you connect again.",
+      "notConfigured": "Google sign-in isn't configured for this app build.",
+      "connected": "Account connected",
+      "connectedAs": "Connected as {email}",
+      "scopeUpgradeHint": "This app now needs additional permissions. Reconnect to grant them.",
+      "notConnected": "Your account isn't connected.",
+      "connecting": "Waiting for Google sign-in...",
+      "needsReauth": "Your connection needs re-authorization.",
+      "membersConnected": "{count} member connected | {count} members connected",
+      "infoButton": "App details",
+      "disabledBadge": "Disabled",
+      "disabledByAdmin": "This app is disabled for the team.",
+      "disableSuccess": "App disabled for the team.",
+      "enableSuccess": "App enabled for the team.",
+      "setDisabledError": "Couldn't update the app.",
+      "info": {
+        "tabOverview": "Overview",
+        "tabAccounts": "Accounts ({count})",
+        "tabSettings": "Settings",
+        "toolsTitle": "Tools it adds",
+        "permissionsTitle": "Permissions",
+        "permissionsDescription": "What each member grants Google when connecting their own account.",
+        "scope": {
+          "identity": "Verify your Google identity",
+          "email": "See your email address",
+          "calendarEvents": "View and edit events on your calendar",
+          "driveReadonly": "See and download all your Google Drive files",
+          "driveFile": "See, edit, create and delete only the Google Drive files this app creates or that you pick"
+        },
+        "accountsEmpty": "No members have connected an account yet.",
+        "you": "(you)",
+        "statusConnected": "Connected",
+        "statusNeedsReauth": "Needs re-authorization",
+        "installedByLabel": "Installed by",
+        "installedOnLabel": "Installed on",
+        "enabledLabel": "Enabled for the team",
+        "enabledDescription": "When off, agents lose this app's tools and members can't connect accounts until it's re-enabled. Connected accounts and settings are kept.",
+        "disabledProvenance": "Disabled by {name} on {date}.",
+        "unknownMember": "Unknown member",
+        "notInstalled": "This app isn't installed for the team."
+      }
+    },
     "titles": {
       "general": "General",
       "preferences": "Preferences",
@@ -590,6 +686,7 @@
       "workflows": "Workflows",
       "members": "Members",
       "groups": "Groups",
+      "connections": "Connections",
       "overview": "Overview",
       "teams": "Teams",
       "workspaces": "Workspaces",
@@ -617,6 +714,7 @@
       "workflows": "Automations that run an agent on a schedule, on content changes, or on demand.",
       "members": "Members, roles, and access.",
       "groups": "Reusable member bundles that grant per-workspace roles.",
+      "connections": "Apps backed by external accounts — install them for the team, then connect your own account.",
       "overview": "Team details, visibility, and access.",
       "teams": "Create and manage teams.",
       "workspaces": "Create and switch workspaces.",
@@ -1518,6 +1616,11 @@
       "modeAutomaticOpt": "Apply automatically",
       "modeReviewHint": "Edits are captured as a changeset an admin approves before they land. Cost-bounded by a human.",
       "modeAutomaticHint": "The agent writes edits directly each run. Bounded by per-run metering and your team's budget.",
+      "connectionsLabel": "Connections access",
+      "connectionsToggle": "Run with my connected accounts",
+      "connectionsHint": "Lets runs read connected apps (like Google Calendar) through your linked account. Revoke anytime by turning this off or disconnecting the account under Settings → Connections.",
+      "connectionsOther": "Currently runs with {name}'s connected accounts. Turning the toggle off revokes it; on rebinds it to you.",
+      "connectionsOtherFallback": "another member",
       "approve": "Approve",
       "reject": "Reject",
       "reviewApproved": "Changes applied.",
@@ -1691,6 +1794,19 @@
         "summarizeNode": {
           "label": "Summarize node (chat)",
           "description": "Generates a structured summary (overview, key points, tags) from the chat message menu."
+        },
+        "connectionTools": {
+          "label": "Connection tools",
+          "description": "Enable or disable tools added by installed connection apps. Apps install on the Integrations page; members link their accounts under Connections."
+        },
+        "disabledForTeam": "Disabled for the team",
+        "googleCalendar": {
+          "label": "Google Calendar",
+          "description": "Looks up and, with per-write confirmation, schedules events on the chatting member's connected Google Calendar."
+        },
+        "googleDrive": {
+          "label": "Google Drive",
+          "description": "Searches and reads files on the chatting member's connected Google Drive - Docs come back as markdown - and, with per-write confirmation, saves files back to Drive."
         },
         "manageContent": {
           "label": "Manage content",
@@ -3406,6 +3522,7 @@
       "countSingular": "{count} attachment",
       "countPlural": "{count} attachments",
       "upload": "Upload",
+      "addFromDrive": "Add from Google Drive",
       "readOnlyArchived": "Archived nodes are read-only. You can still open existing attachments.",
       "readOnlyPermission": "You can view and download attachments, but only members, admins, and owners can edit them.",
       "uploadsTitle": "Uploads",
@@ -3444,7 +3561,8 @@
         "downloaded": "Attachment downloaded",
         "updated": "Attachment updated",
         "renamed": "Attachment renamed",
-        "deleted": "Attachment deleted"
+        "deleted": "Attachment deleted",
+        "driveImported": "Imported \"{name}\" from Google Drive."
       }
     },
     "textEditor": {

@@ -41,7 +41,7 @@ useHotkey("Enter", () => {
             </EnterTrigger>
           </TooltipTrigger>
           <TooltipContent>
-            Press <Kbd>↩</Kbd> to login or sign up
+            Press <Kbd aria-hidden="true">↩</Kbd> to login or sign up
           </TooltipContent>
         </Tooltip>
         <Faq />

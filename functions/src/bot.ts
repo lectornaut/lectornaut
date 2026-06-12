@@ -76,7 +76,8 @@ import {
 } from "./botContext.js"
 import { findRelatedNodesTool } from "./botLink.js"
 import {
-  loadSessionAttachmentMediaParts,
+  ATTACHMENT_CONTENT_PART_FLAG,
+  loadSessionAttachmentParts,
   materializeSessionAttachments,
   type PendingSessionAttachmentInput,
 } from "./botMedia.js"
@@ -104,7 +105,23 @@ import {
   DEFAULT_AGENT_DEFINITION,
   hydrateBuiltInAgent,
 } from "./builtInAgents.js"
-import type { BotChatRole, BotSessionVisibility } from "./domain.js"
+import {
+  CALENDAR_WRITE_TOOL_NAMES,
+  createCalendarEventTool,
+  createDriveFileTool,
+  DRIVE_WRITE_TOOL_NAMES,
+  googleCalendarTool,
+  googleDriveTool,
+  readDriveFileTool,
+  updateCalendarEventTool,
+  updateDriveFileTool,
+} from "./connectionTools.js"
+import {
+  GOOGLE_CALENDAR_TOOL_KEY,
+  GOOGLE_DRIVE_TOOL_KEY,
+  type BotChatRole,
+  type BotSessionVisibility,
+} from "./domain.js"
 import { db } from "./firebase.js"
 import {
   ai,
@@ -125,7 +142,13 @@ import { buildMemoryContextBlock } from "./memoryRag.js"
 import { recallMemoryTool, saveMemoryTool } from "./memoryTools.js"
 import { can, Capabilities } from "./permissions.js"
 import { GENKIT_OPTS } from "./runtimeConfig.js"
-import { anthropicApiKey, geminiApiKey, openaiApiKey } from "./secrets.js"
+import {
+  anthropicApiKey,
+  geminiApiKey,
+  googleOauthClientId,
+  googleOauthClientSecret,
+  openaiApiKey,
+} from "./secrets.js"
 import type { TeamAgentDoc } from "./teamAgents.js"
 import {
   buildCustomToolForChat,
@@ -378,8 +401,17 @@ export function extractMessagesFromSessionData(
       if (typeof content === "string") {
         text = content
       } else if (Array.isArray(content)) {
+        // Flagged parts carry inlined attachment BODIES (model-facing
+        // context); the bubble shows only the user's own text plus the
+        // short `[Uploaded file …]` labels. Media parts have no `text`,
+        // so they drop out of the same map.
         text = content
-          .map((part) => (typeof part?.text === "string" ? part.text : ""))
+          .map((part) =>
+            typeof part?.text === "string" &&
+            !part.metadata?.[ATTACHMENT_CONTENT_PART_FLAG]
+              ? part.text
+              : ""
+          )
           .join("")
       }
       if (text.trim()) {
@@ -1001,6 +1033,38 @@ function pickChatTools(
     tools.push(saveMemoryTool)
     if (googleSecretConfigured) tools.push(recallMemoryTool)
   }
+  // Connection-backed tools (docs/connections-feature.prompt.md). Their
+  // published integration docs flow through the same `enabledBuiltInTools`
+  // resolution as catalog built-ins (`source !== "custom"`), but they're
+  // doc-backed/opt-in — the key is present only while the connection is
+  // installed + the tool enabled. Deliberately NO per-agent intersection in
+  // P1 (memory-tools precedent; `GOOGLE_CALENDAR_TOOL_KEY` is not a
+  // `ChatToolName`). Per-member authorization happens INSIDE the handler at
+  // call time (binding lookup) — a missing/expired binding is narratable
+  // tool output, never a registration concern.
+  if (enabledBuiltInTools.has(GOOGLE_CALENDAR_TOOL_KEY)) {
+    tools.push(googleCalendarTool)
+    // WRITE tools (P2) additionally require an interactive turn: each write
+    // pauses on a confirm interrupt only a human can approve, so headless
+    // workflow runs (allowInterrupts: false) never see them — same rationale
+    // as askQuestion above. One install gate for all three calendar tools
+    // (separate published docs would need a reinstall migration for teams
+    // that installed under P1).
+    if (allowInterrupts) {
+      tools.push(createCalendarEventTool, updateCalendarEventTool)
+    }
+  }
+  // Google Drive (docs/connections-google-drive.prompt.md): all four tools
+  // ride the one googleDrive install gate — only the search tool has an
+  // integration doc. Reads are headless-eligible (the handlers fall back to
+  // the run's `connectionsActsAsUid`); the confirm-gated writes (D2)
+  // require an interactive turn, same rationale as the calendar block.
+  if (enabledBuiltInTools.has(GOOGLE_DRIVE_TOOL_KEY)) {
+    tools.push(googleDriveTool, readDriveFileTool)
+    if (allowInterrupts) {
+      tools.push(createDriveFileTool, updateDriveFileTool)
+    }
+  }
   return tools
 }
 
@@ -1151,6 +1215,8 @@ async function runTransferTurnIfRequested(opts: {
    * visible `error` instead of a misleading `success`.
    */
   headless?: boolean
+  /** Workflows-only (P3) — the handed-off turn keeps the run's identity. */
+  connectionsActsAsUid?: string
   archivedSessionMessage: string
   sendChunk: (chunk: SendBotMessageStreamPayload) => void
 }): Promise<Awaited<ChatStreamResult["response"]>> {
@@ -1231,6 +1297,7 @@ async function runTransferTurnIfRequested(opts: {
       onUsage: opts.onUsage,
       targetScope: opts.targetScope,
       allowInterrupts: opts.allowInterrupts,
+      connectionsActsAsUid: opts.connectionsActsAsUid,
       // Pin is a one-shot at session creation; the first turn already
       // wrote it (or we're resuming, in which case it was written ages
       // ago). Passing it again would be a no-op at best and a doc
@@ -1649,10 +1716,11 @@ const SendBotMessageInput = z.object({
    */
   contextNodes: z.array(NodeRefSchema).max(CONTEXT_NODE_MAX).default([]),
   /**
-   * Chat-session attachment ids the user selected to include as media on THIS
-   * turn (per-turn selectable in the composer). Resolved server-side to base64
-   * media parts via `loadSessionAttachmentMediaParts`. Empty/absent on a
-   * brand-new session (nothing uploaded yet).
+   * Chat-session attachment ids the user selected to include on THIS turn
+   * (per-turn selectable in the composer). Resolved server-side to labeled
+   * prompt parts via `loadSessionAttachmentParts` — base64 media for
+   * images/PDFs, flagged inline text for text-like bodies. Empty/absent on
+   * a brand-new session (nothing uploaded yet).
    */
   attachmentIds: z.array(z.string().min(1)).max(6).default([]),
   /**
@@ -2031,9 +2099,16 @@ async function streamChatToClientInner(
           const key = refKey(part.toolRequest, "call", liveCallSeq++)
           if (sentToolCalls.has(key)) continue
           sentToolCalls.add(key)
+          // Live model chunks carry no `metadata.interrupt` yet — Genkit
+          // attaches it only after the model message finishes — so the
+          // name-based fallback is what lets the client render the confirm
+          // card the instant a calendar-write tool call streams in, rather
+          // than a perpetual "running" spinner until a snapshot reconcile.
           const isInterrupt =
             !!part.metadata?.interrupt ||
-            INTERRUPT_TOOL_NAMES.has(part.toolRequest.name)
+            INTERRUPT_TOOL_NAMES.has(part.toolRequest.name) ||
+            CALENDAR_WRITE_TOOL_NAMES.has(part.toolRequest.name) ||
+            DRIVE_WRITE_TOOL_NAMES.has(part.toolRequest.name)
           sendChunk({
             toolCall: {
               ref: part.toolRequest.ref,
@@ -2130,9 +2205,13 @@ async function streamChatToClientInner(
         const key = refKey(part.toolRequest, "call", sweepCallSeq++)
         if (sentToolCalls.has(key)) continue
         sentToolCalls.add(key)
+        // Mirror the live pass: name-based fallback covers calendar-write
+        // confirms whose `metadata.interrupt` may not be attached yet.
         const isInterrupt =
           !!part.metadata?.interrupt ||
-          INTERRUPT_TOOL_NAMES.has(part.toolRequest.name)
+          INTERRUPT_TOOL_NAMES.has(part.toolRequest.name) ||
+          CALENDAR_WRITE_TOOL_NAMES.has(part.toolRequest.name) ||
+          DRIVE_WRITE_TOOL_NAMES.has(part.toolRequest.name)
         sendChunk({
           toolCall: {
             ref: part.toolRequest.ref,
@@ -2227,11 +2306,12 @@ interface PreparedChatTurn {
   /** The session doc loaded for this turn (null on fresh-session creation). */
   existingSession: BotSessionDocSummary | null
   /**
-   * Media parts (base64 `data:` URLs) built from supported binary attachments
-   * of the attached context nodes — prepended (after the text) to the user
-   * turn's `prompt`. Empty unless the turn carries a real user message.
+   * Attachment parts appended (after the text) to the user turn's `prompt`:
+   * base64 media parts from supported binary attachments (context nodes +
+   * session uploads) and flagged inline-text parts from text-like session
+   * uploads. Empty unless the turn carries a real user message.
    */
-  userMediaParts: Part[]
+  userAttachmentParts: Part[]
   /** Post-clamp model wire-name used for `chat.model` + persistence. */
   effectiveModel: BotAgentModel
   /** Team master Memory switch — gates post-generation extraction (§6.2). */
@@ -2334,6 +2414,12 @@ async function prepareChatTurn(opts: {
   captureChanges?: { sink: CapturedNodeChange[]; captureOnly: boolean }
   /** Workflows-only. Restricts WRITE tools to this scope (the `targetScope`). */
   targetScope?: WorkspaceNodeScope | null
+  /**
+   * Workflows-only (P3). Pre-validated member uid whose connection bindings
+   * this headless run may act through — see
+   * `BotActionContext.connectionsActsAsUid`.
+   */
+  connectionsActsAsUid?: string
 }): Promise<PreparedChatTurn> {
   const {
     principal,
@@ -2354,6 +2440,7 @@ async function prepareChatTurn(opts: {
     onUsage,
     captureChanges,
     targetScope,
+    connectionsActsAsUid,
   } = opts
 
   // The acting id (uid for a user, agentId for an agent) — used for the
@@ -2694,7 +2781,7 @@ async function prepareChatTurn(opts: {
     dispatchableToolIntegrations,
     autoContextBlock,
     memoryContextBlock,
-    sessionMediaParts,
+    sessionAttachmentParts,
   ] = await Promise.all([
     sessionId
       ? creatingNewSessionWithClientId
@@ -2729,9 +2816,10 @@ async function prepareChatTurn(opts: {
       actingUid: principal.kind === "user" ? principal.uid : "",
       query: message ?? "",
     }),
-    // Chat-session uploads the user selected for THIS turn → base64 media
-    // parts. Same `includeMedia` gate as the node-attachment media above.
-    loadSessionAttachmentMediaParts({
+    // Chat-session uploads the user selected for THIS turn → labeled prompt
+    // parts (base64 media for images/PDFs, flagged inline text for text-like
+    // bodies). Same `includeMedia` gate as the node-attachment media above.
+    loadSessionAttachmentParts({
       teamId,
       workspaceId,
       sessionId,
@@ -2818,6 +2906,12 @@ async function prepareChatTurn(opts: {
     captureSink: captureChanges?.sink,
     captureOnly: captureChanges?.captureOnly,
     allowedScope: targetScope ?? undefined,
+    // Workflows (P3): pre-validated member identity for connection READ
+    // tools on headless runs. Only agent principals carry it — interactive
+    // turns resolve bindings by the chatting user's own `auth.uid`.
+    ...(principal.kind === "agent" && connectionsActsAsUid
+      ? { connectionsActsAsUid }
+      : {}),
   }
 
   // Tool catalog — mode steers prompt style only; per-team toggles strip
@@ -2963,7 +3057,7 @@ async function prepareChatTurn(opts: {
     existingSession,
     effectiveModel,
     memoryEnabled: agentConfig.memoryEnabled,
-    userMediaParts: [...nodeContext.media, ...sessionMediaParts],
+    userAttachmentParts: [...nodeContext.media, ...sessionAttachmentParts],
   }
 }
 
@@ -3011,6 +3105,8 @@ interface RunAgentTurnOptions {
    * fallback. `sendBotMessageFlow` leaves it unset (interactive).
    */
   headless?: boolean
+  /** Workflows-only (P3) — see `BotActionContext.connectionsActsAsUid`. */
+  connectionsActsAsUid?: string
 }
 
 /**
@@ -3067,7 +3163,7 @@ async function runAgentTurn(
       existingSession,
       effectiveModel,
       memoryEnabled,
-      userMediaParts,
+      userAttachmentParts,
     } = await prepareChatTurn({
       principal: opts.principal,
       teamId: opts.teamId,
@@ -3088,6 +3184,7 @@ async function runAgentTurn(
       captureChanges: opts.captureChanges,
       targetScope: opts.targetScope,
       disableTransfer: opts.disableTransfer,
+      connectionsActsAsUid: opts.connectionsActsAsUid,
     })
 
     // Capture the thread length BEFORE the first turn appends anything.
@@ -3106,14 +3203,15 @@ async function runAgentTurn(
     // a brand-new session, so this is a no-op on first turns.
     const priorRefs = collectPriorTurnToolRefs(existingSession?.data)
 
-    // Multimodal turn: when the attached nodes contributed media parts
-    // (images/PDFs), send the user turn as a `[text, ...media]` array;
-    // otherwise keep the plain-string prompt (cheaper, unchanged behavior).
-    // `runChatTurn` owns the per-turn AbortController + `maxTurns` + the
-    // deadline race; here we only pick the delivery shape and the ref dedup.
+    // Multimodal turn: when attached nodes or session uploads contributed
+    // parts (media and/or inlined text bodies), send the user turn as a
+    // `[text, ...parts]` array; otherwise keep the plain-string prompt
+    // (cheaper, unchanged behavior). `runChatTurn` owns the per-turn
+    // AbortController + `maxTurns` + the deadline race; here we only pick
+    // the delivery shape and the ref dedup.
     const turnPrompt: string | Part[] =
-      userMediaParts.length > 0
-        ? [{ text: opts.message }, ...userMediaParts]
+      userAttachmentParts.length > 0
+        ? [{ text: opts.message }, ...userAttachmentParts]
         : opts.message
     const firstFinal = await runChatTurn(
       chat,
@@ -3154,6 +3252,7 @@ async function runAgentTurn(
         targetScope: opts.targetScope,
         allowInterrupts: opts.allowInterrupts,
         headless: opts.headless,
+        connectionsActsAsUid: opts.connectionsActsAsUid,
         archivedSessionMessage,
         sendChunk,
       })
@@ -3250,6 +3349,13 @@ export async function runHeadlessAgentTurn(opts: {
    * second turn still runs with transfer disabled (one hop, no chains).
    */
   allowTransfer?: boolean
+  /**
+   * P3 — pre-validated member uid whose connection bindings this run may
+   * act through. The CALLER (workflow worker) owns validation: self-only
+   * at write time + live membership at run time. See
+   * `BotActionContext.connectionsActsAsUid`.
+   */
+  connectionsActsAsUid?: string
 }): Promise<{
   sessionId: string
   reply: string
@@ -3290,6 +3396,7 @@ export async function runHeadlessAgentTurn(opts: {
     // staged changeset and per-run usage still cover both agents' work.
     disableTransfer: opts.allowTransfer !== true,
     targetScope: opts.targetScope,
+    connectionsActsAsUid: opts.connectionsActsAsUid,
     captureChanges: { sink: changes, captureOnly },
     onUsage: (u) => {
       usage.model = u.model
@@ -3343,7 +3450,15 @@ const sendBotMessageFlow = ai.defineFlow(
 export const sendBotMessage = onCallGenkit(
   {
     ...GENKIT_OPTS,
-    secrets: [geminiApiKey, anthropicApiKey, openaiApiKey],
+    // The OAuth client pair rides along so a connection tool can refresh a
+    // member's token mid-turn (connections.ts reads them via process.env).
+    secrets: [
+      geminiApiKey,
+      anthropicApiKey,
+      openaiApiKey,
+      googleOauthClientId,
+      googleOauthClientSecret,
+    ],
     authPolicy: (auth) => !!auth?.token?.email_verified,
     enforceAppCheck: true,
   },
@@ -3490,6 +3605,23 @@ function findPendingInterruptParts(
   return pending
 }
 
+/**
+ * Confirm-style interrupt tools resumable via the RESTART channel, keyed by
+ * wire-name (mirrors `CALENDAR_WRITE_TOOL_NAMES`). Unlike askQuestion
+ * (a respond-channel interrupt whose output IS the user's answer), these
+ * re-RUN their handler with server-stamped `{ approved }` metadata and
+ * produce a real tool output (the write result).
+ */
+const CONFIRM_RESTART_TOOLS = {
+  createCalendarEvent: createCalendarEventTool,
+  updateCalendarEvent: updateCalendarEventTool,
+  createDriveFile: createDriveFileTool,
+  updateDriveFile: updateDriveFileTool,
+} as const
+
+/** Client decision payload for a confirm-style interrupt. */
+const confirmDecisionSchema = z.object({ approved: z.boolean() })
+
 const respondToBotInterruptFlow = ai.defineFlow(
   {
     name: "respondToBotInterrupt",
@@ -3582,69 +3714,162 @@ const respondToBotInterruptFlow = ai.defineFlow(
       }
 
       const interruptName = interruptPart.toolRequest.name ?? name
-      if (interruptName !== "askQuestion") {
-        // Future-proofing: if we add more interrupt tools, the dispatch
-        // table belongs here. For now there's only one.
+      const confirmTool =
+        CONFIRM_RESTART_TOOLS[
+          interruptName as keyof typeof CONFIRM_RESTART_TOOLS
+        ]
+      if (interruptName !== "askQuestion" && !confirmTool) {
         throw new HttpsError(
           "failed-precondition",
           `Unsupported interrupt tool: ${interruptName}`
         )
       }
 
-      // Validate + construct the tool response. `askQuestion.respond` checks
-      // the answer against `askQuestionOutputSchema` and throws on mismatch
-      // — that surfaces as a 400 to the client.
-      let respondPart
-      try {
-        respondPart = askQuestionTool.respond(
-          // The respond() helper expects a ToolRequestPart. Our pending
-          // collector returns the part shape Genkit emits.
-          interruptPart as Parameters<typeof askQuestionTool.respond>[0],
-          response as Parameters<typeof askQuestionTool.respond>[1]
-        )
-      } catch (error) {
+      // ── Resume coverage (Genkit's all-or-nothing rule) ─────────────────
+      // Genkit requires a resume to resolve EVERY pending interrupt in the
+      // thread's LAST model message ("Unresolved tool request" otherwise).
+      // We use this set for two guards below: (1) the target must BE in the
+      // last message — one abandoned by a newer message can't be resumed;
+      // (2) there must be exactly one pending interrupt — multi-interrupt
+      // resumes are refused (see the length check below) because no safe
+      // coverage for the siblings exists on this Genkit version.
+      const resumeThread = existing.data?.threads?.[MAIN_THREAD] as
+        | MessageLike[]
+        | undefined
+      const lastThreadMessage =
+        Array.isArray(resumeThread) && resumeThread.length > 0
+          ? resumeThread[resumeThread.length - 1]
+          : undefined
+      const lastMessageInterruptParts: ToolRequestPartLike[] =
+        lastThreadMessage?.role === "model" &&
+        Array.isArray(lastThreadMessage.content)
+          ? (lastThreadMessage.content as PartLike[]).filter(
+              (p): p is ToolRequestPartLike =>
+                !!p.toolRequest?.name &&
+                (!!p.metadata?.interrupt ||
+                  INTERRUPT_TOOL_NAMES.has(p.toolRequest.name) ||
+                  CALENDAR_WRITE_TOOL_NAMES.has(p.toolRequest.name) ||
+                  DRIVE_WRITE_TOOL_NAMES.has(p.toolRequest.name))
+            )
+          : []
+      if (!lastMessageInterruptParts.includes(interruptPart)) {
         throw new HttpsError(
-          "invalid-argument",
-          `Invalid answer for ${name}: ${(error as Error).message}`
+          "failed-precondition",
+          "This request is no longer active — the conversation has moved on."
         )
+      }
+
+      // Genkit's resume is ALL-OR-NOTHING: a resume payload must resolve
+      // EVERY pending interrupt in the thread's last model message, or
+      // Genkit rejects the whole resume. The only safe coverage for a
+      // SIBLING is one that re-interrupts — but on genkit 1.36.0 restarting
+      // a tool that then re-interrupts throws (after a sibling that already
+      // executed POSTed its write), which would duplicate the write on the
+      // user's retry; and same-name ref-less duplicates can't be targeted
+      // distinctly at all (Genkit matches restarts by name+ref). So we
+      // refuse to resume when more than one interrupt is pending: the user
+      // sends a fresh message (which abandons the stale interrupts) and the
+      // agent re-proposes one at a time. Single-interrupt — the overwhelming
+      // common case — is unaffected. (A model rarely emits parallel
+      // interrupts; when it does, this fails closed rather than guessing.)
+      if (lastMessageInterruptParts.length > 1) {
+        throw new HttpsError(
+          "failed-precondition",
+          "There are multiple pending actions in this chat. Send a new " +
+            "message and the assistant will walk through them one at a time."
+        )
+      }
+
+      const respondParts: ReturnType<typeof askQuestionTool.respond>[] = []
+      const restartParts: ReturnType<typeof createCalendarEventTool.restart>[] =
+        []
+
+      if (confirmTool) {
+        const decision = confirmDecisionSchema.safeParse(response)
+        if (!decision.success) {
+          throw new HttpsError(
+            "invalid-argument",
+            `Invalid decision for ${interruptName}: expected { approved: boolean }.`
+          )
+        }
+        // SECURITY: approval is stamped HERE, server-side, from the
+        // authenticated member's click — the model can never produce it
+        // (its only channels are tool args and text, and the handler reads
+        // approval exclusively off the restart metadata). The restart also
+        // reuses the ORIGINAL stored toolRequest part, so the draft the
+        // handler executes is exactly the one the user approved.
+        restartParts.push(
+          confirmTool.restart(
+            interruptPart as Parameters<typeof confirmTool.restart>[0],
+            {
+              approved: decision.data.approved,
+              decidedByUid: auth.uid,
+              decidedAt: new Date().toISOString(),
+            }
+          )
+        )
+      } else {
+        // askQuestion target. `.respond` validates the answer against
+        // `askQuestionOutputSchema` and throws on mismatch — that surfaces
+        // as a 400 to the client.
+        try {
+          respondParts.push(
+            askQuestionTool.respond(
+              // The respond() helper expects a ToolRequestPart. Our pending
+              // collector returns the part shape Genkit emits.
+              interruptPart as Parameters<typeof askQuestionTool.respond>[0],
+              response as Parameters<typeof askQuestionTool.respond>[1]
+            )
+          )
+        } catch (error) {
+          throw new HttpsError(
+            "invalid-argument",
+            `Invalid answer for ${name}: ${(error as Error).message}`
+          )
+        }
       }
 
       sendChunk({ sessionId: session.id })
 
-      // First chunk to the client: flip the just-answered interrupt's
-      // tool segment from "form" to "done" with the user's answer as the
-      // output. Doing this preemptively (before the model's continuation
-      // streams) keeps the UI responsive — the user sees their submission
-      // land instantly, then the model's reply types in below.
-      sendChunk({
-        toolResult: {
-          ref: interruptPart.toolRequest.ref,
-          name: interruptName,
-          output: response,
-        },
-      })
-
       // Pre-mark every historical tool-call/result ref (same reasoning as
       // in `sendBotMessageFlow`: `final.messages` covers the full thread,
-      // and without seeding we'd resurface prior turns' tool cards). Then
-      // also pre-mark the just-answered interrupt's *toolResult* ref so
-      // the sweep doesn't double-emit it — we already emitted it via the
-      // pre-stream `sendChunk` above to make the form vanish instantly.
-      // The interrupt's *toolCall* ref is naturally covered by the prior
-      // sweep skip (it lives in the pre-turn thread).
+      // and without seeding we'd resurface prior turns' tool cards).
       const priorRefs = collectPriorTurnToolRefs(existing.data)
-      const answeredResultKey = interruptPart.toolRequest.ref
-        ? `result:${interruptPart.toolRequest.ref}`
-        : `result:${interruptName}#${priorRefs.resultCount}`
-      const preSentResults = [...priorRefs.results, answeredResultKey]
+      let preSentResults = priorRefs.results
+      if (!confirmTool) {
+        // askQuestion only: flip the answered card instantly (the user's
+        // answer IS the tool output) and pre-mark its result so the sweep
+        // doesn't double-emit it. Confirm-style interrupts must do NEITHER:
+        // the restarted tool re-RUNS during the resumed turn and produces
+        // the real toolResponse (the write result) — pre-emitting would
+        // paint the approval payload as the result, and pre-marking would
+        // make the sweep's dedupe suppress the genuine one.
+        sendChunk({
+          toolResult: {
+            ref: interruptPart.toolRequest.ref,
+            name: interruptName,
+            output: response,
+          },
+        })
+        const answeredResultKey = interruptPart.toolRequest.ref
+          ? `result:${interruptPart.toolRequest.ref}`
+          : `result:${interruptName}#${priorRefs.resultCount}`
+        preSentResults = [...priorRefs.results, answeredResultKey]
+      }
 
-      // Delivery `{ resume }` folds the user's answer back in as the tool
-      // response (NOT a new user-role message). `runChatTurn` owns the abort
-      // controller + `maxTurns` + deadline race; the resumed turn can chain
-      // tools and hang on the provider just like a fresh send.
+      // Delivery `{ resume }` folds the user's response back in via the
+      // appropriate channel (respond = answer-as-output; restart =
+      // re-run-with-metadata). `runChatTurn` owns the abort controller +
+      // `maxTurns` + deadline race; the resumed turn can chain tools and
+      // hang on the provider just like a fresh send.
       const firstFinal = await runChatTurn(
         chat,
-        { resume: { respond: [respondPart] } },
+        {
+          resume: {
+            ...(respondParts.length > 0 ? { respond: respondParts } : {}),
+            ...(restartParts.length > 0 ? { restart: restartParts } : {}),
+          },
+        },
         {
           sendChunk,
           preSentToolCalls: priorRefs.calls,
@@ -3701,7 +3926,14 @@ const respondToBotInterruptFlow = ai.defineFlow(
 export const respondToBotInterrupt = onCallGenkit(
   {
     ...GENKIT_OPTS,
-    secrets: [geminiApiKey, anthropicApiKey, openaiApiKey],
+    // Same OAuth pair as sendBotMessage — resumed turns run tools too.
+    secrets: [
+      geminiApiKey,
+      anthropicApiKey,
+      openaiApiKey,
+      googleOauthClientId,
+      googleOauthClientSecret,
+    ],
     authPolicy: (auth) => !!auth?.token?.email_verified,
     enforceAppCheck: true,
   },

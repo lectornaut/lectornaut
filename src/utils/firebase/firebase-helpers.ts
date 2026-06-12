@@ -15,6 +15,12 @@
 import { firestore, storage } from "@/modules/firebase"
 import { zodConverter } from "@/schemas/_utils"
 import {
+  connectionBindingSchema,
+  connectionSchema,
+  type IConnection,
+  type IConnectionBinding,
+} from "@/schemas/connections"
+import {
   botSessionSchema,
   groupSchema,
   membershipPreferencesSchema,
@@ -114,6 +120,19 @@ const memoryConverter = zodConverter<IMemory>(
   // canonical from the location, so the admin (unfiltered) memory query parses
   // cleanly without those fields being denormalized into every doc body.
   { teamId: 1, workspaceId: 3 }
+)
+const connectionConverter = zodConverter<IConnection>(
+  connectionSchema,
+  "connection",
+  // `teams/{teamId}/connections/{provider}` — teamId is canonical from the path.
+  { teamId: 1 }
+)
+const connectionBindingConverter = zodConverter<IConnectionBinding>(
+  connectionBindingSchema,
+  "connectionBinding",
+  // `teams/{teamId}/connections/{provider}/bindings/{uid}` — teamId (1) and
+  // provider (3) are canonical from the path.
+  { teamId: 1, provider: 3 }
 )
 
 // ============================================================================
@@ -472,6 +491,56 @@ export const getMemoryRef = (
     "memories",
     memoryId
   ).withConverter(memoryConverter)
+
+/** Get the team's connections collection (validated on read). */
+export const getConnectionsCollection = (teamId: string) =>
+  collection(firestore, "teams", teamId, "connections").withConverter(
+    connectionConverter
+  )
+
+/** Get a single connection document reference (validated on read). */
+export const getConnectionRef = (teamId: string, provider: string) =>
+  doc(firestore, "teams", teamId, "connections", provider).withConverter(
+    connectionConverter
+  )
+
+/**
+ * Get a connection's bindings subcollection (validated on read). Metadata
+ * only — the sibling `bindingSecrets` collection holds tokens and is
+ * unreadable by clients (no rules match it at all).
+ */
+export const getConnectionBindingsCollection = (
+  teamId: string,
+  provider: string
+) =>
+  collection(
+    firestore,
+    "teams",
+    teamId,
+    "connections",
+    provider,
+    "bindings"
+  ).withConverter(connectionBindingConverter)
+
+/**
+ * Get one member's binding document (validated on read). Lets feature
+ * surfaces watch JUST the signed-in member's own link instead of the whole
+ * roster collection.
+ */
+export const getConnectionBindingRef = (
+  teamId: string,
+  provider: string,
+  uid: string
+) =>
+  doc(
+    firestore,
+    "teams",
+    teamId,
+    "connections",
+    provider,
+    "bindings",
+    uid
+  ).withConverter(connectionBindingConverter)
 
 /**
  * Create a query for the signed-in user's own memories in a workspace, sorted

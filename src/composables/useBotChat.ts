@@ -217,16 +217,18 @@ export interface BotChatContext {
     }
   ) => Promise<void>
   /**
-   * Resume a chat that's paused on an `askQuestion` interrupt.
-   * The `messageId` + `ref` locate the tool segment (so the UI can
-   * mutate it in place); `answer` is the user's response, validated
-   * against the interrupt's `outputSchema` server-side.
+   * Resume a chat that's paused on an interrupt. The `messageId` + `ref`
+   * locate the tool segment (so the UI can mutate it in place); `answer` is
+   * the user's response, validated server-side per interrupt kind:
+   * askQuestion takes `{ answer }` (checked against the tool's
+   * outputSchema); the calendar-write confirms take `{ approved }` (stamped
+   * onto the tool's restart metadata by the resume flow).
    */
   respondToInterrupt: (args: {
     messageId: string
     ref?: string
     name: string
-    answer: { answer: string }
+    answer: { answer: string } | { approved: boolean }
   }) => Promise<void>
   selectSession: (id: string) => Promise<void>
   startNewSession: () => void

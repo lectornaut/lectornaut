@@ -42,6 +42,7 @@ import IconHgCameraLens from "~icons/hugeicons/camera-lens"
 import IconHgCancel01 from "~icons/hugeicons/cancel-01"
 import IconHgCancelCircle from "~icons/hugeicons/cancel-circle"
 import IconHgCancelSquare from "~icons/hugeicons/cancel-square"
+import IconHgCells from "~icons/hugeicons/cells"
 import IconHgChatBot from "~icons/hugeicons/chat-bot"
 import IconHgCheckList from "~icons/hugeicons/check-list"
 import IconHgCheckmarkBadge01 from "~icons/hugeicons/checkmark-badge-01"
@@ -226,6 +227,8 @@ import IconHgWrench01 from "~icons/hugeicons/wrench-01"
 import IconLogosAppleAppStore from "~icons/logos/apple-app-store"
 import IconLogosDiscord from "~icons/logos/discord"
 import IconLogosGoogle from "~icons/logos/google"
+import IconLogosGoogleCalendar from "~icons/logos/google-calendar"
+import IconLogosGoogleDrive from "~icons/logos/google-drive"
 import IconLogosGoogleIcon from "~icons/logos/google-icon"
 import IconLogosGooglePlayIcon from "~icons/logos/google-play-icon"
 import IconLogosLinkedin from "~icons/logos/linkedin"
@@ -342,6 +345,7 @@ export {
   IconHgCalculator01 as IconCalculator,
   IconHgCalendar01 as IconCalendar,
   IconHgCamera01 as IconCamera,
+  IconHgCells as IconCells,
   IconMingcuteChat1Fill as IconChatFill,
   IconHgTick02 as IconCheck,
   IconHgTickDouble02 as IconCheckCheck,
@@ -470,6 +474,8 @@ export {
   IconHgLogout01 as IconLogOut,
   IconLogosDiscord,
   IconLogosGoogle,
+  IconLogosGoogleCalendar,
+  IconLogosGoogleDrive,
   IconLogosLinkedin,
   IconLogosMeta,
   IconLogosMicrosoftWindows,

@@ -181,8 +181,8 @@ const openShortcutsDemo = () => {
           </FieldContent>
           <div class="flex flex-col items-end gap-2">
             <KbdGroup>
-              <Kbd>{{ platformSpecialKey }}</Kbd>
-              <Kbd>K</Kbd>
+              <Kbd aria-hidden="true">{{ platformSpecialKey }}</Kbd>
+              <Kbd aria-hidden="true">K</Kbd>
             </KbdGroup>
             <Dialog v-model:open="commandDialogOpen">
               <DialogTrigger as-child>
@@ -243,14 +243,14 @@ const openShortcutsDemo = () => {
           <div class="flex flex-col items-end gap-2">
             <div class="flex flex-col items-end gap-1">
               <KbdGroup>
-                <Kbd>{{ platformSpecialKey }}</Kbd>
-                <Kbd>Shift</Kbd>
-                <Kbd>↑</Kbd>
+                <Kbd aria-hidden="true">{{ platformSpecialKey }}</Kbd>
+                <Kbd aria-hidden="true">Shift</Kbd>
+                <Kbd aria-hidden="true">↑</Kbd>
               </KbdGroup>
               <KbdGroup>
-                <Kbd>{{ platformSpecialKey }}</Kbd>
-                <Kbd>Shift</Kbd>
-                <Kbd>↓</Kbd>
+                <Kbd aria-hidden="true">{{ platformSpecialKey }}</Kbd>
+                <Kbd aria-hidden="true">Shift</Kbd>
+                <Kbd aria-hidden="true">↓</Kbd>
               </KbdGroup>
             </div>
             <DropdownMenu>
@@ -306,8 +306,8 @@ const openShortcutsDemo = () => {
           </FieldContent>
           <div class="flex flex-col items-end gap-2">
             <KbdGroup>
-              <Kbd>{{ platformSpecialKey }}</Kbd>
-              <Kbd>/</Kbd>
+              <Kbd aria-hidden="true">{{ platformSpecialKey }}</Kbd>
+              <Kbd aria-hidden="true">/</Kbd>
             </KbdGroup>
             <Dialog v-model:open="shortcutsDialogOpen">
               <DialogTrigger as-child>
@@ -335,8 +335,8 @@ const openShortcutsDemo = () => {
                       t("pages.welcome.onboarding.appFlow.shortcutCommands")
                     }}</span>
                     <KbdGroup>
-                      <Kbd>{{ platformSpecialKey }}</Kbd>
-                      <Kbd>K</Kbd>
+                      <Kbd aria-hidden="true">{{ platformSpecialKey }}</Kbd>
+                      <Kbd aria-hidden="true">K</Kbd>
                     </KbdGroup>
                   </div>
                   <div class="flex items-center justify-between border p-2">
@@ -346,9 +346,9 @@ const openShortcutsDemo = () => {
                       )
                     }}</span>
                     <KbdGroup>
-                      <Kbd>{{ platformSpecialKey }}</Kbd>
-                      <Kbd>Shift</Kbd>
-                      <Kbd>↑</Kbd>
+                      <Kbd aria-hidden="true">{{ platformSpecialKey }}</Kbd>
+                      <Kbd aria-hidden="true">Shift</Kbd>
+                      <Kbd aria-hidden="true">↑</Kbd>
                     </KbdGroup>
                   </div>
                   <div class="flex items-center justify-between border p-2">
@@ -358,9 +358,9 @@ const openShortcutsDemo = () => {
                       )
                     }}</span>
                     <KbdGroup>
-                      <Kbd>{{ platformSpecialKey }}</Kbd>
-                      <Kbd>Shift</Kbd>
-                      <Kbd>↓</Kbd>
+                      <Kbd aria-hidden="true">{{ platformSpecialKey }}</Kbd>
+                      <Kbd aria-hidden="true">Shift</Kbd>
+                      <Kbd aria-hidden="true">↓</Kbd>
                     </KbdGroup>
                   </div>
                 </div>

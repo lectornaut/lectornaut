@@ -1,5 +1,8 @@
 <script lang="ts" setup>
+import DriveFilePicker from "@/components/app/sidebars/DriveFilePicker.vue"
 import { useConfirmationDialog } from "@/composables/useConfirmationDialog"
+import { useMyConnectionFeature } from "@/composables/useConnections"
+import { importDriveNodeAttachment } from "@/composables/useFunctions"
 import {
   useNodeAttachmentsState,
   validateAttachmentDisplayName,
@@ -22,6 +25,7 @@ import {
   IconFileVideo,
   IconFileWord,
   IconLink2,
+  IconLogosGoogleDrive,
   IconPencil,
   IconRefreshCcw,
   IconTrash2,
@@ -304,6 +308,26 @@ const triggerFilePicker = () => {
   openCreateFileDialog()
 }
 
+// "Add from Drive" — same in-app picker as SessionAttachments, landing the
+// file as a node attachment via `importDriveNodeAttachment` (bytes move
+// entirely server-side). Offered only while the Drive feature is usable:
+// app installed + admin kill switch off + the member's own account linked.
+const { available: driveAvailable } = useMyConnectionFeature("google-drive")
+const drivePickerOpen = ref(false)
+
+const importDriveFile = async (fileId: string) => {
+  const context = getMutableContext()
+  const { data } = await importDriveNodeAttachment({ ...context, fileId })
+  return data
+}
+
+const onDriveImported = (_attachmentId: string, displayName: string) => {
+  // The live attachments query picks up the new doc; just confirm.
+  showSuccessToast(
+    t("components.nodeAttachments.toasts.driveImported", { name: displayName })
+  )
+}
+
 const processSelectedFiles = async (files: File[]) => {
   if (!files.length) return
 
@@ -513,6 +537,10 @@ watch([teamId, workspaceId, nodeId, () => props.scope], () => {
   resetCreateFileDialog()
   closeEditDialog()
   closeDeleteDialog()
+  // Close the Drive picker too — its import callable reads the node context
+  // reactively, so a pick made after a node switch would land the file on
+  // the NEW node.
+  drivePickerOpen.value = false
 })
 
 watch(selectedCreateFiles, async (files) => {
@@ -539,7 +567,27 @@ watch(selectedCreateFiles, async (files) => {
         <IconUpload />
         <span>{{ t("components.nodeAttachments.upload") }}</span>
       </Button>
+      <Button
+        v-if="driveAvailable"
+        variant="outline"
+        size="sm"
+        :disabled="isReadOnly"
+        @click="drivePickerOpen = true"
+      >
+        <IconLogosGoogleDrive />
+        <span class="sr-only">
+          {{ t("components.nodeAttachments.addFromDrive") }}
+        </span>
+      </Button>
     </ButtonGroup>
+
+    <DriveFilePicker
+      v-if="driveAvailable"
+      v-model:open="drivePickerOpen"
+      :team-id="teamId"
+      :import-file="importDriveFile"
+      @imported="onDriveImported"
+    />
     <OverlayScrollbarsWrapper>
       <div class="p-2">
         <div v-if="readOnlyMessage" class="text-muted-foreground text-xs">

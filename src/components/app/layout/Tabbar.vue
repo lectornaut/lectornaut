@@ -346,8 +346,10 @@ watch(copied, (isCopied) => {
                                 >
                                   {{ t("common.close") }}
                                   <KbdGroup>
-                                    <Kbd>{{ getPlatformSpecialKey() }}</Kbd>
-                                    <Kbd>W</Kbd>
+                                    <Kbd aria-hidden="true">{{
+                                      getPlatformSpecialKey()
+                                    }}</Kbd>
+                                    <Kbd aria-hidden="true">W</Kbd>
                                   </KbdGroup>
                                 </TooltipContent>
                               </Tooltip>
@@ -475,8 +477,10 @@ watch(copied, (isCopied) => {
                         {{ tab.fullPath }}
                       </span>
                       <KbdGroup>
-                        <Kbd>{{ getPlatformSpecialKey() }}</Kbd>
-                        <Kbd>{{ index + 1 }}</Kbd>
+                        <Kbd aria-hidden="true">{{
+                          getPlatformSpecialKey()
+                        }}</Kbd>
+                        <Kbd aria-hidden="true">{{ index + 1 }}</Kbd>
                       </KbdGroup>
                     </div>
                     <div class="bg-secondary aspect-video rounded border"></div>

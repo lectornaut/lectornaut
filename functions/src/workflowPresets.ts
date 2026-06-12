@@ -145,6 +145,38 @@ export const WORKFLOW_PRESETS: readonly ServerWorkflowPreset[] = [
     defaultTargetScope: "write",
   },
   {
+    key: "_drive_digest",
+    name: "Google Drive digest",
+    description:
+      "On a schedule, summarize what changed in the team's Google Drive " +
+      "since the last run into a digest doc. Needs the Google Drive app " +
+      "installed and a member's account bound via \"Run with my connected " +
+      'accounts".',
+    avatarSeed: "drive-digest",
+    instructions: [
+      "You maintain a running digest of Google Drive activity.",
+      "1. Use the googleDrive tool to find files modified in the last 7 " +
+        "days (modifiedAfter), scoped to the folder or query named below " +
+        "when one is given.",
+      "2. If the tool says Google Drive isn't connected, record nothing — " +
+        "end the run noting that a member must connect Drive and enable " +
+        '"Run with my connected accounts" on this workflow.',
+      "3. Read the most relevant changed files with readDriveFile (at most " +
+        "5; skip binaries).",
+      "4. Prepend ONE dated entry to the digest doc: one line per file — " +
+        "what changed or what it now says, with its Drive link. Keep older " +
+        "entries intact.",
+      "Done when the digest has one new dated entry covering the period, " +
+        "or no entry if nothing meaningful changed.",
+    ].join("\n"),
+    additionalPrompt:
+      "Watch scope: <name a Drive folder (id or URL) or a search query " +
+      "here; leave as-is to digest everything>.",
+    defaultTrigger: { type: "schedule", schedule: WEEKLY_MON_9AM },
+    defaultUpdateMode: "require_review",
+    defaultTargetScope: "write",
+  },
+  {
     key: "_repair_links",
     name: "Repair links",
     description:

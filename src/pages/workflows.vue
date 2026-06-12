@@ -195,7 +195,10 @@ const formatWhen = (ts: unknown): string =>
             <IconPlus />
             {{ t("settings.workflows.new") }}
           </Button>
-          <InputGroup :class="searchExpanded ? undefined : 'w-auto'">
+          <InputGroup
+            class="border-border border"
+            :class="searchExpanded ? undefined : 'w-auto'"
+          >
             <InputGroupAddon v-if="!searchExpanded" key="search-compact">
               <TooltipProvider>
                 <Tooltip>

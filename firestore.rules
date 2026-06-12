@@ -384,6 +384,27 @@ service cloud.firestore {
         allow write: if false;
       }
 
+      // Connections: installed external-account apps (doc id == provider key,
+      // e.g. "google-calendar"). Member read so the Connections settings
+      // section can render install + link state. Writes are callable-only
+      // (connections.ts: install/uninstall admin-gated, bindings member-gated).
+      //
+      // SECURITY: the sibling `bindingSecrets/{uid}` subcollection holds OAuth
+      // tokens and DELIBERATELY has no match block — deny-by-default means no
+      // client can ever read or write a token. Do not add a match for it.
+      match /connections/{provider} {
+        allow read: if isTeamMember(teamId);
+        allow write: if false;
+
+        // Per-member account links (metadata only: status, email, scopes).
+        // Team-readable so the section can show who's linked ("3 members
+        // connected") and surface needs-reauth states.
+        match /bindings/{userId} {
+          allow read: if isTeamMember(teamId);
+          allow write: if false;
+        }
+      }
+
       // Workflows (team automations) now live UNDER each workspace
       // (teams/{teamId}/workspaces/{workspaceId}/workflows) and are read
       // team-wide via a collectionGroup on the denormalized teamId — see the

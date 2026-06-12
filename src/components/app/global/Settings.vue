@@ -212,6 +212,11 @@ const tabContentClass = "overflow-auto overscroll-none scroll-smooth h-full"
                 <SettingsGroups />
               </OverlayScrollbarsWrapper>
             </TabsContent>
+            <TabsContent :class="tabContentClass" value="connections">
+              <OverlayScrollbarsWrapper>
+                <SettingsConnections />
+              </OverlayScrollbarsWrapper>
+            </TabsContent>
             <TabsContent :class="tabContentClass" value="overview">
               <OverlayScrollbarsWrapper>
                 <SettingsOverview />

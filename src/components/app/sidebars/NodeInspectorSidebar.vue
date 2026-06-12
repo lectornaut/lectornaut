@@ -15,21 +15,36 @@ const { t } = useI18n()
   <Sidebar collapsible="none" class="w-full">
     <Tabs default-value="bot" class="min-h-0 min-w-0 grow gap-0">
       <TabsList
-        class="no-scrollbar m-2 w-[-webkit-fill-available] shrink-0 justify-start overflow-x-auto"
+        class="no-scrollbar bg-input/50 m-2 w-[-webkit-fill-available] shrink-0 justify-start overflow-x-auto border"
       >
-        <TabsTrigger value="bot" class="text-xs">
+        <TabsTrigger
+          value="bot"
+          class="data-[state=active]:border-border! data-[state=active]:bg-background text-xs"
+        >
           {{ t("ai.bot") }}
         </TabsTrigger>
-        <TabsTrigger value="attachments" class="text-xs">
+        <TabsTrigger
+          value="attachments"
+          class="data-[state=active]:border-border! data-[state=active]:bg-background text-xs"
+        >
           {{ t("inspector.tabs.attachments") }}
         </TabsTrigger>
-        <TabsTrigger value="related" class="text-xs">
+        <TabsTrigger
+          value="related"
+          class="data-[state=active]:border-border! data-[state=active]:bg-background text-xs"
+        >
           {{ t("inspector.tabs.related") }}
         </TabsTrigger>
-        <TabsTrigger value="details" class="text-xs">
+        <TabsTrigger
+          value="details"
+          class="data-[state=active]:border-border! data-[state=active]:bg-background text-xs"
+        >
           {{ t("inspector.tabs.details") }}
         </TabsTrigger>
-        <TabsTrigger value="activity" class="text-xs">
+        <TabsTrigger
+          value="activity"
+          class="data-[state=active]:border-border! data-[state=active]:bg-background text-xs"
+        >
           {{ t("inspector.tabs.activity") }}
         </TabsTrigger>
       </TabsList>

@@ -12,6 +12,7 @@ import {
   IconBrain,
   IconBriefcase,
   IconBuilding,
+  IconCells,
   IconCode,
   IconComponent,
   IconCreditCard,
@@ -1417,6 +1418,12 @@ export const defaultSettingsTabs = [
         icon: IconUsers2,
         id: "groups",
         description: "settings.descriptions.groups",
+      },
+      {
+        name: "settings.titles.connections",
+        icon: IconCells,
+        id: "connections",
+        description: "settings.descriptions.connections",
       },
       {
         name: "settings.titles.security",

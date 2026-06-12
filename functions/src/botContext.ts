@@ -30,6 +30,11 @@ import {
 } from "./botMedia.js"
 import { NODE_SCOPES } from "./domain.js"
 import { db } from "./firebase.js"
+import {
+  ATTACHMENT_INLINE_CONTENT_MAX_CHARS,
+  isTextLikeAttachmentMimeType,
+  pickCodeFence,
+} from "./nodeAttachments.js"
 import type { NodeType, WorkspaceNodeScope } from "./types.js"
 
 // ===========================================================================
@@ -80,25 +85,18 @@ const MAX_NODE_CONTENT_BYTES = 100_000
 const PER_TURN_NODE_CONTENT_BUDGET_BYTES = 400_000
 
 /**
- * Max inline content bytes per attachment. Smaller than the node cap
- * because attachments are typically supplemental — if a single
- * attachment is huge, the user probably attached the wrong thing.
+ * Max inline content per attachment — the shared
+ * `ATTACHMENT_INLINE_CONTENT_MAX_CHARS` budget (smaller than the node cap
+ * because attachments are typically supplemental). Used as both the
+ * pre-download size gate (bytes) and the post-decode slice (chars).
  */
-const MAX_ATTACHMENT_INLINE_BYTES = 50_000
+const MAX_ATTACHMENT_INLINE_BYTES = ATTACHMENT_INLINE_CONTENT_MAX_CHARS
 
 /**
  * Max number of binary attachments (image/PDF) turned into media parts on a
  * single turn. Bounds request size when an attached node has many images.
  */
 const MAX_MEDIA_PARTS_PER_TURN = 8
-
-const TEXT_MIME_PREFIXES = [
-  "text/",
-  "application/json",
-  "application/xml",
-  "application/javascript",
-  "application/typescript",
-]
 
 // ===========================================================================
 // Schema + types — shared with bot.ts
@@ -140,11 +138,6 @@ interface NodeContextEntry {
 // Helpers
 // ===========================================================================
 
-function isTextLikeMime(mime: string | null | undefined): boolean {
-  if (!mime) return false
-  return TEXT_MIME_PREFIXES.some((prefix) => mime.startsWith(prefix))
-}
-
 /**
  * Resolve one attachment subdoc into the in-prompt `NodeContextAttachment`
  * shape, downloading its body when it's small + text-like.
@@ -176,7 +169,7 @@ async function fetchAttachmentContext(
   let attTruncated = false
   if (
     storagePath &&
-    isTextLikeMime(mimeType) &&
+    isTextLikeAttachmentMimeType(mimeType) &&
     (size === null || size <= MAX_ATTACHMENT_INLINE_BYTES)
   ) {
     try {
@@ -329,32 +322,6 @@ function formatBytes(bytes: number | null): string {
   if (bytes < 1024) return `${bytes} B`
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
   return `${(bytes / 1024 / 1024).toFixed(1)} MB`
-}
-
-/**
- * Pick a code-fence length that the content can't escape. CommonMark
- * requires the closing fence to have at least as many backticks as the
- * opening, so by scanning for the longest backtick run inside `content`
- * and using one more, we guarantee no malicious file can prematurely
- * close the fence and inject text at the system-prompt level.
- *
- * Without this, a node whose body contained ``` would terminate the
- * fence and the model would see whatever followed as bare system-prompt
- * text — a high-trust position the user shouldn't be able to reach
- * through file content.
- */
-function pickCodeFence(content: string): string {
-  let longestRun = 0
-  let currentRun = 0
-  for (let i = 0; i < content.length; i += 1) {
-    if (content.charCodeAt(i) === 0x60 /* ` */) {
-      currentRun += 1
-      if (currentRun > longestRun) longestRun = currentRun
-    } else {
-      currentRun = 0
-    }
-  }
-  return "`".repeat(Math.max(3, longestRun + 1))
 }
 
 /**

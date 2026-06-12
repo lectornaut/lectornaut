@@ -388,6 +388,13 @@ export const useIntegrationsStore = defineStore("integrations", () => {
             }
       )
     }
+    // Published (connection-contributed) integrations are doc-backed — opt-in
+    // by construction: no virtual synthesis, a row exists only after
+    // `installConnection` writes it. Mirrors the server's `listIntegrations`
+    // walk; without it these docs land in `byTypeKey` and never render.
+    for (const d of docs.value) {
+      if (d.source === "published") out.push(resolveStored(d))
+    }
     // Custom agents + tools (always a doc).
     for (const d of customs) out.push(resolveStored(d))
     return out

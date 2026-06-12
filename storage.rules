@@ -83,6 +83,11 @@ service firebase.storage {
         && request.resource.size <= 5 * 1024 * 1024;
     }
 
+    // Manual copy of the shared gate (rules can't import TS) — the single
+    // source is `isBlockedAttachmentMimeType` in shared/domain.ts, also
+    // re-applied server-side by the Drive import callable. Change all
+    // together (the 25MB size cap below mirrors
+    // NODE_ATTACHMENT_MAX_FILE_SIZE_BYTES the same way).
     function isBlockedAttachmentType() {
       return request.resource.contentType.matches("text/html")
         || request.resource.contentType.matches("application/xhtml.*")

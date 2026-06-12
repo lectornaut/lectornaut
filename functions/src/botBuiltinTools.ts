@@ -151,6 +151,20 @@ export interface BotActionContext {
   captureOnly?: boolean
   /** Workflows-only. Restricts WRITE tools to a single scope (`targetScope`). */
   allowedScope?: WorkspaceNodeScope | null
+  /**
+   * Workflows-only (P3, docs/connections-feature.prompt.md). The HUMAN
+   * member whose connection bindings this headless run may act through
+   * ("runs with {member}'s connected accounts"). Set ONLY by the workflow
+   * worker after two validations: the value was written self-only (the
+   * setter's own uid — consent is structural) and the member is STILL on
+   * the team at run time. Connection READ tools resolve bindings via
+   * `auth.uid || connectionsActsAsUid`; the confirm-gated WRITE tools
+   * deliberately ignore it (they aren't even registered headlessly —
+   * `allowInterrupts` — and a write must always be approved by a present
+   * human). Never set on interactive turns, where `auth.uid` is the
+   * binding identity.
+   */
+  connectionsActsAsUid?: string
 }
 
 // ===========================================================================

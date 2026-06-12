@@ -35,6 +35,11 @@ import { HttpsError, onCall } from "firebase-functions/v2/https"
 import { onSchedule } from "firebase-functions/v2/scheduler"
 import { z } from "zod"
 import { DEFAULT_AGENT_ID } from "./agents.js"
+// Call-time-only use (lifecycle audit entries) — any module cycle through
+// audit.ts is init-safe: every edge is touched only inside handlers, never
+// during module evaluation (same class as audit.ts's blessed call-time
+// import from connections.ts).
+import { buildContext, logEvent } from "./audit.js"
 import { requireVerifiedAuth } from "./auth.js"
 import { assertAdminRole as assertTeamAdminRole } from "./authGuards.js"
 import { estimateTokenCostUsd } from "./billingConfig.js"
@@ -47,6 +52,7 @@ import {
   type ResolvedNodeContext,
 } from "./botNodeTools.js"
 import { BUILT_IN_AGENTS_BY_ID, isBuiltInAgentId } from "./builtInAgents.js"
+import { actsAsUidViolation, isEligibleActsAsUid } from "./connectionsCore.js"
 import {
   NODE_SCOPES,
   WORKFLOW_UPDATE_MODES,
@@ -64,11 +70,13 @@ import {
 import {
   anthropicApiKey,
   geminiApiKey,
+  googleOauthClientId,
+  googleOauthClientSecret,
   openaiApiKey,
   postmarkApiKey,
 } from "./secrets.js"
 import { getTeamAdminsAndOwners } from "./teams.js"
-import type { WorkspaceNodeScope } from "./types.js"
+import type { LogEventParams, WorkspaceNodeScope } from "./types.js"
 import { assertWorkflowAutomaticEntitled } from "./usageMetering.js"
 import { getWorkflowPreset } from "./workflowPresets.js"
 
@@ -145,6 +153,14 @@ const workflowDraftSchema = z.object({
   /** `require_review` (default) stages edits for approval; `automatic` applies. */
   updateMode: updateModeSchema.optional(),
   enabled: z.boolean().optional(),
+  /**
+   * P3 (docs/connections-feature.prompt.md): the HUMAN member whose
+   * connection bindings headless runs may act through ("runs with
+   * {member}'s connected accounts"). Consent is structural: the callables
+   * reject any value other than the CALLER's own uid (`actsAsUidViolation`),
+   * and the run executor re-validates live membership. `null` clears.
+   */
+  actsAsUid: z.string().min(1).max(200).nullish(),
 })
 type WorkflowDraft = z.infer<typeof workflowDraftSchema>
 
@@ -177,6 +193,8 @@ interface WorkflowDoc {
   updateMode: "automatic" | "require_review"
   enabled: boolean
   archivedAt: Timestamp | null
+  /** P3 — connection-binding identity for headless runs (absent on old docs). */
+  actsAsUid?: string | null
 }
 
 type RunStatus = WorkflowRunStatus
@@ -201,12 +219,39 @@ const availableWorkflowsPath = (teamId: string) =>
   `teams/${teamId}/availableWorkflows`
 
 /** Owner/admin gate (shared role logic — see authGuards.ts + shared/permissions). */
-const assertAdminRole = (teamId: string, uid: string): Promise<void> =>
+const assertAdminRole = (teamId: string, uid: string) =>
   assertTeamAdminRole(
     teamId,
     uid,
     "Only team owners and admins can manage workflows."
   )
+
+/** Throw unless the caller may set this `actsAsUid` (self-only; null clears). */
+function assertActsAsAllowed(
+  callerUid: string,
+  requested: string | null | undefined
+): void {
+  const violation = actsAsUidViolation(callerUid, requested)
+  if (violation) throw new HttpsError("permission-denied", violation)
+}
+
+/**
+ * Resolve the connection-binding identity a queued run may act through (P3).
+ * Reads the LIVE workflow doc's `actsAsUid` (not the run snapshot) so
+ * clearing the binding revokes even already-queued runs, then re-validates:
+ * eligible shape (human uid, not a `_` agent sentinel) AND a live team
+ * membership — a member who disconnected merely degrades the tool ("not
+ * connected"), but a member who LEFT the team stops powering runs entirely.
+ * Returns undefined when the run should proceed identity-less.
+ */
+async function resolveRunActsAsUid(
+  teamId: string,
+  actsAsUid: string | null | undefined
+): Promise<string | undefined> {
+  if (!isEligibleActsAsUid(actsAsUid)) return undefined
+  const role = await getMembershipRoleOrNull(teamId, actsAsUid)
+  return role ? actsAsUid : undefined
+}
 
 /**
  * Cap active (non-archived) workflows per team. Enforced on BOTH create paths
@@ -444,6 +489,7 @@ function buildWorkflowDocData(
     updateMode: draft.updateMode ?? "require_review",
     enabled,
     archivedAt: null,
+    actsAsUid: draft.actsAsUid ?? null,
     createdByUid: uid,
     createdAt: FieldValue.serverTimestamp(),
     updatedAt: FieldValue.serverTimestamp(),
@@ -462,7 +508,7 @@ export const createTeamWorkflow = onCall<{ teamId: string; draft: unknown }>(
     if (typeof teamId !== "string" || !teamId) {
       throw new HttpsError("invalid-argument", "teamId is required.")
     }
-    await assertAdminRole(teamId, auth.uid)
+    const role = await assertAdminRole(teamId, auth.uid)
     // CRUD gate: creating a workflow here is always a CUSTOM one (predefined
     // come from enableTeamWorkflowPreset), so block when the team-wide toggle
     // is off — defense in depth behind the client's disabled "New workflow".
@@ -477,6 +523,7 @@ export const createTeamWorkflow = onCall<{ teamId: string; draft: unknown }>(
         `Invalid workflow: ${parsed.error.message}`
       )
     }
+    assertActsAsAllowed(auth.uid, parsed.data.actsAsUid)
     await assertAgentRunnable(teamId, parsed.data.agentId)
     await assertWorkflowSlotAvailable(teamId)
 
@@ -486,6 +533,29 @@ export const createTeamWorkflow = onCall<{ teamId: string; draft: unknown }>(
     await ref.set(
       buildWorkflowDocData(teamId, parsed.data, auth.uid, Date.now())
     )
+    // `actsAsUid` rides the trail — it's the connection-consent edge ("runs
+    // with {member}'s accounts"), the part of a workflow worth auditing most.
+    await logEvent({
+      teamId,
+      workspaceId: parsed.data.workspaceId,
+      actor: { userId: auth.uid, email: auth.token.email ?? undefined, role },
+      action: "workflow.create",
+      resource: {
+        type: "workflow",
+        id: ref.id,
+        parentId: parsed.data.workspaceId,
+      },
+      context: buildContext(request),
+      changes: {
+        fields: ["name", "agentId", "trigger", "actsAsUid"],
+        after: {
+          name: parsed.data.name,
+          agentId: parsed.data.agentId,
+          trigger: parsed.data.trigger.type,
+          actsAsUid: parsed.data.actsAsUid ?? null,
+        },
+      },
+    })
     return { workflowId: ref.id }
   }
 )
@@ -507,7 +577,7 @@ export const updateTeamWorkflow = onCall<{
   if (typeof workflowId !== "string" || !workflowId) {
     throw new HttpsError("invalid-argument", "workflowId is required.")
   }
-  await assertAdminRole(teamId, auth.uid)
+  const role = await assertAdminRole(teamId, auth.uid)
 
   const parsed = workflowUpdateSchema.safeParse(patch ?? {})
   if (!parsed.success) {
@@ -516,6 +586,9 @@ export const updateTeamWorkflow = onCall<{
       `Invalid workflow patch: ${parsed.error.message}`
     )
   }
+  // Self-only consent for the connection-binding identity; `null` (clearing)
+  // is open to any editor — revocation must never be harder than the grant.
+  assertActsAsAllowed(auth.uid, parsed.data.actsAsUid)
 
   const ref = db.doc(`${workflowsPath(teamId, workspaceId)}/${workflowId}`)
   const snap = await ref.get()
@@ -533,6 +606,30 @@ export const updateTeamWorkflow = onCall<{
     updatedAt: FieldValue.serverTimestamp(),
     nextRunAt: nextRunAtField(nextEnabled, nextTrigger, Date.now()),
   })
+  // Changed-field NAMES for everything (instructions/prompts are long text —
+  // values would bloat the log); before/after VALUES only for `actsAsUid`,
+  // the consent edge whose exact transition matters.
+  const changedFields = Object.keys(parsed.data)
+  if (changedFields.length > 0) {
+    const actsAsChanged = "actsAsUid" in parsed.data
+    await logEvent({
+      teamId,
+      workspaceId,
+      actor: { userId: auth.uid, email: auth.token.email ?? undefined, role },
+      action: "workflow.update",
+      resource: { type: "workflow", id: workflowId, parentId: workspaceId },
+      context: buildContext(request),
+      changes: {
+        fields: changedFields,
+        ...(actsAsChanged
+          ? {
+              before: { actsAsUid: current.actsAsUid ?? null },
+              after: { actsAsUid: parsed.data.actsAsUid ?? null },
+            }
+          : {}),
+      },
+    })
+  }
   return { ok: true }
 })
 
@@ -556,7 +653,7 @@ export const setTeamWorkflowEnabled = onCall<{
   if (typeof enabled !== "boolean") {
     throw new HttpsError("invalid-argument", "enabled must be a boolean.")
   }
-  await assertAdminRole(teamId, auth.uid)
+  const role = await assertAdminRole(teamId, auth.uid)
 
   const ref = db.doc(`${workflowsPath(teamId, workspaceId)}/${workflowId}`)
   const snap = await ref.get()
@@ -568,6 +665,19 @@ export const setTeamWorkflowEnabled = onCall<{
     enabled,
     updatedAt: FieldValue.serverTimestamp(),
     nextRunAt: nextRunAtField(enabled, current.trigger, Date.now()),
+  })
+  await logEvent({
+    teamId,
+    workspaceId,
+    actor: { userId: auth.uid, email: auth.token.email ?? undefined, role },
+    action: enabled ? "workflow.enable" : "workflow.disable",
+    resource: { type: "workflow", id: workflowId, parentId: workspaceId },
+    context: buildContext(request),
+    changes: {
+      fields: ["enabled"],
+      before: { enabled: current.enabled },
+      after: { enabled },
+    },
   })
   return { ok: true }
 })
@@ -589,7 +699,7 @@ export const archiveTeamWorkflow = onCall<{
   if (typeof workflowId !== "string" || !workflowId) {
     throw new HttpsError("invalid-argument", "workflowId is required.")
   }
-  await assertAdminRole(teamId, auth.uid)
+  const role = await assertAdminRole(teamId, auth.uid)
 
   const ref = db.doc(`${workflowsPath(teamId, workspaceId)}/${workflowId}`)
   // Archiving also disables (and drops nextRunAt) so an archived workflow
@@ -599,6 +709,17 @@ export const archiveTeamWorkflow = onCall<{
     enabled: false,
     updatedAt: FieldValue.serverTimestamp(),
     nextRunAt: FieldValue.delete(),
+  })
+  await logEvent({
+    teamId,
+    workspaceId,
+    actor: { userId: auth.uid, email: auth.token.email ?? undefined, role },
+    action: archived ? "workflow.archive" : "workflow.unarchive",
+    resource: { type: "workflow", id: workflowId, parentId: workspaceId },
+    context: buildContext(request),
+    // Both directions force enabled=false (an unarchived workflow must be
+    // deliberately re-enabled), so `enabled` is part of the change either way.
+    changes: { fields: ["archivedAt", "enabled"], after: { enabled: false } },
   })
   return { ok: true }
 })
@@ -619,12 +740,38 @@ export const deleteTeamWorkflow = onCall<{
   if (typeof workflowId !== "string" || !workflowId) {
     throw new HttpsError("invalid-argument", "workflowId is required.")
   }
-  await assertAdminRole(teamId, auth.uid)
-  await db.doc(`${workflowsPath(teamId, workspaceId)}/${workflowId}`).delete()
+  const role = await assertAdminRole(teamId, auth.uid)
+  // Read-before-delete so the trail preserves WHAT was destroyed (the log
+  // row becomes the only remaining record); deleting an already-gone doc
+  // stays an idempotent no-op worth no entry.
+  const ref = db.doc(`${workflowsPath(teamId, workspaceId)}/${workflowId}`)
+  const snap = await ref.get()
+  await ref.delete()
+  if (snap.exists) {
+    const data = snap.data() as WorkflowDoc
+    await logEvent({
+      teamId,
+      workspaceId,
+      actor: { userId: auth.uid, email: auth.token.email ?? undefined, role },
+      action: "workflow.delete",
+      resource: { type: "workflow", id: workflowId, parentId: workspaceId },
+      context: buildContext(request),
+      changes: {
+        fields: ["name", "presetKey"],
+        before: { name: data.name ?? null, presetKey: data.presetKey ?? null },
+      },
+    })
+  }
   return { ok: true }
 })
 
-/** Fire a workflow by hand (also the easiest way to test the engine). */
+/**
+ * Fire a workflow by hand (also the easiest way to test the engine).
+ * Deliberately NOT audit-logged: a manual trigger is an execution, not a
+ * lifecycle change, and the run doc it enqueues already records
+ * `triggeredBy: { type: "manual", uid }` — the Runs table is the execution
+ * trail.
+ */
 export const runTeamWorkflowNow = onCall<{
   teamId: string
   workspaceId: string
@@ -695,7 +842,7 @@ export const reviewTeamWorkflowRun = onCall<{
       "decision must be 'approve' or 'reject'."
     )
   }
-  await assertAdminRole(teamId, auth.uid)
+  const role = await assertAdminRole(teamId, auth.uid)
 
   const runRef = db.doc(`${workflowRunsPath(teamId, workspaceId)}/${runId}`)
   const runSnap = await runRef.get()
@@ -704,6 +851,7 @@ export const reviewTeamWorkflowRun = onCall<{
     status?: string
     agentId?: string
     workspaceId?: string
+    workflowId?: string
   }
   if (run.status !== "awaiting_review") {
     throw new HttpsError(
@@ -711,6 +859,26 @@ export const reviewTeamWorkflowRun = onCall<{
       "This run isn't awaiting review."
     )
   }
+
+  // Audit shape shared by both decisions: resource id is the RUN, parented
+  // to its workflow when the doc carries the reference.
+  const reviewAudit = (after: RunStatus): LogEventParams => ({
+    teamId,
+    workspaceId,
+    actor: { userId: auth.uid, email: auth.token.email ?? undefined, role },
+    action: "workflow.run.review",
+    resource: {
+      type: "workflow",
+      id: runId,
+      ...(run.workflowId ? { parentId: run.workflowId } : {}),
+    },
+    context: buildContext(request),
+    changes: {
+      fields: ["status"],
+      before: { status: "awaiting_review" },
+      after: { status: after },
+    },
+  })
 
   if (decision === "reject") {
     // Transactional compare-and-set: only the caller that observes
@@ -731,6 +899,8 @@ export const reviewTeamWorkflowRun = onCall<{
         reviewedAt: FieldValue.serverTimestamp(),
         finishedAt: FieldValue.serverTimestamp(),
       })
+      // Atomic with the compare-and-set, so only the WINNING rejection logs.
+      await logEvent(reviewAudit("cancelled"), { transaction: tx })
     })
     return { ok: true, status: "cancelled" }
   }
@@ -860,10 +1030,15 @@ export const reviewTeamWorkflowRun = onCall<{
 
   if (!executed || finalStatus === null) {
     // Duplicate/concurrent decision — report the run's current status rather
-    // than re-applying or throwing on a harmless double-submit.
+    // than re-applying or throwing on a harmless double-submit. Not logged:
+    // this call changed nothing, the winning call's entry is the record.
     const current = (await runRef.get()).data() as { status?: RunStatus }
     return { ok: true, status: current?.status ?? "applied" }
   }
+  // Only the call that actually executed the replay logs the approval —
+  // `after.status` records the real outcome (applied / partially_applied /
+  // error), not just the intent.
+  await logEvent(reviewAudit(finalStatus))
   return { ok: true, status: finalStatus }
 })
 
@@ -889,12 +1064,29 @@ export const deleteTeamWorkflowRun = onCall<{
   if (typeof runId !== "string" || !runId) {
     throw new HttpsError("invalid-argument", "runId is required.")
   }
-  await assertAdminRole(teamId, auth.uid)
+  const role = await assertAdminRole(teamId, auth.uid)
 
   const runRef = db.doc(`${workflowRunsPath(teamId, workspaceId)}/${runId}`)
   const snap = await runRef.get()
   if (!snap.exists) throw new HttpsError("not-found", "Run not found.")
+  const run = snap.data() as { status?: string; workflowId?: string }
   await db.recursiveDelete(runRef)
+  // History destruction — `before.status` preserves what state the deleted
+  // run was in (an admin purging an `awaiting_review` run reads very
+  // differently from clearing an old `applied` one).
+  await logEvent({
+    teamId,
+    workspaceId,
+    actor: { userId: auth.uid, email: auth.token.email ?? undefined, role },
+    action: "workflow.run.delete",
+    resource: {
+      type: "workflow",
+      id: runId,
+      ...(run.workflowId ? { parentId: run.workflowId } : {}),
+    },
+    context: buildContext(request),
+    changes: { fields: ["status"], before: { status: run.status ?? null } },
+  })
   return { ok: true }
 })
 
@@ -919,7 +1111,7 @@ export const enableTeamWorkflowPreset = onCall<{
   if (typeof agentId !== "string" || !agentId) {
     throw new HttpsError("invalid-argument", "agentId is required.")
   }
-  await assertAdminRole(teamId, auth.uid)
+  const role = await assertAdminRole(teamId, auth.uid)
 
   const preset =
     typeof presetKey === "string" ? getWorkflowPreset(presetKey) : undefined
@@ -948,6 +1140,20 @@ export const enableTeamWorkflowPreset = onCall<{
   await ref.set(
     buildWorkflowDocData(teamId, parsed.data, auth.uid, Date.now(), preset.key)
   )
+  // Same action as a custom create — one verb per outcome; `presetKey` in
+  // the changes is the provenance that distinguishes a materialized preset.
+  await logEvent({
+    teamId,
+    workspaceId,
+    actor: { userId: auth.uid, email: auth.token.email ?? undefined, role },
+    action: "workflow.create",
+    resource: { type: "workflow", id: ref.id, parentId: workspaceId },
+    context: buildContext(request),
+    changes: {
+      fields: ["name", "agentId", "presetKey"],
+      after: { name: preset.name, agentId, presetKey: preset.key },
+    },
+  })
   return { workflowId: ref.id }
 })
 
@@ -985,7 +1191,19 @@ export const setTeamWorkflowAvailability = onCall<{
   if (!getWorkflowPreset(presetKey)) {
     throw new HttpsError("invalid-argument", "Unknown preset.")
   }
-  await assertAdminRole(teamId, auth.uid)
+  const role = await assertAdminRole(teamId, auth.uid)
+
+  // Team-tier availability — no workspaceId on the entry; the resource is
+  // the preset key itself.
+  const availabilityAudit = (after: Record<string, unknown>) =>
+    logEvent({
+      teamId,
+      actor: { userId: auth.uid, email: auth.token.email ?? undefined, role },
+      action: "workflow.availability.update",
+      resource: { type: "workflow", id: presetKey, parentId: teamId },
+      context: buildContext(request),
+      changes: { fields: ["available"], after },
+    })
 
   const ref = db.doc(`${availableWorkflowsPath(teamId)}/${presetKey}`)
   if (available) {
@@ -994,6 +1212,7 @@ export const setTeamWorkflowAvailability = onCall<{
       addedByUid: auth.uid,
       addedAt: FieldValue.serverTimestamp(),
     })
+    await availabilityAudit({ available: true })
     return { ok: true, archived: 0 }
   }
 
@@ -1022,6 +1241,9 @@ export const setTeamWorkflowAvailability = onCall<{
     archived += 1
   }
   await batch.commit()
+  // `archivedDeployments` records the blast radius — removing availability
+  // also archived every live deployment of this preset across the team.
+  await availabilityAudit({ available: false, archivedDeployments: archived })
   return { ok: true, archived }
 })
 
@@ -1393,7 +1615,17 @@ export const executeWorkflowRun = onDocumentCreated(
     ...GENKIT_OPTS,
     // postmarkApiKey: the worker emails admins on noteworthy run outcomes
     // (awaiting_review / error / blocked) via notifyRunCompletion.
-    secrets: [geminiApiKey, anthropicApiKey, openaiApiKey, postmarkApiKey],
+    // The OAuth pair: connection tools may run during a headless turn (P1
+    // they fail-soft with "not connected", but the refresh path must never
+    // die on a missing binding instead of a missing secret).
+    secrets: [
+      geminiApiKey,
+      anthropicApiKey,
+      openaiApiKey,
+      postmarkApiKey,
+      googleOauthClientId,
+      googleOauthClientSecret,
+    ],
   },
   async (event) => {
     const snap = event.data
@@ -1492,6 +1724,14 @@ export const executeWorkflowRun = onDocumentCreated(
           }
         }
 
+        // P3: the workflow may run with a member's connection bindings
+        // ("runs with {member}'s connected accounts") — validated live so
+        // clearing the field or leaving the team revokes queued runs too.
+        const connectionsActsAsUid = await resolveRunActsAsUid(
+          teamId,
+          wf?.actsAsUid
+        )
+
         try {
           const result = await runHeadlessAgentTurn({
             agentId: run.agentId,
@@ -1505,6 +1745,7 @@ export const executeWorkflowRun = onDocumentCreated(
             // specific picked agent runs alone (the admin chose it). The
             // handed-off turn inherits this run's capture + metering.
             allowTransfer: run.agentId === DEFAULT_AGENT_ID,
+            connectionsActsAsUid,
           })
 
           const usage = {

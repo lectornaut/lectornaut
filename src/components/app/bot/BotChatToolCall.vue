@@ -73,6 +73,10 @@ import {
   IconTriangleAlert,
 } from "@/data/icons"
 import { useTeamCustomToolsStore } from "@/stores/teamCustomToolsStore"
+import {
+  GOOGLE_CALENDAR_WRITE_TOOL_NAMES,
+  GOOGLE_DRIVE_WRITE_TOOL_NAMES,
+} from "@lectornaut/shared/domain"
 import { storeToRefs } from "pinia"
 import { computed, inject, ref, watch, type Component } from "vue"
 
@@ -161,7 +165,15 @@ const open = ref(isRunning.value || isLiveInterrupt.value)
 watch(
   () => isRunning.value || isLiveInterrupt.value,
   (active) => {
-    if (!active) open.value = false
+    // Symmetric: collapse when the card goes quiet (result landed /
+    // interrupt superseded), AND re-expand when it becomes active again.
+    // The re-expand matters for the rollback path — when a failed
+    // respondToInterrupt restores `isInterrupt = true` (false→true), the
+    // Approve/Cancel form must reappear rather than stay hidden behind the
+    // collapsed row the optimistic flip closed. History cards still mount
+    // collapsed: the watcher is non-immediate, so it only fires on a live
+    // transition, never on initial mount.
+    open.value = active
   }
 )
 
@@ -267,6 +279,222 @@ const onCustomKeydown = (event: KeyboardEvent) => {
     submitCustom()
   }
 }
+
+// ── Calendar-write confirmation (connection tools, P2) ─────────────────────
+//
+// `createCalendarEvent` / `updateCalendarEvent` pause on a confirm interrupt.
+// The card renders straight from `tool.input` — the server validates the same
+// input STRICTLY and executes a deterministic payload from it, so what the
+// card shows is exactly what an Approve writes (the stream whitelists tool
+// fields to ref/name/input/isInterrupt, so input is the only channel anyway).
+// Names come from the shared vocabulary, so the server dispatch and this
+// card can't drift.
+const CALENDAR_WRITE_TOOL_NAMES: ReadonlySet<string> = new Set(
+  GOOGLE_CALENDAR_WRITE_TOOL_NAMES
+)
+const isCalendarWrite = computed(() =>
+  CALENDAR_WRITE_TOOL_NAMES.has(props.tool.name)
+)
+
+interface CalendarWriteDraft {
+  action: "create" | "update"
+  eventId: string | null
+  summary: string | null
+  start: string | null
+  end: string | null
+  allDay: boolean
+  location: string | null
+  description: string | null
+  attendees: string[]
+}
+
+const draftString = (value: unknown): string | null =>
+  typeof value === "string" && value.trim().length > 0 ? value.trim() : null
+
+const calendarWriteDraft = computed<CalendarWriteDraft | null>(() => {
+  if (!isCalendarWrite.value) return null
+  const raw = props.tool.input
+  if (!raw || typeof raw !== "object") return null
+  const obj = raw as Record<string, unknown>
+  return {
+    action: props.tool.name === "createCalendarEvent" ? "create" : "update",
+    eventId: draftString(obj.eventId),
+    summary: draftString(obj.summary),
+    start: draftString(obj.start),
+    end: draftString(obj.end),
+    allDay: obj.allDay === true,
+    location: draftString(obj.location),
+    description: draftString(obj.description),
+    attendees: Array.isArray(obj.attendees)
+      ? (obj.attendees as unknown[]).filter(
+          (entry): entry is string => typeof entry === "string"
+        )
+      : [],
+  }
+})
+
+/** Human-readable draft time; all-day dates pass through as-is. */
+const formatDraftTime = (iso: string | null, allDay: boolean): string => {
+  if (!iso) return ""
+  if (allDay) return iso
+  const ms = Date.parse(iso)
+  if (!Number.isFinite(ms)) return iso
+  return new Date(ms).toLocaleString(undefined, {
+    dateStyle: "medium",
+    timeStyle: "short",
+  })
+}
+
+const draftTimeRange = computed<string>(() => {
+  const draft = calendarWriteDraft.value
+  if (!draft || !draft.start) return ""
+  const start = formatDraftTime(draft.start, draft.allDay)
+  const end = draft.end ? formatDraftTime(draft.end, draft.allDay) : ""
+  return end && end !== start ? `${start} – ${end}` : start
+})
+
+const submittingDecision = ref<"approve" | "cancel" | null>(null)
+
+const submitDecision = async (approved: boolean) => {
+  if (!botChat || submittingDecision.value) return
+  submittingDecision.value = approved ? "approve" : "cancel"
+  try {
+    await botChat.respondToInterrupt({
+      messageId: props.messageId,
+      ref: props.tool.ref,
+      name: props.tool.name,
+      answer: { approved },
+    })
+  } finally {
+    submittingDecision.value = null
+  }
+}
+
+// ── Drive-write confirmation (connection tools, D2) ─────────────────────────
+//
+// `createDriveFile` / `updateDriveFile` follow the calendar P2 pattern
+// exactly: the card renders the strict-validated draft from `tool.input`,
+// approval restarts the tool server-side, and the outcome card keys off the
+// `written | declined | failed` discriminator. Names come from the shared
+// vocabulary, so the server dispatch and this card can't drift.
+const DRIVE_WRITE_TOOL_NAMES: ReadonlySet<string> = new Set(
+  GOOGLE_DRIVE_WRITE_TOOL_NAMES
+)
+const isDriveWrite = computed(() => DRIVE_WRITE_TOOL_NAMES.has(props.tool.name))
+
+interface DriveWriteDraft {
+  action: "create" | "update"
+  name: string | null
+  /** Effective kind — mirrors the server-side default of "document". */
+  kind: "document" | "text"
+  folderId: string | null
+  fileId: string | null
+  contentPreview: string
+  contentChars: number
+}
+
+const DRIVE_PREVIEW_CHARS = 280
+
+const driveWriteDraft = computed<DriveWriteDraft | null>(() => {
+  if (!isDriveWrite.value) return null
+  const raw = props.tool.input
+  if (!raw || typeof raw !== "object") return null
+  const obj = raw as Record<string, unknown>
+  const content = typeof obj.content === "string" ? obj.content : ""
+  return {
+    action: props.tool.name === "createDriveFile" ? "create" : "update",
+    name: draftString(obj.name),
+    kind: obj.kind === "text" ? "text" : "document",
+    folderId: draftString(obj.folderId),
+    fileId: draftString(obj.fileId),
+    contentPreview:
+      content.length > DRIVE_PREVIEW_CHARS
+        ? `${content.slice(0, DRIVE_PREVIEW_CHARS)}…`
+        : content,
+    contentChars: content.length,
+  }
+})
+
+/** Drive-write outcome — same plumbing as `calendarWriteResult` below. */
+const driveWriteResult = computed<{
+  kind: "written" | "declined" | "failed" | "deciding"
+  link: string | null
+} | null>(() => {
+  if (!isDriveWrite.value || props.tool.output === undefined) return null
+  const raw = props.tool.output
+  if (!raw || typeof raw !== "object") return null
+  const obj = raw as Record<string, unknown>
+  if (typeof obj.ok === "boolean") {
+    const file =
+      obj.file && typeof obj.file === "object"
+        ? (obj.file as Record<string, unknown>)
+        : null
+    const outcome =
+      obj.outcome === "written" ||
+      obj.outcome === "declined" ||
+      obj.outcome === "failed"
+        ? obj.outcome
+        : obj.ok
+          ? "written"
+          : "failed"
+    return {
+      kind: outcome,
+      link: file && typeof file.link === "string" ? file.link : null,
+    }
+  }
+  if (typeof obj.approved === "boolean") {
+    return { kind: "deciding", link: null }
+  }
+  return null
+})
+
+/**
+ * A finished calendar write renders from its REAL tool output `{ ok,
+ * outcome, event }`. The server's `message` is MODEL-directed prose ("Ask
+ * them to reconnect…", "Do not retry…") — never shown verbatim; the card
+ * uses its own i18n copy keyed off `outcome`, and the model relays the
+ * detail in its chat reply. Between the optimistic flip (output =
+ * `{ approved }`) and the streamed toolResult, an interim "deciding" state
+ * keeps the card honest about what's still in flight.
+ *
+ * `failed` vs `declined` is the load-bearing distinction: a deliberate
+ * Cancel is `ok: false` but NOT an error, so it must not wear the
+ * destructive treatment a real Google API failure does.
+ */
+const calendarWriteResult = computed<{
+  kind: "written" | "declined" | "failed" | "deciding"
+  link: string | null
+} | null>(() => {
+  if (!isCalendarWrite.value || props.tool.output === undefined) return null
+  const raw = props.tool.output
+  if (!raw || typeof raw !== "object") return null
+  const obj = raw as Record<string, unknown>
+  if (typeof obj.ok === "boolean") {
+    const event =
+      obj.event && typeof obj.event === "object"
+        ? (obj.event as Record<string, unknown>)
+        : null
+    // Trust the explicit discriminator; fall back by `ok` for any older
+    // output shape that predates it.
+    const outcome =
+      obj.outcome === "written" ||
+      obj.outcome === "declined" ||
+      obj.outcome === "failed"
+        ? obj.outcome
+        : obj.ok
+          ? "written"
+          : "failed"
+    return {
+      kind: outcome,
+      link: event && typeof event.link === "string" ? event.link : null,
+    }
+  }
+  if (typeof obj.approved === "boolean") {
+    // Optimistic interim — the resumed turn is executing (or cancelling).
+    return { kind: "deciding", link: null }
+  }
+  return null
+})
 
 // ── Per-tool typed accessors ──────────────────────────────────────────────
 //
@@ -710,6 +938,22 @@ const FALLBACK_LABEL_KEYS: Record<string, { input: string; output: string }> = {
     input: "ai.toolCall.labels.search",
     output: "ai.toolCall.labels.results",
   },
+  createCalendarEvent: {
+    input: "ai.toolCall.labels.request",
+    output: "ai.toolCall.labels.result",
+  },
+  updateCalendarEvent: {
+    input: "ai.toolCall.labels.request",
+    output: "ai.toolCall.labels.result",
+  },
+  createDriveFile: {
+    input: "ai.toolCall.labels.request",
+    output: "ai.toolCall.labels.result",
+  },
+  updateDriveFile: {
+    input: "ai.toolCall.labels.request",
+    output: "ai.toolCall.labels.result",
+  },
 }
 
 const inputLabel = computed(() =>
@@ -744,6 +988,16 @@ const hasCustomDoneRenderer = computed(() => {
       return relatedOutput.value !== null
     case "browseInternet":
       return browseInternetOutput.value !== null
+    // Connection writes render their own outcome card — including the
+    // user-declined case, which is `ok: false` but NOT an error (so this
+    // also keeps `isErrorResult` from painting a deliberate Cancel as
+    // "Failed").
+    case "createCalendarEvent":
+    case "updateCalendarEvent":
+      return calendarWriteResult.value !== null
+    case "createDriveFile":
+    case "updateDriveFile":
+      return driveWriteResult.value !== null
     default:
       return false
   }
@@ -771,6 +1025,12 @@ type ToolStatus =
 const isErrorResult = computed<boolean>(() => {
   // summarizeNode surfaces a structured error (its own destructive card).
   if (summarizeOutput.value?.error) return true
+  // Connection writes own a dedicated card but still want the error badge on
+  // a genuine FAILURE — and explicitly NOT on a deliberate decline (ok:false
+  // but `declined`). Decided before the hasCustomDoneRenderer suppression
+  // below precisely because that suppression would otherwise hide it.
+  if (isCalendarWrite.value) return calendarWriteResult.value?.kind === "failed"
+  if (isDriveWrite.value) return driveWriteResult.value?.kind === "failed"
   // Tools with a dedicated card render their own success/failure story, so
   // we don't second-guess them — only probe the generic fallback path.
   if (hasCustomDoneRenderer.value) return false
@@ -910,6 +1170,165 @@ const showChevron = computed(
       </Card>
 
       <!-- ============================================================== -->
+      <!-- Live calendar-write confirmation: the event draft + Approve / -->
+      <!-- Cancel. Approval is stamped server-side onto the tool restart; -->
+      <!-- nothing is written until the member clicks Approve.           -->
+      <!-- ============================================================== -->
+      <Card v-else-if="isLiveInterrupt && calendarWriteDraft" size="sm">
+        <CardHeader>
+          <CardTitle>
+            {{
+              t(
+                calendarWriteDraft.action === "create"
+                  ? "ai.toolCall.calendarWrite.createTitle"
+                  : "ai.toolCall.calendarWrite.updateTitle"
+              )
+            }}
+          </CardTitle>
+          <CardDescription>
+            {{ t("ai.toolCall.calendarWrite.confirmHint") }}
+          </CardDescription>
+        </CardHeader>
+        <CardContent class="grid gap-1 text-sm">
+          <div v-if="calendarWriteDraft.summary" class="font-medium">
+            {{ calendarWriteDraft.summary }}
+          </div>
+          <div v-if="draftTimeRange" class="text-muted-foreground">
+            {{ draftTimeRange }}
+          </div>
+          <div v-if="calendarWriteDraft.location" class="text-muted-foreground">
+            {{ calendarWriteDraft.location }}
+          </div>
+          <div
+            v-if="calendarWriteDraft.description"
+            class="text-muted-foreground"
+          >
+            {{ calendarWriteDraft.description }}
+          </div>
+          <div
+            v-if="calendarWriteDraft.attendees.length > 0"
+            class="text-muted-foreground"
+          >
+            {{
+              t(
+                "ai.toolCall.calendarWrite.attendees",
+                calendarWriteDraft.attendees.length
+              )
+            }}: {{ calendarWriteDraft.attendees.join(", ") }}
+          </div>
+          <div
+            v-if="calendarWriteDraft.eventId"
+            class="text-muted-foreground/80 text-xs"
+          >
+            {{ t("ai.toolCall.calendarWrite.eventId") }}:
+            {{ calendarWriteDraft.eventId }}
+          </div>
+        </CardContent>
+        <CardFooter class="gap-2">
+          <Button
+            size="sm"
+            :disabled="submittingDecision !== null"
+            @click="submitDecision(true)"
+          >
+            <Spinner v-if="submittingDecision === 'approve'" />
+            {{ t("ai.toolCall.calendarWrite.approve") }}
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            :disabled="submittingDecision !== null"
+            @click="submitDecision(false)"
+          >
+            <Spinner v-if="submittingDecision === 'cancel'" />
+            {{ t("ai.toolCall.calendarWrite.cancel") }}
+          </Button>
+        </CardFooter>
+      </Card>
+
+      <!-- ============================================================== -->
+      <!-- Live Drive-write confirmation: the file draft + Approve /     -->
+      <!-- Cancel. Same contract as the calendar card above.             -->
+      <!-- ============================================================== -->
+      <Card v-else-if="isLiveInterrupt && driveWriteDraft" size="sm">
+        <CardHeader>
+          <CardTitle>
+            {{
+              t(
+                driveWriteDraft.action === "create"
+                  ? "ai.toolCall.driveWrite.createTitle"
+                  : "ai.toolCall.driveWrite.updateTitle"
+              )
+            }}
+          </CardTitle>
+          <CardDescription>
+            {{ t("ai.toolCall.driveWrite.confirmHint") }}
+          </CardDescription>
+        </CardHeader>
+        <CardContent class="grid gap-1 text-sm">
+          <div v-if="driveWriteDraft.name" class="font-medium">
+            {{ driveWriteDraft.name }}
+          </div>
+          <div class="text-muted-foreground">
+            {{
+              t(
+                driveWriteDraft.kind === "document"
+                  ? "ai.toolCall.driveWrite.kindDocument"
+                  : "ai.toolCall.driveWrite.kindText"
+              )
+            }}
+            <template v-if="driveWriteDraft.contentChars > 0">
+              ·
+              {{
+                t(
+                  "ai.toolCall.driveWrite.contentChars",
+                  driveWriteDraft.contentChars
+                )
+              }}
+            </template>
+          </div>
+          <div
+            v-if="driveWriteDraft.contentPreview"
+            class="text-muted-foreground border-border border-l-2 pl-2 text-xs whitespace-pre-wrap"
+          >
+            {{ driveWriteDraft.contentPreview }}
+          </div>
+          <div
+            v-if="driveWriteDraft.folderId"
+            class="text-muted-foreground/80 text-xs"
+          >
+            {{ t("ai.toolCall.driveWrite.folder") }}:
+            {{ driveWriteDraft.folderId }}
+          </div>
+          <div
+            v-if="driveWriteDraft.fileId"
+            class="text-muted-foreground/80 text-xs"
+          >
+            {{ t("ai.toolCall.driveWrite.file") }}:
+            {{ driveWriteDraft.fileId }}
+          </div>
+        </CardContent>
+        <CardFooter class="gap-2">
+          <Button
+            size="sm"
+            :disabled="submittingDecision !== null"
+            @click="submitDecision(true)"
+          >
+            <Spinner v-if="submittingDecision === 'approve'" />
+            {{ t("ai.toolCall.driveWrite.approve") }}
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            :disabled="submittingDecision !== null"
+            @click="submitDecision(false)"
+          >
+            <Spinner v-if="submittingDecision === 'cancel'" />
+            {{ t("ai.toolCall.driveWrite.cancel") }}
+          </Button>
+        </CardFooter>
+      </Card>
+
+      <!-- ============================================================== -->
       <!-- Live interrupt with malformed payload — polite escape hatch. -->
       <!-- ============================================================== -->
       <Item v-else-if="isLiveInterrupt" variant="muted" size="xs">
@@ -936,6 +1355,52 @@ const showChevron = computed(
         </CardContent>
       </Card>
 
+      <!-- Abandoned calendar-write confirmation: the user moved on without -->
+      <!-- deciding, so nothing was written. Read-only historical card. -->
+      <Card v-else-if="isAbandonedInterrupt && calendarWriteDraft" size="sm">
+        <CardHeader>
+          <CardTitle>
+            {{
+              t(
+                calendarWriteDraft.action === "create"
+                  ? "ai.toolCall.calendarWrite.createTitle"
+                  : "ai.toolCall.calendarWrite.updateTitle"
+              )
+            }}
+          </CardTitle>
+          <CardDescription v-if="calendarWriteDraft.summary">
+            {{ calendarWriteDraft.summary }}
+          </CardDescription>
+        </CardHeader>
+        <CardContent class="text-muted-foreground flex items-center gap-2">
+          <IconCircleHelp />
+          <span>{{ t("ai.toolCall.calendarWrite.unconfirmed") }}</span>
+        </CardContent>
+      </Card>
+
+      <!-- Abandoned Drive-write confirmation: the user moved on without -->
+      <!-- deciding, so nothing was written. Read-only historical card. -->
+      <Card v-else-if="isAbandonedInterrupt && driveWriteDraft" size="sm">
+        <CardHeader>
+          <CardTitle>
+            {{
+              t(
+                driveWriteDraft.action === "create"
+                  ? "ai.toolCall.driveWrite.createTitle"
+                  : "ai.toolCall.driveWrite.updateTitle"
+              )
+            }}
+          </CardTitle>
+          <CardDescription v-if="driveWriteDraft.name">
+            {{ driveWriteDraft.name }}
+          </CardDescription>
+        </CardHeader>
+        <CardContent class="text-muted-foreground flex items-center gap-2">
+          <IconCircleHelp />
+          <span>{{ t("ai.toolCall.driveWrite.unconfirmed") }}</span>
+        </CardContent>
+      </Card>
+
       <!-- ============================================================== -->
       <!-- Resolved interrupt: question (header) + the chosen answer. A -->
       <!-- completed result, so it shares the done-state Card anatomy -->
@@ -951,6 +1416,95 @@ const showChevron = computed(
         <CardContent class="flex items-center gap-2">
           <IconCheck class="text-muted-foreground" />
           <span class="text-foreground">{{ interruptAnswer }}</span>
+        </CardContent>
+      </Card>
+
+      <!-- ============================================================== -->
+      <!-- Calendar-write outcome: the REAL write result (or the interim -->
+      <!-- "deciding" state between the optimistic flip and the streamed -->
+      <!-- toolResult). Owns the declined case too — a deliberate Cancel -->
+      <!-- is `ok: false` but not an error. -->
+      <!-- ============================================================== -->
+      <Card v-else-if="isCalendarWrite && calendarWriteResult" size="sm">
+        <CardHeader v-if="calendarWriteDraft?.summary">
+          <CardTitle>{{ calendarWriteDraft.summary }}</CardTitle>
+        </CardHeader>
+        <CardContent class="flex items-center gap-2">
+          <template v-if="calendarWriteResult.kind === 'deciding'">
+            <Spinner />
+            <span class="text-muted-foreground">
+              {{ t("ai.toolCall.calendarWrite.executing") }}
+            </span>
+          </template>
+          <template v-else-if="calendarWriteResult.kind === 'written'">
+            <IconCheck class="text-muted-foreground" />
+            <span class="text-foreground">
+              {{ t("ai.toolCall.calendarWrite.written") }}
+              <a
+                v-if="calendarWriteResult.link"
+                :href="calendarWriteResult.link"
+                target="_blank"
+                rel="noopener noreferrer"
+                class="text-primary underline-offset-2 hover:underline"
+              >
+                {{ t("ai.toolCall.calendarWrite.openEvent") }}
+              </a>
+            </span>
+          </template>
+          <template v-else-if="calendarWriteResult.kind === 'declined'">
+            <IconCircleHelp class="text-muted-foreground" />
+            <span class="text-muted-foreground">
+              {{ t("ai.toolCall.calendarWrite.declined") }}
+            </span>
+          </template>
+          <template v-else>
+            <IconTriangleAlert class="text-destructive" />
+            <span class="text-destructive">
+              {{ t("ai.toolCall.calendarWrite.failed") }}
+            </span>
+          </template>
+        </CardContent>
+      </Card>
+
+      <!-- Drive-write outcome: same contract as the calendar outcome card. -->
+      <Card v-else-if="isDriveWrite && driveWriteResult" size="sm">
+        <CardHeader v-if="driveWriteDraft?.name">
+          <CardTitle>{{ driveWriteDraft.name }}</CardTitle>
+        </CardHeader>
+        <CardContent class="flex items-center gap-2">
+          <template v-if="driveWriteResult.kind === 'deciding'">
+            <Spinner />
+            <span class="text-muted-foreground">
+              {{ t("ai.toolCall.driveWrite.executing") }}
+            </span>
+          </template>
+          <template v-else-if="driveWriteResult.kind === 'written'">
+            <IconCheck class="text-muted-foreground" />
+            <span class="text-foreground">
+              {{ t("ai.toolCall.driveWrite.written") }}
+              <a
+                v-if="driveWriteResult.link"
+                :href="driveWriteResult.link"
+                target="_blank"
+                rel="noopener noreferrer"
+                class="text-primary underline-offset-2 hover:underline"
+              >
+                {{ t("ai.toolCall.driveWrite.openFile") }}
+              </a>
+            </span>
+          </template>
+          <template v-else-if="driveWriteResult.kind === 'declined'">
+            <IconCircleHelp class="text-muted-foreground" />
+            <span class="text-muted-foreground">
+              {{ t("ai.toolCall.driveWrite.declined") }}
+            </span>
+          </template>
+          <template v-else>
+            <IconTriangleAlert class="text-destructive" />
+            <span class="text-destructive">
+              {{ t("ai.toolCall.driveWrite.failed") }}
+            </span>
+          </template>
         </CardContent>
       </Card>
 
