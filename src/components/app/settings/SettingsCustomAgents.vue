@@ -60,6 +60,8 @@ const {
   archivedAgents,
   isSaving,
   canManage,
+  getEditableById,
+  isBuiltIn,
   create,
   update,
 } = useTeamAgents(messagesGetter)
@@ -107,7 +109,10 @@ const editingAgentId = ref<string | null>(null)
 
 // Resolve the agent by id across all three lifecycle buckets so editing
 // a disabled or archived agent (selected from the inline list) works
-// without special-casing the source bucket.
+// without special-casing the source bucket. Built-in agents live outside
+// those buckets (they're not custom docs), so fall back to the editor
+// lookup — it resolves any agent integration to its EFFECTIVE persona
+// (the team's customization override, or the shipped catalog default).
 const editingAgent = computed<ITeamAgent | null>(() => {
   const id = editingAgentId.value
   if (!id) return null
@@ -115,11 +120,17 @@ const editingAgent = computed<ITeamAgent | null>(() => {
     selectableAgents.value.find((a) => a.id === id) ??
     disabledAgents.value.find((a) => a.id === id) ??
     archivedAgents.value.find((a) => a.id === id) ??
-    null
+    getEditableById(id)
   )
 })
 
 const isNew = computed(() => editingAgent.value === null)
+
+/** Editing a built-in preset (customization mode) vs a custom agent. */
+const isBuiltInAgent = computed<boolean>(() => {
+  const id = editingAgentId.value
+  return id !== null && isBuiltIn(id)
+})
 
 const dialogTitle = computed<string>(() =>
   editingAgent.value
@@ -148,6 +159,13 @@ interface AgentDraft {
   name: string
   description: string
   avatarSeed: string
+  /**
+   * Public-profile visibility (`/agents/{uid}`). Only meaningful for
+   * custom agents — built-in personas resolve their profile from the
+   * platform registry, so the Switch is hidden and the flag stripped
+   * from built-in patches on save.
+   */
+  isPublic: boolean
   systemPromptBase: string
   promptSuffixes: {
     auto: string
@@ -170,6 +188,7 @@ const DEFAULT_DRAFT: AgentDraft = {
   name: "",
   description: "",
   avatarSeed: "",
+  isPublic: true,
   systemPromptBase:
     "You are a focused assistant. Reply concisely and ground your " +
     "answers in the context you're given.",
@@ -213,6 +232,7 @@ const cloneDraft = (source: ITeamAgent | null): AgentDraft => {
     name: source.name,
     description: source.description,
     avatarSeed: source.avatarSeed,
+    isPublic: source.isPublic !== false,
     systemPromptBase: source.systemPromptBase,
     promptSuffixes: { ...source.promptSuffixes },
     tools: { ...source.tools },
@@ -505,7 +525,15 @@ const handleEditorSave = async (): Promise<void> => {
   const payload = prepareDraftForSave()
   const target = editingAgent.value
   if (target) {
-    await update(target.id, payload)
+    if (isBuiltInAgent.value) {
+      // Built-in personas have no per-team public profile (resolved from
+      // the platform registry), so the visibility flag never rides a
+      // divergence doc.
+      const { isPublic: _isPublic, ...patch } = payload
+      await update(target.id, patch)
+    } else {
+      await update(target.id, payload)
+    }
   } else {
     const created = await create(payload)
     if (!created) return
@@ -522,6 +550,9 @@ const handleEditorSave = async (): Promise<void> => {
       <DialogHeader>
         <DialogTitle class="flex items-center gap-2">
           {{ dialogTitle }}
+          <Badge v-if="isBuiltInAgent" variant="secondary">
+            {{ t("settings.agents.custom.builtInBadge") }}
+          </Badge>
           <Badge v-if="statusBadgeKey === 'disabled'" variant="outline">
             {{ t("settings.agents.custom.disabledBadge") }}
           </Badge>
@@ -799,6 +830,30 @@ const handleEditorSave = async (): Promise<void> => {
                       class="grow"
                     />
                   </div>
+                </Field>
+
+                <!--
+                  Public-profile visibility. Hidden for built-ins: their
+                  profile is platform-level (registry-resolved), so a
+                  per-team flag would be a lie. Effective only while the
+                  TEAM is public — team privacy is the outer boundary.
+                -->
+                <Field v-if="!isBuiltInAgent" orientation="horizontal">
+                  <FieldContent>
+                    <FieldLabel
+                      :for="`agent-is-public-${editingAgent?.id ?? 'new'}`"
+                    >
+                      {{ t("settings.agents.custom.isPublic.label") }}
+                    </FieldLabel>
+                    <FieldDescription>
+                      {{ t("settings.agents.custom.isPublic.description") }}
+                    </FieldDescription>
+                  </FieldContent>
+                  <Switch
+                    :id="`agent-is-public-${editingAgent?.id ?? 'new'}`"
+                    v-model="draft.isPublic"
+                    :disabled="!canManage"
+                  />
                 </Field>
               </FieldSet>
 

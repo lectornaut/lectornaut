@@ -3,7 +3,15 @@ import { useCanViewTeamSettings } from "@/composables/useCanViewTeamSettings"
 import { useAgentConfig } from "@/composables/useAgentConfig"
 import { useIntegrations } from "@/composables/useIntegrations"
 import { useTeamAgents } from "@/composables/useTeamAgents"
-import { IconBot, IconChevronDown, IconCirclePlus } from "@/data/icons"
+import { BUILT_IN_AGENTS } from "@/data/builtInAgents"
+import {
+  IconBot,
+  IconChevronDown,
+  IconCirclePlus,
+  IconPencil,
+  IconRotateCcw,
+  IconSettings,
+} from "@/data/icons"
 import { emitter } from "@/modules/mitt"
 import { useIntegrationsStore } from "@/stores/integrationsStore"
 import type { ITeamAgent } from "@/types/domain"
@@ -94,6 +102,12 @@ const handleToggleCustomAgents = async (value: boolean): Promise<void> => {
  * on the Integrations page) drops out here. Toggling enable is an IMMEDIATE
  * per-integration write — `setEnabled` materializes a thin doc carrying the
  * flag — so it's no longer part of the dirty-bar form.
+ *
+ * Display resolution: presets localize through the
+ * `settings.agents.builtInAgents.*` keys, but a team RENAME must win over
+ * the locale label — `t(key, fallback)` ignores its fallback once the key
+ * exists, so renamed/redescribed presets read the doc value directly while
+ * untouched ones keep localizing.
  */
 const integrationsStore = useIntegrationsStore()
 const { setEnabled: setIntegrationEnabled } = useIntegrations()
@@ -101,12 +115,23 @@ const { setEnabled: setIntegrationEnabled } = useIntegrations()
 const builtInAgentRows = computed(() =>
   integrationsStore.agentIntegrations
     .filter((i) => i.source !== "custom" && i.installed)
-    .map((i) => ({
-      id: i.sourceKey ?? i.id,
-      enabled: i.enabled,
-      fallbackName: i.name,
-      fallbackDescription: i.description,
-    }))
+    .map((i) => {
+      const id = i.sourceKey ?? i.id
+      const def = BUILT_IN_AGENTS.find((a) => a.id === id)
+      const renamed = def !== undefined && i.name !== def.name
+      const redescribed = def !== undefined && i.description !== def.description
+      return {
+        id,
+        enabled: i.enabled,
+        customized: i.customized,
+        name: renamed
+          ? i.name
+          : t(`settings.agents.builtInAgents.${id}.label`, i.name),
+        description: redescribed
+          ? i.description
+          : t(`settings.agents.builtInAgents.${id}.description`, i.description),
+      }
+    })
 )
 
 const handleToggleBuiltInAgent = async (
@@ -114,6 +139,34 @@ const handleToggleBuiltInAgent = async (
   value: boolean
 ): Promise<void> => {
   await setIntegrationEnabled({ type: "agent", sourceKey: id }, value)
+}
+
+/**
+ * Customize a built-in: opens the SAME editor dialog custom agents use,
+ * pre-filled with the preset's effective persona. Saving stores the edits
+ * as a customization override on the preset's divergence doc.
+ */
+const openEditBuiltInDialog = (id: string): void => {
+  emitter.emit("Dialog.CustomAgents.Open", { agentId: id })
+}
+
+/**
+ * Reset-to-default confirm state. Resetting discards the team's
+ * customization override (irreversible — there's no history of the
+ * override), so it goes through an AlertDialog like hard-delete does.
+ */
+const resetTarget = ref<{ id: string; name: string } | null>(null)
+const resetConfirmOpen = computed({
+  get: () => resetTarget.value !== null,
+  set: (open: boolean) => {
+    if (!open) resetTarget.value = null
+  },
+})
+
+const handleResetConfirmed = async (): Promise<void> => {
+  const target = resetTarget.value
+  resetTarget.value = null
+  if (target) await resetBuiltIn(target.id)
 }
 
 // ── Custom agents (inline list) ─────────────────────────────────────────────
@@ -133,6 +186,8 @@ const agentsMessagesGetter = () => ({
   setEnabledError: t("settings.agents.custom.setEnabledError"),
   deleteSuccess: t("settings.agents.custom.deleteSuccess"),
   deleteError: t("settings.agents.custom.deleteError"),
+  resetSuccess: t("settings.agents.builtInAgents.resetSuccess"),
+  resetError: t("settings.agents.builtInAgents.resetError"),
 })
 
 const {
@@ -147,6 +202,7 @@ const {
   restore,
   setEnabled,
   remove,
+  resetBuiltIn,
 } = useTeamAgents(agentsMessagesGetter)
 
 // Active section starts open — it's the primary content. Disabled
@@ -224,31 +280,72 @@ const handleRemoveAgent = async (agent: ITeamAgent): Promise<void> => {
           orientation="horizontal"
         >
           <FieldContent>
-            <FieldLabel :for="`builtin-agent-${row.id}`">
-              {{
-                t(
-                  `settings.agents.builtInAgents.${row.id}.label`,
-                  row.fallbackName
-                )
-              }}
+            <FieldLabel
+              :for="`builtin-agent-${row.id}`"
+              class="flex items-center gap-2"
+            >
+              {{ row.name }}
+              <Badge v-if="row.customized" variant="secondary">
+                {{ t("settings.agents.builtInAgents.customizedBadge") }}
+              </Badge>
             </FieldLabel>
             <FieldDescription>
-              {{
-                t(
-                  `settings.agents.builtInAgents.${row.id}.description`,
-                  row.fallbackDescription
-                )
-              }}
+              {{ row.description }}
             </FieldDescription>
           </FieldContent>
-          <Switch
-            :id="`builtin-agent-${row.id}`"
-            :model-value="row.enabled"
-            :disabled="!canEdit"
-            @update:model-value="
-              (value) => handleToggleBuiltInAgent(row.id, Boolean(value))
-            "
-          />
+          <div class="flex items-center gap-1">
+            <!-- Customize cog — Edit opens the shared agent editor dialog
+                 on this preset; Reset (only once customized) discards the
+                 override via the confirm dialog below. -->
+            <TooltipProvider>
+              <Tooltip>
+                <DropdownMenu>
+                  <TooltipTrigger as-child>
+                    <DropdownMenuTrigger as-child>
+                      <InputGroupButton
+                        variant="ghost"
+                        size="icon-xs"
+                        :disabled="!canManage"
+                      >
+                        <IconSettings />
+                      </InputGroupButton>
+                    </DropdownMenuTrigger>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    {{ t("settings.agents.builtInAgents.configure") }}
+                  </TooltipContent>
+                  <DropdownMenuContent align="end" class="w-44">
+                    <DropdownMenuItem
+                      data-hotkey="e"
+                      @select="openEditBuiltInDialog(row.id)"
+                    >
+                      <IconPencil />
+                      {{ t("settings.agents.custom.edit") }}
+                      <DropdownMenuShortcut>E</DropdownMenuShortcut>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      v-if="row.customized"
+                      data-hotkey="r"
+                      @select="resetTarget = { id: row.id, name: row.name }"
+                    >
+                      <IconRotateCcw />
+                      {{ t("settings.agents.builtInAgents.reset") }}
+                      <DropdownMenuShortcut>R</DropdownMenuShortcut>
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </Tooltip>
+            </TooltipProvider>
+
+            <Switch
+              :id="`builtin-agent-${row.id}`"
+              :model-value="row.enabled"
+              :disabled="!canEdit"
+              @update:model-value="
+                (value) => handleToggleBuiltInAgent(row.id, Boolean(value))
+              "
+            />
+          </div>
         </Field>
 
         <!-- Every preset removed via Integrations — nothing left to toggle. -->
@@ -266,6 +363,37 @@ const handleRemoveAgent = async (agent: ITeamAgent): Promise<void> => {
           </EmptyHeader>
         </Empty>
       </FieldSet>
+
+      <!--
+        Reset-to-default confirmation, shared across the built-in rows.
+        Required because resetting discards the team's customization
+        override with no way back (the override isn't versioned).
+      -->
+      <AlertDialog v-model:open="resetConfirmOpen">
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {{ t("settings.agents.builtInAgents.resetConfirmTitle") }}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {{
+                t("settings.agents.builtInAgents.resetConfirmBody", {
+                  name: resetTarget?.name ?? "",
+                })
+              }}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>
+              {{ t("common.cancel") }}<Kbd aria-hidden="true">Esc</Kbd>
+            </AlertDialogCancel>
+            <AlertDialogAction @click="handleResetConfirmed">
+              {{ t("settings.agents.builtInAgents.reset") }}
+              <Kbd aria-hidden="true">↩</Kbd>
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <FieldSeparator />
 

@@ -291,6 +291,7 @@ export function hydrateBuiltInAgent(
     // check to mean "all enabled."
     customTools: {},
     enabled: true,
+    isPublic: true,
     archivedAt: null,
     createdAt: now,
     updatedAt: now,

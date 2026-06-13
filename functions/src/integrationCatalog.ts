@@ -162,8 +162,9 @@ function agentEntry(def: BuiltInAgentDefinition): CatalogEntry {
       systemPromptBase: def.systemPromptBase,
       promptSuffixes: { ...def.promptSuffixes },
       tools: { ...def.tools },
-      // Built-ins default to "every custom tool enabled" via the `!== false`
-      // dispatch check — no per-built-in customTools editor exists.
+      // Catalog default: "every custom tool enabled" via the `!== false`
+      // dispatch check. Teams customize a preset (incl. this map) via an
+      // override spec on their divergence doc — see updateIntegration.
       customTools: {},
     },
   }

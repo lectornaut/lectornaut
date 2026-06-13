@@ -66,6 +66,8 @@ interface UseTeamAgentsI18n {
   setEnabledError?: string
   deleteSuccess?: string
   deleteError?: string
+  resetSuccess?: string
+  resetError?: string
 }
 
 /**
@@ -209,6 +211,26 @@ export function useTeamAgents(messagesRef?: () => UseTeamAgentsI18n) {
   }
 
   /**
+   * Reset a built-in agent to its shipped catalog persona (clears the
+   * team's customization override). Irreversible for the override, so
+   * callers confirm first; explicit success feedback mirrors `remove`.
+   */
+  const resetBuiltIn = async (agentId: string): Promise<ITeamAgent | null> => {
+    if (!guardManage()) return null
+    try {
+      const agent = await store.resetBuiltIn(agentId)
+      const okMsg = messagesRef?.().resetSuccess ?? ""
+      if (okMsg) toast.success(okMsg)
+      return agent
+    } catch (error) {
+      console.error("[useTeamAgents] failed to reset built-in agent:", error)
+      const errMsg = messagesRef?.().resetError ?? ""
+      if (errMsg) toast.error(errMsg)
+      throw error
+    }
+  }
+
+  /**
    * Hard-delete an agent. The store returns `void` because the doc
    * is gone; callers that need the agent's record after the call
    * should snapshot it before. Surfaces a destructive toast on
@@ -241,8 +263,14 @@ export function useTeamAgents(messagesRef?: () => UseTeamAgentsI18n) {
     loadError,
     canManage,
     cannotManageReason,
+    // Editor lookups that also cover built-ins (custom-only `getById`
+    // keeps its prior behavior for existing consumers).
+    getEditableById: store.getEditableById,
+    isBuiltIn: store.isBuiltIn,
+    isCustomized: store.isCustomized,
     create,
     update,
+    resetBuiltIn,
     archive,
     restore,
     setEnabled,

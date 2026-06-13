@@ -8,6 +8,7 @@ import {
   IconChevronDown,
   IconCirclePlus,
   IconPencil,
+  IconRotateCcw,
   IconSettings,
   IconWorkflow,
 } from "@/data/icons"
@@ -32,6 +33,7 @@ const {
   archive,
   remove,
   enablePreset,
+  update,
 } = useTeamWorkflows()
 
 const authStore = useAuthStore()
@@ -214,6 +216,37 @@ const editPreset = (preset: WorkflowPreset): void => {
   if (wf) openEdit(wf)
 }
 
+// ── Reset a preset's materialized doc back to its catalog defaults ──────────
+// Restores every editable field from the client preset catalog (agent binding
+// is immutable and `enabled` is the row Switch's axis, so both stay put).
+// Confirm-gated: it overwrites whatever the team customized in the editor,
+// and there's no history of those edits to recover.
+const resetWorkflowTarget = ref<WorkflowPreset | null>(null)
+const resetWorkflowConfirmOpen = computed({
+  get: () => resetWorkflowTarget.value !== null,
+  set: (open: boolean) => {
+    if (!open) resetWorkflowTarget.value = null
+  },
+})
+
+const handleResetWorkflowConfirmed = async (): Promise<void> => {
+  const preset = resetWorkflowTarget.value
+  resetWorkflowTarget.value = null
+  if (!preset) return
+  const wf = presetActiveWorkflow(preset.key)
+  if (!wf) return
+  await update(wf.id, {
+    name: preset.name,
+    description: preset.description,
+    avatarSeed: preset.avatarSeed,
+    instructions: preset.instructions,
+    additionalPrompt: preset.additionalPrompt ?? "",
+    targetScope: preset.defaultTargetScope,
+    trigger: preset.defaultTrigger,
+    updateMode: preset.defaultUpdateMode,
+  })
+}
+
 // ── Row description (trigger · mode) — used by custom + archived rows ─────────
 const dayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
 const minuteToTime = (min: number): string =>
@@ -318,6 +351,14 @@ const rowDescription = (wf: IWorkflow): string =>
                       {{ t("settings.workflows.edit") }}
                       <DropdownMenuShortcut>E</DropdownMenuShortcut>
                     </DropdownMenuItem>
+                    <DropdownMenuItem
+                      data-hotkey="r"
+                      @select="resetWorkflowTarget = preset"
+                    >
+                      <IconRotateCcw />
+                      {{ t("settings.workflows.reset") }}
+                      <DropdownMenuShortcut>R</DropdownMenuShortcut>
+                    </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
               </Tooltip>
@@ -351,6 +392,37 @@ const rowDescription = (wf: IWorkflow): string =>
           </EmptyHeader>
         </Empty>
       </FieldSet>
+
+      <!--
+        Reset-to-default confirmation, shared across the preset rows.
+        Overwrites the team's edits to the materialized workflow with the
+        catalog defaults — there's no history of those edits to recover.
+      -->
+      <AlertDialog v-model:open="resetWorkflowConfirmOpen">
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {{ t("settings.workflows.resetConfirmTitle") }}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {{
+                t("settings.workflows.resetConfirmBody", {
+                  name: resetWorkflowTarget?.name ?? "",
+                })
+              }}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>
+              {{ t("common.cancel") }}<Kbd aria-hidden="true">Esc</Kbd>
+            </AlertDialogCancel>
+            <AlertDialogAction @click="handleResetWorkflowConfirmed">
+              {{ t("settings.workflows.reset") }}
+              <Kbd aria-hidden="true">↩</Kbd>
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <FieldSeparator />
 

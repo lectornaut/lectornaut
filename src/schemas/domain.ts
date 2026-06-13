@@ -627,6 +627,13 @@ export const teamAgentSchema = z.object({
    */
   enabled: z.boolean(),
   /**
+   * Public-profile visibility. The agent's profile page resolves for
+   * anonymous viewers only when the TEAM is public AND this flag is on;
+   * team members always see it. Missing = true (opt-out convention,
+   * matching `enabled`).
+   */
+  isPublic: z.boolean().default(true),
+  /**
    * Soft-delete marker — semantically a "deprecate" signal. Set when
    * the admin archives the agent from the settings UI; cleared by the
    * restore action. Archived agents are filtered out of pickers but
@@ -1215,6 +1222,12 @@ const integrationBaseShape = {
   avatarSeed: z.string().max(40).default(""),
   /** On/off — orthogonal to install (archivedAt). */
   enabled: z.boolean(),
+  /**
+   * Agent profile visibility: the public profile resolves anonymously only
+   * when the TEAM is public AND this flag is on. Missing = true (opt-out
+   * convention). Meaningless for tools and built-in divergence docs.
+   */
+  isPublic: z.boolean().default(true),
   /** Set = uninstalled/deprecated (history-preserving). null = installed. */
   archivedAt: timestampSchema.nullable().optional(),
   createdAt: timestampSchema,
@@ -1247,6 +1260,8 @@ export const agentIntegrationDraftSchema = z.object({
   name: z.string().min(1).max(40),
   description: z.string().max(200).default(""),
   avatarSeed: z.string().max(40).default(""),
+  /** Public-profile visibility; omitted = true (opt-out convention). */
+  isPublic: z.boolean().optional(),
   spec: agentIntegrationSpecSchema,
 })
 
@@ -1256,7 +1271,11 @@ export const agentIntegrationPatchSchema = z
     description: z.string().max(200),
     avatarSeed: z.string().max(40),
     enabled: z.boolean(),
-    spec: agentIntegrationSpecSchema.partial(),
+    isPublic: z.boolean(),
+    // `null` clears a BUILT-IN agent's customization override so its persona
+    // resolves from the shipped catalog again ("reset to default"). The
+    // server rejects null for custom agents — they must keep a spec.
+    spec: agentIntegrationSpecSchema.partial().nullable(),
   })
   .partial()
 

@@ -5,7 +5,7 @@
  *
  * Sources composed, each reusing the single source that already describes it:
  *   - the curated `shortcuts.ts` commands-context categories (mitt events)
- *   - "Go to" navigation from `defaultMenu` (+ Explore)
+ *   - "Go to" navigation from `defaultMenu`
  *   - "Create" intents from `useCreateActions` (permission/feature gated)
  *   - tab actions + open / recently-closed tabs (the `Tabs.*` mitt bridge)
  *   - workspace / team switching (`useWorkspaceActions` / `useTeamActions`)
@@ -27,7 +27,6 @@ import {
   IconCircleX,
   IconCopy,
   IconGalleryHorizontalEnd,
-  IconGlobe,
   IconHistory,
   IconPlus,
   IconSquarePen,
@@ -161,35 +160,23 @@ export function useCommandPalette(): { groups: ComputedRef<PaletteGroup[]> } {
   )
 
   // ==========================================================================
-  // "Go to" — sidebar destinations from `defaultMenu`, plus pages the
-  // sidebar doesn't list (Explore). Navigates the current tab; the
-  // route ⇄ tab sync reuses or opens tabs as usual.
+  // "Go to" — sidebar destinations from `defaultMenu`. Navigates the
+  // current tab; the route ⇄ tab sync reuses or opens tabs as usual.
   // ==========================================================================
 
   const navigationGroup = computed<PaletteGroup>(() => ({
     id: "navigate",
     heading: t("components.global.commandK.groups.navigate"),
     highlight: true,
-    commands: [
-      ...defaultMenu.map((item) => ({
-        id: `navigate:${item.url}`,
-        label: [item.title],
-        icon: item.icon as Component,
-        keywords: `go to open page ${item.action}`,
-        run: () => {
-          void router.push(item.url)
-        },
-      })),
-      {
-        id: "navigate:/explore",
-        label: ["Explore"],
-        icon: IconGlobe as Component,
-        keywords: "go to open page discover gallery showcase",
-        run: () => {
-          void router.push("/explore")
-        },
+    commands: defaultMenu.map((item) => ({
+      id: `navigate:${item.url}`,
+      label: [item.title],
+      icon: item.icon as Component,
+      keywords: `go to open page ${item.action}`,
+      run: () => {
+        void router.push(item.url)
       },
-    ],
+    })),
   }))
 
   // ==========================================================================

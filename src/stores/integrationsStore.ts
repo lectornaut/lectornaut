@@ -72,6 +72,8 @@ interface StoredIntegration {
   description: string
   avatarSeed: string
   enabled: boolean
+  /** Agent public-profile visibility (missing = true). See domain schema. */
+  isPublic: boolean
   archivedAt: Timestamp | null
   spec: IAgentIntegrationSpec | IToolIntegrationSpec | null
   createdAt: Timestamp
@@ -95,9 +97,16 @@ export interface ResolvedIntegration {
   description: string
   avatarSeed: string
   enabled: boolean
+  isPublic: boolean
   installed: boolean
   archivedAt: Timestamp | null
   spec: IAgentIntegrationSpec | IToolIntegrationSpec | null
+  /**
+   * Built-in agents only: the team has diverged from the shipped persona —
+   * a stored spec override and/or edited envelope (name/description/avatar).
+   * Drives the "Customized" badge + the Reset-to-default affordance.
+   */
+  customized: boolean
   createdAt: Timestamp
   updatedAt: Timestamp
   createdByUid: string
@@ -131,9 +140,14 @@ function snapshotToStored(
     data.source === "custom" || data.source === "published"
       ? data.source
       : "builtin"
-  // Built-ins are thin references — spec resolves from the catalog (overlay).
+  // Custom docs carry a full spec. Built-in AGENT docs are thin references
+  // unless the team customized the persona — then the stored spec is the
+  // override and wins at resolution. Built-in TOOL docs never carry a spec
+  // (the handler is server code, keyed by `sourceKey`). Mirrors the server's
+  // `normalizeIntegrationDoc`.
   const spec =
-    source === "custom" && isRecord(data.spec)
+    isRecord(data.spec) &&
+    (source === "custom" || (source === "builtin" && type === "agent"))
       ? (data.spec as IAgentIntegrationSpec | IToolIntegrationSpec)
       : null
   return {
@@ -146,6 +160,7 @@ function snapshotToStored(
     description: typeof data.description === "string" ? data.description : "",
     avatarSeed: typeof data.avatarSeed === "string" ? data.avatarSeed : "",
     enabled: typeof data.enabled === "boolean" ? data.enabled : true,
+    isPublic: typeof data.isPublic === "boolean" ? data.isPublic : true,
     archivedAt: data.archivedAt instanceof Timestamp ? data.archivedAt : null,
     spec,
     createdAt:
@@ -159,8 +174,18 @@ function snapshotToStored(
 
 function resolveStored(doc: StoredIntegration): ResolvedIntegration {
   let spec = doc.spec
+  let customized = false
   if (doc.source !== "custom" && doc.type === "agent" && doc.sourceKey) {
-    spec = builtInAgentSpec(doc.sourceKey)
+    // A stored spec on a built-in agent doc is the team's customization
+    // override; otherwise the persona comes from the shipped catalog.
+    spec = doc.spec ?? builtInAgentSpec(doc.sourceKey)
+    const def = BUILT_IN_AGENTS.find((a) => a.id === doc.sourceKey)
+    customized =
+      doc.spec !== null ||
+      (def !== undefined &&
+        (doc.name !== def.name ||
+          doc.description !== def.description ||
+          doc.avatarSeed !== def.avatarSeed))
   } else if (doc.source !== "custom" && doc.type === "tool") {
     spec = null
   }
@@ -174,9 +199,11 @@ function resolveStored(doc: StoredIntegration): ResolvedIntegration {
     description: doc.description,
     avatarSeed: doc.avatarSeed,
     enabled: doc.enabled,
+    isPublic: doc.isPublic,
     installed: doc.archivedAt === null,
     archivedAt: doc.archivedAt,
     spec,
+    customized,
     createdAt: doc.createdAt,
     updatedAt: doc.updatedAt,
     createdByUid: doc.createdByUid,
@@ -235,6 +262,7 @@ function synthesizeBuiltinDoc(
     source: "builtin" as const,
     sourceKey,
     enabled: flags.enabled,
+    isPublic: true,
     archivedAt: flags.archivedAt,
     spec: null,
     createdAt: now,
@@ -354,9 +382,11 @@ export const useIntegrationsStore = defineStore("integrations", () => {
               description: def.description,
               avatarSeed: def.avatarSeed,
               enabled: true,
+              isPublic: true,
               installed: true,
               archivedAt: null,
               spec: builtInAgentSpec(def.id),
+              customized: false,
               createdAt: Timestamp.now(),
               updatedAt: Timestamp.now(),
               createdByUid: "",
@@ -379,9 +409,11 @@ export const useIntegrationsStore = defineStore("integrations", () => {
               description: tool.description,
               avatarSeed: tool.name,
               enabled: true,
+              isPublic: true,
               installed: true,
               archivedAt: null,
               spec: null,
+              customized: false,
               createdAt: Timestamp.now(),
               updatedAt: Timestamp.now(),
               createdByUid: "",

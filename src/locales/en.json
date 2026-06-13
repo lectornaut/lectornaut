@@ -1565,6 +1565,9 @@
       "weekly": "Weekly · {day} {time} UTC",
       "runNow": "Run now",
       "edit": "Edit",
+      "reset": "Reset to default",
+      "resetConfirmTitle": "Reset to Default?",
+      "resetConfirmBody": "This overwrites your team's edits to {name} with the predefined workflow's instructions, trigger, and settings. This action cannot be undone.",
       "archive": "Archive",
       "delete": "Delete",
       "restore": "Restore",
@@ -1845,7 +1848,19 @@
           "label": "Custom tools",
           "description": "Lets admins ship custom model-callable tools (webhooks, prompt templates, canned searches)."
         },
-        "empty": "No built-in tools installed. Add them from the Features tab."
+        "empty": "No built-in tools installed. Add them from the Features tab.",
+        "listWorkspaceNodes": {
+          "label": "List nodes",
+          "description": "Browse the workspace's content tree."
+        },
+        "compareNodes": {
+          "label": "Compare nodes",
+          "description": "Contrast two workspace nodes side by side."
+        },
+        "findRelatedNodes": {
+          "label": "Find related nodes",
+          "description": "Surface content related to a workspace node."
+        }
       },
       "limits": {
         "label": "Display limits",
@@ -1888,6 +1903,7 @@
         "untitledAgent": "Untitled agent",
         "archivedBadge": "Archived",
         "disabledBadge": "Disabled",
+        "builtInBadge": "Built-in",
         "archive": "Archive",
         "restore": "Restore",
         "create": "Create",
@@ -1947,12 +1963,23 @@
           "disabledAtTeamTooltip": "Enable this tool in the team's tool settings above before assigning it to an agent."
         },
         "customToolsHeader": "Custom tools",
-        "customToolsHeaderDesc": "Admin-authored tools the agent can call. New tools default to enabled for every agent — disable any you don't want this persona to use."
+        "customToolsHeaderDesc": "Admin-authored tools the agent can call. New tools default to enabled for every agent — disable any you don't want this persona to use.",
+        "isPublic": {
+          "label": "Public profile",
+          "description": "Anyone with the link can view this agent's profile page while the team is public. Team members can always view it."
+        }
       },
       "builtInAgents": {
         "label": "Built-in agents",
-        "sectionDescription": "Pre-built personas with curated tool access and system prompts for common use cases.",
+        "sectionDescription": "Pre-built personas with curated tool access and system prompts for common use cases. Customize any of them to fit your team — edits apply to your team only.",
         "empty": "No built-in agents installed. Add them from the Features tab.",
+        "configure": "Configure",
+        "customizedBadge": "Customized",
+        "reset": "Reset to default",
+        "resetConfirmTitle": "Reset to Default?",
+        "resetConfirmBody": "This discards your team's customization of {name} and restores the built-in configuration. This action cannot be undone.",
+        "resetSuccess": "Agent reset to default",
+        "resetError": "Couldn't reset the agent. Try again.",
         "_researcher": {
           "label": "Researcher",
           "description": "Grounded, cited workspace answers."
@@ -2598,58 +2625,31 @@
       }
     },
     "agents": {
-      "copyUrl": "Copy URL",
-      "info": "Information",
-      "tabs": {
-        "details": "Details",
-        "activity": "Activity",
-        "settings": "Settings"
-      },
-      "new": "New",
-      "filter": "Filter",
-      "search": "Search",
+      "title": "Agents",
+      "description": "Built-in personas and custom agents available to your team. Open an agent to view its profile.",
       "searchPlaceholder": "Search agents...",
-      "featured": "Featured",
-      "empty": "No results found.",
-      "title": "Agent Network",
-      "description": "Discover and deploy AI agents that automate workflows.",
-      "trending": "Trending Agents",
-      "categories": {
-        "featured": "Featured",
-        "writing": "Writing",
-        "productivity": "Productivity",
-        "research": "Research",
-        "coding": "Coding",
-        "data": "Data",
-        "design": "Design",
-        "marketing": "Marketing",
-        "sales": "Sales",
-        "support": "Support",
-        "hr": "HR",
-        "finance": "Finance",
-        "legal": "Legal",
-        "education": "Education",
-        "entertainment": "Entertainment",
-        "calendar": "Calendar",
-        "searchEmoji": "Search Emoji",
-        "calculator": "Calculator"
-      },
-      "sections": {
-        "featured": "Featured",
-        "featuredDescription": "Featured agents to boost productivity.",
-        "trending": "Trending",
-        "trendingDescription": "The most popular agents in the community.",
-        "byAgentNetwork": "By Agent Network",
-        "byAgentNetworkDescription": "Agents created by Agent Network."
-      },
-      "buttons": {
-        "new": "New",
-        "recruit": "Recruit",
-        "addToTeam": "Add to team"
-      },
-      "badges": {
-        "runs": "RUNS",
-        "hours": "HOURS"
+      "builtInSection": "Built-in agents",
+      "customSection": "Custom agents",
+      "loadError": "Couldn't load agents.",
+      "noAgents": "No agents yet.",
+      "noAgentsHint": "Create a custom agent to get started.",
+      "noMatches": "No agents match your search.",
+      "profile": {
+        "title": "Agent",
+        "builtInBadge": "Built-in agent",
+        "customBadge": "Custom agent",
+        "status": {
+          "active": "Active",
+          "disabled": "Disabled",
+          "archived": "Archived"
+        },
+        "memberSince": "Member since {date}",
+        "team": "Team",
+        "tools": "Tools",
+        "privateTitle": "Private agent",
+        "privateDescription": "This agent belongs to a private team. Sign in with a member account to view it.",
+        "notFoundTitle": "Agent not found",
+        "notFoundDescription": "This agent doesn't exist or isn't publicly visible."
       }
     },
     "pricing": {
@@ -3725,159 +3725,6 @@
         "urlPlaceholder": "https://example.com",
         "remove": "Remove",
         "apply": "Apply"
-      }
-    },
-    "flow": {
-      "title": "Flow",
-      "steps": "Steps",
-      "actions": "Actions",
-      "progress": {
-        "title": "Workflow",
-        "subtitle": "Lectornaut workflow progress.",
-        "step": "Step {step} of {total}",
-        "myProgress": "My progress",
-        "skip": "Skip",
-        "stepCreateWorkflow": "Create a workflow",
-        "stepAddNode": "Add a node",
-        "stepRunWorkflow": "Run a workflow",
-        "stepPublishAutomation": "Publish an automation"
-      },
-      "stats": {
-        "totalMinutes": "Total minutes",
-        "totalMinutesDescription": "Total minutes across all agents in this organization for current month.",
-        "totalJobRuns": "Total job runs",
-        "totalJobRunsDescription": "Total job runs across all agents in this organization for current month.",
-        "avgJobRunTime": "Avg job run time",
-        "avgJobRunTimeDescription": "Average time taken by a job to run across all agents in this organization for current month.",
-        "avgJobQueueTime": "Avg job queue time",
-        "avgJobQueueTimeDescription": "Average time taken by a job to get queued across all agents in this organization for current month.",
-        "jobFailureRate": "Job failure rate",
-        "jobFailureRateDescription": "Percentage of jobs that failed across all agents in this organization for current month.",
-        "failedJobUsage": "Failed job usage",
-        "unitMins": "mins",
-        "unitRuns": "runs",
-        "unitSeconds": "seconds",
-        "unitMinutes": "minutes"
-      },
-      "sidebar": {
-        "widgets": "Widgets",
-        "settings": "Settings"
-      },
-      "details": {
-        "runs": "Runs",
-        "runsUnit": "runs",
-        "jobsUnit": "jobs",
-        "errorsUnit": "errors",
-        "firstRun": "First run",
-        "lastRun": "Last run",
-        "usedInBillingCycle": "used in billing cycle.",
-        "used": "Used",
-        "reserved": "Reserved",
-        "information": "Information",
-        "createdBy": "Created by",
-        "createdOn": "Created on",
-        "lastModified": "Last modified",
-        "dimensions": "Dimensions",
-        "resolution": "Resolution",
-        "description": "Description",
-        "addDescription": "Add a description.",
-        "sharedWith": "Shared with",
-        "roles": {
-          "owner": "Owner",
-          "admin": "Admin",
-          "member": "Member",
-          "guest": "Guest"
-        }
-      },
-      "activity": {
-        "history": "History",
-        "startDate": "Start date",
-        "endDate": "End date",
-        "limitReached": "Limit reached",
-        "upgrade": "Upgrade",
-        "upgradeDesc": "Upgrade to Pro for unlimited activity timeline.",
-        "presets": {
-          "today": "Today",
-          "last7days": "Last 7 days",
-          "last14days": "Last 14 days",
-          "last30days": "Last 30 days",
-          "last3months": "Last 3 months",
-          "last6months": "Last 6 months",
-          "lastYear": "Last 1 year"
-        },
-        "select": "Select"
-      },
-      "settings": {
-        "general": {
-          "title": "General",
-          "description": "Configure the general settings of the project.",
-          "projectName": "Project name",
-          "projectDesc": "Description",
-          "placeholders": {
-            "name": "Name",
-            "desc": "Description"
-          },
-          "save": "Save"
-        },
-        "team": {
-          "title": "Team",
-          "description": "Manage the team members of the project.",
-          "invite": "Invite people",
-          "emailPlaceholder": "Email",
-          "inviteButton": "Invite",
-          "peopleAccess": "People with access",
-          "generalAccess": "General access",
-          "edit": "Edit",
-          "view": "View",
-          "access": {
-            "public": {
-              "label": "Public to everyone",
-              "desc": "Anyone on the internet with the link can view."
-            },
-            "private": {
-              "label": "Private to members",
-              "desc": "Only people in your organization can view."
-            },
-            "restricted": {
-              "label": "Restricted",
-              "desc": "Only people with access can open the link."
-            }
-          }
-        },
-        "notifications": {
-          "title": "Notifications",
-          "description": "Configure the notifications of the project.",
-          "taskUpdates": {
-            "label": "Task updates",
-            "desc": "Automation completes, fails, or errors."
-          },
-          "workflow": {
-            "label": "Workflow execution",
-            "desc": "Start, pause, or completion of workflows."
-          },
-          "agent": {
-            "label": "Agent Insights",
-            "desc": "AI suggestions, optimizations, or reports."
-          },
-          "collaboration": {
-            "label": "Collaboration Alerts",
-            "desc": "Assignments, comments, or task updates."
-          },
-          "security": {
-            "label": "Security & Compliance",
-            "desc": "Access attempts, unusual activity, or failures."
-          }
-        },
-        "danger": {
-          "title": "Danger Zone",
-          "description": "Delete the project and all its data permanently.",
-          "delete": "Delete workflow"
-        },
-        "placeholders": {
-          "name": "Name",
-          "description": "Description",
-          "email": "Email"
-        }
       }
     },
     "support": {

@@ -21,8 +21,11 @@
  *
  * CATALOG OVERLAY (preserves the old opt-out default with no migration):
  *   A built-in agent/tool has a doc here ONLY when the team has DIVERGED from
- *   the shipped default — i.e. uninstalled it (archivedAt set) or disabled it
- *   (enabled=false). A built-in with NO doc resolves as installed+enabled, so
+ *   the shipped default — uninstalled it (archivedAt set), disabled it
+ *   (enabled=false), or (agents only) CUSTOMIZED it: the doc stores an
+ *   override `spec` + envelope that replace the catalog persona wholesale,
+ *   and `spec: null` via updateIntegration clears the override back to the
+ *   catalog default. A built-in with NO doc resolves as installed+enabled, so
  *   a newly-shipped built-in rolls out opt-out, exactly as before. Built-in
  *   doc id == its catalog `sourceKey` (`_researcher`, `rollDice`) so dispatch
  *   addressing is unchanged. Custom integrations always have an auto-id doc.
@@ -41,6 +44,7 @@
  */
 
 import { FieldValue, Timestamp } from "firebase-admin/firestore"
+import * as logger from "firebase-functions/logger"
 import { HttpsError, onCall } from "firebase-functions/v2/https"
 import { z } from "zod"
 // Call-time-only use (lifecycle audit entries) — the indirect cycle
@@ -151,6 +155,15 @@ interface IntegrationDocBase {
   description: string
   avatarSeed: string
   enabled: boolean
+  /**
+   * Agent profile visibility: the public profile page resolves for
+   * anonymous viewers only when the TEAM is public AND this flag is on
+   * (members always see it). Missing = true — opt-out convention, so
+   * docs that predate the field stay visible. Carried on the shared
+   * envelope; meaningless for tools and for built-in divergence docs
+   * (built-in profiles are platform-level, resolved from the registry).
+   */
+  isPublic: boolean
   archivedAt: FirebaseFirestore.Timestamp | null
   createdAt: FirebaseFirestore.Timestamp
   updatedAt: FirebaseFirestore.Timestamp
@@ -177,6 +190,7 @@ export interface ResolvedIntegration {
   description: string
   avatarSeed: string
   enabled: boolean
+  isPublic: boolean
   installed: boolean
   archivedAt: FirebaseFirestore.Timestamp | null
   spec: AgentSpec | ToolSpec | null
@@ -261,6 +275,8 @@ const agentDraftSchema = z.object({
   name: z.string().min(1).max(40),
   description: z.string().max(200).optional(),
   avatarSeed: z.string().max(40).optional(),
+  /** Public-profile visibility; omitted = true (opt-out convention). */
+  isPublic: z.boolean().optional(),
   spec: agentSpecDraftSchema,
 })
 
@@ -276,7 +292,11 @@ const agentPatchSchema = z
     name: z.string().min(1).max(40),
     description: z.string().max(200),
     avatarSeed: z.string().max(40),
-    spec: agentSpecDraftSchema.partial(),
+    isPublic: z.boolean(),
+    // `null` = clear a built-in agent's customization override so the
+    // persona resolves from the shipped catalog again ("reset to default").
+    // Custom agents can't carry null — the handler rejects it.
+    spec: agentSpecDraftSchema.partial().nullable(),
   })
   .partial()
 
@@ -474,6 +494,7 @@ function normalizeIntegrationDoc(
     description: typeof data.description === "string" ? data.description : "",
     avatarSeed: typeof data.avatarSeed === "string" ? data.avatarSeed : "",
     enabled: typeof data.enabled === "boolean" ? data.enabled : true,
+    isPublic: typeof data.isPublic === "boolean" ? data.isPublic : true,
     archivedAt: data.archivedAt instanceof Timestamp ? data.archivedAt : null,
     createdAt:
       data.createdAt instanceof Timestamp ? data.createdAt : Timestamp.now(),
@@ -482,9 +503,14 @@ function normalizeIntegrationDoc(
     createdByUid:
       typeof data.createdByUid === "string" ? data.createdByUid : "",
   }
-  // Built-in docs are thin references — spec stays null and is resolved from
-  // the catalog. Custom docs carry a full spec.
-  const hasSpec = source === "custom" && isRecord(data.spec)
+  // Custom docs carry a full spec. Built-in AGENT docs are thin references
+  // (spec null → persona resolves from the catalog) UNLESS the team has
+  // customized the persona — then the doc stores the override spec and it
+  // wins at resolution. Built-in TOOL docs never carry a spec (the handler
+  // is code, keyed by `sourceKey`).
+  const hasSpec =
+    isRecord(data.spec) &&
+    (source === "custom" || (source === "builtin" && type === "agent"))
   if (type === "agent") {
     return {
       ...base,
@@ -515,14 +541,27 @@ function catalogAgentSpec(entry: CatalogEntry): AgentSpec {
   }
 }
 
+/** Catalog persona for a built-in agent doc; null for custom/unknown keys. */
+function builtinSpecOf(doc: IntegrationDoc): AgentSpec | null {
+  if (doc.source === "custom" || doc.type !== "agent" || !doc.sourceKey) {
+    return null
+  }
+  const entry = getCatalogEntry("agent", doc.sourceKey)
+  return entry ? catalogAgentSpec(entry) : null
+}
+
 /** Resolve a stored doc into its effective integration (overlaying catalog). */
 function resolveDoc(doc: IntegrationDoc): ResolvedIntegration {
   const installed = doc.archivedAt === null
   let spec: AgentSpec | ToolSpec | null = doc.spec
   if (doc.source !== "custom" && doc.sourceKey) {
     const entry = getCatalogEntry(doc.type, doc.sourceKey)
-    if (entry && doc.type === "agent") spec = catalogAgentSpec(entry)
-    else if (doc.type === "tool") spec = null // handler keyed by sourceKey
+    if (entry && doc.type === "agent") {
+      // A stored spec on a built-in agent doc is the team's customization
+      // override — it replaces the catalog persona wholesale. No stored
+      // spec → the shipped catalog default (and future catalog updates).
+      spec = doc.spec ?? catalogAgentSpec(entry)
+    } else if (doc.type === "tool") spec = null // handler keyed by sourceKey
   }
   return {
     id: doc.id,
@@ -531,6 +570,7 @@ function resolveDoc(doc: IntegrationDoc): ResolvedIntegration {
     source: doc.source,
     sourceKey: doc.sourceKey,
     name: doc.name,
+    isPublic: doc.isPublic,
     description: doc.description,
     avatarSeed: doc.avatarSeed,
     enabled: doc.enabled,
@@ -559,6 +599,7 @@ function virtualFromCatalog(
     description: entry.description,
     avatarSeed: entry.avatarSeed,
     enabled: true,
+    isPublic: true,
     installed: true,
     archivedAt: null,
     spec: entry.type === "agent" ? catalogAgentSpec(entry) : null,
@@ -593,9 +634,32 @@ export async function listIntegrations(
 
   const snap = await db.collection(integrationsCollectionPath(teamId)).get()
   const docs: IntegrationDoc[] = []
+  // Data healing: custom docs written before the body `id` field shipped
+  // (2026-06-12, public agent profiles) get it backfilled opportunistically
+  // — fire-and-forget so the read path pays no latency. Converges on the
+  // first server read of the team's integrations (dispatch or any
+  // integration callable).
+  const missingIdRefs: FirebaseFirestore.DocumentReference[] = []
   for (const d of snap.docs) {
     const doc = normalizeIntegrationDoc(teamId, d.id, d.data())
-    if (doc) docs.push(doc)
+    if (doc) {
+      docs.push(doc)
+      if (doc.source === "custom" && d.data()?.id !== d.id) {
+        missingIdRefs.push(d.ref)
+      }
+    }
+  }
+  if (missingIdRefs.length > 0) {
+    const batch = db.batch()
+    for (const ref of missingIdRefs) {
+      batch.set(ref, { id: ref.id }, { merge: true })
+    }
+    void batch.commit().catch((err) => {
+      logger.warn(
+        `[integrations] id backfill failed team=${teamId} count=${missingIdRefs.length}`,
+        { err: String(err) }
+      )
+    })
   }
   const byTypeKey = new Map<string, IntegrationDoc>()
   const customs: IntegrationDoc[] = []
@@ -792,6 +856,7 @@ export const createIntegration = onCall<CreateIntegrationRequest>(
         name: parsed.data.name,
         description: parsed.data.description ?? "",
         avatarSeed: parsed.data.avatarSeed ?? "",
+        isPublic: parsed.data.isPublic,
         spec,
       })
       await logCreate(id, parsed.data.name)
@@ -832,12 +897,18 @@ async function writeNewCustomDoc(
     name: string
     description: string
     avatarSeed: string
+    isPublic?: boolean
     spec: AgentSpec | ToolSpec
   }
 ): Promise<string> {
   const ref = db.collection(integrationsCollectionPath(teamId)).doc()
   const now = FieldValue.serverTimestamp()
   await ref.set({
+    // Own id duplicated into the body so the doc is reachable by a
+    // collectionGroup equality query (the public agent-profile lookup) —
+    // collectionGroup can't filter on document id alone. Older docs are
+    // healed by `listIntegrations`.
+    id: ref.id,
     type: fields.type,
     source: "custom",
     sourceKey: null,
@@ -846,6 +917,7 @@ async function writeNewCustomDoc(
     avatarSeed: fields.avatarSeed,
     spec: fields.spec,
     enabled: true,
+    isPublic: fields.isPublic ?? true,
     archivedAt: null,
     createdAt: now,
     updatedAt: now,
@@ -865,11 +937,22 @@ async function loadResolved(
   return doc ? resolveDoc(doc) : null
 }
 
-// ─── Callable: updateIntegration (custom only) ────────────────────────────────
+// ─── Callable: updateIntegration (custom agents/tools + built-in agents) ──────
+// Custom integrations are fully editable. Built-in AGENTS are customizable:
+// the patch lands on the divergence doc (materialized on first edit) as an
+// override spec + envelope; `spec: null` clears the override back to the
+// catalog default. Built-in TOOLS stay locked — their behavior is a code
+// handler keyed by `sourceKey`, there is no spec to edit. Published
+// (connection-contributed) docs stay locked — the connection owns them.
 
 interface UpdateIntegrationRequest {
   teamId: string
-  integrationId: string
+  // Existing doc (custom, or already-diverged built-in): pass integrationId.
+  // Built-in with no divergence doc yet: pass type + sourceKey and the doc
+  // is materialized (same addressing as setIntegrationEnabled).
+  integrationId?: string
+  type?: "agent" | "tool"
+  sourceKey?: string
   patch: unknown
 }
 
@@ -877,28 +960,30 @@ export const updateIntegration = onCall<UpdateIntegrationRequest>(
   { ...CALLABLE_OPTS, enforceAppCheck: true },
   async (request) => {
     const auth = requireVerifiedAuth(request.auth)
-    const { teamId, integrationId, patch } = request.data ?? {}
+    const data = request.data ?? ({} as UpdateIntegrationRequest)
+    const { teamId, patch } = data
     requireTeamId(teamId)
-    if (typeof integrationId !== "string" || !integrationId) {
-      throw new HttpsError("invalid-argument", "integrationId is required.")
-    }
     const role = await assertAdminRole(teamId, auth.uid)
 
-    const ref = db.doc(integrationDocPath(teamId, integrationId))
+    const ref = await resolveMutableRef(teamId, data)
+    const integrationId = ref.id
     const existing = await ref.get()
-    if (!existing.exists) {
-      throw new HttpsError("not-found", "Integration not found.")
-    }
     const current = normalizeIntegrationDoc(
       teamId,
       integrationId,
       existing.data()
     )
     if (!current) throw new HttpsError("not-found", "Integration not found.")
-    if (current.source !== "custom") {
+    if (current.source === "published") {
       throw new HttpsError(
         "failed-precondition",
-        "Built-in integrations can't be edited — only enabled, disabled, installed, or uninstalled."
+        "Connection tools can't be edited — only enabled, disabled, installed, or uninstalled."
+      )
+    }
+    if (current.source !== "custom" && current.type === "tool") {
+      throw new HttpsError(
+        "failed-precondition",
+        "Built-in tools can't be edited — their behavior is fixed. They can only be enabled, disabled, installed, or uninstalled."
       )
     }
 
@@ -915,8 +1000,23 @@ export const updateIntegration = onCall<UpdateIntegrationRequest>(
         )
       }
       applyEnvelopePatch(updates, parsed.data)
-      const cur = current.spec as AgentSpec | null
-      if (parsed.data.spec) {
+      // The merge base is the EFFECTIVE spec: the stored one for custom
+      // agents (and already-customized built-ins), the catalog persona for a
+      // built-in being customized for the first time — so a partial patch
+      // (e.g. one tool toggle) keeps the shipped prompt rather than
+      // resetting it to empty.
+      const cur = (current.spec as AgentSpec | null) ?? builtinSpecOf(current)
+      if (parsed.data.spec === null) {
+        if (current.source === "custom") {
+          throw new HttpsError(
+            "invalid-argument",
+            "A custom agent must keep a spec — only built-in agents can be reset to their catalog default."
+          )
+        }
+        // Reset: clear the override so the persona resolves from the
+        // catalog again (and keeps tracking future catalog updates).
+        updates.spec = null
+      } else if (parsed.data.spec) {
         // Deep-merge promptSuffixes/tools; replace customTools wholesale
         // (the editor ships the full id set — a merge would make un-setting
         // a key impossible). Mirrors the old updateTeamAgent policy.
@@ -975,7 +1075,12 @@ export const updateIntegration = onCall<UpdateIntegrationRequest>(
     if (changedFields.length > 0) {
       const envelopeBefore: Record<string, unknown> = {}
       const envelopeAfter: Record<string, unknown> = {}
-      for (const key of ["name", "description", "avatarSeed"] as const) {
+      for (const key of [
+        "name",
+        "description",
+        "avatarSeed",
+        "isPublic",
+      ] as const) {
         if (key in updates) {
           envelopeBefore[key] = current[key]
           envelopeAfter[key] = updates[key]
@@ -1000,11 +1105,17 @@ export const updateIntegration = onCall<UpdateIntegrationRequest>(
 
 function applyEnvelopePatch(
   updates: Record<string, unknown>,
-  patch: { name?: string; description?: string; avatarSeed?: string }
+  patch: {
+    name?: string
+    description?: string
+    avatarSeed?: string
+    isPublic?: boolean
+  }
 ): void {
   if (patch.name !== undefined) updates.name = patch.name
   if (patch.description !== undefined) updates.description = patch.description
   if (patch.avatarSeed !== undefined) updates.avatarSeed = patch.avatarSeed
+  if (patch.isPublic !== undefined) updates.isPublic = patch.isPublic
 }
 
 // ─── Callable: setIntegrationEnabled ──────────────────────────────────────────

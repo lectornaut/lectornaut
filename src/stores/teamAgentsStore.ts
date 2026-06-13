@@ -22,6 +22,7 @@ import {
   type CreateTeamAgentDraft,
   type UpdateTeamAgentPatch,
 } from "@/composables/useFunctions"
+import { BUILT_IN_AGENTS } from "@/data/builtInAgents"
 import { useAgentConfigStore } from "@/stores/agentConfigStore"
 import { useAuthStore } from "@/stores/authStore"
 import {
@@ -80,6 +81,7 @@ function toTeamAgent(i: ResolvedIntegration): ITeamAgent {
     tools: spec?.tools ?? { ...DEFAULT_TOOL_TOGGLES },
     customTools: spec?.customTools ?? {},
     enabled: i.enabled,
+    isPublic: i.isPublic,
     archivedAt: i.archivedAt,
     createdAt: i.createdAt,
     updatedAt: i.updatedAt,
@@ -103,6 +105,7 @@ function integrationToTeamAgent(i: IIntegration | null): ITeamAgent {
     tools: spec?.tools ?? { ...DEFAULT_TOOL_TOGGLES },
     customTools: spec?.customTools ?? {},
     enabled: i?.enabled ?? true,
+    isPublic: i?.isPublic ?? true,
     archivedAt: i?.archivedAt ?? null,
     createdAt: now,
     updatedAt: now,
@@ -116,6 +119,7 @@ function toAgentDraft(d: CreateTeamAgentDraft): IAgentIntegrationDraft {
     name: d.name,
     description: d.description ?? "",
     avatarSeed: d.avatarSeed ?? "",
+    isPublic: d.isPublic ?? true,
     spec: {
       systemPromptBase: d.systemPromptBase,
       promptSuffixes: {
@@ -142,6 +146,7 @@ function toAgentPatch(p: UpdateTeamAgentPatch): IAgentIntegrationPatch {
   if (p.name !== undefined) patch.name = p.name
   if (p.description !== undefined) patch.description = p.description
   if (p.avatarSeed !== undefined) patch.avatarSeed = p.avatarSeed
+  if (p.isPublic !== undefined) patch.isPublic = p.isPublic
   if (Object.keys(spec).length > 0) patch.spec = spec
   return patch
 }
@@ -241,6 +246,28 @@ export const useTeamAgentsStore = defineStore("teamAgents", () => {
   const getById = (agentId: string): ITeamAgent | null =>
     agents.value.find((agent) => agent.id === agentId) ?? null
 
+  /**
+   * Lookup for the EDITOR: any agent integration — custom or built-in, in
+   * any lifecycle state (disabled/archived built-ins stay editable). For a
+   * built-in this is the EFFECTIVE persona: the team's customization
+   * override when one exists, the shipped catalog default otherwise — so
+   * the editor always opens pre-filled with what actually dispatches.
+   */
+  const getEditableById = (agentId: string): ITeamAgent | null => {
+    const integration = agentIntegrations.value.find((i) => i.id === agentId)
+    return integration ? toTeamAgent(integration) : null
+  }
+
+  /** True when the id resolves to a non-custom (built-in) agent integration. */
+  const isBuiltIn = (agentId: string): boolean => {
+    const integration = agentIntegrations.value.find((i) => i.id === agentId)
+    return integration !== undefined && integration.source !== "custom"
+  }
+
+  /** Built-in agent has diverged from the shipped persona (badge + reset). */
+  const isCustomized = (agentId: string): boolean =>
+    agentIntegrations.value.find((i) => i.id === agentId)?.customized === true
+
   // ── Mutations (admin only — server enforces; routed to unified callables) ─
 
   const withSave = async <T>(
@@ -272,18 +299,49 @@ export const useTeamAgentsStore = defineStore("teamAgents", () => {
     patch: UpdateTeamAgentPatch
   ): Promise<ITeamAgent> =>
     withSave(async (teamId) => {
+      // Built-ins are addressed by catalog key so the server can materialize
+      // the divergence doc on a first-time customization (a built-in with no
+      // doc has nothing to patch by id). Diverged built-ins live at
+      // id == sourceKey, so this addressing also works once the doc exists.
+      const target = isBuiltIn(agentId)
+        ? { type: "agent" as const, sourceKey: agentId }
+        : { integrationId: agentId }
       // `enabled` has a dedicated callable; everything else is a doc patch.
       if (patch.enabled !== undefined) {
         await setIntegrationEnabledFn({
           teamId,
-          integrationId: agentId,
+          ...target,
           enabled: patch.enabled,
         })
       }
       const { data } = await updateIntegrationFn({
         teamId,
-        integrationId: agentId,
+        ...target,
         patch: toAgentPatch(patch),
+      })
+      return integrationToTeamAgent(data.integration)
+    })
+
+  /**
+   * Reset a built-in agent to its shipped catalog persona: clears the
+   * stored spec override (`spec: null`) and restores the catalog envelope.
+   * The doc keeps tracking future catalog updates afterwards — unlike
+   * saving a spec identical to today's defaults, which would pin it.
+   */
+  const resetBuiltIn = (agentId: string): Promise<ITeamAgent> =>
+    withSave(async (teamId) => {
+      const def = BUILT_IN_AGENTS.find((a) => a.id === agentId)
+      if (!def) throw new Error(`Unknown built-in agent "${agentId}".`)
+      const { data } = await updateIntegrationFn({
+        teamId,
+        type: "agent",
+        sourceKey: agentId,
+        patch: {
+          name: def.name,
+          description: def.description,
+          avatarSeed: def.avatarSeed,
+          spec: null,
+        },
       })
       return integrationToTeamAgent(data.integration)
     })
@@ -338,8 +396,12 @@ export const useTeamAgentsStore = defineStore("teamAgents", () => {
     loadError,
     loadedTeamId,
     getById,
+    getEditableById,
+    isBuiltIn,
+    isCustomized,
     create,
     update,
+    resetBuiltIn,
     archive,
     restore,
     setEnabled,

@@ -7,7 +7,6 @@ import {
   IconLogs,
   IconMail,
   IconRocket,
-  IconSearch,
   IconUserRound,
   IconZap,
 } from "@/data/icons"
@@ -72,7 +71,6 @@ export const tabIconRules: readonly TabIconRule[] = [
   exactPathRule("exit", "/exit", IconLogOut),
   exactPathRule("pricing", "/pricing", IconCreditCard),
   exactPathRule("changelog", "/changelog", IconLogs),
-  exactPathRule("explore", "/explore", IconSearch),
   exactPathRule("file-capture", "/file-capture", IconCamera),
   exactPathRule("invitations", "/invitations", IconMail),
   ...primaryRouteRules,

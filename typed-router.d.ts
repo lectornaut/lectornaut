@@ -123,13 +123,6 @@ declare module "vue-router/auto-routes" {
       Record<never, never>,
       never
     >
-    "/explore": RouteRecordInfo<
-      "/explore",
-      "/explore",
-      Record<never, never>,
-      Record<never, never>,
-      never
-    >
     "/file-capture": RouteRecordInfo<
       "/file-capture",
       "/file-capture",
@@ -301,11 +294,6 @@ declare module "vue-router/auto-routes" {
     }
     "src/pages/exit.vue": {
       routes: "/exit"
-      views: never
-      pathParamNames: never
-    }
-    "src/pages/explore.vue": {
-      routes: "/explore"
       views: never
       pathParamNames: never
     }

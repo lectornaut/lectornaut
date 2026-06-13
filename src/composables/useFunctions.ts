@@ -712,6 +712,45 @@ export interface GetPublicTeamMembersResponse {
   memberCount: number
 }
 
+export type PublicAgentProfileStatus = "active" | "disabled" | "archived"
+
+export interface PublicAgentProfile {
+  /** The agent's uid — immutable, doubles as its public handle. */
+  id: string
+  name: string
+  description: string
+  avatarSeed: string
+  isBuiltIn: boolean
+  status: PublicAgentProfileStatus
+  /**
+   * EFFECTIVE public reachability — `team.isPublic && agent.isPublic` —
+   * i.e. whether an anonymous viewer can open this profile. Members of
+   * private teams (who get "found" via the membership gate) see `false`.
+   */
+  isPublic: boolean
+  /** Membership `createdAt` — when the agent was added as a team member. */
+  memberSinceMillis: number | null
+  /** Agent doc `createdAt` (null for built-ins — no doc). */
+  createdAtMillis: number | null
+}
+
+export interface PublicAgentProfileTeam extends PublicProfileTeam {
+  username: string | null
+}
+
+export interface GetPublicAgentProfileRequest {
+  agentId: string
+}
+
+export type GetPublicAgentProfileResponse =
+  | {
+      status: "found"
+      agent: PublicAgentProfile
+      team: PublicAgentProfileTeam | null
+    }
+  | { status: "private" }
+  | { status: "not_found" }
+
 // =============================================================================
 // Bot Chat Request/Response Types
 // =============================================================================
@@ -1068,6 +1107,11 @@ export interface CreateTeamAgentDraft {
   name: string
   description?: string
   avatarSeed?: string
+  /**
+   * Public-profile visibility. Effective only when the team is public —
+   * team privacy is the outer boundary. Omitted = true.
+   */
+  isPublic?: boolean
   systemPromptBase: string
   promptSuffixes?: Partial<ITeamAgent["promptSuffixes"]>
   tools?: Partial<IBotAgentToolToggles>
@@ -1597,6 +1641,11 @@ export const getPublicTeamsForUser = createTypedCallable<
   GetPublicTeamsForUserResponse
 >("getPublicTeamsForUser")
 
+export const getPublicAgentProfile = createTypedCallable<
+  GetPublicAgentProfileRequest,
+  GetPublicAgentProfileResponse
+>("getPublicAgentProfile")
+
 // =============================================================================
 // User Profile Functions
 // =============================================================================
@@ -2089,9 +2138,19 @@ export interface CreateIntegrationRequest {
   draft: IAgentIntegrationDraft | IToolIntegrationDraft
 }
 
+/**
+ * Update an integration. For an existing doc (custom, or an already-diverged
+ * built-in) pass `integrationId`; for a built-in with no divergence doc yet,
+ * pass `type` + `sourceKey` (the server materializes the doc, mirroring
+ * setIntegrationEnabled). Built-in AGENTS accept envelope + spec patches —
+ * the spec is stored as a customization override, and `spec: null` clears it
+ * back to the catalog default. Built-in tools and published docs reject edits.
+ */
 export interface UpdateIntegrationRequest {
   teamId: string
-  integrationId: string
+  integrationId?: string
+  type?: "agent" | "tool"
+  sourceKey?: string
   patch: IAgentIntegrationPatch | IToolIntegrationPatch
 }
 
@@ -2767,6 +2826,7 @@ export function useFunctions() {
     // Public profile operations
     getPublicTeamMembers,
     getPublicTeamsForUser,
+    getPublicAgentProfile,
     claimUsername,
     releaseUsername,
     updateUserProfileVisibility,

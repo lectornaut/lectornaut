@@ -6,6 +6,7 @@ import {
   HttpsError,
   onCall,
 } from "firebase-functions/v2/https"
+import { BUILT_IN_AGENTS_BY_ID, isBuiltInAgentId } from "./builtInAgents.js"
 import { COST_BUDGET } from "./costBudget.js"
 import { sendEmailInternal } from "./email.js"
 import { db } from "./firebase.js"
@@ -584,4 +585,209 @@ export const getPublicTeamMembers = onCall(CALLABLE_OPTS, async (request) => {
 
   const { members, memberCount } = await getPublicMembersForTeam(teamId)
   return { members, memberCount }
+})
+
+type PublicAgentProfileStatus = "active" | "disabled" | "archived"
+
+type PublicAgentProfile = {
+  id: string
+  name: string
+  description: string
+  avatarSeed: string
+  isBuiltIn: boolean
+  status: PublicAgentProfileStatus
+  /**
+   * EFFECTIVE public reachability — `team.isPublic && agent.isPublic` —
+   * i.e. "can an anonymous viewer open this profile". Members of private
+   * teams (who get "found" via the membership gate) see `false` here.
+   */
+  isPublic: boolean
+  /** Membership `createdAt` — when the agent was added as a team member. */
+  memberSinceMillis: number | null
+  /** Agent doc `createdAt` (null for built-ins — no doc). */
+  createdAtMillis: number | null
+}
+
+const toMillisOrNull = (value: unknown): number | null => {
+  if (
+    value &&
+    typeof value === "object" &&
+    "toMillis" in value &&
+    typeof (value as { toMillis: unknown }).toMillis === "function"
+  ) {
+    return (value as { toMillis: () => number }).toMillis()
+  }
+  return null
+}
+
+/**
+ * Returns the public profile for an agent by its uid. Works without auth.
+ *
+ * Resolution mirrors the "agents are team members" model: a CUSTOM agent
+ * becomes publicly resolvable once an admin enrolls it as a team member
+ * (`addTeamAgentMember` writes a membership doc carrying a queryable
+ * `agentId`). Built-in agents (`_`-prefixed ids) are platform personas —
+ * they resolve from the in-process registry with no team context, and MUST
+ * short-circuit before the membership query because the same built-in id
+ * exists in every team (the query would leak an arbitrary team's
+ * enrollment).
+ *
+ * Privacy mirrors the public user/team profile surface: a public team's
+ * agents are visible to anyone; a private team's agents only to its
+ * members. Only display fields leave the server — never prompts, tool
+ * toggles, or spec internals (same secrecy rule the audit log applies).
+ */
+export const getPublicAgentProfile = onCall(CALLABLE_OPTS, async (request) => {
+  const rawAgentId = request.data?.agentId
+  const agentId = typeof rawAgentId === "string" ? rawAgentId.trim() : ""
+
+  if (!agentId) {
+    throw new HttpsError("invalid-argument", "agentId is required.")
+  }
+
+  if (isBuiltInAgentId(agentId)) {
+    const definition = BUILT_IN_AGENTS_BY_ID[agentId]
+    if (!definition) {
+      return { status: "not_found" as const }
+    }
+    const agent: PublicAgentProfile = {
+      id: definition.id,
+      name: definition.name,
+      description: definition.description,
+      avatarSeed: definition.avatarSeed,
+      isBuiltIn: true,
+      status: "active",
+      isPublic: true,
+      memberSinceMillis: null,
+      createdAtMillis: null,
+    }
+    return { status: "found" as const, agent, team: null }
+  }
+
+  // Primary: direct lookup via the `id` field custom integration docs
+  // carry in their body (written at create; older docs are healed by
+  // `listIntegrations` and by the fallback below). Resolves every custom
+  // agent regardless of team-member enrollment.
+  let teamId: string | null = null
+  let agentDoc: DocumentSnapshot | null = null
+
+  const integrationSnap = await db
+    .collectionGroup("integrations")
+    .where("id", "==", agentId)
+    .limit(1)
+    .get()
+  const integrationHit = integrationSnap.docs[0]
+  if (integrationHit && integrationHit.data()?.type === "agent") {
+    agentDoc = integrationHit
+    teamId = integrationHit.ref.parent.parent?.id ?? null
+  }
+
+  // Fallback: enrollment membership — covers docs written before the body
+  // `id` field shipped (their membership has carried a queryable `agentId`
+  // since agents-as-members).
+  if (!teamId) {
+    const membershipSnap = await db
+      .collectionGroup("memberships")
+      .where("agentId", "==", agentId)
+      .limit(1)
+      .get()
+    const membershipData = membershipSnap.docs[0]?.data() as
+      | { teamId?: unknown }
+      | undefined
+    teamId =
+      typeof membershipData?.teamId === "string" ? membershipData.teamId : null
+  }
+
+  if (!teamId) {
+    return { status: "not_found" as const }
+  }
+
+  // Live agent doc — read BEFORE the visibility gate because the per-agent
+  // `isPublic` flag participates in it. The collectionGroup hit IS the live
+  // doc; the membership-fallback path reads it now. A missing doc means the
+  // agent was hard-deleted and the membership is residue.
+  if (!agentDoc) {
+    const directSnap = await db
+      .doc(`teams/${teamId}/integrations/${agentId}`)
+      .get()
+    if (directSnap.exists) {
+      agentDoc = directSnap
+      // Targeted heal: this doc just proved reachable only through its
+      // membership — backfill the queryable id so it keeps resolving even
+      // if the enrollment is later removed. Fire-and-forget.
+      void directSnap.ref
+        .set({ id: agentId }, { merge: true })
+        .catch(() => undefined)
+    }
+  }
+  if (!agentDoc?.exists) {
+    return { status: "not_found" as const }
+  }
+  const agentData = agentDoc.data() ?? {}
+  if (agentData.type !== "agent") {
+    return { status: "not_found" as const }
+  }
+
+  const teamSnap = await db.doc(`teams/${teamId}`).get()
+  if (!teamSnap.exists) {
+    return { status: "not_found" as const }
+  }
+  const teamData = teamSnap.data() ?? {}
+
+  // Effective public visibility: the team's privacy is the outer boundary;
+  // the per-agent flag opts an individual agent out within a public team.
+  // Missing flag = true (opt-out convention shared with `enabled`).
+  const publiclyVisible =
+    teamData.isPublic === true && agentData.isPublic !== false
+
+  let canRead = publiclyVisible
+  if (!canRead && request.auth?.uid) {
+    const viewerSnap = await db
+      .doc(`teams/${teamId}/memberships/${request.auth.uid}`)
+      .get()
+    canRead = viewerSnap.exists
+  }
+  if (!canRead) {
+    return { status: "private" as const }
+  }
+
+  // Enrollment is optional — when present it contributes "member since".
+  const agentMembershipSnap = await db
+    .doc(`teams/${teamId}/memberships/${agentId}`)
+    .get()
+  const memberSinceMillis = agentMembershipSnap.exists
+    ? toMillisOrNull(agentMembershipSnap.data()?.createdAt)
+    : null
+
+  const status: PublicAgentProfileStatus = agentData.archivedAt
+    ? "archived"
+    : agentData.enabled === false
+      ? "disabled"
+      : "active"
+
+  const agent: PublicAgentProfile = {
+    id: agentId,
+    name: typeof agentData.name === "string" ? agentData.name : "",
+    description:
+      typeof agentData.description === "string" ? agentData.description : "",
+    avatarSeed:
+      typeof agentData.avatarSeed === "string" ? agentData.avatarSeed : "",
+    isBuiltIn: false,
+    status,
+    isPublic: publiclyVisible,
+    memberSinceMillis,
+    createdAtMillis: toMillisOrNull(agentData.createdAt),
+  }
+
+  const team: PublicProfileTeam & { username: string | null } = {
+    teamId,
+    name: typeof teamData.name === "string" ? teamData.name : "",
+    photoURL: typeof teamData.photoURL === "string" ? teamData.photoURL : null,
+    username:
+      typeof teamData.username === "string" && teamData.username.length > 0
+        ? teamData.username
+        : null,
+  }
+
+  return { status: "found" as const, agent, team }
 })

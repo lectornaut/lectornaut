@@ -274,11 +274,12 @@ export function hydrateBuiltInAgent(
     systemPromptBase: definition.systemPromptBase,
     promptSuffixes: { ...definition.promptSuffixes },
     tools: { ...definition.tools },
-    // Built-in presets default to "every custom tool enabled" — admins
-    // can't currently customize the customTools map for built-ins
-    // (no per-built-in editor exists; the only knobs are the on/off
-    // toggles in `agentConfig.builtInAgents`). An empty map relies on
-    // the `!== false` dispatch check to mean "all enabled."
+    // Catalog defaults carry "every custom tool enabled" (an empty map
+    // relies on the `!== false` dispatch check). Per-team customization
+    // of a preset — including its customTools map — lives on the team's
+    // divergence doc and resolves in `integrations.ts::resolveDoc`; this
+    // hydration only serves catalog-default personas (today: the Default
+    // agent, which is deliberately not customizable).
     customTools: {},
     enabled: true,
     archivedAt: null,
