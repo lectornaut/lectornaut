@@ -1,6 +1,7 @@
 import {
   getHotkeyCombos,
   getShortcutById,
+  getShortcutDisplayKeys,
   hotkeyToDisplayKeys,
 } from "@/helpers/shortcuts"
 import { useShortcutsStore } from "@/stores/shortcutsStore"
@@ -10,9 +11,10 @@ import { computed, toValue, type ComputedRef, type MaybeRefOrGetter } from "vue"
 /**
  * Resolve the displayable keys for a shortcut event id.
  *
- * Honors any user override from the shortcuts store; otherwise falls back to
- * the static `keys` defined on the shortcut. Returns `null` when the event
- * has no displayable keys (e.g. command-palette-only shortcuts).
+ * Honors any user override from the shortcuts store; otherwise uses the
+ * shortcut's canonical display — its explicit `keys` override, else derived
+ * from `hotkeys` (`getShortcutDisplayKeys`). Returns `null` when the event has
+ * no displayable keys (e.g. command-palette-only shortcuts).
  *
  * Accepts a plain string, a ref, or a getter. The id is resolved with
  * `toValue` *inside* the computed (along with the `getShortcutById` lookup),
@@ -31,6 +33,9 @@ export const useShortcutKeys = (
       const firstCombo = getHotkeyCombos(override)[0]
       if (firstCombo) return hotkeyToDisplayKeys(firstCombo)
     }
-    return getShortcutById(id)?.keys?.[0] ?? null
+    // No override: the canonical display (explicit `keys`, else derived from
+    // `hotkeys`), first combo only.
+    const shortcut = getShortcutById(id)
+    return shortcut ? (getShortcutDisplayKeys(shortcut)[0] ?? null) : null
   })
 }

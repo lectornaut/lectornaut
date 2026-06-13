@@ -769,7 +769,7 @@ const openInfoDialog = (provider: ConnectionProvider): void => {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead class="w-1/3">
+                    <TableHead class="w-1/6">
                       <Button variant="ghost" @click="toggleManageSort('name')">
                         {{ t("settings.connections.columnApp") }}
                         <IconArrowUp
@@ -787,7 +787,7 @@ const openInfoDialog = (provider: ConnectionProvider): void => {
                         <IconArrowUpDown v-else />
                       </Button>
                     </TableHead>
-                    <TableHead>
+                    <TableHead class="w-1/6">
                       <Button
                         variant="ghost"
                         @click="toggleManageSort('status')"
@@ -808,10 +808,10 @@ const openInfoDialog = (provider: ConnectionProvider): void => {
                         <IconArrowUpDown v-else />
                       </Button>
                     </TableHead>
-                    <TableHead class="w-1/4">
+                    <TableHead class="w-1/6">
                       {{ t("settings.connections.columnCategories") }}
                     </TableHead>
-                    <TableHead>
+                    <TableHead class="w-1/6">
                       <Button
                         variant="ghost"
                         @click="toggleManageSort('accounts')"
@@ -832,7 +832,7 @@ const openInfoDialog = (provider: ConnectionProvider): void => {
                         <IconArrowUpDown v-else />
                       </Button>
                     </TableHead>
-                    <TableHead>
+                    <TableHead class="w-1/6">
                       <Button
                         variant="ghost"
                         @click="toggleManageSort('installed')"
@@ -853,7 +853,7 @@ const openInfoDialog = (provider: ConnectionProvider): void => {
                         <IconArrowUpDown v-else />
                       </Button>
                     </TableHead>
-                    <TableHead class="text-right"></TableHead>
+                    <TableHead class="w-1/6 text-right"></TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -862,13 +862,13 @@ const openInfoDialog = (provider: ConnectionProvider): void => {
                     :key="row.app.provider"
                   >
                     <TableCell>
-                      <Item class="p-0" size="xs">
+                      <Item class="group p-0" size="xs">
                         <ItemMedia variant="icon">
                           <component :is="row.app.logo" />
                         </ItemMedia>
                         <ItemContent>
                           <ItemTitle>{{ row.app.name }}</ItemTitle>
-                          <ItemDescription class="line-clamp-1 text-xs">
+                          <ItemDescription class="text-xs">
                             {{ row.app.description }}
                           </ItemDescription>
                         </ItemContent>

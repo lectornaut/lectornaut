@@ -38,8 +38,10 @@ import {
   getFilteredShortcuts,
   getHotkeyCombos,
   getShortcutById,
+  getShortcutDisplayKeys,
   getShortcutId,
   hotkeyToDisplayKeys,
+  sequenceToDisplayKeys,
   type Shortcut,
 } from "@/helpers/shortcuts"
 import { isDefaultRoute } from "@/helpers/utilities"
@@ -96,6 +98,13 @@ const GROUP_ORDER: readonly string[] = [
   "shortcut:account",
 ]
 
+/**
+ * Static `shortcuts.ts` category ids that are search-only: shown while typing,
+ * but kept OUT of the curated empty-query highlights. Appearance (theme
+ * switching) is rarely why you open the palette, so it surfaces only on search.
+ */
+const SEARCH_ONLY_SHORTCUT_CATEGORIES = new Set(["appearance"])
+
 export function useCommandPalette(): { groups: ComputedRef<PaletteGroup[]> } {
   const { t } = useI18n()
   const router = useRouter()
@@ -124,7 +133,9 @@ export function useCommandPalette(): { groups: ComputedRef<PaletteGroup[]> } {
       const combo = getHotkeyCombos(override)[0]
       if (combo) return hotkeyToDisplayKeys(combo)
     }
-    return shortcut.keys?.[0] ?? null
+    // No override: the canonical display (explicit `keys`, else derived from
+    // `hotkeys`). First combo only — the palette shows a single key hint.
+    return getShortcutDisplayKeys(shortcut)[0] ?? null
   }
 
   /** Keys for a `shortcuts.ts` entry looked up by its stable id. */
@@ -146,7 +157,7 @@ export function useCommandPalette(): { groups: ComputedRef<PaletteGroup[]> } {
       (category) => ({
         id: `shortcut:${category.id}`,
         heading: category.title,
-        highlight: true,
+        highlight: !SEARCH_ONLY_SHORTCUT_CATEGORIES.has(category.id),
         commands: category.shortcuts.map((shortcut) => ({
           id: `shortcut:${getShortcutId(shortcut)}`,
           label: shortcut.description,
@@ -172,6 +183,7 @@ export function useCommandPalette(): { groups: ComputedRef<PaletteGroup[]> } {
       id: `navigate:${item.url}`,
       label: [item.title],
       icon: item.icon as Component,
+      keys: sequenceToDisplayKeys(item.sequence),
       keywords: `go to open page ${item.action}`,
       run: () => {
         void router.push(item.url)
@@ -195,6 +207,7 @@ export function useCommandPalette(): { groups: ComputedRef<PaletteGroup[]> } {
         id: `create:${action.id}`,
         label: [t("actions.create"), action.label],
         icon: action.icon,
+        keys: sequenceToDisplayKeys(action.sequence),
         keywords: "create new add",
         run: () => {
           void action.run()

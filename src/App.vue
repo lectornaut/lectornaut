@@ -2,6 +2,7 @@
 import { resumeSessionWatcher } from "@/composables/useDeviceSessions"
 import { useDialogActionHotkey } from "@/composables/useDialogActionHotkey"
 import { useGlobalHotkeys } from "@/composables/useGlobalHotkeys"
+import { useGlobalHotkeySequences } from "@/composables/useGlobalHotkeySequences"
 import { useMenuActionHotkey } from "@/composables/useMenuActionHotkey"
 import { useCurrentUser } from "vuefire"
 
@@ -11,6 +12,10 @@ const route = useRoute()
 
 // Register all global application hotkeys for the app's lifetime.
 useGlobalHotkeys()
+
+// Register Vim/Linear-style multi-key sequences: "G" then a page letter to go
+// to a destination, "C" then a letter to create. Surfaced in the ⌘K palette.
+useGlobalHotkeySequences()
 
 // Enter fires the proceed button ([data-dialog-action], or shadcn's
 // AlertDialogAction) of whichever dialog the keystroke originates in.

@@ -27,6 +27,7 @@ import {
   type CreateMenuGroup,
   type CreateMenuId,
 } from "@/helpers/defaults"
+import { CREATE_SEQUENCE_PREFIX } from "@/helpers/shortcuts"
 import { emitter } from "@/modules/mitt"
 import { useAgentConfigStore } from "@/stores/agentConfigStore"
 import { useMembershipStore } from "@/stores/membershipStore"
@@ -45,6 +46,12 @@ export interface CreateAction {
   disabledReason: string | null
   /** Single-letter menu accelerator (see `useMenuActionHotkey`), lowercase. */
   hotkey: string
+  /**
+   * Multi-key "create" sequence (e.g. `["C", "D"]` for a new document): the
+   * create prefix plus this intent's accelerator letter, uppercased. Bound by
+   * `useGlobalHotkeySequences` and surfaced as a key hint in the ⌘K palette.
+   */
+  sequence: string[]
   run: () => void | Promise<void>
 }
 
@@ -118,8 +125,18 @@ export function useCreateActions() {
     workspace: () => emitter.emit("Dialog.CreateWorkspace.Open"),
   }
 
-  // Per-intent menu accelerator — first letter of the label ("Document",
-  // "Code file", …) except Workspace, which yields W to Workflow.
+  // The ONE mnemonic key per create intent, deliberately shared by both
+  // surfaces so they can never drift: the in-menu accelerator (rendered in
+  // `CreateMenu` + bound via `data-hotkey`) AND the second key of the global
+  // `C`-prefixed create sequence (`sequence` below, shown in ⌘K). Keep them in
+  // sync by only ever editing this map.
+  //
+  // Each is the label's first letter — Document → d, Code file → c, Agent → a,
+  // Tool → t, Workflow → w. Two are structurally constrained, not arbitrary:
+  // Workspace would also be `w`, so it yields that to Workflow (the more
+  // central feature) and takes `s` (Space); and `code` keeps `c` (the clearest
+  // mnemonic) even though that makes its sequence the doubled `C C`. Must stay
+  // unique across the six.
   const hotkeyById: Record<CreateMenuId, string> = {
     write: "d",
     code: "c",
@@ -175,6 +192,10 @@ export function useCreateActions() {
             disabled,
             disabledReason: reason,
             hotkey: hotkeyById[item.id],
+            sequence: [
+              CREATE_SEQUENCE_PREFIX,
+              hotkeyById[item.id].toUpperCase(),
+            ],
             run: runById[item.id],
           }
         }),

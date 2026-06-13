@@ -83,9 +83,8 @@ const GOOGLE_DRIVE: ConnectionProviderSpec = {
   provider: "google-drive",
   name: "Google Drive",
   description:
-    "Let agents search and read members' connected Google Drives — Docs " +
-    "come back as markdown — and, with per-write confirmation, save files " +
-    "back to Drive.",
+    "Let agents search, read, and (with confirmation) save files in " +
+    "members' connected Google Drives.",
   avatarSeed: "google-drive",
   // The least-privilege pair (docs/connections-google-drive.prompt.md):
   // `drive.readonly` (RESTRICTED — CASA assessment) powers search/read;

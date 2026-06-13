@@ -641,7 +641,7 @@ export const defaultMenu = [
       bg: "bg-pink-50 dark:bg-pink-950/40",
       grid: "",
     },
-    shortcut: "⌘H",
+    sequence: ["G", "H"],
   },
   {
     title: "Bot",
@@ -656,7 +656,7 @@ export const defaultMenu = [
       bg: "bg-amber-50 dark:bg-amber-950/40",
       grid: "",
     },
-    shortcut: "⌘B",
+    sequence: ["G", "B"],
   },
   {
     title: "Agents",
@@ -670,7 +670,7 @@ export const defaultMenu = [
       bg: "bg-orange-50 dark:bg-orange-950/40",
       grid: "",
     },
-    shortcut: "⌘A",
+    sequence: ["G", "A"],
   },
   {
     title: "Workflows",
@@ -684,7 +684,7 @@ export const defaultMenu = [
       bg: "bg-violet-50 dark:bg-violet-950/40",
       grid: "",
     },
-    shortcut: "⌘F",
+    sequence: ["G", "F"],
   },
   {
     title: "Runs",
@@ -698,7 +698,7 @@ export const defaultMenu = [
       bg: "bg-blue-50 dark:bg-blue-950/40",
       grid: "",
     },
-    shortcut: "⌘R",
+    sequence: ["G", "R"],
   },
   {
     title: "Write",
@@ -712,7 +712,7 @@ export const defaultMenu = [
       bg: "bg-teal-50 dark:bg-teal-950/40",
       grid: "",
     },
-    shortcut: "⌘W",
+    sequence: ["G", "W"],
   },
   {
     title: "Code",
@@ -726,7 +726,7 @@ export const defaultMenu = [
       bg: "bg-teal-50 dark:bg-teal-950/40",
       grid: "",
     },
-    shortcut: "⌘C",
+    sequence: ["G", "C"],
   },
   {
     title: "Teams",
@@ -740,7 +740,7 @@ export const defaultMenu = [
       bg: "bg-indigo-50 dark:bg-indigo-950/40",
       grid: "",
     },
-    shortcut: "⌘E",
+    sequence: ["G", "T"],
   },
   {
     title: "Profile",
@@ -754,7 +754,7 @@ export const defaultMenu = [
       bg: "bg-rose-50 dark:bg-rose-950/40",
       grid: "",
     },
-    shortcut: "⌘P",
+    sequence: ["G", "P"],
   },
 ] as const
 

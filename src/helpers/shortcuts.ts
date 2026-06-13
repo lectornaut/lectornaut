@@ -86,7 +86,13 @@ export type ShortcutVisibility = {
 export type Shortcut = {
   /** Breadcrumb-style description path */
   description: string[]
-  /** Display keys (e.g., [["⌘", "K"]]) - optional for command-only shortcuts */
+  /**
+   * Optional DISPLAY OVERRIDE for `<Kbd>` rendering (array of combos, each a
+   * list of key tokens). Omit it to let the display derive from `hotkeys` —
+   * `getShortcutDisplayKeys` is the single resolver. Set it only when the
+   * derived glyphs would be wrong: e.g. `[["?"]]` for `Shift+/`, or a summary
+   * range like `[["⌘", "1...9"]]` that has no single `hotkeys`.
+   */
   keys?: string[][]
   /**
    * TanStack hotkey binding(s) in cross-platform `Mod` notation (e.g. `"Mod+K"`,
@@ -264,8 +270,24 @@ export const getHotkeyCombos = (
 }
 
 /**
+ * House display glyphs. TanStack's `formatForDisplay` spells a few keys
+ * differently than this app's established style — the word `"Shift"` on
+ * Windows, `"↵"` for Enter (the repo uses `↩`), `"⇥"` for Tab. Remapping these
+ * makes every *derived* display match what the hand-written `keys` arrays used
+ * to render, on both macOS and Windows, so `keys` can be dropped as redundant.
+ */
+const HOUSE_DISPLAY_GLYPHS: Record<string, string> = {
+  Shift: "⇧",
+  "↵": "↩",
+  Enter: "↩",
+  "⇥": "Tab",
+}
+
+/**
  * Convert a single hotkey combo to platform-specific display key tokens for
  * `<Kbd>` rendering, e.g. `"Mod+Shift+L"` -> `["⌘", "⇧", "L"]` on macOS.
+ * Library glyphs are remapped to the app's house style (see
+ * `HOUSE_DISPLAY_GLYPHS`), so this is the one source of display-key glyphs.
  */
 export const hotkeyToDisplayKeys = (hotkey: string): string[] => {
   if (!hotkey) return []
@@ -273,11 +295,65 @@ export const hotkeyToDisplayKeys = (hotkey: string): string[] => {
     return formatForDisplay(hotkey, {
       platform: DISPLAY_PLATFORM,
       separatorToken: DISPLAY_SEPARATOR,
-    }).split(DISPLAY_SEPARATOR)
+    })
+      .split(DISPLAY_SEPARATOR)
+      .map((token) => HOUSE_DISPLAY_GLYPHS[token] ?? token)
   } catch {
     return [hotkey]
   }
 }
+
+/**
+ * Resolve a shortcut's display keys for `<Kbd>` rendering, as an array of
+ * combos (each combo a list of key tokens). `hotkeys` is the single source:
+ * the display derives from it. An explicit `keys` is an override for the rare
+ * case the derived form is wrong (e.g. `?` for `Shift+/`, or a no-`hotkeys`
+ * summary like `⌘ 1...9`). Returns `[]` for command-only entries (neither set).
+ */
+export const getShortcutDisplayKeys = (
+  shortcut: Pick<Shortcut, "keys" | "hotkeys">
+): string[][] =>
+  shortcut.keys?.length
+    ? shortcut.keys
+    : getHotkeyCombos(shortcut.hotkeys).map((combo) =>
+        hotkeyToDisplayKeys(combo)
+      )
+
+// ============================================================================
+// Multi-key sequences (Vim / Linear-style, e.g. "G" then "H" → Home)
+// ============================================================================
+//
+// Unlike the chord shortcuts above (registered from this file via
+// `useGlobalHotkeys`), sequences are derived from the surfaces that already
+// own them — destinations from `defaultMenu`, create intents from
+// `useCreateActions` — and registered together by `useGlobalHotkeySequences`.
+// This file owns only the vocabulary not tied to one destination: the create
+// prefix (create letters are derived, not curated per item), the inter-key
+// timeout, and the `<Kbd>` display formatting. The "go to" prefix ("G") and
+// its per-page letters live inline on `defaultMenu`, beside the routes.
+
+/**
+ * Leading key for "create <thing>" sequences (the "go to" counterpart, "G",
+ * lives on each `defaultMenu` entry's `sequence`). The second key is the
+ * create intent's single-letter accelerator — the same letter the `CreateMenu`
+ * dropdown uses — uppercased.
+ */
+export const CREATE_SEQUENCE_PREFIX = "C"
+
+/**
+ * Milliseconds the user has to press the next key before an in-progress
+ * sequence resets. Mirrors TanStack's `DEFAULT_SEQUENCE_TIMEOUT` (1000ms).
+ */
+export const SEQUENCE_TIMEOUT = 1000
+
+/**
+ * Convert a multi-key sequence (e.g. `["G", "H"]`) to platform display key
+ * tokens for `<Kbd>` rendering. Each step is formatted independently — so a
+ * modifier-bearing step like `"Shift+R"` still expands to its glyphs — then
+ * concatenated, since a sequence reads as "press each key in turn".
+ */
+export const sequenceToDisplayKeys = (sequence: readonly string[]): string[] =>
+  sequence.flatMap((step) => hotkeyToDisplayKeys(step))
 
 /** Stable identifier for storing per-shortcut overrides */
 export const getShortcutId = (
@@ -338,7 +414,6 @@ const generateTabSelectionShortcuts = (): Shortcut[] =>
     const num = i + 1
     return {
       description: [`Select tab ${num}`],
-      keys: [[getPlatformSpecialKey(), String(num)]],
       hotkeys: `Mod+${num}`,
       event: "Tabs.Select",
       parameters: num,
@@ -380,7 +455,6 @@ export const shortcuts: ShortcutCategory[] = [
     shortcuts: [
       {
         description: ["Commands"],
-        keys: [[getPlatformSpecialKey(), "K"]],
         hotkeys: "Mod+K",
         event: "Dialog.Command.Open",
         icon: IconTerminal,
@@ -389,7 +463,6 @@ export const shortcuts: ShortcutCategory[] = [
       },
       {
         description: ["Ask AI"],
-        keys: [[getPlatformSpecialKey(), "↩"]],
         hotkeys: "Mod+Enter",
         event: "Dialog.AiAsk.Toggle",
         icon: IconSparkles,
@@ -397,7 +470,6 @@ export const shortcuts: ShortcutCategory[] = [
       },
       {
         description: ["Settings"],
-        keys: [[getPlatformSpecialKey(), ","]],
         hotkeys: "Mod+,",
         event: "Dialog.Settings.Open",
         parameters: "preferences",
@@ -406,7 +478,6 @@ export const shortcuts: ShortcutCategory[] = [
       },
       {
         description: ["Keyboard shortcuts"],
-        keys: [[getPlatformSpecialKey(), "/"]],
         hotkeys: "Mod+/",
         event: "Dialog.Shortcuts.Open",
         icon: IconKeyboard,
@@ -454,7 +525,6 @@ export const shortcuts: ShortcutCategory[] = [
     shortcuts: [
       {
         description: ["Open new tab"],
-        keys: [[getPlatformSpecialKey(), "T"]],
         hotkeys: "Mod+T",
         event: "Tabs.Add",
         icon: IconPlusSquare,
@@ -462,7 +532,6 @@ export const shortcuts: ShortcutCategory[] = [
       },
       {
         description: ["Reopen last closed tab"],
-        keys: [[getPlatformSpecialKey(), "⇧", "T"]],
         hotkeys: "Mod+Shift+T",
         event: "Tabs.ReopenLast",
         icon: IconHistory,
@@ -470,7 +539,6 @@ export const shortcuts: ShortcutCategory[] = [
       },
       {
         description: ["Close current tab"],
-        keys: [[getPlatformSpecialKey(), "W"]],
         hotkeys: "Mod+W",
         event: "Tabs.Close",
         icon: IconMinusSquare,
@@ -478,7 +546,6 @@ export const shortcuts: ShortcutCategory[] = [
       },
       {
         description: ["Close other tabs"],
-        keys: [[getPlatformSpecialKey(), "⇧", "W"]],
         hotkeys: "Mod+Shift+W",
         event: "Tabs.Close.Others",
         icon: IconXCircle,
@@ -486,7 +553,6 @@ export const shortcuts: ShortcutCategory[] = [
       },
       {
         description: ["Close all tabs"],
-        keys: [[getPlatformSpecialKey(), getPlatformAlternateKey(), "W"]],
         hotkeys: "Mod+Alt+W",
         event: "Tabs.Close.All",
         icon: IconXSquare,
@@ -494,7 +560,6 @@ export const shortcuts: ShortcutCategory[] = [
       },
       {
         description: ["Duplicate tab"],
-        keys: [[getPlatformSpecialKey(), "D"]],
         hotkeys: "Mod+D",
         event: "Tabs.Duplicate",
         icon: IconCopy,
@@ -502,7 +567,6 @@ export const shortcuts: ShortcutCategory[] = [
       },
       {
         description: ["Rename tab"],
-        keys: [["F2"]],
         hotkeys: "F2",
         event: "Tabs.Rename",
         icon: IconSquarePen,
@@ -510,7 +574,6 @@ export const shortcuts: ShortcutCategory[] = [
       },
       {
         description: ["Select next tab"],
-        keys: [[getPlatformControlKey(), "Tab"]],
         hotkeys: "Control+Tab",
         event: "Tabs.Select",
         parameters: "next",
@@ -520,7 +583,6 @@ export const shortcuts: ShortcutCategory[] = [
       },
       {
         description: ["Select previous tab"],
-        keys: [[getPlatformControlKey(), "⇧", "Tab"]],
         hotkeys: "Control+Shift+Tab",
         event: "Tabs.Select",
         parameters: "previous",
@@ -551,7 +613,6 @@ export const shortcuts: ShortcutCategory[] = [
     shortcuts: [
       {
         description: ["Sidebar", "Left"],
-        keys: [[getPlatformSpecialKey(), "\\"]],
         hotkeys: "Mod+\\",
         event: "Sidebar.Left.Toggle",
         icon: IconPanelLeft,
@@ -559,7 +620,6 @@ export const shortcuts: ShortcutCategory[] = [
       },
       {
         description: ["Sidebar", "Right"],
-        keys: [[getPlatformSpecialKey(), "⇧", "\\"]],
         hotkeys: "Mod+Shift+\\",
         event: "Sidebar.Right.Toggle",
         icon: IconPanelRight,
@@ -567,7 +627,6 @@ export const shortcuts: ShortcutCategory[] = [
       },
       {
         description: ["Panel", "Bottom"],
-        keys: [[getPlatformSpecialKey(), "J"]],
         hotkeys: "Mod+J",
         event: "Panel.Bottom.Toggle",
         icon: IconPanelBottom,
@@ -586,7 +645,6 @@ export const shortcuts: ShortcutCategory[] = [
       // With keyboard shortcuts
       {
         description: ["Settings", "Team", "Overview"],
-        keys: [[getPlatformSpecialKey(), ";"]],
         hotkeys: "Mod+;",
         event: "Dialog.Settings.Open",
         parameters: "overview",
@@ -597,7 +655,6 @@ export const shortcuts: ShortcutCategory[] = [
       // workspaces
       {
         description: ["Settings", "Team", "Workspaces"],
-        keys: [[getPlatformSpecialKey(), "⇧", "S"]],
         hotkeys: "Mod+Shift+S",
         event: "Dialog.Settings.Open",
         parameters: "workspaces",
@@ -607,7 +664,6 @@ export const shortcuts: ShortcutCategory[] = [
       },
       {
         description: ["Settings", "Team", "Members"],
-        keys: [[getPlatformSpecialKey(), "⇧", "M"]],
         hotkeys: "Mod+Shift+M",
         event: "Dialog.Settings.Open",
         parameters: "members",
@@ -659,7 +715,6 @@ export const shortcuts: ShortcutCategory[] = [
     shortcuts: [
       {
         description: ["Logout"],
-        keys: [[getPlatformSpecialKey(), "⇧", "L"]],
         hotkeys: "Mod+Shift+L",
         event: "Dialog.Exit.Open",
         icon: IconLogOut,
