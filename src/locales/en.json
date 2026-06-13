@@ -1326,11 +1326,6 @@
       "bulkClear": "Clear selection",
       "bulkDeleteTitle": "Delete selected memories?",
       "bulkDeleteConfirm": "The selected memories will be permanently deleted. This action cannot be undone.",
-      "purgeAll": "Delete all",
-      "purgeTitle": "Delete every memory in this workspace?",
-      "purgeConfirm": "Every memory in this workspace — across all members, private and shared — will be permanently deleted. This action cannot be undone.",
-      "purgeSuccess": "No memories to delete. | Deleted {count} memory. | Deleted {count} memories.",
-      "purgeError": "Couldn't delete memories.",
       "createTitle": "New memory",
       "editTitle": "Edit memory",
       "formHint": "Memories are embedded so agents can recall the relevant ones. New memories are private until you share them.",
@@ -1372,6 +1367,27 @@
         "confirmTitle": "Permanently delete every chat you own?",
         "confirmBody": "{count} chat will be permanently deleted, including every message. This action cannot be undone. | {count} chat will be permanently deleted, including every message. This action cannot be undone. | {count} chats will be permanently deleted, including every message. This action cannot be undone.",
         "noChats": "You don't have any chats to delete."
+      },
+      "memoriesLabel": "Your memories",
+      "memoriesDescription": "Bulk actions on the private memories you own in this workspace. Shared memories — yours or anyone else's — are never affected.",
+      "memoryCount": "No private memories yet | {count} private memory | {count} private memories",
+      "archiveMemories": {
+        "label": "Archive all my private memories",
+        "description": "Mark every active private memory you own as archived so agents stop recalling it. You can restore each one anytime from Memory settings.",
+        "action": "Archive all",
+        "confirmTitle": "Archive every private memory you own?",
+        "confirmBody": "{count} active private memory will be archived and pulled from agent recall. | {count} active private memory will be archived and pulled from agent recall. | {count} active private memories will be archived and pulled from agent recall.",
+        "success": "No private memories to archive. | Archived {count} private memory. | Archived {count} private memories.",
+        "error": "Couldn't archive your private memories."
+      },
+      "deleteMemories": {
+        "label": "Delete all my private memories",
+        "description": "Permanently remove every private memory you own — active and archived. Shared memories are not affected. This action cannot be undone.",
+        "action": "Delete all",
+        "confirmTitle": "Permanently delete every private memory you own?",
+        "confirmBody": "{count} private memory will be permanently deleted. This action cannot be undone. | {count} private memory will be permanently deleted. This action cannot be undone. | {count} private memories will be permanently deleted. This action cannot be undone.",
+        "success": "No private memories to delete. | Deleted {count} private memory. | Deleted {count} private memories.",
+        "error": "Couldn't delete your private memories."
       }
     },
     "data": {
@@ -1435,6 +1451,26 @@
         "confirmTitle": "Delete every Write document?",
         "confirmBody": "{count} top-level item will be permanently deleted along with every descendant file, folder, and attachment. This action cannot be undone. | {count} top-level item will be permanently deleted along with every descendant file, folder, and attachment. This action cannot be undone. | {count} top-level items will be permanently deleted along with every descendant file, folder, and attachment. This action cannot be undone.",
         "noItems": "No write documents to delete."
+      },
+      "memoryCount": "No memories | {count} memory | {count} memories",
+      "activeMemoryCount": "No active memories | {count} active memory | {count} active memories",
+      "archiveMemories": {
+        "label": "Archive all memories",
+        "description": "Mark every active memory in this workspace — across all members, private and shared — as archived so agents stop recalling them. Individually restorable.",
+        "action": "Archive all memories",
+        "confirmTitle": "Archive every active memory?",
+        "confirmBody": "{count} active memory will be archived for every member of this workspace. | {count} active memory will be archived for every member of this workspace. | {count} active memories will be archived for every member of this workspace.",
+        "success": "No memories to archive. | Archived {count} memory. | Archived {count} memories.",
+        "error": "Couldn't archive memories."
+      },
+      "deleteMemories": {
+        "label": "Delete all memories",
+        "description": "Permanently remove every memory in this workspace — across all members, private and shared. This action cannot be undone.",
+        "action": "Delete all memories",
+        "confirmTitle": "Delete every memory in this workspace?",
+        "confirmBody": "{count} memory will be permanently deleted across every member. This action cannot be undone. | {count} memory will be permanently deleted across every member. This action cannot be undone. | {count} memories will be permanently deleted across every member. This action cannot be undone.",
+        "success": "No memories to delete. | Deleted {count} memory. | Deleted {count} memories.",
+        "error": "Couldn't delete memories."
       }
     },
     "security": {

@@ -1,10 +1,12 @@
 <script lang="ts" setup>
 import { useCurrentTeamRole } from "@/composables/useCurrentTeamRole"
+import { useMemories } from "@/composables/useMemories"
 import { useNodes } from "@/composables/useNodes"
 import {
   IconAlertTriangle,
   IconArchive,
   IconBox,
+  IconSparkles,
   IconTrash2,
 } from "@/data/icons"
 import { useAuthStore } from "@/stores/authStore"
@@ -257,6 +259,52 @@ const submitDeleteCodes = () => deleteAllInScope("code")
 const submitDeleteWrites = () => deleteAllInScope("write")
 
 const isDisabled = computed(() => bulkBusy.value || isLoadingCounts.value)
+
+// ── Memories (whole-workspace governance) ────────────────────────────────────
+// Reuses the workspace-scoped memory callables — these touch EVERY member's
+// memories, both private and shared (admin governance). The optimistic cache
+// updates inside the composable refresh the counts the moment an action lands,
+// so there's no manual re-count like the node sections need.
+const {
+  memories,
+  archiveAll: archiveAllMemories,
+  purgeAll: purgeAllMemories,
+  isMutating: isMutatingMemories,
+} = useMemories()
+
+const memoryActiveCount = computed(
+  () => memories.value.filter((m) => m.archived !== true).length
+)
+const memoryTotalCount = computed(() => memories.value.length)
+
+const archiveMemoriesDialogOpen = ref(false)
+const deleteMemoriesDialogOpen = ref(false)
+
+const submitArchiveMemories = async () => {
+  if (isMutatingMemories.value) return
+  try {
+    const count = await archiveAllMemories()
+    toast.success(t("settings.storage.archiveMemories.success", { count }))
+  } catch (error) {
+    console.error("[SettingsStorage] archive memories failed:", error)
+    toast.error(t("settings.storage.archiveMemories.error"))
+  } finally {
+    archiveMemoriesDialogOpen.value = false
+  }
+}
+
+const submitDeleteMemories = async () => {
+  if (isMutatingMemories.value) return
+  try {
+    const count = await purgeAllMemories()
+    toast.success(t("settings.storage.deleteMemories.success", { count }))
+  } catch (error) {
+    console.error("[SettingsStorage] delete memories failed:", error)
+    toast.error(t("settings.storage.deleteMemories.error"))
+  } finally {
+    deleteMemoriesDialogOpen.value = false
+  }
+}
 </script>
 
 <template>
@@ -399,6 +447,62 @@ const isDisabled = computed(() => bulkBusy.value || isLoadingCounts.value)
               {{ t("settings.storage.deleteCodes.action") }}
             </Button>
           </Field>
+
+          <FieldSeparator />
+
+          <Field orientation="horizontal">
+            <FieldContent>
+              <FieldLabel>
+                {{ t("settings.storage.archiveMemories.label") }}
+              </FieldLabel>
+              <FieldDescription>
+                {{ t("settings.storage.archiveMemories.description") }}
+                <span class="tabular-nums">
+                  ·
+                  {{
+                    t("settings.storage.activeMemoryCount", {
+                      count: memoryActiveCount,
+                    })
+                  }}
+                </span>
+              </FieldDescription>
+            </FieldContent>
+            <Button
+              variant="outline"
+              :disabled="isMutatingMemories || memoryActiveCount === 0"
+              @click="archiveMemoriesDialogOpen = true"
+            >
+              <IconArchive />
+              {{ t("settings.storage.archiveMemories.action") }}
+            </Button>
+          </Field>
+
+          <Field orientation="horizontal">
+            <FieldContent>
+              <FieldLabel>
+                {{ t("settings.storage.deleteMemories.label") }}
+              </FieldLabel>
+              <FieldDescription>
+                {{ t("settings.storage.deleteMemories.description") }}
+                <span class="tabular-nums">
+                  ·
+                  {{
+                    t("settings.storage.memoryCount", {
+                      count: memoryTotalCount,
+                    })
+                  }}
+                </span>
+              </FieldDescription>
+            </FieldContent>
+            <Button
+              variant="destructive"
+              :disabled="isMutatingMemories || memoryTotalCount === 0"
+              @click="deleteMemoriesDialogOpen = true"
+            >
+              <IconSparkles />
+              {{ t("settings.storage.deleteMemories.action") }}
+            </Button>
+          </Field>
         </template>
       </FieldSet>
     </FieldGroup>
@@ -521,6 +625,69 @@ const isDisabled = computed(() => bulkBusy.value || isLoadingCounts.value)
           >
             <Spinner v-if="bulkBusy" />
             {{ t("settings.storage.deleteWrites.action") }}
+            <Kbd aria-hidden="true">↩</Kbd>
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+
+    <!-- Archive all memories — reversible, so no "cannot be undone" warning. -->
+    <AlertDialog v-model:open="archiveMemoriesDialogOpen">
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>
+            {{ t("settings.storage.archiveMemories.confirmTitle") }}
+          </AlertDialogTitle>
+          <AlertDialogDescription>
+            {{
+              t("settings.storage.archiveMemories.confirmBody", {
+                count: memoryActiveCount,
+              })
+            }}
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel :disabled="isMutatingMemories">
+            {{ t("actions.cancel") }}
+            <Kbd aria-hidden="true">Esc</Kbd>
+          </AlertDialogCancel>
+          <AlertDialogAction
+            :disabled="isMutatingMemories || memoryActiveCount === 0"
+            @click.prevent="submitArchiveMemories"
+          >
+            <Spinner v-if="isMutatingMemories" />
+            {{ t("settings.storage.archiveMemories.action") }}
+            <Kbd aria-hidden="true">↩</Kbd>
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+
+    <AlertDialog v-model:open="deleteMemoriesDialogOpen">
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>
+            {{ t("settings.storage.deleteMemories.confirmTitle") }}
+          </AlertDialogTitle>
+          <AlertDialogDescription>
+            {{
+              t("settings.storage.deleteMemories.confirmBody", {
+                count: memoryTotalCount,
+              })
+            }}
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel :disabled="isMutatingMemories">
+            {{ t("actions.cancel") }}
+            <Kbd aria-hidden="true">Esc</Kbd>
+          </AlertDialogCancel>
+          <AlertDialogAction
+            :disabled="isMutatingMemories || memoryTotalCount === 0"
+            @click.prevent="submitDeleteMemories"
+          >
+            <Spinner v-if="isMutatingMemories" />
+            {{ t("settings.storage.deleteMemories.action") }}
             <Kbd aria-hidden="true">↩</Kbd>
           </AlertDialogAction>
         </AlertDialogFooter>

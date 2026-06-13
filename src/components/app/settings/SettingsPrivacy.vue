@@ -1,7 +1,9 @@
 <script lang="ts" setup>
 import { useBotChat } from "@/composables/useBotChat"
-import { IconArchive, IconTrash2 } from "@/data/icons"
+import { useMemories } from "@/composables/useMemories"
+import { IconArchive, IconSparkles, IconTrash2 } from "@/data/icons"
 import { computed, ref } from "vue"
+import { toast } from "vue-sonner"
 
 const { t } = useI18n()
 
@@ -91,6 +93,52 @@ const submitDeleteAll = async () => {
 }
 
 const isDisabled = computed(() => bulkBusy.value || isMutatingSession.value)
+
+// ── My private memories ──────────────────────────────────────────────────────
+// `myPrivateMemories` is the caller's OWN private rows only — the composable
+// derives it from the same per-user query that already backs the table, so
+// these counts and the server callables share one privacy boundary: shared
+// memories (mine or anyone else's) are never touched.
+const {
+  myPrivateMemories,
+  archiveMyPrivate,
+  purgeMyPrivate,
+  isMutating: isMutatingMemories,
+} = useMemories()
+
+const activeMemoryCount = computed(
+  () => myPrivateMemories.value.filter((m) => m.archived !== true).length
+)
+const totalMemoryCount = computed(() => myPrivateMemories.value.length)
+
+const archiveMemoriesDialogOpen = ref(false)
+const deleteMemoriesDialogOpen = ref(false)
+
+const submitArchiveMemories = async () => {
+  if (isMutatingMemories.value) return
+  try {
+    const count = await archiveMyPrivate()
+    toast.success(t("settings.privacy.archiveMemories.success", { count }))
+  } catch (error) {
+    console.error("[SettingsPrivacy] archive private memories failed:", error)
+    toast.error(t("settings.privacy.archiveMemories.error"))
+  } finally {
+    archiveMemoriesDialogOpen.value = false
+  }
+}
+
+const submitDeleteMemories = async () => {
+  if (isMutatingMemories.value) return
+  try {
+    const count = await purgeMyPrivate()
+    toast.success(t("settings.privacy.deleteMemories.success", { count }))
+  } catch (error) {
+    console.error("[SettingsPrivacy] delete private memories failed:", error)
+    toast.error(t("settings.privacy.deleteMemories.error"))
+  } finally {
+    deleteMemoriesDialogOpen.value = false
+  }
+}
 </script>
 
 <template>
@@ -155,6 +203,71 @@ const isDisabled = computed(() => bulkBusy.value || isMutatingSession.value)
             {{ t("settings.privacy.deleteAll.action") }}
           </Button>
         </Field>
+
+        <FieldSeparator />
+
+        <Field orientation="horizontal">
+          <FieldContent>
+            <FieldLabel>{{ t("settings.privacy.memoriesLabel") }}</FieldLabel>
+            <FieldDescription>
+              {{ t("settings.privacy.memoriesDescription") }}
+            </FieldDescription>
+          </FieldContent>
+        </Field>
+
+        <Field orientation="horizontal">
+          <FieldContent>
+            <FieldLabel>
+              {{ t("settings.privacy.archiveMemories.label") }}
+            </FieldLabel>
+            <FieldDescription>
+              {{ t("settings.privacy.archiveMemories.description") }}
+              <span class="tabular-nums">
+                ·
+                {{
+                  t("settings.privacy.memoryCount", {
+                    count: activeMemoryCount,
+                  })
+                }}
+              </span>
+            </FieldDescription>
+          </FieldContent>
+          <Button
+            variant="outline"
+            :disabled="isMutatingMemories || activeMemoryCount === 0"
+            @click="archiveMemoriesDialogOpen = true"
+          >
+            <IconArchive />
+            {{ t("settings.privacy.archiveMemories.action") }}
+          </Button>
+        </Field>
+
+        <Field orientation="horizontal">
+          <FieldContent>
+            <FieldLabel>
+              {{ t("settings.privacy.deleteMemories.label") }}
+            </FieldLabel>
+            <FieldDescription>
+              {{ t("settings.privacy.deleteMemories.description") }}
+              <span class="tabular-nums">
+                ·
+                {{
+                  t("settings.privacy.memoryCount", {
+                    count: totalMemoryCount,
+                  })
+                }}
+              </span>
+            </FieldDescription>
+          </FieldContent>
+          <Button
+            variant="destructive"
+            :disabled="isMutatingMemories || totalMemoryCount === 0"
+            @click="deleteMemoriesDialogOpen = true"
+          >
+            <IconSparkles />
+            {{ t("settings.privacy.deleteMemories.action") }}
+          </Button>
+        </Field>
       </FieldSet>
     </FieldGroup>
 
@@ -214,6 +327,69 @@ const isDisabled = computed(() => bulkBusy.value || isMutatingSession.value)
           >
             <Spinner v-if="bulkBusy" />
             {{ t("settings.privacy.deleteAll.action") }}
+            <Kbd aria-hidden="true">↩</Kbd>
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+
+    <!-- Archive my private memories — reversible, restorable per-row. -->
+    <AlertDialog v-model:open="archiveMemoriesDialogOpen">
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>
+            {{ t("settings.privacy.archiveMemories.confirmTitle") }}
+          </AlertDialogTitle>
+          <AlertDialogDescription>
+            {{
+              t("settings.privacy.archiveMemories.confirmBody", {
+                count: activeMemoryCount,
+              })
+            }}
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel :disabled="isMutatingMemories">
+            {{ t("actions.cancel") }}
+            <Kbd aria-hidden="true">Esc</Kbd>
+          </AlertDialogCancel>
+          <AlertDialogAction
+            :disabled="isMutatingMemories || activeMemoryCount === 0"
+            @click.prevent="submitArchiveMemories"
+          >
+            <Spinner v-if="isMutatingMemories" />
+            {{ t("settings.privacy.archiveMemories.action") }}
+            <Kbd aria-hidden="true">↩</Kbd>
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+
+    <AlertDialog v-model:open="deleteMemoriesDialogOpen">
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>
+            {{ t("settings.privacy.deleteMemories.confirmTitle") }}
+          </AlertDialogTitle>
+          <AlertDialogDescription>
+            {{
+              t("settings.privacy.deleteMemories.confirmBody", {
+                count: totalMemoryCount,
+              })
+            }}
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel :disabled="isMutatingMemories">
+            {{ t("actions.cancel") }}
+            <Kbd aria-hidden="true">Esc</Kbd>
+          </AlertDialogCancel>
+          <AlertDialogAction
+            :disabled="isMutatingMemories || totalMemoryCount === 0"
+            @click.prevent="submitDeleteMemories"
+          >
+            <Spinner v-if="isMutatingMemories" />
+            {{ t("settings.privacy.deleteMemories.action") }}
             <Kbd aria-hidden="true">↩</Kbd>
           </AlertDialogAction>
         </AlertDialogFooter>

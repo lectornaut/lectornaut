@@ -35,7 +35,6 @@ const {
   memories,
   isLoading,
   canManage,
-  canPurge,
   memoryEnabled,
   isMutating,
   create,
@@ -44,7 +43,6 @@ const {
   setArchived,
   setPinned,
   setShared,
-  purgeAll,
 } = useMemories()
 
 const { currentUser } = storeToRefs(useAuthStore())
@@ -584,23 +582,6 @@ const submitBulkDelete = async () => {
     bulkBusy.value = false
   }
 }
-
-// ── Purge all (admin governance) ─────────────────────────────────────────────
-
-const purgeDialogOpen = ref(false)
-
-const submitPurge = async () => {
-  if (isMutating.value) return
-  try {
-    const deleted = await purgeAll()
-    purgeDialogOpen.value = false
-    clearSelection()
-    toast.success(t("settings.memory.purgeSuccess", { count: deleted }))
-  } catch (error) {
-    console.error("[SettingsMemory] purge failed:", error)
-    toast.error(t("settings.memory.purgeError"))
-  }
-}
 </script>
 
 <template>
@@ -637,16 +618,6 @@ const submitPurge = async () => {
               </FieldDescription>
             </FieldContent>
             <div class="flex items-center gap-2">
-              <Button
-                v-if="canPurge && memories.length > 0"
-                size="sm"
-                variant="outline"
-                :disabled="isMutating"
-                @click="purgeDialogOpen = true"
-              >
-                <IconTrash2 />
-                {{ t("settings.memory.purgeAll") }}
-              </Button>
               <Button
                 size="sm"
                 :disabled="!memoryEnabled || isMutating"
@@ -960,34 +931,6 @@ const submitPurge = async () => {
           >
             <Spinner v-if="bulkBusy" />
             {{ t("actions.delete") }}
-            <Kbd aria-hidden="true">↩</Kbd>
-          </AlertDialogAction>
-        </AlertDialogFooter>
-      </AlertDialogContent>
-    </AlertDialog>
-
-    <!-- Purge-all (admin governance) confirm -->
-    <AlertDialog v-model:open="purgeDialogOpen">
-      <AlertDialogContent>
-        <AlertDialogHeader>
-          <AlertDialogTitle>
-            {{ t("settings.memory.purgeTitle") }}
-          </AlertDialogTitle>
-          <AlertDialogDescription>
-            {{ t("settings.memory.purgeConfirm") }}
-          </AlertDialogDescription>
-        </AlertDialogHeader>
-        <AlertDialogFooter>
-          <AlertDialogCancel :disabled="isMutating">
-            {{ t("actions.cancel") }}
-            <Kbd aria-hidden="true">Esc</Kbd>
-          </AlertDialogCancel>
-          <AlertDialogAction
-            :disabled="isMutating"
-            @click.prevent="submitPurge"
-          >
-            <Spinner v-if="isMutating" />
-            {{ t("settings.memory.purgeAll") }}
             <Kbd aria-hidden="true">↩</Kbd>
           </AlertDialogAction>
         </AlertDialogFooter>

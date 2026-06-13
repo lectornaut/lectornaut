@@ -66,10 +66,17 @@ const READ_MEMORY_DENY =
 const PURGE_MEMORY_DENY =
   "You do not have permission to delete all workspace memories."
 
-// Firestore write-batch ceiling (mirrors `DELETE_BATCH_SIZE` in audit.ts).
-const MEMORY_DELETE_BATCH_SIZE = 450
+const ARCHIVE_ALL_MEMORY_DENY =
+  "You do not have permission to archive all workspace memories."
 
-/** Split into fixed-size chunks (batched deletes respect Firestore's cap). */
+const PRIVATE_MEMORY_DENY =
+  "You do not have permission to manage your workspace memories."
+
+// Firestore write-batch ceiling (mirrors `DELETE_BATCH_SIZE` in audit.ts).
+// Shared by the purge (delete) and archive-all (update) governance batches.
+const MEMORY_BATCH_SIZE = 450
+
+/** Split into fixed-size chunks (batched writes respect Firestore's cap). */
 function chunkRefs<T>(items: readonly T[], size: number): T[][] {
   const out: T[][] = []
   for (let i = 0; i < items.length; i += size)
@@ -640,7 +647,7 @@ export const purgeWorkspaceMemories = defineCallable<
     const refs = snap.docs.map((d) => d.ref)
 
     let deleted = 0
-    for (const batchRefs of chunkRefs(refs, MEMORY_DELETE_BATCH_SIZE)) {
+    for (const batchRefs of chunkRefs(refs, MEMORY_BATCH_SIZE)) {
       const batch = db.batch()
       batchRefs.forEach((ref) => batch.delete(ref))
       await batch.commit()
@@ -652,6 +659,258 @@ export const purgeWorkspaceMemories = defineCallable<
       workspaceId,
       actor: { userId: actorId, email: actorEmail, role },
       action: "memory.purge",
+      resource: { type: "content", id: workspaceId, parentId: teamId },
+      changes: { fields: ["deletedCount"], after: { deletedCount: deleted } },
+    })
+
+    return { deleted, logId: logRef.id }
+  },
+})
+
+// ===========================================================================
+// Archive all (admin governance) — soft-archive every active memory
+// ===========================================================================
+
+export interface ArchiveWorkspaceMemoriesResult {
+  archived: number
+  logId: string
+}
+
+/**
+ * Archive EVERY active memory in a workspace — the admin "Archive all"
+ * governance action (Settings → Memory), the reversible sibling of
+ * `purgeWorkspaceMemories`. Gated by the same `MANAGE_WORKSPACE_STORAGE`
+ * (owner/admin-only) capability.
+ *
+ * Already-archived docs are skipped so the returned count reflects what was
+ * actually flipped — and dormant rows don't churn their `archivedAt`/
+ * `updatedAt`. Members can restore any of them afterwards via `unarchiveMemory`.
+ * Batched like the purge (a workspace can hold more docs than a transaction
+ * allows) + a single audited `logEvent`. Available regardless of the
+ * `memoryEnabled` toggle — governance over existing data stays on (spec §8b).
+ */
+export const archiveWorkspaceMemories = defineCallable<
+  { teamId: string; workspaceId: string },
+  ArchiveWorkspaceMemoriesResult
+>({
+  name: "archiveWorkspaceMemories",
+  opts: DESTRUCTIVE_CALLABLE_OPTS,
+  input: z.object({
+    teamId: nonEmptyString,
+    workspaceId: nonEmptyString,
+  }),
+  handler: async ({ auth, input }) => {
+    const actorId = auth.uid
+    const actorEmail = auth.token.email ?? undefined
+    const { teamId, workspaceId } = input
+
+    const role =
+      requireAuthorized(
+        await authorize(actorId, Capabilities.MANAGE_WORKSPACE_STORAGE, {
+          teamId,
+          workspaceId,
+        }),
+        ARCHIVE_ALL_MEMORY_DENY
+      ).teamRole ?? undefined
+
+    const snap = await db
+      .collection(memoriesCollectionPath(teamId, workspaceId))
+      .get()
+    const refs = snap.docs
+      .filter((d) => d.get("archived") !== true)
+      .map((d) => d.ref)
+
+    let archived = 0
+    for (const batchRefs of chunkRefs(refs, MEMORY_BATCH_SIZE)) {
+      const batch = db.batch()
+      batchRefs.forEach((ref) =>
+        batch.update(ref, {
+          archived: true,
+          archivedAt: FieldValue.serverTimestamp(),
+          updatedAt: FieldValue.serverTimestamp(),
+        })
+      )
+      await batch.commit()
+      archived += batchRefs.length
+    }
+
+    const logRef = await logEvent({
+      teamId,
+      workspaceId,
+      actor: { userId: actorId, email: actorEmail, role },
+      action: "memory.archiveAll",
+      resource: { type: "content", id: workspaceId, parentId: teamId },
+      changes: {
+        fields: ["archivedCount"],
+        after: { archivedCount: archived },
+      },
+    })
+
+    return { archived, logId: logRef.id }
+  },
+})
+
+// ===========================================================================
+// Privacy (per-member) — archive / delete the CALLER's own private memories
+// ===========================================================================
+
+export interface ArchiveMyPrivateMemoriesResult {
+  archived: number
+  logId: string
+}
+
+export interface PurgeMyPrivateMemoriesResult {
+  deleted: number
+  logId: string
+}
+
+/**
+ * Authorize a member to manage their OWN memories (Settings → Privacy). Unlike
+ * the workspace-storage governance actions, this is a data-ownership action:
+ * any non-excluded workspace participant may run it because every query below
+ * is hard-scoped to `ownerUid == caller`, so it can only ever touch the
+ * caller's rows. Mirrors the `recallMemories` participation gate. Returns the
+ * caller's team role for the audit actor.
+ */
+async function authorizeOwnMemoryAccess(
+  actorId: string,
+  teamId: string,
+  workspaceId: string
+): Promise<string | undefined> {
+  const role =
+    requireAuthorized(
+      await authorize(actorId, Capabilities.READ_WORKSPACE, {
+        teamId,
+        workspaceId,
+      }),
+      PRIVATE_MEMORY_DENY
+    ).teamRole ?? undefined
+  const participation = await resolveParticipation(teamId, workspaceId, actorId)
+  if (participation.excluded) {
+    throw new HttpsError(
+      "permission-denied",
+      "You are not a member of this workspace."
+    )
+  }
+  return role
+}
+
+/** The caller's own private memories (any archived state). Two equality
+ *  filters, no orderBy — served by a zigzag merge, so no composite index. */
+function myPrivateMemoriesQuery(
+  teamId: string,
+  workspaceId: string,
+  ownerUid: string
+) {
+  return db
+    .collection(memoriesCollectionPath(teamId, workspaceId))
+    .where("ownerUid", "==", ownerUid)
+    .where("visibility", "==", "private")
+}
+
+/**
+ * Archive every ACTIVE private memory the caller owns in a workspace — the
+ * "Archive my private memories" privacy action (Settings → Privacy). Shared
+ * memories (even the caller's own) are left untouched. Already-archived rows
+ * are skipped so the count reflects what actually flipped; each is restorable
+ * per-row via `unarchiveMemory`.
+ */
+export const archiveMyPrivateMemories = defineCallable<
+  { teamId: string; workspaceId: string },
+  ArchiveMyPrivateMemoriesResult
+>({
+  name: "archiveMyPrivateMemories",
+  opts: DESTRUCTIVE_CALLABLE_OPTS,
+  input: z.object({
+    teamId: nonEmptyString,
+    workspaceId: nonEmptyString,
+  }),
+  handler: async ({ auth, input }) => {
+    const actorId = auth.uid
+    const actorEmail = auth.token.email ?? undefined
+    const { teamId, workspaceId } = input
+    const role = await authorizeOwnMemoryAccess(actorId, teamId, workspaceId)
+
+    const snap = await myPrivateMemoriesQuery(
+      teamId,
+      workspaceId,
+      actorId
+    ).get()
+    const refs = snap.docs
+      .filter((d) => d.get("archived") !== true)
+      .map((d) => d.ref)
+
+    let archived = 0
+    for (const batchRefs of chunkRefs(refs, MEMORY_BATCH_SIZE)) {
+      const batch = db.batch()
+      batchRefs.forEach((ref) =>
+        batch.update(ref, {
+          archived: true,
+          archivedAt: FieldValue.serverTimestamp(),
+          updatedAt: FieldValue.serverTimestamp(),
+        })
+      )
+      await batch.commit()
+      archived += batchRefs.length
+    }
+
+    const logRef = await logEvent({
+      teamId,
+      workspaceId,
+      actor: { userId: actorId, email: actorEmail, role },
+      action: "memory.archivePrivate",
+      resource: { type: "content", id: workspaceId, parentId: teamId },
+      changes: {
+        fields: ["archivedCount"],
+        after: { archivedCount: archived },
+      },
+    })
+
+    return { archived, logId: logRef.id }
+  },
+})
+
+/**
+ * Delete every private memory the caller owns in a workspace — the "Delete my
+ * private memories" privacy action (active AND archived). Shared memories are
+ * never touched. Irreversible. Batched + a single audited `logEvent`.
+ */
+export const purgeMyPrivateMemories = defineCallable<
+  { teamId: string; workspaceId: string },
+  PurgeMyPrivateMemoriesResult
+>({
+  name: "purgeMyPrivateMemories",
+  opts: DESTRUCTIVE_CALLABLE_OPTS,
+  input: z.object({
+    teamId: nonEmptyString,
+    workspaceId: nonEmptyString,
+  }),
+  handler: async ({ auth, input }) => {
+    const actorId = auth.uid
+    const actorEmail = auth.token.email ?? undefined
+    const { teamId, workspaceId } = input
+    const role = await authorizeOwnMemoryAccess(actorId, teamId, workspaceId)
+
+    const snap = await myPrivateMemoriesQuery(
+      teamId,
+      workspaceId,
+      actorId
+    ).get()
+    const refs = snap.docs.map((d) => d.ref)
+
+    let deleted = 0
+    for (const batchRefs of chunkRefs(refs, MEMORY_BATCH_SIZE)) {
+      const batch = db.batch()
+      batchRefs.forEach((ref) => batch.delete(ref))
+      await batch.commit()
+      deleted += batchRefs.length
+    }
+
+    const logRef = await logEvent({
+      teamId,
+      workspaceId,
+      actor: { userId: actorId, email: actorEmail, role },
+      action: "memory.purgePrivate",
       resource: { type: "content", id: workspaceId, parentId: teamId },
       changes: { fields: ["deletedCount"], after: { deletedCount: deleted } },
     })

@@ -226,10 +226,13 @@ export const AUDIT_ACTIONS = [
   "memory.delete",
   "memory.archive",
   "memory.unarchive",
+  "memory.archiveAll",
+  "memory.archivePrivate",
   "memory.share",
   "memory.unshare",
   "memory.merge",
   "memory.purge",
+  "memory.purgePrivate",
   // invitation
   "invitation.create",
   "invitation.resend",

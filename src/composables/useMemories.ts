@@ -18,9 +18,12 @@
 import { useCurrentTeamRole } from "@/composables/useCurrentTeamRole"
 import {
   archiveMemory,
+  archiveMyPrivateMemories,
+  archiveWorkspaceMemories,
   createMemory,
   deleteMemory,
   pinMemory,
+  purgeMyPrivateMemories,
   purgeWorkspaceMemories,
   shareMemory,
   unarchiveMemory,
@@ -62,6 +65,9 @@ export type UpdateMemoryInput = Omit<
 
 export interface UseMemoriesReturn {
   memories: ComputedRef<IMemory[]>
+  /** The caller's OWN private memories (excludes shared + others'). Backs the
+   *  per-member privacy controls (Settings → Privacy). */
+  myPrivateMemories: ComputedRef<IMemory[]>
   isLoading: ComputedRef<boolean>
   /** Owner/admin/member (not guests) — gates create/edit affordances. */
   canManage: ComputedRef<boolean>
@@ -80,6 +86,21 @@ export interface UseMemoriesReturn {
   setShared: (memoryId: string, shared: boolean) => Promise<void>
   /** Admin governance: delete EVERY memory in the workspace. Returns the count. */
   purgeAll: () => Promise<number>
+  /**
+   * Admin governance: archive every ACTIVE memory in the workspace (reversible).
+   * Returns the number actually archived (already-archived rows are skipped).
+   */
+  archiveAll: () => Promise<number>
+  /**
+   * Privacy: archive every ACTIVE private memory the caller owns (reversible).
+   * Shared memories are never touched. Returns the number actually archived.
+   */
+  archiveMyPrivate: () => Promise<number>
+  /**
+   * Privacy: delete every private memory the caller owns (active + archived).
+   * Shared memories are never touched. Returns the count deleted.
+   */
+  purgeMyPrivate: () => Promise<number>
 }
 
 const memoriesPath = (teamId: string, workspaceId: string) =>
@@ -156,6 +177,16 @@ export function useMemories(): UseMemoriesReturn {
     for (const m of sharedQuery.data.value ?? []) byId.set(m.id, m)
     for (const m of ownQuery.data.value ?? []) byId.set(m.id, m)
     return [...byId.values()].sort(byUpdatedDesc)
+  })
+
+  // The caller's own private rows — already present in every view (the admin
+  // list, or the member's `own` stream), so a filter is enough; no extra query.
+  const myPrivateMemories = computed<IMemory[]>(() => {
+    const owner = uid.value
+    if (!owner) return []
+    return memories.value.filter(
+      (m) => m.ownerUid === owner && m.visibility === "private"
+    )
   })
 
   const isLoading = computed<boolean>(() =>
@@ -363,8 +394,120 @@ export function useMemories(): UseMemoriesReturn {
     }
   }
 
+  const archiveAll = async (): Promise<number> => {
+    const teamId = currentTeamId.value
+    const workspaceId = currentWorkspaceId.value
+    if (!teamId || !workspaceId || isMutating.value) return 0
+    isMutating.value = true
+    try {
+      // Optimistically flip every active row to archived; the listener
+      // reconciles on release. Rollback wiring mirrors `purgeAll`.
+      const previous = activeKeys.value.map(
+        (key) => [key, queryClient.getQueryData<IMemory[]>(key)] as const
+      )
+      const releases = activeKeys.value.map((key) => holdOptimistic(key))
+      const archivedAt = Timestamp.now()
+      for (const [key, snapshot] of previous) {
+        queryClient.setQueryData<IMemory[]>(
+          key,
+          (snapshot ?? []).map((m) =>
+            m.archived === true ? m : { ...m, archived: true, archivedAt }
+          )
+        )
+      }
+      try {
+        const { data } = await archiveWorkspaceMemories({ teamId, workspaceId })
+        return data.archived
+      } catch (error) {
+        for (const [key, snapshot] of previous) {
+          queryClient.setQueryData(key, snapshot)
+        }
+        throw error
+      } finally {
+        setTimeout(() => releases.forEach((release) => release()), 120)
+      }
+    } finally {
+      isMutating.value = false
+    }
+  }
+
+  // Predicate for "the caller's own private rows" — the privacy boundary shared
+  // by both per-member actions (mirrors the server's hard-scoped query).
+  const isMyPrivate = (m: IMemory): boolean =>
+    m.ownerUid === uid.value && m.visibility === "private"
+
+  const archiveMyPrivate = async (): Promise<number> => {
+    const teamId = currentTeamId.value
+    const workspaceId = currentWorkspaceId.value
+    if (!teamId || !workspaceId || !uid.value || isMutating.value) return 0
+    isMutating.value = true
+    try {
+      const previous = activeKeys.value.map(
+        (key) => [key, queryClient.getQueryData<IMemory[]>(key)] as const
+      )
+      const releases = activeKeys.value.map((key) => holdOptimistic(key))
+      const archivedAt = Timestamp.now()
+      for (const [key, snapshot] of previous) {
+        queryClient.setQueryData<IMemory[]>(
+          key,
+          (snapshot ?? []).map((m) =>
+            isMyPrivate(m) && m.archived !== true
+              ? { ...m, archived: true, archivedAt }
+              : m
+          )
+        )
+      }
+      try {
+        const { data } = await archiveMyPrivateMemories({ teamId, workspaceId })
+        return data.archived
+      } catch (error) {
+        for (const [key, snapshot] of previous) {
+          queryClient.setQueryData(key, snapshot)
+        }
+        throw error
+      } finally {
+        setTimeout(() => releases.forEach((release) => release()), 120)
+      }
+    } finally {
+      isMutating.value = false
+    }
+  }
+
+  const purgeMyPrivate = async (): Promise<number> => {
+    const teamId = currentTeamId.value
+    const workspaceId = currentWorkspaceId.value
+    if (!teamId || !workspaceId || !uid.value || isMutating.value) return 0
+    isMutating.value = true
+    try {
+      const previous = activeKeys.value.map(
+        (key) => [key, queryClient.getQueryData<IMemory[]>(key)] as const
+      )
+      const releases = activeKeys.value.map((key) => holdOptimistic(key))
+      for (const [key, snapshot] of previous) {
+        queryClient.setQueryData<IMemory[]>(
+          key,
+          (snapshot ?? []).filter((m) => !isMyPrivate(m))
+        )
+      }
+      try {
+        const { data } = await purgeMyPrivateMemories({ teamId, workspaceId })
+        return data.deleted
+      } catch (error) {
+        for (const [key, snapshot] of previous) {
+          queryClient.setQueryData(key, snapshot)
+        }
+        throw error
+      } finally {
+        setTimeout(() => releases.forEach((release) => release()), 120)
+      }
+    } finally {
+      isMutating.value = false
+    }
+  }
+
   return {
     memories,
+    myPrivateMemories,
     isLoading,
     canManage: canManageWorkspaceContent,
     canPurge: canManageWorkspaceStorage,
@@ -378,5 +521,8 @@ export function useMemories(): UseMemoriesReturn {
     setPinned,
     setShared,
     purgeAll,
+    archiveAll,
+    archiveMyPrivate,
+    purgeMyPrivate,
   }
 }

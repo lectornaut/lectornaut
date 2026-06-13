@@ -2771,6 +2771,46 @@ export const purgeWorkspaceMemories = createTypedCallable<
   PurgeWorkspaceMemoriesResponse
 >("purgeWorkspaceMemories")
 
+export interface ArchiveWorkspaceMemoriesRequest {
+  teamId: string
+  workspaceId: string
+}
+
+export interface ArchiveWorkspaceMemoriesResponse {
+  archived: number
+  logId: string
+}
+
+export const archiveWorkspaceMemories = createTypedCallable<
+  ArchiveWorkspaceMemoriesRequest,
+  ArchiveWorkspaceMemoriesResponse
+>("archiveWorkspaceMemories")
+
+export interface MyPrivateMemoriesRequest {
+  teamId: string
+  workspaceId: string
+}
+
+export interface ArchiveMyPrivateMemoriesResponse {
+  archived: number
+  logId: string
+}
+
+export interface PurgeMyPrivateMemoriesResponse {
+  deleted: number
+  logId: string
+}
+
+export const archiveMyPrivateMemories = createTypedCallable<
+  MyPrivateMemoriesRequest,
+  ArchiveMyPrivateMemoriesResponse
+>("archiveMyPrivateMemories")
+
+export const purgeMyPrivateMemories = createTypedCallable<
+  MyPrivateMemoriesRequest,
+  PurgeMyPrivateMemoriesResponse
+>("purgeMyPrivateMemories")
+
 export function useFunctions() {
   return {
     // Team operations
