@@ -1,4 +1,5 @@
 <script lang="ts" setup>
+import type { AccentId, BaseId, ColorSwatch } from "@/helpers/defaults"
 import { accents, bases, languages, themes } from "@/helpers/defaults"
 import {
   accent,
@@ -27,16 +28,18 @@ const accentOptions = accents.filter(
   (color) => color.id !== "base" && color.id !== "custom"
 )
 
-const getOptionClass = (optionId: string, fallbackClass: string) =>
-  optionId === "custom" ? "" : fallbackClass
+// Paint each swatch dot from the option's CSS-var color; `custom` uses the
+// live picked color. Inline style (not a `bg-*` class) so dynamically-listed
+// palette colors don't depend on Tailwind's static class scanning.
+const baseSwatchStyle = (option: ColorSwatch<BaseId>) => ({
+  backgroundColor:
+    option.id === "custom" ? customBaseColor.value : option.swatch,
+})
 
-const getBaseOptionStyle = (optionId: string) =>
-  optionId === "custom" ? { backgroundColor: customBaseColor.value } : undefined
-
-const getAccentOptionStyle = (optionId: string) =>
-  optionId === "custom"
-    ? { backgroundColor: customAccentColor.value }
-    : undefined
+const accentSwatchStyle = (option: ColorSwatch<AccentId>) => ({
+  backgroundColor:
+    option.id === "custom" ? customAccentColor.value : option.swatch,
+})
 </script>
 
 <template>
@@ -88,7 +91,7 @@ const getAccentOptionStyle = (optionId: string) =>
               id="onboarding-custom-base-color"
               v-model="customBaseColor"
               type="color"
-              class="bg-background appearance-noneborder aspect-square size-9 cursor-pointer p-2.75 shadow-xs"
+              class="bg-background aspect-square size-9 cursor-pointer appearance-none rounded-full border p-2.75"
             />
             <Select id="onboarding-base" v-model="base">
               <SelectTrigger>
@@ -105,11 +108,7 @@ const getAccentOptionStyle = (optionId: string) =>
                     :key="color.id"
                     :value="color.id"
                   >
-                    <span
-                      class="size-3"
-                      :class="getOptionClass(color.id, color.style)"
-                      :style="getBaseOptionStyle(color.id)"
-                    />
+                    <span class="size-3" :style="baseSwatchStyle(color)" />
                     {{ color.name }}
                   </SelectItem>
                 </SelectGroup>
@@ -123,11 +122,7 @@ const getAccentOptionStyle = (optionId: string) =>
                     :value="color.id"
                     :disabled="color.id === 'accent' && isAccentBaseSelected"
                   >
-                    <span
-                      class="size-3"
-                      :class="getOptionClass(color.id, color.style)"
-                      :style="getBaseOptionStyle(color.id)"
-                    />
+                    <span class="size-3" :style="baseSwatchStyle(color)" />
                     {{ color.name }}
                   </SelectItem>
                 </SelectGroup>
@@ -151,7 +146,7 @@ const getAccentOptionStyle = (optionId: string) =>
               id="onboarding-custom-accent-color"
               v-model="customAccentColor"
               type="color"
-              class="bg-background appearance-noneborder aspect-square size-9 cursor-pointer p-2.75 shadow-xs"
+              class="bg-background aspect-square size-9 cursor-pointer appearance-none rounded-full border p-2.75"
             />
             <Select id="onboarding-accent" v-model="accent">
               <SelectTrigger>
@@ -167,11 +162,7 @@ const getAccentOptionStyle = (optionId: string) =>
                     :value="color.id"
                     :disabled="color.id === 'base' && isBaseAccentSelected"
                   >
-                    <span
-                      class="size-3"
-                      :class="getOptionClass(color.id, color.style)"
-                      :style="getAccentOptionStyle(color.id)"
-                    />
+                    <span class="size-3" :style="accentSwatchStyle(color)" />
                     {{ color.name }}
                   </SelectItem>
                 </SelectGroup>
@@ -186,11 +177,7 @@ const getAccentOptionStyle = (optionId: string) =>
                     :key="color.id"
                     :value="color.id"
                   >
-                    <span
-                      class="size-3"
-                      :class="getOptionClass(color.id, color.style)"
-                      :style="getAccentOptionStyle(color.id)"
-                    />
+                    <span class="size-3" :style="accentSwatchStyle(color)" />
                     {{ color.name }}
                   </SelectItem>
                 </SelectGroup>

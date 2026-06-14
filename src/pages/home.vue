@@ -680,9 +680,15 @@ const expandedCard = ref<number | null>(null)
                 <PopoverContent class="grid w-full">
                   <div class="px-2 pt-2">
                     <Select v-model="range">
-                      <SelectTrigger>
-                        <SelectValue :placeholder="t('common.select')" />
-                      </SelectTrigger>
+                      <Button
+                        variant="outline"
+                        class="w-full justify-between"
+                        as-child
+                      >
+                        <SelectTrigger>
+                          <SelectValue :placeholder="t('common.select')" />
+                        </SelectTrigger>
+                      </Button>
                       <SelectContent>
                         <SelectGroup>
                           <SelectItem

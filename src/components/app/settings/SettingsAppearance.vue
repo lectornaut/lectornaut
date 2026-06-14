@@ -2,6 +2,7 @@
 import type {
   AccentId,
   BaseId,
+  ColorSwatch,
   EditorFontSizeId,
   EditorThemeId,
   FontId,
@@ -149,18 +150,18 @@ const accentOptions = accents.filter(
 const isAccentBaseSelected = computed(() => selectedAccent.value === "base")
 const isBaseAccentSelected = computed(() => selectedBase.value === "accent")
 
-const getOptionClass = (optionId: BaseId | AccentId, fallbackClass: string) =>
-  optionId === "custom" ? "" : fallbackClass
+// Paint each swatch dot from the option's CSS-var color; `custom` uses the
+// live picked color. Inline style (not a `bg-*` class) so dynamically-listed
+// palette colors don't depend on Tailwind's static class scanning.
+const baseSwatchStyle = (option: ColorSwatch<BaseId>) => ({
+  backgroundColor:
+    option.id === "custom" ? selectedCustomBaseColor.value : option.swatch,
+})
 
-const getBaseOptionStyle = (optionId: BaseId) =>
-  optionId === "custom"
-    ? { backgroundColor: selectedCustomBaseColor.value }
-    : undefined
-
-const getAccentOptionStyle = (optionId: AccentId) =>
-  optionId === "custom"
-    ? { backgroundColor: selectedCustomAccentColor.value }
-    : undefined
+const accentSwatchStyle = (option: ColorSwatch<AccentId>) => ({
+  backgroundColor:
+    option.id === "custom" ? selectedCustomAccentColor.value : option.swatch,
+})
 </script>
 
 <template>
@@ -223,7 +224,7 @@ const getAccentOptionStyle = (optionId: AccentId) =>
               id="custom-base-color"
               v-model="selectedCustomBaseColor"
               type="color"
-              class="bg-background appearance-noneborder aspect-square size-9 cursor-pointer p-2.75 shadow-xs"
+              class="bg-background aspect-square size-9 cursor-pointer appearance-none rounded-full border p-2.75"
             />
             <Select id="base" v-model="selectedBase">
               <SelectTrigger>
@@ -240,8 +241,7 @@ const getAccentOptionStyle = (optionId: AccentId) =>
                   >
                     <span
                       class="size-3 rounded-full"
-                      :class="getOptionClass(color.id, color.style)"
-                      :style="getBaseOptionStyle(color.id)"
+                      :style="baseSwatchStyle(color)"
                     />
                     {{ color.name }}
                   </SelectItem>
@@ -258,8 +258,7 @@ const getAccentOptionStyle = (optionId: AccentId) =>
                   >
                     <span
                       class="size-3 rounded-full"
-                      :class="getOptionClass(color.id, color.style)"
-                      :style="getBaseOptionStyle(color.id)"
+                      :style="baseSwatchStyle(color)"
                     />
                     {{ color.name }}
                   </SelectItem>
@@ -283,7 +282,7 @@ const getAccentOptionStyle = (optionId: AccentId) =>
               id="custom-accent-color"
               v-model="selectedCustomAccentColor"
               type="color"
-              class="bg-background appearance-noneborder aspect-square size-9 cursor-pointer p-2.75 shadow-xs"
+              class="bg-background aspect-square size-9 cursor-pointer appearance-none rounded-full border p-2.75"
             />
             <Select id="accent" v-model="selectedAccent">
               <SelectTrigger>
@@ -301,8 +300,7 @@ const getAccentOptionStyle = (optionId: AccentId) =>
                   >
                     <span
                       class="size-3 rounded-full"
-                      :class="getOptionClass(color.id, color.style)"
-                      :style="getAccentOptionStyle(color.id)"
+                      :style="accentSwatchStyle(color)"
                     />
                     {{ color.name }}
                   </SelectItem>
@@ -320,8 +318,7 @@ const getAccentOptionStyle = (optionId: AccentId) =>
                   >
                     <span
                       class="size-3 rounded-full"
-                      :class="getOptionClass(color.id, color.style)"
-                      :style="getAccentOptionStyle(color.id)"
+                      :style="accentSwatchStyle(color)"
                     />
                     {{ color.name }}
                   </SelectItem>

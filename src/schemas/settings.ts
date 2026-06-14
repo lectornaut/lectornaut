@@ -1,56 +1,25 @@
+import { ACCENT_IDS, BASE_IDS } from "@/utils/theme/families"
 import { z } from "zod"
 
 /**
  * Settings doc schemas — mirror `src/types/settings.ts`.
  *
- * Theme-related literal unions (`ThemeId`, `BaseId`, `AccentId`, `FontId`,
- * `SizeId`, `LanguageId`) are declared in `src/helpers/defaults.ts` as
- * derivations from `as const` arrays. We deliberately DO NOT import them
- * here because `defaults.ts` pulls in the entire `@/data/icons` graph, and
- * making `src/schemas` depend on that is a heavy transitive cost.
+ * The base/accent family id lists come straight from `@/utils/theme/families`
+ * — the single module that declares the palette set — so the picker, the CSS
+ * generator, and this schema can't drift. That leaf is dependency-free (no
+ * `@/data/icons` graph), which is why importing it here is cheap, unlike
+ * importing `@/helpers/defaults`.
  *
- * The literal values below are copied verbatim. Keep in sync with the
- * arrays in `src/helpers/defaults.ts`. A drift check could be added as a
- * build step later if this becomes a recurring issue.
+ * The remaining small literal unions (`ThemeId`, `FontId`, `SizeId`,
+ * `LanguageId`, editor theme/size) are still inlined below; keep those in
+ * sync with `src/helpers/defaults.ts`.
  */
 
 const themeModeSchema = z.enum(["auto", "light", "dark"])
 
-const accentIdSchema = z.enum([
-  "red",
-  "orange",
-  "amber",
-  "yellow",
-  "lime",
-  "green",
-  "emerald",
-  "teal",
-  "cyan",
-  "sky",
-  "blue",
-  "indigo",
-  "violet",
-  "purple",
-  "fuchsia",
-  "pink",
-  "rose",
-  "base",
-  "custom",
-])
+const accentIdSchema = z.enum(ACCENT_IDS)
 
-const baseIdSchema = z.enum([
-  "slate",
-  "gray",
-  "zinc",
-  "neutral",
-  "stone",
-  "taupe",
-  "mauve",
-  "mist",
-  "olive",
-  "accent",
-  "custom",
-])
+const baseIdSchema = z.enum(BASE_IDS)
 
 const fontIdSchema = z.enum(["sans", "serif", "mono"])
 

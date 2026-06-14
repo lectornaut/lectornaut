@@ -53,6 +53,18 @@ import type {
   IBotAgentModelToggles,
   IBotModelProvider,
 } from "@/types/domain"
+import {
+  ACCENT_FAMILIES,
+  ANCHOR_FAMILY,
+  BASE_FAMILIES,
+  type AccentId,
+  type BaseId,
+} from "@/utils/theme/families"
+import { paletteHex } from "@/utils/theme/tokens"
+
+// Re-exported so existing `@/helpers/defaults` importers keep their `AccentId`
+// / `BaseId` source; the canonical declaration lives in `@/utils/theme/families`.
+export type { AccentId, BaseId }
 
 export const languages = [
   {
@@ -91,50 +103,54 @@ export const themes = [
 export type ThemeId = (typeof themes)[number]["id"]
 export const defaultTheme: ThemeId = "auto"
 
-export const accents = [
-  { id: "red", name: "Red", style: "bg-red-500" },
-  { id: "orange", name: "Orange", style: "bg-orange-500" },
-  { id: "amber", name: "Amber", style: "bg-amber-500" },
-  { id: "yellow", name: "Yellow", style: "bg-yellow-500" },
-  { id: "lime", name: "Lime", style: "bg-lime-500" },
-  { id: "green", name: "Green", style: "bg-green-500" },
-  { id: "emerald", name: "Emerald", style: "bg-emerald-500" },
-  { id: "teal", name: "Teal", style: "bg-teal-500" },
-  { id: "cyan", name: "Cyan", style: "bg-cyan-500" },
-  { id: "sky", name: "Sky", style: "bg-sky-500" },
-  { id: "blue", name: "Blue", style: "bg-blue-500" },
-  { id: "indigo", name: "Indigo", style: "bg-indigo-500" },
-  { id: "violet", name: "Violet", style: "bg-violet-500" },
-  { id: "purple", name: "Purple", style: "bg-purple-500" },
-  { id: "fuchsia", name: "Fuchsia", style: "bg-fuchsia-500" },
-  { id: "pink", name: "Pink", style: "bg-pink-500" },
-  { id: "rose", name: "Rose", style: "bg-rose-500" },
-  { id: "base", name: "Base", style: "bg-foreground" },
-  { id: "custom", name: "Custom", style: "bg-current" },
-] as const
+// Title-cased display label for a palette family (e.g. `slate` -> `Slate`).
+const swatchName = (id: string) => id.charAt(0).toUpperCase() + id.slice(1)
 
-export type AccentId = (typeof accents)[number]["id"]
+// A picker option + the CSS color to paint its swatch dot.
+export type ColorSwatch<Id extends string> = {
+  id: Id
+  name: string
+  swatch: string
+}
 
-export const bases = [
-  { id: "slate", name: "Slate", style: "bg-slate-500" },
-  { id: "gray", name: "Gray", style: "bg-gray-500" },
-  { id: "zinc", name: "Zinc", style: "bg-zinc-500" },
-  { id: "neutral", name: "Neutral", style: "bg-neutral-500" },
-  { id: "stone", name: "Stone", style: "bg-stone-500" },
-  { id: "taupe", name: "Taupe", style: "bg-taupe-500" },
-  { id: "mauve", name: "Mauve", style: "bg-mauve-500" },
-  { id: "mist", name: "Mist", style: "bg-mist-500" },
-  { id: "olive", name: "Olive", style: "bg-olive-500" },
-  { id: "accent", name: "Accent", style: "bg-primary" },
-  { id: "custom", name: "Custom", style: "bg-current" },
-] as const
+// Picker swatches: each palette family becomes `{ id, name, swatch }` where
+// `swatch` is a ready-to-apply CSS color rendered inline as the dot background.
+// We deliberately DON'T return a `bg-<family>-500` utility class: those are
+// built dynamically (`bg-${id}-500`), and Tailwind only generates classes it
+// can find as literals in source — a template specifier is invisible to its
+// scanner, so the swatches came out colorless. Pointing the dot at the palette
+// CSS var sidesteps static detection entirely (same approach as the editor
+// color picker). The family lists are owned by `@/utils/theme/families` (the
+// one place a palette is declared); here we only decorate them for display.
+// `custom` has no fixed swatch — the picker paints it with the user's color.
+export const accents: readonly ColorSwatch<AccentId>[] = [
+  ...ACCENT_FAMILIES.map((id) => ({
+    id,
+    name: swatchName(id),
+    swatch: `var(--color-${id}-500)`,
+  })),
+  { id: "base", name: "Base", swatch: "var(--color-foreground)" },
+  { id: "custom", name: "Custom", swatch: "" },
+]
 
-export type BaseId = (typeof bases)[number]["id"]
+export const bases: readonly ColorSwatch<BaseId>[] = [
+  ...BASE_FAMILIES.map((id) => ({
+    id,
+    name: swatchName(id),
+    swatch: `var(--color-${id}-500)`,
+  })),
+  { id: "accent", name: "Accent", swatch: "var(--color-primary)" },
+  { id: "custom", name: "Custom", swatch: "" },
+]
 
-export const defaultBase: BaseId = "neutral"
+export const defaultBase: BaseId = ANCHOR_FAMILY
 export const defaultAccent: AccentId = "base"
-export const defaultCustomBaseColor = "#737373"
-export const defaultCustomAccentColor = "#2563eb"
+
+// Default custom-picker seeds, read live from the palette so they can't drift
+// from it: the neutral anchor's mid shade and blue-600. (`#737373` / `#2563eb`
+// were exactly these values under Tailwind v3's hex palette.)
+export const defaultCustomBaseColor = paletteHex(ANCHOR_FAMILY, 500)
+export const defaultCustomAccentColor = paletteHex("blue", 600)
 
 export const fonts = [
   { id: "sans", name: "Sans", icon: IconFontSans, style: "font-sans" },

@@ -1,42 +1,22 @@
-import colors from "tailwindcss/colors"
-import { getContrastRatio } from "../../utils/theme/color"
+import {
+  ACCENT_FAMILIES,
+  ANCHOR_FAMILY,
+  BASE_FAMILIES,
+  paletteVar,
+  type AccentFamily,
+  type BaseFamily,
+} from "../../utils/theme/families"
+import {
+  buildBaseTokens,
+  paletteColor,
+  pickContrastVar,
+  type BaseSourceToken,
+} from "../../utils/theme/tokens"
 
 export type ThemeMode = "light" | "dark"
 
 const LIGHT_MODE: ThemeMode = "light"
 const DARK_MODE: ThemeMode = "dark"
-
-const BASE_FAMILIES = [
-  "slate",
-  "gray",
-  "zinc",
-  "neutral",
-  "stone",
-  "taupe",
-  "mauve",
-  "mist",
-  "olive",
-] as const
-
-const ACCENT_FAMILIES = [
-  "red",
-  "orange",
-  "amber",
-  "yellow",
-  "lime",
-  "green",
-  "emerald",
-  "teal",
-  "cyan",
-  "sky",
-  "blue",
-  "indigo",
-  "violet",
-  "purple",
-  "fuchsia",
-  "pink",
-  "rose",
-] as const
 
 const FONT_TOKENS = {
   sans: '"Geist Variable", "sans-serif"',
@@ -52,11 +32,6 @@ const SIZE_TOKENS = {
   xl: "var(--text-xl)",
 } as const
 
-const DEFAULT_BASE_FAMILY = "neutral"
-const LIGHT_CONTRAST_COLOR = readPaletteColor(DEFAULT_BASE_FAMILY, 50)
-const LIGHT_CONTRAST_CSS_VALUE = paletteVar(DEFAULT_BASE_FAMILY, 50)
-const DARK_CONTRAST_COLOR = readPaletteColor(DEFAULT_BASE_FAMILY, 950)
-const DARK_CONTRAST_CSS_VALUE = paletteVar(DEFAULT_BASE_FAMILY, 950)
 const LIGHT_ACCENT_SHADES = {
   primary: 300,
   destructive: 400,
@@ -72,101 +47,97 @@ const DARK_ACCENT_SHADES = {
 
 type ThemeTokens = Record<string, string>
 
+// Per-source-token palette shades for the two base renderers. Both expand
+// through the shared `buildBaseTokens` graph, so only the source values (and,
+// for presets, the white/black background) differ between them.
+const PRESET_SOURCE_SHADES = {
+  light: {
+    foreground: 800,
+    card: 50,
+    "card-foreground": 900,
+    secondary: 100,
+    muted: 200,
+    "muted-foreground": 600,
+  },
+  dark: {
+    foreground: 200,
+    card: 950,
+    "card-foreground": 100,
+    secondary: 900,
+    muted: 800,
+    "muted-foreground": 400,
+  },
+} satisfies Record<
+  ThemeMode,
+  Record<Exclude<BaseSourceToken, "background">, number>
+>
+
+const ACCENT_BASE_SOURCE_SHADES = {
+  light: {
+    background: 50,
+    foreground: 950,
+    card: 100,
+    "card-foreground": 950,
+    secondary: 100,
+    muted: 200,
+    "muted-foreground": 600,
+  },
+  dark: {
+    background: 950,
+    foreground: 50,
+    card: 900,
+    "card-foreground": 100,
+    secondary: 900,
+    muted: 800,
+    "muted-foreground": 400,
+  },
+} satisfies Record<ThemeMode, Record<BaseSourceToken, number>>
+
+// Preset base: the active base family's shades on white/black surfaces.
 export function buildPresetBaseTokens(
-  family: (typeof BASE_FAMILIES)[number],
+  family: BaseFamily,
   mode: ThemeMode
 ): ThemeTokens {
-  if (mode === LIGHT_MODE) {
-    const background = "var(--color-white)"
-    const foreground = paletteVar(family, 800)
-    const card = paletteVar(family, 50)
-    const cardForeground = paletteVar(family, 900)
-    const secondary = paletteVar(family, 100)
-    const muted = paletteVar(family, 200)
+  const shades = PRESET_SOURCE_SHADES[mode]
 
-    return buildBaseTokenShape({
-      background,
-      foreground,
-      card,
-      cardForeground,
-      secondary,
-      muted,
-      mutedForeground: paletteVar(family, 600),
-    })
-  }
-
-  const background = "var(--color-black)"
-  const foreground = paletteVar(family, 200)
-  const card = paletteVar(family, 950)
-  const cardForeground = paletteVar(family, 100)
-  const secondary = paletteVar(family, 900)
-  const muted = paletteVar(family, 800)
-
-  return buildBaseTokenShape({
-    background,
-    foreground,
-    card,
-    cardForeground,
-    secondary,
-    muted,
-    mutedForeground: paletteVar(family, 400),
-  })
+  return buildBaseTokens(
+    (token) =>
+      token === "background"
+        ? mode === LIGHT_MODE
+          ? "var(--color-white)"
+          : "var(--color-black)"
+        : paletteVar(family, shades[token]),
+    (target) => `var(--${target})`
+  )
 }
 
+// Accent-as-base (`data-base="accent"`): an accent family tinting every
+// surface, so the background itself carries the hue.
 export function buildAccentBaseTokens(
-  family: (typeof ACCENT_FAMILIES)[number],
+  family: AccentFamily,
   mode: ThemeMode
 ): ThemeTokens {
-  if (mode === LIGHT_MODE) {
-    const background = paletteVar(family, 50)
-    const foreground = paletteVar(family, 950)
-    const card = paletteVar(family, 100)
-    const cardForeground = paletteVar(family, 950)
-    const secondary = paletteVar(family, 100)
-    const muted = paletteVar(family, 200)
+  const shades = ACCENT_BASE_SOURCE_SHADES[mode]
 
-    return buildBaseTokenShape({
-      background,
-      foreground,
-      card,
-      cardForeground,
-      secondary,
-      muted,
-      mutedForeground: paletteVar(family, 600),
-    })
-  }
-
-  const background = paletteVar(family, 950)
-  const foreground = paletteVar(family, 50)
-  const card = paletteVar(family, 900)
-  const cardForeground = paletteVar(family, 100)
-  const secondary = paletteVar(family, 900)
-  const muted = paletteVar(family, 800)
-
-  return buildBaseTokenShape({
-    background,
-    foreground,
-    card,
-    cardForeground,
-    secondary,
-    muted,
-    mutedForeground: paletteVar(family, 400),
-  })
+  return buildBaseTokens(
+    (token) => paletteVar(family, shades[token]),
+    (target) => `var(--${target})`
+  )
 }
 
 export function buildAccentTokens(
-  family: (typeof ACCENT_FAMILIES)[number] | (typeof BASE_FAMILIES)[number],
+  family: AccentFamily | BaseFamily,
   mode: ThemeMode
 ): ThemeTokens {
   const shades = mode === LIGHT_MODE ? LIGHT_ACCENT_SHADES : DARK_ACCENT_SHADES
-  const primary = readPaletteColor(family, shades.primary)
-  const destructive = readPaletteColor(family, shades.destructive)
+  const primary = paletteColor(family, shades.primary)
+  const destructive = paletteColor(family, shades.destructive)
 
   return {
     "--primary": paletteVar(family, shades.primary),
-    "--primary-foreground": pickContrastCssValue(primary),
+    "--primary-foreground": pickContrastVar(primary),
     "--destructive": paletteVar(family, shades.destructive),
-    "--destructive-foreground": pickContrastCssValue(destructive),
+    "--destructive-foreground": pickContrastVar(destructive),
     "--ring": paletteVar(family, shades.ring),
     "--sidebar-ring": paletteVar(family, shades.ring),
     "--chart-1": paletteVar(family, shades.charts[0]),
@@ -283,50 +254,8 @@ function buildRootFallbackTokens(): ThemeTokens {
     "--flex": FONT_TOKENS.sans,
     "--size": SIZE_TOKENS.base,
     "color-scheme": "light",
-    ...buildPresetBaseTokens(DEFAULT_BASE_FAMILY, LIGHT_MODE),
-    ...buildAccentTokens(DEFAULT_BASE_FAMILY, LIGHT_MODE),
-  }
-}
-
-function buildBaseTokenShape({
-  background,
-  foreground,
-  card,
-  cardForeground,
-  secondary,
-  muted,
-  mutedForeground,
-}: {
-  background: string
-  foreground: string
-  card: string
-  cardForeground: string
-  secondary: string
-  muted: string
-  mutedForeground: string
-}): ThemeTokens {
-  return {
-    "--background": background,
-    "--foreground": foreground,
-    "--card": card,
-    "--card-foreground": cardForeground,
-    "--popover": "var(--background)",
-    "--popover-foreground": "var(--foreground)",
-    "--secondary": secondary,
-    "--secondary-foreground": "var(--foreground)",
-    "--muted": muted,
-    "--muted-foreground": mutedForeground,
-    "--accent": "var(--muted)",
-    "--accent-foreground": "var(--card-foreground)",
-    "--border": "var(--muted)",
-    "--input": "var(--muted)",
-    "--sidebar": "var(--card)",
-    "--sidebar-foreground": "var(--card-foreground)",
-    "--sidebar-primary": "var(--foreground)",
-    "--sidebar-primary-foreground": "var(--card)",
-    "--sidebar-accent": "var(--muted)",
-    "--sidebar-accent-foreground": "var(--card-foreground)",
-    "--sidebar-border": "var(--muted)",
+    ...buildPresetBaseTokens(ANCHOR_FAMILY, LIGHT_MODE),
+    ...buildAccentTokens(ANCHOR_FAMILY, LIGHT_MODE),
   }
 }
 
@@ -372,32 +301,4 @@ function trimTrailingEmptyLines(lines: string[]) {
   }
 
   return trimmed
-}
-
-function paletteVar(
-  family: (typeof BASE_FAMILIES)[number] | (typeof ACCENT_FAMILIES)[number],
-  shade: number
-) {
-  return `var(--color-${family}-${shade})`
-}
-
-function readPaletteColor(
-  family: (typeof BASE_FAMILIES)[number] | (typeof ACCENT_FAMILIES)[number],
-  shade: number
-) {
-  const familyPalette = colors[family] as Record<number, string> | undefined
-  const value = familyPalette?.[shade]
-
-  if (typeof value !== "string") {
-    throw new Error(`Missing Tailwind color for ${family}-${shade}`)
-  }
-
-  return value
-}
-
-function pickContrastCssValue(color: string) {
-  return getContrastRatio(color, LIGHT_CONTRAST_COLOR) >=
-    getContrastRatio(color, DARK_CONTRAST_COLOR)
-    ? LIGHT_CONTRAST_CSS_VALUE
-    : DARK_CONTRAST_CSS_VALUE
 }

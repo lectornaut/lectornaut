@@ -75,7 +75,7 @@ watch(needRefresh, (value) => {
   toast.info(t("components.globalActions.toasts.needRefresh.title"), {
     id: "pwa-need-refresh",
     duration: Infinity,
-    description: t("components.globalActions.toasts.needRefresh.description"),
+    // description: t("components.globalActions.toasts.needRefresh.description"),
     action: {
       label: t("components.globalActions.toasts.needRefresh.action"),
       onClick: () => updateServiceWorker(),
@@ -102,7 +102,6 @@ onMounted(() => {
 
 <template>
   <Sonner
-    offset="8px"
     close-button
     close-button-position="top-right"
     position="bottom-center"

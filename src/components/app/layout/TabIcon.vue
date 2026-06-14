@@ -27,7 +27,7 @@ const indicatorToneClass = computed(
 </script>
 
 <template>
-  <span class="relative shrink-0">
+  <span class="relative flex shrink-0 items-center justify-center">
     <Component :is="resolvedIcon" />
     <span
       v-if="indicator"
