@@ -140,7 +140,7 @@ function googleApiErrorDetail(body: unknown): string | null {
  * Per-app nouns for the shared failure copy below — the triage logic is
  * identical across Google APIs; only the names differ.
  */
-interface ConnectionAppCopy {
+export interface ConnectionAppCopy {
   /** Display name, e.g. "Google Calendar". */
   app: string
   /** Cloud API to enable in the console, e.g. "Google Calendar API". */
@@ -214,7 +214,7 @@ function googleAuthRejectionMessage(
 }
 
 /** Shared model-facing copy for binding/token failures (read + write tools). */
-function bindingFailureMessage(
+export function bindingFailureMessage(
   reason:
     | "not_connected"
     | "needs_reauth"
@@ -238,7 +238,7 @@ function bindingFailureMessage(
       )
     case "config":
       return (
-        `${copy.app} is unavailable: the server's Google OAuth ` +
+        `${copy.app} is unavailable: the server's OAuth ` +
         "client isn't configured."
       )
     case "transient":
@@ -480,7 +480,7 @@ const updateCalendarEventInputSchema = z.object({
   ...writeTimeFields,
 })
 
-type ConnectionToolRunContext = Parameters<
+export type ConnectionToolRunContext = Parameters<
   Parameters<typeof ai.defineTool>[1]
 >[1]
 
@@ -491,12 +491,16 @@ type ConnectionToolRunContext = Parameters<
  * passed the `requiredScope` check. Generic over the tool's result shape —
  * `fail` builds the tool-specific failure payload.
  */
-async function runConfirmedConnectionWrite<T>(opts: {
+export async function runConfirmedConnectionWrite<T>(opts: {
   ctx: ConnectionToolRunContext
   provider: ConnectionProvider
   copy: ConnectionAppCopy
-  /** Scope the binding must have GRANTED for this write to be executable. */
-  requiredScope: string
+  /**
+   * Scope the binding must have GRANTED for this write — or `null` when the
+   * provider gates writes by something other than OAuth scopes (GitHub App
+   * permissions; an insufficient permission surfaces as a 403 at the API).
+   */
+  requiredScope: string | null
   missingScopeMessage: string
   /** Interrupt metadata tag the client card branches on. */
   confirmKind: string
@@ -549,7 +553,10 @@ async function runConfirmedConnectionWrite<T>(opts: {
   if (!token.ok) {
     return opts.fail(bindingFailureMessage(token.reason, opts.copy))
   }
-  if (!hasGrantedScope(token.grantedScopes, opts.requiredScope)) {
+  if (
+    opts.requiredScope !== null &&
+    !hasGrantedScope(token.grantedScopes, opts.requiredScope)
+  ) {
     return opts.fail(opts.missingScopeMessage)
   }
 
@@ -986,7 +993,7 @@ export const readDriveFileTool = ai.defineTool(
     const token = await resolveDriveToken(ctx)
     if (!token.ok) return readFailure(token.message)
 
-    let meta = await fetchDriveFileMetadata(token.accessToken, fileId)
+    const meta = await fetchDriveFileMetadata(token.accessToken, fileId)
     if ("error" in meta) {
       return readFailure(
         `Drive request failed before returning (${meta.error}).`

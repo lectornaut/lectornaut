@@ -481,7 +481,11 @@ export type IntegrationSource = (typeof INTEGRATION_SOURCES)[number]
 // teams/{teamId}/connections/{provider}); the capabilities it contributes are
 // ordinary integration docs with the reserved `source: "published"`.
 
-export const CONNECTION_PROVIDERS = ["google-calendar", "google-drive"] as const
+export const CONNECTION_PROVIDERS = [
+  "google-calendar",
+  "google-drive",
+  "github",
+] as const
 export type ConnectionProvider = (typeof CONNECTION_PROVIDERS)[number]
 
 /**
@@ -515,9 +519,11 @@ export type ConnectionBindingStatus =
  */
 export const GOOGLE_CALENDAR_TOOL_KEY = "googleCalendar"
 export const GOOGLE_DRIVE_TOOL_KEY = "googleDrive"
+export const GITHUB_TOOL_KEY = "gitHub"
 export const CONNECTION_TOOL_KEYS = [
   GOOGLE_CALENDAR_TOOL_KEY,
   GOOGLE_DRIVE_TOOL_KEY,
+  GITHUB_TOOL_KEY,
 ] as const
 export type ConnectionToolKey = (typeof CONNECTION_TOOL_KEYS)[number]
 
@@ -527,6 +533,12 @@ export type ConnectionToolKey = (typeof CONNECTION_TOOL_KEYS)[number]
  * enable gate, the same one-gate-per-app rule as the calendar write tools.
  */
 export const GOOGLE_DRIVE_READ_FILE_TOOL_NAME = "readDriveFile"
+
+/**
+ * Companion read tool to `gitHub` (file/dir content fetch) — rides the one
+ * gitHub install gate, like `readDriveFile` does for googleDrive.
+ */
+export const GITHUB_READ_FILE_TOOL_NAME = "readGitHubFile"
 
 /**
  * Genkit wire-names of each app's confirm-gated WRITE tools (no integration
@@ -550,6 +562,28 @@ export const GOOGLE_DRIVE_WRITE_TOOL_NAMES = [
   "createDriveFile",
   "updateDriveFile",
 ] as const
+/**
+ * GitHub confirm-gated write tools (P2). `addGitHubComment` covers issues AND
+ * pull requests (PRs are issues for the comment API).
+ */
+export const GITHUB_WRITE_TOOL_NAMES = [
+  "createGitHubIssue",
+  "addGitHubComment",
+  "updateGitHubIssue",
+] as const
+
+/**
+ * Union of EVERY connection provider's write-tool wire-names — the single
+ * source the bot's interrupt-marking + resume-flow dispatch key on, so a new
+ * provider's writes are recognized at all those sites by extending this list
+ * alone (the resume site is fail-closed: an unrecognized write-interrupt
+ * hard-rejects the member's Approve/Cancel click).
+ */
+export const CONNECTION_WRITE_TOOL_NAMES: readonly string[] = [
+  ...GOOGLE_CALENDAR_WRITE_TOOL_NAMES,
+  ...GOOGLE_DRIVE_WRITE_TOOL_NAMES,
+  ...GITHUB_WRITE_TOOL_NAMES,
+]
 
 // ── OAuth scope hierarchy ───────────────────────────────────────────────────
 // Shared so the server's write gate (`hasGrantedScope` in connectionTools)
@@ -571,6 +605,10 @@ export const GOOGLE_DRIVE_READONLY_SCOPE =
 export const GOOGLE_DRIVE_FILE_SCOPE =
   "https://www.googleapis.com/auth/drive.file"
 
+// GitHub is a GitHub App, not an OAuth App: access is governed by the app's
+// granted PERMISSIONS + installed repos, not OAuth scopes — so it has no scope
+// constants and requests no `scope`.
+
 /** Granted scopes (key) that satisfy a required scope (value). */
 const SCOPE_SATISFIERS: Readonly<Record<string, readonly string[]>> = {
   [GOOGLE_CALENDAR_EVENTS_SCOPE]: [
@@ -590,6 +628,8 @@ const SCOPE_SATISFIERS: Readonly<Record<string, readonly string[]>> = {
     GOOGLE_DRIVE_FULL_SCOPE,
   ],
   [GOOGLE_DRIVE_FILE_SCOPE]: [GOOGLE_DRIVE_FILE_SCOPE, GOOGLE_DRIVE_FULL_SCOPE],
+  // GitHub needs no rows — a GitHub App requests no scopes; access is governed
+  // by its installed-repo permissions, gated at the API (403/404), not here.
 }
 
 /**

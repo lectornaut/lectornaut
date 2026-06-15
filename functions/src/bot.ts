@@ -106,10 +106,8 @@ import {
   hydrateBuiltInAgent,
 } from "./builtInAgents.js"
 import {
-  CALENDAR_WRITE_TOOL_NAMES,
   createCalendarEventTool,
   createDriveFileTool,
-  DRIVE_WRITE_TOOL_NAMES,
   googleCalendarTool,
   googleDriveTool,
   readDriveFileTool,
@@ -117,6 +115,8 @@ import {
   updateDriveFileTool,
 } from "./connectionTools.js"
 import {
+  CONNECTION_WRITE_TOOL_NAMES,
+  GITHUB_TOOL_KEY,
   GOOGLE_CALENDAR_TOOL_KEY,
   GOOGLE_DRIVE_TOOL_KEY,
   type BotChatRole,
@@ -131,6 +131,13 @@ import {
 } from "./genkitClient.js"
 import { aiMiddlewares } from "./genkitMiddleware.js"
 import {
+  addGitHubCommentTool,
+  createGitHubIssueTool,
+  gitHubTool,
+  readGitHubFileTool,
+  updateGitHubIssueTool,
+} from "./githubTools.js"
+import {
   listDispatchable,
   listIntegrations,
   type AgentSpec,
@@ -144,9 +151,8 @@ import { can, Capabilities } from "./permissions.js"
 import { GENKIT_OPTS } from "./runtimeConfig.js"
 import {
   anthropicApiKey,
+  CONNECTION_OAUTH_SECRETS,
   geminiApiKey,
-  googleOauthClientId,
-  googleOauthClientSecret,
   openaiApiKey,
 } from "./secrets.js"
 import type { TeamAgentDoc } from "./teamAgents.js"
@@ -158,6 +164,16 @@ import type { IMembershipRole, WorkspaceNodeScope } from "./types.js"
 import { assertWithinBudget, incrementTeamTokenUsage } from "./usageMetering.js"
 import { generateId } from "./utilities.js"
 import { resolveParticipation } from "./workspaceRoles.js"
+
+/**
+ * Every connection provider's write-tool wire-names as one membership set —
+ * the live-stream interrupt marking AND the fail-closed resume-flow dispatch
+ * key on this so a new provider's writes are recognized everywhere by
+ * extending the shared union, never by editing each site.
+ */
+const CONNECTION_WRITE_TOOL_NAME_SET: ReadonlySet<string> = new Set(
+  CONNECTION_WRITE_TOOL_NAMES
+)
 
 // `AuthData` isn't re-exported from `firebase-functions/v2/https`, so derive
 // it from `CallableRequest["auth"]` to avoid reaching into internal paths.
@@ -1063,6 +1079,20 @@ function pickChatTools(
     tools.push(googleDriveTool, readDriveFileTool)
     if (allowInterrupts) {
       tools.push(createDriveFileTool, updateDriveFileTool)
+    }
+  }
+  // GitHub (docs/connections-github.prompt.md): the search + file-read tools
+  // ride the one gitHub install gate; reads are headless-eligible (handlers
+  // fall back to `connectionsActsAsUid`). The three confirm-gated writes
+  // require an interactive turn — same rationale as the calendar/drive blocks.
+  if (enabledBuiltInTools.has(GITHUB_TOOL_KEY)) {
+    tools.push(gitHubTool, readGitHubFileTool)
+    if (allowInterrupts) {
+      tools.push(
+        createGitHubIssueTool,
+        addGitHubCommentTool,
+        updateGitHubIssueTool
+      )
     }
   }
   return tools
@@ -2107,8 +2137,7 @@ async function streamChatToClientInner(
           const isInterrupt =
             !!part.metadata?.interrupt ||
             INTERRUPT_TOOL_NAMES.has(part.toolRequest.name) ||
-            CALENDAR_WRITE_TOOL_NAMES.has(part.toolRequest.name) ||
-            DRIVE_WRITE_TOOL_NAMES.has(part.toolRequest.name)
+            CONNECTION_WRITE_TOOL_NAME_SET.has(part.toolRequest.name)
           sendChunk({
             toolCall: {
               ref: part.toolRequest.ref,
@@ -2210,8 +2239,7 @@ async function streamChatToClientInner(
         const isInterrupt =
           !!part.metadata?.interrupt ||
           INTERRUPT_TOOL_NAMES.has(part.toolRequest.name) ||
-          CALENDAR_WRITE_TOOL_NAMES.has(part.toolRequest.name) ||
-          DRIVE_WRITE_TOOL_NAMES.has(part.toolRequest.name)
+          CONNECTION_WRITE_TOOL_NAME_SET.has(part.toolRequest.name)
         sendChunk({
           toolCall: {
             ref: part.toolRequest.ref,
@@ -3456,8 +3484,7 @@ export const sendBotMessage = onCallGenkit(
       geminiApiKey,
       anthropicApiKey,
       openaiApiKey,
-      googleOauthClientId,
-      googleOauthClientSecret,
+      ...CONNECTION_OAUTH_SECRETS,
     ],
     authPolicy: (auth) => !!auth?.token?.email_verified,
     enforceAppCheck: true,
@@ -3617,6 +3644,9 @@ const CONFIRM_RESTART_TOOLS = {
   updateCalendarEvent: updateCalendarEventTool,
   createDriveFile: createDriveFileTool,
   updateDriveFile: updateDriveFileTool,
+  createGitHubIssue: createGitHubIssueTool,
+  addGitHubComment: addGitHubCommentTool,
+  updateGitHubIssue: updateGitHubIssueTool,
 } as const
 
 /** Client decision payload for a confirm-style interrupt. */
@@ -3748,8 +3778,7 @@ const respondToBotInterruptFlow = ai.defineFlow(
                 !!p.toolRequest?.name &&
                 (!!p.metadata?.interrupt ||
                   INTERRUPT_TOOL_NAMES.has(p.toolRequest.name) ||
-                  CALENDAR_WRITE_TOOL_NAMES.has(p.toolRequest.name) ||
-                  DRIVE_WRITE_TOOL_NAMES.has(p.toolRequest.name))
+                  CONNECTION_WRITE_TOOL_NAME_SET.has(p.toolRequest.name))
             )
           : []
       if (!lastMessageInterruptParts.includes(interruptPart)) {
@@ -3931,8 +3960,7 @@ export const respondToBotInterrupt = onCallGenkit(
       geminiApiKey,
       anthropicApiKey,
       openaiApiKey,
-      googleOauthClientId,
-      googleOauthClientSecret,
+      ...CONNECTION_OAUTH_SECRETS,
     ],
     authPolicy: (auth) => !!auth?.token?.email_verified,
     enforceAppCheck: true,

@@ -16,6 +16,15 @@ import type { ConnectionStatus } from "@lectornaut/shared/domain"
 /** Refresh when the access token is missing or expires within this window. */
 export const ACCESS_TOKEN_REFRESH_SKEW_MS = 60_000
 
+/**
+ * Stored as `accessTokenExpiresAtMs` for any token response without an
+ * `expires_in` (classic GitHub OAuth, or a GitHub App with token expiration
+ * disabled). A far-future epoch keeps `shouldRefreshAccessToken` returning
+ * false forever so the token is served directly — never routed into a refresh
+ * path that may not exist. NOT `Infinity`: must survive a Firestore round-trip.
+ */
+export const NON_EXPIRING_TOKEN_EXPIRY_MS = Number.MAX_SAFE_INTEGER
+
 export function shouldRefreshAccessToken(
   expiresAtMs: number | null | undefined,
   nowMs: number
@@ -24,6 +33,17 @@ export function shouldRefreshAccessToken(
     return true
   }
   return expiresAtMs - nowMs <= ACCESS_TOKEN_REFRESH_SKEW_MS
+}
+
+/**
+ * Normalize an OAuth token endpoint's granted-scope string into an array.
+ * Splits on commas AND whitespace because providers disagree: Google returns
+ * space-separated, GitHub comma-separated. A single split rule covers both,
+ * so a `repo,read:org` grant doesn't store as one garbage element (which
+ * would make every scope check fail).
+ */
+export function parseScopeList(scope: string): string[] {
+  return scope.split(/[,\s]+/).filter((s) => s.length > 0)
 }
 
 /**
@@ -52,18 +72,33 @@ export function decodeJwtClaims(
 
 export interface ParsedTokenResponse {
   accessToken: string
-  /** Absolute expiry (ms epoch), derived from `expires_in`. */
+  /** Absolute expiry (ms epoch), derived from `expires_in` (or the
+   * non-expiring sentinel for providers that issue permanent tokens). */
   expiresAtMs: number
   /** Present only on first consent (or `prompt=consent`); keep the stored one otherwise. */
   refreshToken: string | null
-  /** Space-separated granted scopes (may differ from requested). */
-  scope: string
-  /** From the `id_token` when `openid email` was requested. */
+  /** Granted scopes, normalized across the comma/space wire formats. */
+  scopes: string[]
+  /** From the `id_token` when `openid email` was requested (Google); null for
+   * providers whose identity needs a separate userinfo call (GitHub). */
   email: string | null
 }
 
-/** Defensively parse Google's token endpoint success body. Null = unusable. */
-export function parseGoogleTokenResponse(
+/**
+ * Defensively parse an OAuth 2.0 token endpoint success body (Google AND
+ * GitHub — both speak the same response shape). Null = unusable (no access
+ * token; e.g. GitHub returns `{ error: "bad_verification_code" }` on a bad
+ * code, which has no `access_token`). Email is read from the `id_token` when
+ * present (Google); GitHub returns none, so its binding identity is fetched
+ * separately from the userinfo endpoint.
+ *
+ * Token lifetime is AUTO-DETECTED from `expires_in`: present+positive →
+ * expiring (refresh when stale); absent → non-expiring (the far-future
+ * sentinel, served forever). One rule covers classic GitHub OAuth (no
+ * expires_in), GitHub Apps under EITHER token-expiration setting, and Google
+ * (always expiring) — no per-provider flag.
+ */
+export function parseOauthTokenResponse(
   body: unknown,
   nowMs: number
 ): ParsedTokenResponse | null {
@@ -72,9 +107,11 @@ export function parseGoogleTokenResponse(
   const accessToken = record.access_token
   if (typeof accessToken !== "string" || accessToken.length === 0) return null
   const expiresIn =
-    typeof record.expires_in === "number" && Number.isFinite(record.expires_in)
+    typeof record.expires_in === "number" &&
+    Number.isFinite(record.expires_in) &&
+    record.expires_in > 0
       ? record.expires_in
-      : 0
+      : null
   const claims =
     typeof record.id_token === "string"
       ? decodeJwtClaims(record.id_token)
@@ -85,13 +122,18 @@ export function parseGoogleTokenResponse(
       : null
   return {
     accessToken,
-    expiresAtMs: nowMs + Math.max(0, expiresIn) * 1000,
+    expiresAtMs:
+      expiresIn !== null
+        ? nowMs + expiresIn * 1000
+        : NON_EXPIRING_TOKEN_EXPIRY_MS,
     refreshToken:
       typeof record.refresh_token === "string" &&
       record.refresh_token.length > 0
         ? record.refresh_token
         : null,
-    scope: typeof record.scope === "string" ? record.scope : "",
+    scopes: parseScopeList(
+      typeof record.scope === "string" ? record.scope : ""
+    ),
     email,
   }
 }
@@ -104,6 +146,16 @@ export type GoogleTokenFailureKind =
   /** Config / request problem (bad client id, malformed code, …). */
   | "rejected"
 
+/**
+ * Token-endpoint error codes that mean the GRANT is dead (refresh token
+ * revoked/expired) → flip the binding to needs_reauth. Google: `invalid_grant`;
+ * GitHub App: `bad_refresh_token`. NOT `bad_verification_code` — that's a bad
+ * one-time authorization code (retry the connect), not a dead binding.
+ */
+export function isDeadGrantError(error: string | null | undefined): boolean {
+  return error === "invalid_grant" || error === "bad_refresh_token"
+}
+
 export function classifyGoogleTokenFailure(
   status: number,
   body: unknown
@@ -112,9 +164,46 @@ export function classifyGoogleTokenFailure(
     typeof body === "object" && body !== null
       ? (body as Record<string, unknown>).error
       : undefined
-  if (error === "invalid_grant") return "invalid_grant"
+  if (isDeadGrantError(typeof error === "string" ? error : null)) {
+    return "invalid_grant"
+  }
   if (status === 429 || status >= 500) return "transient"
   return "rejected"
+}
+
+/**
+ * The `error` field of a token-endpoint body, if present. GitHub returns
+ * HTTP 200 with `{ error: "bad_verification_code" }` on a bad code (no
+ * `access_token`), so a 2xx exchange can still be a logical failure — the
+ * caller checks this when parsing yields no token.
+ */
+export function extractOauthError(body: unknown): string | null {
+  if (typeof body !== "object" || body === null) return null
+  const error = (body as Record<string, unknown>).error
+  return typeof error === "string" && error.length > 0 ? error : null
+}
+
+// ===========================================================================
+// Redirect URI allowlist (exchange `redirect_uri` validation)
+// ===========================================================================
+//
+// The exchange's redirect_uri is client-supplied, so the server only accepts
+// values it can vouch for: an RFC 8252 loopback host (desktop/Tauri) or an
+// EXACT match against the web callback DERIVED from the request's own Origin
+// (the web client always uses `${origin}/connections/callback`). Never an open
+// https pattern. The OAuth provider's registered-redirect-URI list is the real
+// boundary — a code only exists for a URI registered on our client — so this
+// is belt-and-suspenders, no config needed.
+
+export const LOOPBACK_REDIRECT_RE =
+  /^http:\/\/(127\.0\.0\.1|localhost):\d{1,5}(\/[A-Za-z0-9/_-]*)?$/
+
+export function isAllowedRedirectUri(
+  uri: string,
+  expectedWebCallback: string | null
+): boolean {
+  if (LOOPBACK_REDIRECT_RE.test(uri)) return true
+  return expectedWebCallback !== null && uri === expectedWebCallback
 }
 
 // ===========================================================================

@@ -69,9 +69,8 @@ import {
 } from "./runtimeConfig.js"
 import {
   anthropicApiKey,
+  CONNECTION_OAUTH_SECRETS,
   geminiApiKey,
-  googleOauthClientId,
-  googleOauthClientSecret,
   openaiApiKey,
   postmarkApiKey,
 } from "./secrets.js"
@@ -1623,8 +1622,7 @@ export const executeWorkflowRun = onDocumentCreated(
       anthropicApiKey,
       openaiApiKey,
       postmarkApiKey,
-      googleOauthClientId,
-      googleOauthClientSecret,
+      ...CONNECTION_OAUTH_SECRETS,
     ],
   },
   async (event) => {

@@ -74,6 +74,7 @@ import {
 } from "@/data/icons"
 import { useTeamCustomToolsStore } from "@/stores/teamCustomToolsStore"
 import {
+  GITHUB_WRITE_TOOL_NAMES,
   GOOGLE_CALENDAR_WRITE_TOOL_NAMES,
   GOOGLE_DRIVE_WRITE_TOOL_NAMES,
 } from "@lectornaut/shared/domain"
@@ -491,6 +492,103 @@ const calendarWriteResult = computed<{
   }
   if (typeof obj.approved === "boolean") {
     // Optimistic interim — the resumed turn is executing (or cancelling).
+    return { kind: "deciding", link: null }
+  }
+  return null
+})
+
+// ── GitHub-write confirmation (connection tools, P2) ────────────────────────
+//
+// createGitHubIssue / addGitHubComment / updateGitHubIssue follow the
+// calendar/drive pattern: the card renders the strict-validated draft from
+// `tool.input`, approval restarts the tool server-side, and the outcome card
+// keys off the `written | declined | failed` discriminator. Names come from
+// the shared vocabulary so the server dispatch and this card can't drift.
+const GITHUB_WRITE_TOOL_NAME_SET: ReadonlySet<string> = new Set(
+  GITHUB_WRITE_TOOL_NAMES
+)
+const isGitHubWrite = computed(() =>
+  GITHUB_WRITE_TOOL_NAME_SET.has(props.tool.name)
+)
+
+interface GitHubWriteDraft {
+  action: "create" | "comment" | "update"
+  repo: string | null
+  title: string | null
+  issueNumber: number | null
+  bodyPreview: string
+  state: string | null
+  labels: string[]
+}
+
+const GITHUB_PREVIEW_CHARS = 280
+
+const gitHubWriteDraft = computed<GitHubWriteDraft | null>(() => {
+  if (!isGitHubWrite.value) return null
+  const raw = props.tool.input
+  if (!raw || typeof raw !== "object") return null
+  const obj = raw as Record<string, unknown>
+  const action =
+    props.tool.name === "createGitHubIssue"
+      ? "create"
+      : props.tool.name === "addGitHubComment"
+        ? "comment"
+        : "update"
+  const body = typeof obj.body === "string" ? obj.body : ""
+  return {
+    action,
+    repo: draftString(obj.repo),
+    title: draftString(obj.title),
+    issueNumber: typeof obj.issueNumber === "number" ? obj.issueNumber : null,
+    bodyPreview:
+      body.length > GITHUB_PREVIEW_CHARS
+        ? `${body.slice(0, GITHUB_PREVIEW_CHARS)}…`
+        : body,
+    state: draftString(obj.state),
+    labels: Array.isArray(obj.labels)
+      ? (obj.labels as unknown[]).filter(
+          (entry): entry is string => typeof entry === "string"
+        )
+      : [],
+  }
+})
+
+const gitHubWriteTitleKey = computed<string>(() => {
+  const action = gitHubWriteDraft.value?.action
+  return action === "create"
+    ? "ai.toolCall.gitHubWrite.createTitle"
+    : action === "comment"
+      ? "ai.toolCall.gitHubWrite.commentTitle"
+      : "ai.toolCall.gitHubWrite.updateTitle"
+})
+
+const gitHubWriteResult = computed<{
+  kind: "written" | "declined" | "failed" | "deciding"
+  link: string | null
+} | null>(() => {
+  if (!isGitHubWrite.value || props.tool.output === undefined) return null
+  const raw = props.tool.output
+  if (!raw || typeof raw !== "object") return null
+  const obj = raw as Record<string, unknown>
+  if (typeof obj.ok === "boolean") {
+    const item =
+      obj.item && typeof obj.item === "object"
+        ? (obj.item as Record<string, unknown>)
+        : null
+    const outcome =
+      obj.outcome === "written" ||
+      obj.outcome === "declined" ||
+      obj.outcome === "failed"
+        ? obj.outcome
+        : obj.ok
+          ? "written"
+          : "failed"
+    return {
+      kind: outcome,
+      link: item && typeof item.url === "string" ? item.url : null,
+    }
+  }
+  if (typeof obj.approved === "boolean") {
     return { kind: "deciding", link: null }
   }
   return null
@@ -998,6 +1096,10 @@ const hasCustomDoneRenderer = computed(() => {
     case "createDriveFile":
     case "updateDriveFile":
       return driveWriteResult.value !== null
+    case "createGitHubIssue":
+    case "addGitHubComment":
+    case "updateGitHubIssue":
+      return gitHubWriteResult.value !== null
     default:
       return false
   }
@@ -1031,6 +1133,7 @@ const isErrorResult = computed<boolean>(() => {
   // below precisely because that suppression would otherwise hide it.
   if (isCalendarWrite.value) return calendarWriteResult.value?.kind === "failed"
   if (isDriveWrite.value) return driveWriteResult.value?.kind === "failed"
+  if (isGitHubWrite.value) return gitHubWriteResult.value?.kind === "failed"
   // Tools with a dedicated card render their own success/failure story, so
   // we don't second-guess them — only probe the generic fallback path.
   if (hasCustomDoneRenderer.value) return false
@@ -1328,6 +1431,66 @@ const showChevron = computed(
         </CardFooter>
       </Card>
 
+      <!-- GitHub-write confirm: same contract as the drive card. -->
+      <Card v-else-if="isLiveInterrupt && gitHubWriteDraft" size="sm">
+        <CardHeader>
+          <CardTitle>{{ t(gitHubWriteTitleKey) }}</CardTitle>
+          <CardDescription>
+            {{ t("ai.toolCall.gitHubWrite.confirmHint") }}
+          </CardDescription>
+        </CardHeader>
+        <CardContent class="grid gap-1 text-sm">
+          <div v-if="gitHubWriteDraft.repo" class="font-medium">
+            {{ gitHubWriteDraft.repo
+            }}<template v-if="gitHubWriteDraft.issueNumber"
+              >#{{ gitHubWriteDraft.issueNumber }}</template
+            >
+          </div>
+          <div v-if="gitHubWriteDraft.title" class="text-foreground">
+            {{ gitHubWriteDraft.title }}
+          </div>
+          <div
+            v-if="gitHubWriteDraft.bodyPreview"
+            class="text-muted-foreground border-border border-l-2 pl-2 text-xs whitespace-pre-wrap"
+          >
+            {{ gitHubWriteDraft.bodyPreview }}
+          </div>
+          <div
+            v-if="gitHubWriteDraft.state"
+            class="text-muted-foreground/80 text-xs"
+          >
+            {{ t("ai.toolCall.gitHubWrite.state") }}:
+            {{ gitHubWriteDraft.state }}
+          </div>
+          <div
+            v-if="gitHubWriteDraft.labels.length > 0"
+            class="text-muted-foreground/80 text-xs"
+          >
+            {{ t("ai.toolCall.gitHubWrite.labels") }}:
+            {{ gitHubWriteDraft.labels.join(", ") }}
+          </div>
+        </CardContent>
+        <CardFooter class="gap-2">
+          <Button
+            size="sm"
+            :disabled="submittingDecision !== null"
+            @click="submitDecision(true)"
+          >
+            <Spinner v-if="submittingDecision === 'approve'" />
+            {{ t("ai.toolCall.gitHubWrite.approve") }}
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            :disabled="submittingDecision !== null"
+            @click="submitDecision(false)"
+          >
+            <Spinner v-if="submittingDecision === 'cancel'" />
+            {{ t("ai.toolCall.gitHubWrite.cancel") }}
+          </Button>
+        </CardFooter>
+      </Card>
+
       <!-- ============================================================== -->
       <!-- Live interrupt with malformed payload — polite escape hatch. -->
       <!-- ============================================================== -->
@@ -1398,6 +1561,22 @@ const showChevron = computed(
         <CardContent class="text-muted-foreground flex items-center gap-2">
           <IconCircleHelp />
           <span>{{ t("ai.toolCall.driveWrite.unconfirmed") }}</span>
+        </CardContent>
+      </Card>
+
+      <Card v-else-if="isAbandonedInterrupt && gitHubWriteDraft" size="sm">
+        <CardHeader>
+          <CardTitle>{{ t(gitHubWriteTitleKey) }}</CardTitle>
+          <CardDescription v-if="gitHubWriteDraft.repo">
+            {{ gitHubWriteDraft.repo
+            }}<template v-if="gitHubWriteDraft.issueNumber"
+              >#{{ gitHubWriteDraft.issueNumber }}</template
+            >
+          </CardDescription>
+        </CardHeader>
+        <CardContent class="text-muted-foreground flex items-center gap-2">
+          <IconCircleHelp />
+          <span>{{ t("ai.toolCall.gitHubWrite.unconfirmed") }}</span>
         </CardContent>
       </Card>
 
@@ -1503,6 +1682,53 @@ const showChevron = computed(
             <IconTriangleAlert class="text-destructive" />
             <span class="text-destructive">
               {{ t("ai.toolCall.driveWrite.failed") }}
+            </span>
+          </template>
+        </CardContent>
+      </Card>
+
+      <!-- GitHub-write outcome: same contract as the calendar/drive cards. -->
+      <Card v-else-if="isGitHubWrite && gitHubWriteResult" size="sm">
+        <CardHeader v-if="gitHubWriteDraft?.repo">
+          <CardTitle>
+            {{ gitHubWriteDraft.repo
+            }}<template v-if="gitHubWriteDraft.issueNumber"
+              >#{{ gitHubWriteDraft.issueNumber }}</template
+            >
+          </CardTitle>
+        </CardHeader>
+        <CardContent class="flex items-center gap-2">
+          <template v-if="gitHubWriteResult.kind === 'deciding'">
+            <Spinner />
+            <span class="text-muted-foreground">
+              {{ t("ai.toolCall.gitHubWrite.executing") }}
+            </span>
+          </template>
+          <template v-else-if="gitHubWriteResult.kind === 'written'">
+            <IconCheck class="text-muted-foreground" />
+            <span class="text-foreground">
+              {{ t("ai.toolCall.gitHubWrite.written") }}
+              <a
+                v-if="gitHubWriteResult.link"
+                :href="gitHubWriteResult.link"
+                target="_blank"
+                rel="noopener noreferrer"
+                class="text-primary underline-offset-2 hover:underline"
+              >
+                {{ t("ai.toolCall.gitHubWrite.openItem") }}
+              </a>
+            </span>
+          </template>
+          <template v-else-if="gitHubWriteResult.kind === 'declined'">
+            <IconCircleHelp class="text-muted-foreground" />
+            <span class="text-muted-foreground">
+              {{ t("ai.toolCall.gitHubWrite.declined") }}
+            </span>
+          </template>
+          <template v-else>
+            <IconTriangleAlert class="text-destructive" />
+            <span class="text-destructive">
+              {{ t("ai.toolCall.gitHubWrite.failed") }}
             </span>
           </template>
         </CardContent>

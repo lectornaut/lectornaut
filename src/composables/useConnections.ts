@@ -9,8 +9,9 @@
  *
  * Verbs:
  *   - install / uninstall (admin-gated) — registration only, no OAuth.
- *   - connect / disconnect (any member, own account) — `connect` runs the
- *     GIS popup **code** flow client-side and posts the one-time code to
+ *   - connect / disconnect (any member, own account) — `connect` runs an
+ *     authorization-code popup (web: redirect → `/connections/callback`;
+ *     desktop: system-browser loopback) and posts the one-time code to
  *     `completeConnectionBinding`; the exchange happens server-side because
  *     only functions hold the OAuth client secret.
  *
@@ -55,67 +56,6 @@ import { storeToRefs } from "pinia"
 import { computed, type ComputedRef } from "vue"
 import { toast } from "vue-sonner"
 
-// ─── GIS popup code flow ─────────────────────────────────────────────────────
-// Loaded on demand from Google's CDN — the library is script-only (no npm
-// package) and only members who click Connect ever pay for it.
-
-const GIS_SRC = "https://accounts.google.com/gsi/client"
-
-interface GoogleCodeResponse {
-  code?: string
-  error?: string
-}
-
-interface GoogleCodeClientConfig {
-  client_id: string
-  scope: string
-  ux_mode: "popup"
-  /** Forces a refresh-token reissue on every connect (see connections.ts). */
-  prompt: "consent"
-  callback: (response: GoogleCodeResponse) => void
-  error_callback?: (error: { type?: string; message?: string }) => void
-}
-
-interface GoogleCodeClient {
-  requestCode(): void
-}
-
-interface GisWindow {
-  google?: {
-    accounts?: {
-      oauth2?: {
-        initCodeClient(config: GoogleCodeClientConfig): GoogleCodeClient
-      }
-    }
-  }
-}
-
-let gisLoad: Promise<void> | null = null
-
-function loadGis(): Promise<void> {
-  const win = window as unknown as GisWindow
-  if (win.google?.accounts?.oauth2) return Promise.resolve()
-  gisLoad ??= new Promise<void>((resolve, reject) => {
-    const script = document.createElement("script")
-    script.src = GIS_SRC
-    script.async = true
-    script.onload = () => resolve()
-    script.onerror = () => {
-      gisLoad = null // allow a retry after a transient network failure
-      reject(new Error("Couldn't load Google's sign-in library."))
-    }
-    document.head.appendChild(script)
-  })
-  return gisLoad
-}
-
-/**
- * GIS `error_callback` types we branch UX on: a blocked popup gets an
- * actionable toast; a user-closed popup is a deliberate cancel, not an error.
- */
-const GIS_POPUP_BLOCKED = "popup_failed_to_open"
-const GIS_POPUP_CLOSED = "popup_closed"
-
 // ─── Tauri system-browser flow ───────────────────────────────────────────────
 // Inside the Tauri webview the GIS popup flow is unusable twice over: the
 // webview won't spawn the popup, and Google rejects OAuth from embedded
@@ -126,15 +66,14 @@ const GIS_POPUP_CLOSED = "popup_closed"
 // exchange, now with the loopback `redirectUri` (the server allowlists
 // loopback hosts only). Tokens never exist inside the app.
 
-const GOOGLE_AUTH_ENDPOINT = "https://accounts.google.com/o/oauth2/v2/auth"
-
 /**
  * Loopback redirect the desktop authorization listens on — registered
- * VERBATIM under the connections OAuth client's Authorized redirect URIs
+ * VERBATIM under each provider's OAuth client's Authorized redirect URIs
  * (docs/connections-feature.prompt.md → deploy prerequisites). Sharing the
  * sign-in listener's port is safe: both flows are one-shot and
  * user-sequential, so they never race; the distinct path keeps the two
- * registrations self-documenting in the console.
+ * registrations self-documenting in the console. Shared across providers, so
+ * each provider's OAuth app must register this exact URI.
  */
 const TAURI_LOOPBACK_REDIRECT_URI = "http://localhost:7878/connections-callback"
 
@@ -143,7 +82,9 @@ interface TauriAuthorizationResult {
   state: string | null
 }
 
-/** Run the system-browser flow; resolve with code + the loopback redirect. */
+/** Run the system-browser flow; resolve with code + the loopback redirect.
+ * Provider-agnostic: the authorize URL + grant params come from the app
+ * descriptor (Google: offline+consent; GitHub: none). */
 async function requestAuthorizationCodeTauri(
   app: ConnectionAppDescriptor,
   clientId: string
@@ -153,17 +94,11 @@ async function requestAuthorizationCodeTauri(
   const state = crypto.randomUUID()
   const result = await invoke<TauriAuthorizationResult>("authorize_oauth", {
     config: {
-      auth_url: GOOGLE_AUTH_ENDPOINT,
+      auth_url: app.authorizeUrl,
       client_id: clientId,
       redirect_uri: TAURI_LOOPBACK_REDIRECT_URI,
       scopes: app.scopes.join(" "),
-      extra_params: {
-        // Same grant semantics as the GIS popup flow: offline for the
-        // refresh token, consent so Google reissues it on reconnect.
-        access_type: "offline",
-        prompt: "consent",
-        state,
-      },
+      extra_params: { ...app.authParams, state },
     },
   })
   if (result.state !== state) {
@@ -172,47 +107,115 @@ async function requestAuthorizationCodeTauri(
   return { code: result.code, redirectUri: TAURI_LOOPBACK_REDIRECT_URI }
 }
 
+// ─── Web authorization-code redirect flow (non-Google providers) ─────────────
+// The generic OAuth 2.0 popup: open the provider's authorize URL in a popup,
+// it redirects to our same-origin /connections/callback SPA route, which
+// postMessages the one-time code home. The code (NOT a token) crosses the
+// browser; the server exchanges it. CSRF nonce stays in this closure (the
+// opener never navigates), exactly like the Tauri state check.
+
+/** Message type the callback page posts — namespaced so a sign-in popup's
+ * token message can never be consumed by the connection listener. */
+const CONNECTION_OAUTH_MESSAGE = "connection_oauth"
+/** Reasons surfaced as Error messages so connect() can branch the toast. */
+const REDIRECT_POPUP_BLOCKED = "popup_blocked"
+const REDIRECT_POPUP_CLOSED = "popup_closed"
+
+interface ConnectionOauthMessage {
+  type: typeof CONNECTION_OAUTH_MESSAGE
+  code?: string
+  state?: string
+  error?: string
+}
+
 /**
- * Run the popup and resolve with the one-time authorization code.
- *
- * POPUP-BLOCKER CONSTRAINT: browsers allow `window.open` only inside a live
- * user activation (the click). Everything between the click and
- * `client.requestCode()` must therefore stay synchronous-or-microtask —
- * which is why `loadGis()` is PRELOADED at composable setup (below): on
- * first use, loading the script here would burn the activation on a network
- * fetch and the popup would open blocked ("Failed to open popup window").
- * With the script warm, `await loadGis()` is a resolved-promise microtask
- * and the popup opens within the activation window.
+ * Run the redirect popup and resolve with the code + the redirect URI used
+ * (which the server re-sends at exchange — it must match the authorize
+ * request). Same popup-activation constraint as GIS: `window.open` runs
+ * synchronously inside the click.
  */
-async function requestAuthorizationCode(
+function requestAuthorizationCodeRedirect(
   app: ConnectionAppDescriptor,
   clientId: string
-): Promise<string> {
-  await loadGis()
-  const win = window as unknown as GisWindow
-  const oauth2 = win.google?.accounts?.oauth2
-  if (!oauth2) throw new Error("Couldn't load Google's sign-in library.")
-  return new Promise<string>((resolve, reject) => {
-    const client = oauth2.initCodeClient({
-      client_id: clientId,
-      scope: app.scopes.join(" "),
-      ux_mode: "popup",
-      prompt: "consent",
-      callback: (response) => {
-        if (response.code) resolve(response.code)
-        else reject(new Error(response.error ?? GIS_POPUP_CLOSED))
-      },
-      error_callback: (error) => {
-        // Surface the machine-readable `type` as the message so `connect()`
-        // can branch (blocked → actionable toast; closed → silent cancel).
-        reject(new Error(error.type ?? error.message ?? "Popup failed."))
-      },
-    })
-    client.requestCode()
-  })
+): Promise<{ code: string; redirectUri: string }> {
+  const state = crypto.randomUUID()
+  const redirectUri = `${window.location.origin}/connections/callback`
+  const url = new URL(app.authorizeUrl)
+  url.searchParams.set("client_id", clientId)
+  url.searchParams.set("redirect_uri", redirectUri)
+  url.searchParams.set("response_type", "code")
+  // GitHub Apps use permissions, not scopes — omit an empty `scope`.
+  if (app.scopes.length > 0) {
+    url.searchParams.set("scope", app.scopes.join(" "))
+  }
+  url.searchParams.set("state", state)
+  for (const [key, value] of Object.entries(app.authParams)) {
+    url.searchParams.set(key, value)
+  }
+  const popup = window.open(
+    url.toString(),
+    "_blank",
+    "popup,width=600,height=720"
+  )
+  if (!popup) return Promise.reject(new Error(REDIRECT_POPUP_BLOCKED))
+
+  return new Promise<{ code: string; redirectUri: string }>(
+    (resolve, reject) => {
+      let graceTimer: ReturnType<typeof setTimeout> | null = null
+      const cleanup = () => {
+        window.removeEventListener("message", onMessage)
+        clearInterval(closeWatch)
+        if (graceTimer) clearTimeout(graceTimer)
+      }
+      const onMessage = (event: MessageEvent) => {
+        // Origin + type guards are the safety boundary: never read a foreign
+        // origin, never accept a non-connection message (e.g. a sign-in
+        // token postMessage).
+        if (event.origin !== window.location.origin) return
+        const data = event.data as ConnectionOauthMessage | undefined
+        if (!data || data.type !== CONNECTION_OAUTH_MESSAGE) return
+        cleanup()
+        if (data.error) return reject(new Error(data.error))
+        if (data.state !== state) {
+          return reject(new Error("Authorization state mismatch."))
+        }
+        if (typeof data.code !== "string" || !data.code) {
+          return reject(new Error(REDIRECT_POPUP_CLOSED))
+        }
+        resolve({ code: data.code, redirectUri })
+      }
+      // A closed popup MAY be a cancel — but the success message is posted
+      // immediately before window.close(), so a tick can see `closed` with the
+      // message still in flight. Give it a grace beat to win before we call it
+      // a cancel; onMessage's cleanup() cancels the grace timer if it lands.
+      const closeWatch = setInterval(() => {
+        if (!popup.closed || graceTimer) return
+        clearInterval(closeWatch)
+        graceTimer = setTimeout(() => {
+          cleanup()
+          reject(new Error(REDIRECT_POPUP_CLOSED))
+        }, 400)
+      }, 500)
+      window.addEventListener("message", onMessage)
+    }
+  )
 }
 
 // ─── Composable ──────────────────────────────────────────────────────────────
+
+/**
+ * Public OAuth client id per provider. Literal `import.meta.env.VITE_*`
+ * accesses (Vite only inlines literal keys, never a dynamic lookup). The two
+ * Google apps share one client; GitHub has its own.
+ */
+const OAUTH_CLIENT_ID_BY_PROVIDER: Record<
+  ConnectionProvider,
+  string | undefined
+> = {
+  "google-calendar": import.meta.env.VITE_GOOGLE_OAUTH_CLIENT_ID,
+  "google-drive": import.meta.env.VITE_GOOGLE_OAUTH_CLIENT_ID,
+  github: import.meta.env.VITE_GITHUB_OAUTH_CLIENT_ID,
+}
 
 export interface ConnectionAppRow {
   app: ConnectionAppDescriptor
@@ -265,17 +268,6 @@ const isMissingRequestedScopes = (
 
 export function useConnections() {
   const { t } = useI18n()
-
-  // Warm the GIS script the moment a Connections surface exists. The popup
-  // in `requestAuthorizationCode` must open within the Connect click's user
-  // activation — loading the script lazily on that first click spends the
-  // activation on a network fetch and the browser blocks the popup. A
-  // failed preload is ignored: `loadGis()` resets itself on error, so the
-  // click path retries (and then surfaces the blocked/offline toast).
-  // Pointless inside Tauri, which uses the system-browser flow instead.
-  if (typeof window !== "undefined" && !isTauri.value) {
-    void loadGis().catch(() => undefined)
-  }
 
   const authStore = useAuthStore()
   const { currentTeamId, currentUser } = storeToRefs(authStore)
@@ -433,7 +425,9 @@ export function useConnections() {
     }
   }
 
-  /** Link the signed-in member's own account: GIS popup → code → callable. */
+  /** Link the signed-in member's own account: popup → code → callable. The
+   * web path forks on the app's auth flavor (Google GIS vs generic redirect);
+   * desktop always uses the system-browser loopback. */
   const connect = async (provider: ConnectionProvider): Promise<void> => {
     const teamId = requireTeam()
     if (!teamId) return
@@ -444,43 +438,35 @@ export function useConnections() {
       toast.error(t("settings.connections.disabledByAdmin"))
       return
     }
-    const clientId = import.meta.env.VITE_GOOGLE_OAUTH_CLIENT_ID as
-      | string
-      | undefined
+    const app = getConnectionApp(provider)
+    const clientId = OAUTH_CLIENT_ID_BY_PROVIDER[provider]
     if (!clientId) {
       toast.error(t("settings.connections.notConfigured"))
       return
     }
     try {
-      // Tauri: system-browser + loopback (the webview can't run the GIS
-      // popup and Google rejects embedded webviews). Web: GIS popup.
+      // Tauri: system-browser + loopback (the webview can't run a popup and
+      // providers reject embedded webviews). Web: the authorization-code
+      // redirect popup (every provider — Google migrated off GIS).
       const grant = isTauri.value
-        ? await requestAuthorizationCodeTauri(
-            getConnectionApp(provider),
-            clientId
-          )
-        : {
-            code: await requestAuthorizationCode(
-              getConnectionApp(provider),
-              clientId
-            ),
-            redirectUri: undefined,
-          }
+        ? await requestAuthorizationCodeTauri(app, clientId)
+        : await requestAuthorizationCodeRedirect(app, clientId)
       await completeConnectionBindingFn({
         teamId,
         provider,
         code: grant.code,
-        ...(grant.redirectUri ? { redirectUri: grant.redirectUri } : {}),
+        redirectUri: grant.redirectUri,
       })
       toast.success(t("settings.connections.connectSuccess"))
     } catch (error) {
       const reason = error instanceof Error ? error.message : ""
       // The user closed the popup — a deliberate cancel, not a failure.
-      if (reason.includes(GIS_POPUP_CLOSED)) return
+      if (reason.includes(REDIRECT_POPUP_CLOSED)) return
       console.error("[useConnections] connect failed:", error)
+      const blocked = reason.includes(REDIRECT_POPUP_BLOCKED)
       toast.error(
         t(
-          reason.includes(GIS_POPUP_BLOCKED)
+          blocked
             ? "settings.connections.popupBlocked"
             : "settings.connections.connectError"
         )

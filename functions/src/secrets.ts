@@ -17,3 +17,20 @@ export const googleOauthClientId = defineSecret("GOOGLE_OAUTH_CLIENT_ID")
 export const googleOauthClientSecret = defineSecret(
   "GOOGLE_OAUTH_CLIENT_SECRET"
 )
+export const githubOauthClientId = defineSecret("GITHUB_OAUTH_CLIENT_ID")
+export const githubOauthClientSecret = defineSecret(
+  "GITHUB_OAUTH_CLIENT_SECRET"
+)
+
+/**
+ * Every connection provider's OAuth client secret pair — spread into the
+ * `secrets: [...]` of EACH function that exchanges or refreshes a binding
+ * token (a function only sees a secret it declares). Adding a provider means
+ * extending this one list, not hunting every call site.
+ */
+export const CONNECTION_OAUTH_SECRETS = [
+  googleOauthClientId,
+  googleOauthClientSecret,
+  githubOauthClientId,
+  githubOauthClientSecret,
+]

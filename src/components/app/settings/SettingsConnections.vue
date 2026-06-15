@@ -21,6 +21,7 @@ import {
   IconListFilter,
   IconMoreHorizontal,
   IconSearch,
+  IconSettings,
   IconTrash,
   IconUnlink,
   IconX,
@@ -719,25 +720,60 @@ const openInfoDialog = (provider: ConnectionProvider): void => {
                       </span>
                     </div>
                     <div class="flex items-center gap-2">
-                      <!-- Visibility rules live in showConnectAction /
-                     showDisconnectAction (shared with the Manage table's
-                     actions menu). -->
-                      <Button
-                        v-if="showConnectAction(row)"
-                        variant="outline"
-                        size="sm"
-                        :disabled="isBindingPending(row.app.provider)"
-                        @click="handleConnect(row.app.provider)"
+                      <!-- Connect + (for GitHub) the install/configure cog,
+                     grouped. Authorizing alone isn't enough for a GitHub App —
+                     the app must be installed on the member's repos. Connect
+                     visibility lives in showConnectAction (shared with the
+                     Manage table's actions menu). -->
+                      <ButtonGroup
+                        v-if="
+                          showConnectAction(row) ||
+                          (row.app.manage && row.myBinding && !row.disabled)
+                        "
                       >
-                        <Spinner
-                          v-if="isPendingId(connectActionId(row.app.provider))"
-                        />
-                        {{
-                          row.myBinding
-                            ? t("settings.connections.reconnect")
-                            : t("settings.connections.connect")
-                        }}
-                      </Button>
+                        <Button
+                          v-if="showConnectAction(row)"
+                          variant="outline"
+                          size="sm"
+                          :disabled="isBindingPending(row.app.provider)"
+                          @click="handleConnect(row.app.provider)"
+                        >
+                          <Spinner
+                            v-if="
+                              isPendingId(connectActionId(row.app.provider))
+                            "
+                          />
+                          {{
+                            row.myBinding
+                              ? t("settings.connections.reconnect")
+                              : t("settings.connections.connect")
+                          }}
+                        </Button>
+                        <TooltipProvider
+                          v-if="
+                            row.app.manage && row.myBinding && !row.disabled
+                          "
+                        >
+                          <Tooltip>
+                            <TooltipTrigger as-child>
+                              <Button
+                                as="a"
+                                :href="row.app.manage.url"
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                variant="outline"
+                                size="icon-sm"
+                                :aria-label="t(row.app.manage.labelKey)"
+                              >
+                                <IconSettings />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              {{ t(row.app.manage.labelKey) }}
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      </ButtonGroup>
                       <Button
                         v-if="showDisconnectAction(row)"
                         variant="outline"

@@ -14,12 +14,14 @@
  * from there they flow through every existing pipe (listDispatchable →
  * enabledBuiltInTools → pickChatTools; SettingsTools' enable axis).
  *
- * OAuth flow: the client runs the GIS popup code flow (`initCodeClient`,
- * `redirect_uri: "postmessage"`, `prompt: "consent"`) and posts the one-time
- * code to `completeConnectionBinding`; the exchange happens HERE because only
- * functions hold the client secret. Token refresh is on-demand at tool-call
- * time (`resolveBindingAccessToken`), with `invalid_grant` flipping the
- * binding to `needs_reauth` (reconnect heals it).
+ * OAuth flow: the client runs an authorization-code popup (web: redirect to
+ * the `/connections/callback` SPA route; desktop: system-browser loopback)
+ * and posts the one-time code to `completeConnectionBinding`; the exchange
+ * happens HERE because only functions hold the client secret. (A legacy
+ * `postmessage` redirect from the old Google GIS popup is still accepted for
+ * rolling-deploy compatibility.) Token refresh is on-demand at tool-call time
+ * (`resolveBindingAccessToken`), with `invalid_grant` flipping the binding to
+ * `needs_reauth` (reconnect heals it).
  */
 
 import { FieldValue } from "firebase-admin/firestore"
@@ -36,8 +38,11 @@ import { getMembershipRole } from "./bot.js"
 import { getConnectionProviderSpec } from "./connectionProviders.js"
 import {
   classifyGoogleTokenFailure,
+  extractOauthError,
+  isAllowedRedirectUri,
   isConnectionDisabled,
-  parseGoogleTokenResponse,
+  isDeadGrantError,
+  parseOauthTokenResponse,
   shouldRefreshAccessToken,
   type ParsedTokenResponse,
 } from "./connectionsCore.js"
@@ -48,7 +53,7 @@ import {
   integrationDocPath,
   invalidateIntegrationsCache,
 } from "./integrations.js"
-import { googleOauthClientId, googleOauthClientSecret } from "./secrets.js"
+import { CONNECTION_OAUTH_SECRETS } from "./secrets.js"
 
 // ─── Paths ───────────────────────────────────────────────────────────────────
 
@@ -65,12 +70,12 @@ const bindingSecretDocPath = (
   uid: string
 ): string => `${connectionDocPath(teamId, provider)}/bindingSecrets/${uid}`
 
-// ─── Google OAuth endpoints ──────────────────────────────────────────────────
+// ─── OAuth endpoints (per-provider; substrate) ───────────────────────────────
 
-const GOOGLE_TOKEN_ENDPOINT = "https://oauth2.googleapis.com/token"
-const GOOGLE_REVOKE_ENDPOINT = "https://oauth2.googleapis.com/revoke"
-/** GIS popup code flow's fixed pseudo redirect — pinned server-side. */
+/** GIS popup code flow's fixed pseudo redirect — Google web only. */
 const POSTMESSAGE_REDIRECT_URI = "postmessage"
+/** GitHub's API requires a User-Agent on every request. */
+const GITHUB_API_USER_AGENT = "lectornaut-connections"
 
 interface OauthClientConfig {
   clientId: string
@@ -78,17 +83,38 @@ interface OauthClientConfig {
 }
 
 /**
- * Bound secrets surface as env vars, so this works in any function that
- * DECLARES the two secrets (the connection callables here, plus the chat /
- * workflow entry points whose turns may refresh a token mid-tool-call).
- * Null = the running function forgot to bind them — a config failure the
- * caller reports without throwing.
+ * Read a provider's confidential OAuth client from the env vars its bound
+ * secrets surface as. Bound secrets are visible only in functions that
+ * DECLARE them (all the token-touching entry points spread
+ * `CONNECTION_OAUTH_SECRETS`). Null = the running function forgot to bind a
+ * pair — a config failure the caller reports without throwing.
  */
-function readOauthClientConfig(): OauthClientConfig | null {
-  const clientId = process.env.GOOGLE_OAUTH_CLIENT_ID
-  const clientSecret = process.env.GOOGLE_OAUTH_CLIENT_SECRET
+function readOauthClientConfig(
+  provider: ConnectionProvider
+): OauthClientConfig | null {
+  const { clientIdEnvVar, clientSecretEnvVar } =
+    getConnectionProviderSpec(provider).oauth
+  const clientId = process.env[clientIdEnvVar]
+  const clientSecret = process.env[clientSecretEnvVar]
   if (!clientId || !clientSecret) return null
   return { clientId, clientSecret }
+}
+
+/**
+ * The web (SPA) OAuth callback the redirect flavor is allowed to exchange
+ * against — derived from the request's own Origin header (the web client uses
+ * `${window.location.origin}/connections/callback`, so the two match exactly).
+ * Null when there's no usable Origin (non-browser callers; loopback/Tauri
+ * doesn't need it). Zero config — works across dev/staging/prod automatically.
+ */
+function expectedWebCallback(request: { rawRequest?: unknown }): string | null {
+  const headers = (
+    request.rawRequest as { headers?: Record<string, unknown> } | undefined
+  )?.headers
+  const origin = headers?.origin
+  return typeof origin === "string" && origin.length > 0
+    ? `${origin}/connections/callback`
+    : null
 }
 
 type TokenRequestResult =
@@ -100,14 +126,20 @@ type TokenRequestResult =
     }
 
 async function postTokenRequest(
+  tokenUrl: string,
   form: Record<string, string>
 ): Promise<TokenRequestResult> {
   let status = 0
   let body: unknown = null
   try {
-    const response = await fetch(GOOGLE_TOKEN_ENDPOINT, {
+    const response = await fetch(tokenUrl, {
       method: "POST",
-      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded",
+        // GitHub's token endpoint returns form-encoded WITHOUT this; Google
+        // returns JSON regardless, so always asking for JSON is safe.
+        Accept: "application/json",
+      },
       body: new URLSearchParams(form).toString(),
     })
     status = response.status
@@ -117,27 +149,73 @@ async function postTokenRequest(
     return { ok: false, kind: "transient", message }
   }
   if (status >= 200 && status < 300) {
-    const parsed = parseGoogleTokenResponse(body, Date.now())
+    const parsed = parseOauthTokenResponse(body, Date.now())
     if (parsed) return { ok: true, parsed }
+    // GitHub answers a bad code/refresh token with HTTP 200 + `{ error }` (no
+    // access_token) — a logical failure inside a 2xx.
+    const error = extractOauthError(body)
     return {
       ok: false,
-      kind: "rejected",
-      message: "Token endpoint returned an unusable body.",
+      kind: isDeadGrantError(error) ? "invalid_grant" : "rejected",
+      message: error
+        ? `Token request failed (${error}).`
+        : "Token endpoint returned an unusable body.",
     }
   }
   const kind = classifyGoogleTokenFailure(status, body)
-  const detail =
-    typeof body === "object" && body !== null
-      ? String((body as Record<string, unknown>).error ?? status)
-      : String(status)
+  const detail = extractOauthError(body) ?? String(status)
   return { ok: false, kind, message: `Token request failed (${detail}).` }
 }
 
-/** Best-effort token revocation — never throws, never blocks the caller. */
-async function revokeTokenBestEffort(token: string | null): Promise<void> {
-  if (!token) return
+/**
+ * Fetch the binding's identity label from a provider userinfo endpoint when
+ * the token response carries no id_token (GitHub `GET /user` → login/email).
+ * Best-effort: a null label just leaves the binding row unlabeled.
+ */
+async function fetchProviderIdentity(
+  userInfoUrl: string,
+  accessToken: string
+): Promise<string | null> {
   try {
-    await fetch(GOOGLE_REVOKE_ENDPOINT, {
+    const response = await fetch(userInfoUrl, {
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        Accept: "application/vnd.github+json",
+        "User-Agent": GITHUB_API_USER_AGENT,
+      },
+    })
+    if (!response.ok) return null
+    const body = (await response.json().catch(() => null)) as Record<
+      string,
+      unknown
+    > | null
+    if (!body) return null
+    const email =
+      typeof body.email === "string" && body.email.length > 0
+        ? body.email
+        : null
+    const login =
+      typeof body.login === "string" && body.login.length > 0
+        ? body.login
+        : null
+    // Prefer the email; fall back to the @handle (GitHub email is often
+    // private → null) so the row still reads "Connected as …".
+    return email ?? login
+  } catch (error) {
+    logger.warn("[connections] identity fetch failed (ignored)", error)
+    return null
+  }
+}
+
+/** Best-effort token revocation — never throws, never blocks the caller.
+ * Skipped when the provider has no revoke endpoint (GitHub). */
+async function revokeTokenBestEffort(
+  revokeUrl: string | null,
+  token: string | null
+): Promise<void> {
+  if (!revokeUrl || !token) return
+  try {
+    await fetch(revokeUrl, {
       method: "POST",
       headers: { "Content-Type": "application/x-www-form-urlencoded" },
       body: new URLSearchParams({ token }).toString(),
@@ -264,6 +342,7 @@ export const uninstallConnection = defineCallable({
     for (const doc of secretsSnap.docs) {
       const data = doc.data()
       await revokeTokenBestEffort(
+        spec.oauth.revokeUrl,
         typeof data.refreshToken === "string" ? data.refreshToken : null
       )
     }
@@ -391,37 +470,44 @@ export const setConnectionDisabled = defineCallable({
 
 // ─── Callable: completeConnectionBinding ─────────────────────────────────────
 
-/**
- * Loopback-only allowlist for the desktop (Tauri) authorization flow —
- * RFC 8252's native-app pattern. The exchange's `redirect_uri` must equal
- * the one used in the authorization request, so the desktop client sends
- * the loopback address it listened on. Restricting to loopback hosts keeps
- * this parameter harmless: the code is single-use, bound to this exact URI
- * at issuance, and a loopback URI can't route the redirect anywhere but the
- * user's own machine.
- */
-const LOOPBACK_REDIRECT_RE =
-  /^http:\/\/(127\.0\.0\.1|localhost):\d{1,5}(\/[A-Za-z0-9/_-]*)?$/
-
 export const completeConnectionBinding = defineCallable({
   name: "completeConnectionBinding",
   auth: "verified",
   appCheck: true,
-  secrets: [googleOauthClientId, googleOauthClientSecret],
+  // Every provider's client pair — a function only sees a secret it declares,
+  // and any provider's binding may be exchanged here.
+  secrets: CONNECTION_OAUTH_SECRETS,
   input: providerInputSchema.extend({
-    /** One-time authorization code from the GIS popup code flow. */
+    /** One-time authorization code from the OAuth popup/redirect. */
     code: z.string().min(1).max(2048),
     /**
-     * Desktop (Tauri) flow only: the loopback redirect the system-browser
-     * authorization used. Omitted by the web GIS popup flow (which pins
-     * `postmessage`).
+     * The redirect URI used at authorization — desktop (Tauri) loopback OR
+     * the web redirect flavor's SPA callback. Validated against the
+     * loopback + configured-web allowlist in the handler. Omitted by Google's
+     * GIS popup web flow (which pins `postmessage` server-side).
      */
-    redirectUri: z.string().max(200).regex(LOOPBACK_REDIRECT_RE).optional(),
+    redirectUri: z.string().max(300).optional(),
   }),
   handler: async ({ request, auth, input }) => {
     const { teamId, provider, code, redirectUri } = input
     // Member gate — any team member may bind their OWN account.
     const role = await getMembershipRole(teamId, auth.uid)
+    const spec = getConnectionProviderSpec(provider)
+
+    // The redirect_uri is client-supplied and echoed to the issuer's token
+    // endpoint — accept only values we can vouch for (loopback or a
+    // configured web callback). Loosening this to an open https match would
+    // make it a foothold.
+    if (
+      redirectUri &&
+      !isAllowedRedirectUri(redirectUri, expectedWebCallback(request))
+    ) {
+      logger.warn("[connections] redirect URI rejected", {
+        provider,
+        redirectUri,
+      })
+      throw new HttpsError("invalid-argument", "Unrecognized redirect URI.")
+    }
 
     const connSnap = await db.doc(connectionDocPath(teamId, provider)).get()
     if (!connSnap.exists) {
@@ -440,15 +526,15 @@ export const completeConnectionBinding = defineCallable({
       )
     }
 
-    const config = readOauthClientConfig()
+    const config = readOauthClientConfig(provider)
     if (!config) {
       throw new HttpsError(
         "failed-precondition",
-        "The server's Google OAuth client isn't configured."
+        `The server's ${spec.name} OAuth client isn't configured.`
       )
     }
 
-    const result = await postTokenRequest({
+    const result = await postTokenRequest(spec.oauth.tokenUrl, {
       grant_type: "authorization_code",
       code,
       client_id: config.clientId,
@@ -460,31 +546,46 @@ export const completeConnectionBinding = defineCallable({
         teamId,
         provider,
         kind: result.kind,
-        // Google's error token (e.g. redirect_uri_mismatch, invalid_client) —
-        // the discriminator that turns a generic "rejected" into a diagnosis.
+        // The issuer's error token (e.g. redirect_uri_mismatch,
+        // bad_verification_code) — turns a generic "rejected" into a diagnosis.
         detail: result.message,
         redirectUri: redirectUri ?? "postmessage",
       })
+      // Surface the cause in the message (kind + issuer error code) — all of
+      // it is actionable during setup (incorrect_client_credentials,
+      // redirect_uri_mismatch, bad_verification_code, network) and none of it
+      // is sensitive, so no need to make the admin dig through logs.
       throw new HttpsError(
         result.kind === "transient" ? "unavailable" : "invalid-argument",
-        "Couldn't complete the Google authorization. Try connecting again."
+        `Couldn't complete the ${spec.name} authorization [${result.kind}]: ` +
+          `${result.message} Try connecting again.`
+      )
+    }
+
+    // Identity: Google's email rides the id_token; GitHub returns none, so
+    // fetch it from the userinfo endpoint (login fallback when email private).
+    let email = result.parsed.email
+    if (!email && spec.oauth.userInfoUrl) {
+      email = await fetchProviderIdentity(
+        spec.oauth.userInfoUrl,
+        result.parsed.accessToken
       )
     }
 
     const secretRef = db.doc(bindingSecretDocPath(teamId, provider, auth.uid))
-    // `prompt: "consent"` on the client makes Google reissue the refresh
-    // token, but keep the stored one as a fallback for the odd response
-    // that omits it (re-consent races, policy edge cases).
+    // `prompt: "consent"` makes Google reissue the refresh token, but keep the
+    // stored one as a fallback for the odd response that omits it. Providers
+    // that issue no refresh token (GitHub) carry null.
     const existingSecret = (await secretRef.get()).data()
     const refreshToken =
       result.parsed.refreshToken ??
       (typeof existingSecret?.refreshToken === "string"
         ? existingSecret.refreshToken
         : null)
-    if (!refreshToken) {
+    if (spec.oauth.expectsRefreshToken && !refreshToken) {
       throw new HttpsError(
         "failed-precondition",
-        "Google didn't issue a long-lived grant. Try connecting again."
+        `${spec.name} didn't issue a long-lived grant. Try connecting again.`
       )
     }
 
@@ -493,19 +594,21 @@ export const completeConnectionBinding = defineCallable({
     batch.set(secretRef, {
       refreshToken,
       accessToken: result.parsed.accessToken,
+      // Non-expiring providers store the far-future sentinel, so the token is
+      // served directly and never routed into a refresh path it can't use.
       accessTokenExpiresAtMs: result.parsed.expiresAtMs,
       // Granted scopes ride on the secret doc too (not just the
       // member-visible binding doc) so `resolveBindingAccessToken` can hand
       // write tools the grant without a second read.
-      scopes: result.parsed.scope ? result.parsed.scope.split(" ") : [],
+      scopes: result.parsed.scopes,
       updatedAt: now,
     })
     batch.set(
       db.doc(bindingDocPath(teamId, provider, auth.uid)),
       {
         status: "connected",
-        ...(result.parsed.email ? { email: result.parsed.email } : {}),
-        scopes: result.parsed.scope ? result.parsed.scope.split(" ") : [],
+        ...(email ? { email } : {}),
+        scopes: result.parsed.scopes,
         updatedAt: now,
         ...(existingSecret ? {} : { connectedAt: now }),
       },
@@ -525,12 +628,12 @@ export const completeConnectionBinding = defineCallable({
       changes: {
         fields: ["email", "scopes"],
         after: {
-          email: result.parsed.email ?? null,
-          scopes: result.parsed.scope ? result.parsed.scope.split(" ") : [],
+          email: email ?? null,
+          scopes: result.parsed.scopes,
         },
       },
     })
-    return { ok: true as const, email: result.parsed.email }
+    return { ok: true as const, email }
   },
 })
 
@@ -588,6 +691,7 @@ async function revokeAndDeleteBinding(
   if (secretSnap.exists) {
     const data = secretSnap.data()
     await revokeTokenBestEffort(
+      getConnectionProviderSpec(provider).oauth.revokeUrl,
       typeof data?.refreshToken === "string" ? data.refreshToken : null
     )
   }
@@ -595,6 +699,31 @@ async function revokeAndDeleteBinding(
   batch.delete(secretRef)
   batch.delete(db.doc(bindingDocPath(teamId, provider, uid)))
   await batch.commit()
+}
+
+/**
+ * Flip a binding to `needs_reauth` from a TOOL handler that saw a 401 from
+ * the provider's API. The refresh path (where Google's `invalid_grant`
+ * normally trips this) is never reached for non-expiring providers like
+ * GitHub, so without this a revoked GitHub grant would read "connected"
+ * forever. Best-effort: the tool's narratable failure matters more than the
+ * flag write landing.
+ */
+export async function markBindingNeedsReauth(
+  teamId: string,
+  provider: ConnectionProvider,
+  uid: string
+): Promise<void> {
+  try {
+    await db
+      .doc(bindingDocPath(teamId, provider, uid))
+      .set(
+        { status: "needs_reauth", updatedAt: FieldValue.serverTimestamp() },
+        { merge: true }
+      )
+  } catch (error) {
+    logger.warn("[connections] needs_reauth flag write failed", error)
+  }
 }
 
 /**
@@ -717,12 +846,15 @@ export async function resolveBindingAccessToken(
   if (accessToken && !shouldRefreshAccessToken(expiresAtMs, Date.now())) {
     return { ok: true, accessToken, grantedScopes: storedScopes }
   }
+  // Non-expiring providers (GitHub) never reach here: their token is served
+  // above. Reaching it without a refresh token means a dead grant.
   if (!refreshToken) return { ok: false, reason: "needs_reauth" }
 
-  const config = readOauthClientConfig()
+  const spec = getConnectionProviderSpec(provider)
+  const config = readOauthClientConfig(provider)
   if (!config) return { ok: false, reason: "config" }
 
-  const result = await postTokenRequest({
+  const result = await postTokenRequest(spec.oauth.tokenUrl, {
     grant_type: "refresh_token",
     refresh_token: refreshToken,
     client_id: config.clientId,
@@ -748,9 +880,8 @@ export async function resolveBindingAccessToken(
 
   // The refresh response restates the grant — prefer it over the stored
   // copy (it also HEALS P1-era secret docs that predate scope persistence).
-  const refreshedScopes = result.parsed.scope
-    ? result.parsed.scope.split(" ")
-    : storedScopes
+  const refreshedScopes =
+    result.parsed.scopes.length > 0 ? result.parsed.scopes : storedScopes
   try {
     await secretRef.set(
       {
@@ -760,7 +891,7 @@ export async function resolveBindingAccessToken(
         ...(result.parsed.refreshToken
           ? { refreshToken: result.parsed.refreshToken }
           : {}),
-        ...(result.parsed.scope ? { scopes: refreshedScopes } : {}),
+        ...(result.parsed.scopes.length > 0 ? { scopes: refreshedScopes } : {}),
         updatedAt: FieldValue.serverTimestamp(),
       },
       { merge: true }

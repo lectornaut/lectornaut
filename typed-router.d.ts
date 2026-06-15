@@ -88,6 +88,13 @@ declare module "vue-router/auto-routes" {
       Record<never, never>,
       never
     >
+    "/connections/callback": RouteRecordInfo<
+      "/connections/callback",
+      "/connections/callback",
+      Record<never, never>,
+      Record<never, never>,
+      never
+    >
     "/deeplink": RouteRecordInfo<
       "/deeplink",
       "/deeplink",
@@ -269,6 +276,11 @@ declare module "vue-router/auto-routes" {
     }
     "src/pages/code.vue": {
       routes: "/code"
+      views: never
+      pathParamNames: never
+    }
+    "src/pages/connections/callback.vue": {
+      routes: "/connections/callback"
       views: never
       pathParamNames: never
     }

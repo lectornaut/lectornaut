@@ -226,6 +226,7 @@ import IconHgWorkflowSquare01 from "~icons/hugeicons/workflow-square-01"
 import IconHgWrench01 from "~icons/hugeicons/wrench-01"
 import IconLogosAppleAppStore from "~icons/logos/apple-app-store"
 import IconLogosDiscord from "~icons/logos/discord"
+import IconLogosGithubIcon from "~icons/logos/github-icon"
 import IconLogosGoogle from "~icons/logos/google"
 import IconLogosGoogleCalendar from "~icons/logos/google-calendar"
 import IconLogosGoogleDrive from "~icons/logos/google-drive"
@@ -473,6 +474,7 @@ export {
   IconHgLock as IconLock,
   IconHgLogout01 as IconLogOut,
   IconLogosDiscord,
+  IconLogosGithubIcon,
   IconLogosGoogle,
   IconLogosGoogleCalendar,
   IconLogosGoogleDrive,

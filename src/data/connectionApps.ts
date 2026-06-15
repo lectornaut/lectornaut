@@ -7,9 +7,14 @@
  * same convention as the built-in tool catalog keeping copy in data files).
  */
 
-import { IconLogosGoogleCalendar, IconLogosGoogleDrive } from "@/data/icons"
+import {
+  IconLogosGithubIcon,
+  IconLogosGoogleCalendar,
+  IconLogosGoogleDrive,
+} from "@/data/icons"
 import {
   CONNECTION_PROVIDERS,
+  GITHUB_TOOL_KEY,
   GOOGLE_CALENDAR_TOOL_KEY,
   GOOGLE_DRIVE_FILE_SCOPE,
   GOOGLE_DRIVE_READONLY_SCOPE,
@@ -50,8 +55,40 @@ export interface ConnectionAppDescriptor {
    * mismatch surfaces as confusing consent screens.
    */
   scopes: string[]
+  /**
+   * Provider authorize endpoint — used by the web authorization-code redirect
+   * flow AND the desktop (Tauri) loopback flow for every provider.
+   */
+  authorizeUrl: string
+  /**
+   * Extra authorization-request params. Google needs `access_type=offline` +
+   * `prompt=consent` for the refresh token; GitHub needs none.
+   */
+  authParams: Record<string, string>
   /** Integration sourceKeys this app contributes while installed. */
   toolKeys: string[]
+  /**
+   * Optional provider-side management link, surfaced as a cog button next to
+   * Connect — e.g. GitHub's install/configure page (which repos the app may
+   * touch) or Google's third-party-access page (view/revoke). `labelKey` is
+   * the i18n key for its tooltip/aria-label. Undefined = no cog.
+   */
+  manage?: { url: string; labelKey: string }
+}
+
+// Google authorize endpoint + grant params shared by both Google apps (web +
+// desktop loopback both build their authorize URL from these).
+const GOOGLE_AUTHORIZE_URL = "https://accounts.google.com/o/oauth2/v2/auth"
+const GOOGLE_AUTH_PARAMS: Record<string, string> = {
+  access_type: "offline",
+  prompt: "consent",
+}
+// Google has no per-resource configure step (scopes are all-or-nothing, set
+// by the app) — the only user-side surface is the account's third-party-access
+// page to view/revoke. Shared by both Google apps.
+const GOOGLE_MANAGE = {
+  url: "https://myaccount.google.com/connections",
+  labelKey: "settings.connections.manageOnGoogle",
 }
 
 const GOOGLE_CALENDAR_APP: ConnectionAppDescriptor = {
@@ -71,7 +108,10 @@ const GOOGLE_CALENDAR_APP: ConnectionAppDescriptor = {
     "email",
     "https://www.googleapis.com/auth/calendar.events",
   ],
+  authorizeUrl: GOOGLE_AUTHORIZE_URL,
+  authParams: GOOGLE_AUTH_PARAMS,
   toolKeys: [GOOGLE_CALENDAR_TOOL_KEY],
+  manage: GOOGLE_MANAGE,
 }
 
 const GOOGLE_DRIVE_APP: ConnectionAppDescriptor = {
@@ -98,7 +138,36 @@ const GOOGLE_DRIVE_APP: ConnectionAppDescriptor = {
     GOOGLE_DRIVE_READONLY_SCOPE,
     GOOGLE_DRIVE_FILE_SCOPE,
   ],
+  authorizeUrl: GOOGLE_AUTHORIZE_URL,
+  authParams: GOOGLE_AUTH_PARAMS,
   toolKeys: [GOOGLE_DRIVE_TOOL_KEY],
+  manage: GOOGLE_MANAGE,
+}
+
+const GITHUB_APP: ConnectionAppDescriptor = {
+  provider: "github",
+  name: "GitHub",
+  description:
+    "Let agents search and read repositories, and — with per-write " +
+    "confirmation — file issues and comment on members' connected GitHub.",
+  avatarSeed: "github",
+  categories: ["ai-integrations", "automations"],
+  logo: IconLogosGithubIcon,
+  // GitHub App: access is governed by the app's PERMISSIONS + which repos it's
+  // installed on, not OAuth scopes — so request none (an empty `scope` is
+  // omitted from the authorize URL). No extra grant params either.
+  scopes: [],
+  authorizeUrl: "https://github.com/login/oauth/authorize",
+  authParams: {},
+  toolKeys: [GITHUB_TOOL_KEY],
+  // Authorizing alone yields a token that can reach NO repos until the GitHub
+  // App is installed on them — point members at the install/configure page.
+  manage: import.meta.env.VITE_GITHUB_APP_SLUG
+    ? {
+        url: `https://github.com/apps/${import.meta.env.VITE_GITHUB_APP_SLUG}/installations/new`,
+        labelKey: "settings.connections.installOnGitHub",
+      }
+    : undefined,
 }
 
 const APPS_BY_PROVIDER: Readonly<
@@ -106,6 +175,7 @@ const APPS_BY_PROVIDER: Readonly<
 > = {
   "google-calendar": GOOGLE_CALENDAR_APP,
   "google-drive": GOOGLE_DRIVE_APP,
+  github: GITHUB_APP,
 }
 
 /** Every installable app, in directory display order. */

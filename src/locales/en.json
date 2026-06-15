@@ -218,6 +218,22 @@
         "failed": "Couldn't write to your Google Drive.",
         "openFile": "Open in Google Drive"
       },
+      "gitHubWrite": {
+        "createTitle": "Create GitHub Issue",
+        "commentTitle": "Post GitHub Comment",
+        "updateTitle": "Update GitHub Issue",
+        "confirmHint": "Nothing is written to GitHub until you approve.",
+        "approve": "Approve",
+        "cancel": "Cancel",
+        "state": "State",
+        "labels": "Labels",
+        "unconfirmed": "Not confirmed - the conversation moved on. Nothing was written.",
+        "executing": "Applying your decision...",
+        "written": "Done on GitHub.",
+        "declined": "You declined this. Nothing was written.",
+        "failed": "Couldn't complete the GitHub action.",
+        "openItem": "Open on GitHub"
+      },
       "labels": {
         "request": "Request",
         "response": "Response",
@@ -621,6 +637,8 @@
       "connect": "Connect",
       "reconnect": "Reconnect",
       "disconnect": "Disconnect",
+      "installOnGitHub": "Install on GitHub",
+      "manageOnGoogle": "Manage on Google",
       "connectSuccess": "Account connected.",
       "connectError": "Couldn't connect the account.",
       "popupBlocked": "Couldn't open the Google sign-in popup. Allow popups for this site and try again.",
@@ -1867,6 +1885,10 @@
           "label": "Google Drive",
           "description": "Searches and reads files on the chatting member's connected Google Drive - Docs come back as markdown - and, with per-write confirmation, saves files back to Drive."
         },
+        "gitHub": {
+          "label": "GitHub",
+          "description": "Searches and reads issues, pull requests, repositories and file contents on the chatting member's connected GitHub - and, with per-write confirmation, files issues and posts comments."
+        },
         "manageContent": {
           "label": "Manage content",
           "description": "Lets member-agents create, edit, rename, move, and archive workspace files and folders. Only applies to agents added as content-capable team members."
@@ -2635,6 +2657,11 @@
     "deeplink": {
       "continueTitle": "Continue in Lectornaut",
       "continueDescription": "The app should open automatically. You can close this tab."
+    },
+    "connectionCallback": {
+      "title": "Almost there",
+      "description": "Finishing the connection. You can close this window.",
+      "noOpener": "This page is part of the connection flow. You can close it and try connecting again from Settings."
     },
     "changelog": {
       "title": "Changelog",
