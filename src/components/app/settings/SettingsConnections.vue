@@ -16,12 +16,12 @@ import {
   IconArrowUp,
   IconArrowUpDown,
   IconDownload,
+  IconExternalLink,
   IconInfo,
   IconLink,
   IconListFilter,
   IconMoreHorizontal,
   IconSearch,
-  IconSettings,
   IconTrash,
   IconUnlink,
   IconX,
@@ -516,9 +516,6 @@ const openInfoDialog = (provider: ConnectionProvider): void => {
                           <InputGroupButton
                             size="icon-xs"
                             class="data-[state=open]:bg-accent relative"
-                            :aria-label="
-                              t('settings.connections.filterByCategory')
-                            "
                           >
                             <IconListFilter />
                             <span
@@ -608,28 +605,25 @@ const openInfoDialog = (provider: ConnectionProvider): void => {
                   </ItemContent>
                   <ItemActions>
                     <TooltipProvider>
-                      <Tooltip>
-                        <TooltipTrigger as-child>
-                          <Button
-                            variant="ghost"
-                            size="icon-sm"
-                            :aria-label="t('settings.connections.infoButton')"
-                            @click="openInfoDialog(row.app.provider)"
-                          >
-                            <IconInfo />
-                          </Button>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          {{ t("settings.connections.infoButton") }}
-                        </TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
-                    <TooltipProvider>
-                      <Tooltip>
-                        <TooltipTrigger as-child>
-                          <span class="inline-block">
+                      <ButtonGroup>
+                        <Tooltip>
+                          <TooltipTrigger as-child>
                             <Button
-                              :variant="row.installed ? 'outline' : 'default'"
+                              :variant="row.installed ? 'secondary' : 'default'"
+                              size="icon-sm"
+                              @click="openInfoDialog(row.app.provider)"
+                            >
+                              <IconInfo />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            {{ t("settings.connections.infoButton") }}
+                          </TooltipContent>
+                        </Tooltip>
+                        <Tooltip>
+                          <TooltipTrigger as-child>
+                            <Button
+                              :variant="row.installed ? 'secondary' : 'default'"
                               size="sm"
                               :disabled="
                                 !canManage ||
@@ -648,20 +642,17 @@ const openInfoDialog = (provider: ConnectionProvider): void => {
                                   : t("settings.connections.installApp")
                               }}
                             </Button>
-                          </span>
-                        </TooltipTrigger>
-                        <TooltipContent v-if="!canManage">
-                          {{ t("settings.connections.permissionRequired") }}
-                        </TooltipContent>
-                      </Tooltip>
+                          </TooltipTrigger>
+                          <TooltipContent v-if="!canManage">
+                            {{ t("settings.connections.permissionRequired") }}
+                          </TooltipContent>
+                        </Tooltip>
+                      </ButtonGroup>
                     </TooltipProvider>
                   </ItemActions>
                   <!-- The signed-in member's own account link (member action,
                  deliberately NOT admin-gated). -->
-                  <ItemFooter
-                    v-if="row.installed"
-                    class="bg-secondary rounded-2xl p-4"
-                  >
+                  <ItemFooter v-if="row.installed">
                     <div class="flex flex-col">
                       <span class="text-sm">
                         <!-- The OAuth handoff runs in another window (GIS popup /
@@ -697,7 +688,7 @@ const openInfoDialog = (provider: ConnectionProvider): void => {
                           {{ t("settings.connections.connected") }}
                         </template>
                       </span>
-                      <span class="text-muted-foreground text-sm">
+                      <span class="text-muted-foreground text-xs">
                         {{
                           t(
                             "settings.connections.membersConnected",
@@ -725,15 +716,10 @@ const openInfoDialog = (provider: ConnectionProvider): void => {
                      the app must be installed on the member's repos. Connect
                      visibility lives in showConnectAction (shared with the
                      Manage table's actions menu). -->
-                      <ButtonGroup
-                        v-if="
-                          showConnectAction(row) ||
-                          (row.app.manage && row.myBinding && !row.disabled)
-                        "
-                      >
+                      <ButtonGroup>
                         <Button
                           v-if="showConnectAction(row)"
-                          variant="outline"
+                          :variant="row.myBinding ? 'outline' : 'default'"
                           size="sm"
                           :disabled="isBindingPending(row.app.provider)"
                           @click="handleConnect(row.app.provider)"
@@ -749,6 +735,20 @@ const openInfoDialog = (provider: ConnectionProvider): void => {
                               : t("settings.connections.connect")
                           }}
                         </Button>
+                        <Button
+                          v-if="showDisconnectAction(row)"
+                          variant="outline"
+                          size="sm"
+                          :disabled="isBindingPending(row.app.provider)"
+                          @click="disconnectDialog.open(row.app)"
+                        >
+                          <Spinner
+                            v-if="
+                              isPendingId(disconnectActionId(row.app.provider))
+                            "
+                          />
+                          {{ t("settings.connections.disconnect") }}
+                        </Button>
                         <TooltipProvider
                           v-if="
                             row.app.manage && row.myBinding && !row.disabled
@@ -759,13 +759,12 @@ const openInfoDialog = (provider: ConnectionProvider): void => {
                               <Button
                                 as="a"
                                 :href="row.app.manage.url"
+                                :variant="row.myBinding ? 'outline' : 'default'"
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                variant="outline"
                                 size="icon-sm"
-                                :aria-label="t(row.app.manage.labelKey)"
                               >
-                                <IconSettings />
+                                <IconExternalLink />
                               </Button>
                             </TooltipTrigger>
                             <TooltipContent>
@@ -774,20 +773,6 @@ const openInfoDialog = (provider: ConnectionProvider): void => {
                           </Tooltip>
                         </TooltipProvider>
                       </ButtonGroup>
-                      <Button
-                        v-if="showDisconnectAction(row)"
-                        variant="outline"
-                        size="sm"
-                        :disabled="isBindingPending(row.app.provider)"
-                        @click="disconnectDialog.open(row.app)"
-                      >
-                        <Spinner
-                          v-if="
-                            isPendingId(disconnectActionId(row.app.provider))
-                          "
-                        />
-                        {{ t("settings.connections.disconnect") }}
-                      </Button>
                     </div>
                   </ItemFooter>
                 </Item>

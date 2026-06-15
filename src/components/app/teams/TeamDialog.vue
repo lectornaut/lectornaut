@@ -1386,11 +1386,6 @@ const handleSubmit = async () => {
                                     :disabled="
                                       !canInviteMembers && mode !== 'create'
                                     "
-                                    :aria-label="
-                                      t(
-                                        'components.teamDialog.tooltips.addAgent'
-                                      )
-                                    "
                                   >
                                     <IconBot />
                                   </InputGroupButton>

@@ -51,7 +51,6 @@ const shared = computed(() => props.memory.visibility === "shared")
               variant="ghost"
               size="icon-xs"
               class="data-[state=open]:bg-accent"
-              :aria-label="t('settings.memory.rowActions')"
               @click.stop
             >
               <IconMoreHorizontal />

@@ -351,7 +351,6 @@ const renderedMessages = computed(() =>
                     variant="ghost"
                     size="icon-xs"
                     :disabled="!message.content"
-                    :aria-label="t('actions.copy')"
                     @click="handleCopyMessage(message)"
                   >
                     <IconCheck v-if="isCopied(message.id)" class="size-3!" />
@@ -372,7 +371,6 @@ const renderedMessages = computed(() =>
                     variant="ghost"
                     size="icon-xs"
                     :disabled="!message.content"
-                    :aria-label="t('ai.reply')"
                     @click="handleReplyMessage(message)"
                   >
                     <IconReply class="size-3!" />
@@ -392,7 +390,6 @@ const renderedMessages = computed(() =>
                       <Button
                         variant="ghost"
                         size="icon-xs"
-                        :aria-label="t('ai.readAloudPause')"
                         @click="pauseReadAloud()"
                       >
                         <IconPause class="size-3!" />
@@ -407,7 +404,6 @@ const renderedMessages = computed(() =>
                       <Button
                         variant="ghost"
                         size="icon-xs"
-                        :aria-label="t('ai.readAloudResume')"
                         @click="resumeReadAloud()"
                       >
                         <IconPlay class="size-3!" />
@@ -422,7 +418,6 @@ const renderedMessages = computed(() =>
                       <Button
                         variant="ghost"
                         size="icon-xs"
-                        :aria-label="t('ai.readAloudStop')"
                         @click="stopReadAloud()"
                       >
                         <IconSquare class="size-3!" />
@@ -439,7 +434,6 @@ const renderedMessages = computed(() =>
                       variant="ghost"
                       size="icon-xs"
                       :disabled="!message.content"
-                      :aria-label="t('ai.readAloud')"
                       @click="handleReadAloud(message)"
                     >
                       <IconVolume2 class="size-3!" />

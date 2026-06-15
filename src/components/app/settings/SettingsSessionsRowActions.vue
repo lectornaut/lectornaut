@@ -42,7 +42,6 @@ const archived = computed(() => !!props.session.archivedAt)
               variant="ghost"
               size="icon-xs"
               class="data-[state=open]:bg-accent"
-              :aria-label="t('ai.chatActions')"
               @click.stop
             >
               <IconMoreHorizontal />
