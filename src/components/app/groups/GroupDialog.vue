@@ -348,7 +348,7 @@ const handleSubmit = async () => {
         <DialogClose as-child>
           <Button variant="outline" :disabled="isSaving">
             {{ t("actions.cancel") }}
-            <Kbd aria-hidden="true">Esc</Kbd>
+            <Kbd>Esc</Kbd>
           </Button>
         </DialogClose>
         <Button
@@ -362,7 +362,7 @@ const handleSubmit = async () => {
               ? t("components.groupDialog.create")
               : t("components.groupDialog.saveChanges")
           }}
-          <Kbd aria-hidden="true">↩</Kbd>
+          <Kbd>↩</Kbd>
         </Button>
       </DialogFooter>
     </DialogContent>

@@ -1220,12 +1220,12 @@ const handleSave = async (): Promise<void> => {
           @click="emit('update:open', false)"
         >
           {{ t("settings.workflows.cancel") }}
-          <Kbd aria-hidden="true">Esc</Kbd>
+          <Kbd>Esc</Kbd>
         </Button>
         <Button data-dialog-action :disabled="!canSave" @click="handleSave">
           <Spinner v-if="isSaving" />
           {{ t("settings.workflows.save") }}
-          <Kbd aria-hidden="true">↩</Kbd>
+          <Kbd>↩</Kbd>
         </Button>
       </DialogFooter>
     </DialogContent>

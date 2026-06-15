@@ -288,7 +288,7 @@ const submitDeleteMemories = async () => {
         <AlertDialogFooter>
           <AlertDialogCancel :disabled="bulkBusy">
             {{ t("actions.cancel") }}
-            <Kbd aria-hidden="true">Esc</Kbd>
+            <Kbd>Esc</Kbd>
           </AlertDialogCancel>
           <AlertDialogAction
             :disabled="bulkBusy || activeOwnedCount === 0"
@@ -296,7 +296,7 @@ const submitDeleteMemories = async () => {
           >
             <Spinner v-if="bulkBusy" />
             {{ t("settings.privacy.archiveAll.action") }}
-            <Kbd aria-hidden="true">↩</Kbd>
+            <Kbd>↩</Kbd>
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>
@@ -319,7 +319,7 @@ const submitDeleteMemories = async () => {
         <AlertDialogFooter>
           <AlertDialogCancel :disabled="bulkBusy">
             {{ t("actions.cancel") }}
-            <Kbd aria-hidden="true">Esc</Kbd>
+            <Kbd>Esc</Kbd>
           </AlertDialogCancel>
           <AlertDialogAction
             :disabled="bulkBusy || totalOwnedCount === 0"
@@ -327,7 +327,7 @@ const submitDeleteMemories = async () => {
           >
             <Spinner v-if="bulkBusy" />
             {{ t("settings.privacy.deleteAll.action") }}
-            <Kbd aria-hidden="true">↩</Kbd>
+            <Kbd>↩</Kbd>
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>
@@ -351,7 +351,7 @@ const submitDeleteMemories = async () => {
         <AlertDialogFooter>
           <AlertDialogCancel :disabled="isMutatingMemories">
             {{ t("actions.cancel") }}
-            <Kbd aria-hidden="true">Esc</Kbd>
+            <Kbd>Esc</Kbd>
           </AlertDialogCancel>
           <AlertDialogAction
             :disabled="isMutatingMemories || activeMemoryCount === 0"
@@ -359,7 +359,7 @@ const submitDeleteMemories = async () => {
           >
             <Spinner v-if="isMutatingMemories" />
             {{ t("settings.privacy.archiveMemories.action") }}
-            <Kbd aria-hidden="true">↩</Kbd>
+            <Kbd>↩</Kbd>
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>
@@ -382,7 +382,7 @@ const submitDeleteMemories = async () => {
         <AlertDialogFooter>
           <AlertDialogCancel :disabled="isMutatingMemories">
             {{ t("actions.cancel") }}
-            <Kbd aria-hidden="true">Esc</Kbd>
+            <Kbd>Esc</Kbd>
           </AlertDialogCancel>
           <AlertDialogAction
             :disabled="isMutatingMemories || totalMemoryCount === 0"
@@ -390,7 +390,7 @@ const submitDeleteMemories = async () => {
           >
             <Spinner v-if="isMutatingMemories" />
             {{ t("settings.privacy.deleteMemories.action") }}
-            <Kbd aria-hidden="true">↩</Kbd>
+            <Kbd>↩</Kbd>
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>

@@ -921,7 +921,7 @@ const handleSubmit = async () => {
         <DialogClose as-child>
           <Button variant="outline" :disabled="isLoading">
             {{ t("common.actions.cancel") }}
-            <Kbd aria-hidden="true">Esc</Kbd>
+            <Kbd>Esc</Kbd>
           </Button>
         </DialogClose>
         <Button
@@ -935,7 +935,7 @@ const handleSubmit = async () => {
               ? t("components.workspaceDialog.createTitle")
               : t("components.workspaceDialog.saveChanges")
           }}
-          <Kbd aria-hidden="true">↩</Kbd>
+          <Kbd>↩</Kbd>
         </Button>
       </DialogFooter>
     </DialogContent>

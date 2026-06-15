@@ -291,12 +291,12 @@ onUnmounted(() => {
           >
             <Spinner v-if="loading" />
             {{ t("settings.account.mfa.verify") }}
-            <Kbd aria-hidden="true"> ↩ </Kbd>
+            <Kbd> ↩ </Kbd>
           </Button>
           <DialogClose as-child>
             <Button variant="outline">
               {{ t("common.cancel") }}
-              <Kbd aria-hidden="true">Esc</Kbd>
+              <Kbd>Esc</Kbd>
             </Button>
           </DialogClose>
         </div>

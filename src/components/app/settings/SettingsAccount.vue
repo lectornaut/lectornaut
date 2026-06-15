@@ -1181,7 +1181,7 @@ const getDeviceIcon = (deviceType: string) => {
                     <span>{{
                       t("settings.account.email.sendVerification")
                     }}</span>
-                    <Kbd aria-hidden="true">↩</Kbd>
+                    <Kbd>↩</Kbd>
                   </Button>
                 </DialogFooter>
               </DialogContent>
@@ -1236,7 +1236,7 @@ const getDeviceIcon = (deviceType: string) => {
                   >
                     <Spinner v-if="changingPassword" />
                     <span>{{ t("settings.account.password.change") }}</span>
-                    <Kbd aria-hidden="true">↩</Kbd>
+                    <Kbd>↩</Kbd>
                   </Button>
                 </DialogFooter>
               </DialogContent>
@@ -1335,7 +1335,7 @@ const getDeviceIcon = (deviceType: string) => {
                     <AlertDialogFooter>
                       <AlertDialogCancel>
                         {{ t("common.cancel") }}
-                        <Kbd aria-hidden="true">Esc</Kbd>
+                        <Kbd>Esc</Kbd>
                       </AlertDialogCancel>
                       <AlertDialogAction
                         :disabled="unlinkingProviderMap[provider.providerId]"
@@ -1345,7 +1345,7 @@ const getDeviceIcon = (deviceType: string) => {
                           v-if="unlinkingProviderMap[provider.providerId]"
                         />
                         {{ t("common.remove") }}
-                        <Kbd aria-hidden="true">↩</Kbd>
+                        <Kbd>↩</Kbd>
                       </AlertDialogAction>
                     </AlertDialogFooter>
                   </AlertDialogContent>
@@ -1412,7 +1412,7 @@ const getDeviceIcon = (deviceType: string) => {
                     <AlertDialogFooter>
                       <AlertDialogCancel>
                         {{ t("common.cancel") }}
-                        <Kbd aria-hidden="true">Esc</Kbd>
+                        <Kbd>Esc</Kbd>
                       </AlertDialogCancel>
                       <AlertDialogAction
                         :disabled="disablingMfa"
@@ -1420,7 +1420,7 @@ const getDeviceIcon = (deviceType: string) => {
                       >
                         <Spinner v-if="disablingMfa" />
                         {{ t("settings.account.mfa.disable") }}
-                        <Kbd aria-hidden="true">↩</Kbd>
+                        <Kbd>↩</Kbd>
                       </AlertDialogAction>
                     </AlertDialogFooter>
                   </AlertDialogContent>
@@ -1485,7 +1485,7 @@ const getDeviceIcon = (deviceType: string) => {
                 <AlertDialogFooter>
                   <AlertDialogCancel>
                     {{ t("common.cancel") }}
-                    <Kbd aria-hidden="true">Esc</Kbd>
+                    <Kbd>Esc</Kbd>
                   </AlertDialogCancel>
                   <AlertDialogAction
                     :disabled="unenrollingFactorUid === factor.uid"
@@ -1493,7 +1493,7 @@ const getDeviceIcon = (deviceType: string) => {
                   >
                     <Spinner v-if="unenrollingFactorUid === factor.uid" />
                     {{ t("common.remove") }}
-                    <Kbd aria-hidden="true">↩</Kbd>
+                    <Kbd>↩</Kbd>
                   </AlertDialogAction>
                 </AlertDialogFooter>
               </AlertDialogContent>
@@ -1612,7 +1612,7 @@ const getDeviceIcon = (deviceType: string) => {
                 @click="totpStep = 'verify'"
               >
                 {{ t("common.next") }}
-                <Kbd aria-hidden="true">↩</Kbd>
+                <Kbd>↩</Kbd>
               </Button>
               <Button
                 v-if="totpStep === 'verify'"
@@ -1622,7 +1622,7 @@ const getDeviceIcon = (deviceType: string) => {
               >
                 <Spinner v-if="totpLoading" />
                 {{ t("settings.account.mfa.verify") }}
-                <Kbd aria-hidden="true">↩</Kbd>
+                <Kbd>↩</Kbd>
               </Button>
             </DialogFooter>
           </DialogContent>
@@ -1708,7 +1708,7 @@ const getDeviceIcon = (deviceType: string) => {
               >
                 <Spinner v-if="smsLoading" />
                 {{ t("settings.account.mfa.sendCode") }}
-                <Kbd aria-hidden="true">↩</Kbd>
+                <Kbd>↩</Kbd>
               </Button>
               <Button
                 v-if="smsStep === 'verify'"
@@ -1718,7 +1718,7 @@ const getDeviceIcon = (deviceType: string) => {
               >
                 <Spinner v-if="smsLoading" />
                 {{ t("settings.account.mfa.verify") }}
-                <Kbd aria-hidden="true">↩</Kbd>
+                <Kbd>↩</Kbd>
               </Button>
             </DialogFooter>
           </DialogContent>
@@ -1763,7 +1763,7 @@ const getDeviceIcon = (deviceType: string) => {
                 <AlertDialogFooter>
                   <AlertDialogCancel>
                     {{ t("common.cancel") }}
-                    <Kbd aria-hidden="true">Esc</Kbd>
+                    <Kbd>Esc</Kbd>
                   </AlertDialogCancel>
                   <AlertDialogAction
                     :disabled="isRevoking('revokeAll')"
@@ -1771,7 +1771,7 @@ const getDeviceIcon = (deviceType: string) => {
                   >
                     <Spinner v-if="isRevoking('revokeAll')" />
                     {{ t("settings.account.devices.logoutAllButton") }}
-                    <Kbd aria-hidden="true">↩</Kbd>
+                    <Kbd>↩</Kbd>
                   </AlertDialogAction>
                 </AlertDialogFooter>
               </AlertDialogContent>
@@ -1846,7 +1846,7 @@ const getDeviceIcon = (deviceType: string) => {
                       <AlertDialogFooter>
                         <AlertDialogCancel>
                           {{ t("common.cancel") }}
-                          <Kbd aria-hidden="true">Esc</Kbd>
+                          <Kbd>Esc</Kbd>
                         </AlertDialogCancel>
                         <AlertDialogAction
                           :disabled="isRevoking(session.id)"
@@ -1854,7 +1854,7 @@ const getDeviceIcon = (deviceType: string) => {
                         >
                           <Spinner v-if="isRevoking(session.id)" />
                           {{ t("settings.account.devices.logoutDevice") }}
-                          <Kbd aria-hidden="true">↩</Kbd>
+                          <Kbd>↩</Kbd>
                         </AlertDialogAction>
                       </AlertDialogFooter>
                     </AlertDialogContent>
@@ -1921,7 +1921,7 @@ const getDeviceIcon = (deviceType: string) => {
                 <AlertDialogFooter>
                   <AlertDialogCancel @click="deleteAccountInput = ''">
                     {{ t("common.cancel") }}
-                    <Kbd aria-hidden="true">Esc</Kbd>
+                    <Kbd>Esc</Kbd>
                   </AlertDialogCancel>
                   <AlertDialogAction
                     :disabled="deletingAccount || !isDeleteAccountInputValid"
@@ -1929,7 +1929,7 @@ const getDeviceIcon = (deviceType: string) => {
                   >
                     <Spinner v-if="deletingAccount" />
                     {{ t("common.delete") }}
-                    <Kbd aria-hidden="true">↩</Kbd>
+                    <Kbd>↩</Kbd>
                   </AlertDialogAction>
                 </AlertDialogFooter>
               </AlertDialogContent>

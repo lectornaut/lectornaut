@@ -349,7 +349,7 @@ const submitDelete = async () => {
       <AlertDialogFooter>
         <AlertDialogCancel>
           {{ t("actions.cancel") }}
-          <Kbd aria-hidden="true">Esc</Kbd>
+          <Kbd>Esc</Kbd>
         </AlertDialogCancel>
         <AlertDialogAction
           :disabled="isUpdatingVisibility"
@@ -357,7 +357,7 @@ const submitDelete = async () => {
         >
           <Spinner v-if="isUpdatingVisibility" />
           {{ t("ai.sidebar.shareConfirmAction") }}
-          <Kbd aria-hidden="true">↩</Kbd>
+          <Kbd>↩</Kbd>
         </AlertDialogAction>
       </AlertDialogFooter>
     </AlertDialogContent>
@@ -386,7 +386,7 @@ const submitDelete = async () => {
         <DialogClose as-child>
           <Button variant="outline" :disabled="isMutating">
             {{ t("actions.cancel") }}
-            <Kbd aria-hidden="true">Esc</Kbd>
+            <Kbd>Esc</Kbd>
           </Button>
         </DialogClose>
         <Button
@@ -396,7 +396,7 @@ const submitDelete = async () => {
         >
           <Spinner v-if="isMutating" />
           {{ t("actions.save") }}
-          <Kbd aria-hidden="true">↩</Kbd>
+          <Kbd>↩</Kbd>
         </Button>
       </DialogFooter>
     </DialogContent>
@@ -417,12 +417,12 @@ const submitDelete = async () => {
       <AlertDialogFooter>
         <AlertDialogCancel :disabled="isMutating">
           {{ t("actions.cancel") }}
-          <Kbd aria-hidden="true">Esc</Kbd>
+          <Kbd>Esc</Kbd>
         </AlertDialogCancel>
         <AlertDialogAction :disabled="isMutating" @click.prevent="submitDelete">
           <Spinner v-if="isMutating" />
           {{ t("actions.delete") }}
-          <Kbd aria-hidden="true">↩</Kbd>
+          <Kbd>↩</Kbd>
         </AlertDialogAction>
       </AlertDialogFooter>
     </AlertDialogContent>

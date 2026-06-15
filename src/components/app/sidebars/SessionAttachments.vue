@@ -483,13 +483,13 @@ const handleDelete = async (attachment: IBotSessionAttachment) => {
             <DialogClose as-child>
               <Button variant="outline">
                 Cancel
-                <Kbd aria-hidden="true">Esc</Kbd>
+                <Kbd>Esc</Kbd>
               </Button>
             </DialogClose>
             <Button type="submit" data-dialog-action :disabled="isSavingEdit">
               <Spinner v-if="isSavingEdit" />
               Save
-              <Kbd aria-hidden="true">↩</Kbd>
+              <Kbd>↩</Kbd>
             </Button>
           </DialogFooter>
         </form>
@@ -510,16 +510,14 @@ const handleDelete = async (attachment: IBotSessionAttachment) => {
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogCancel
-            >Cancel<Kbd aria-hidden="true">Esc</Kbd>
-          </AlertDialogCancel>
+          <AlertDialogCancel>Cancel<Kbd>Esc</Kbd> </AlertDialogCancel>
           <AlertDialogAction
             :disabled="deletingId === pendingDelete?.id"
             @click="onConfirmDelete"
           >
             <Spinner v-if="deletingId === pendingDelete?.id" />
             Delete
-            <Kbd aria-hidden="true">↩</Kbd>
+            <Kbd>↩</Kbd>
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>

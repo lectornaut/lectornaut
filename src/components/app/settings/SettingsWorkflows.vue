@@ -414,11 +414,11 @@ const rowDescription = (wf: IWorkflow): string =>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>
-              {{ t("common.cancel") }}<Kbd aria-hidden="true">Esc</Kbd>
+              {{ t("common.cancel") }}<Kbd>Esc</Kbd>
             </AlertDialogCancel>
             <AlertDialogAction @click="handleResetWorkflowConfirmed">
               {{ t("settings.workflows.reset") }}
-              <Kbd aria-hidden="true">↩</Kbd>
+              <Kbd>↩</Kbd>
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

@@ -327,7 +327,7 @@ useHead(() => ({
       <template v-else>
         <div class="flex flex-col items-center justify-center p-2">
           <div
-            class="bg-background flex aspect-video max-h-40 w-full flex-col border shadow-xs"
+            class="bg-background flex aspect-video max-h-40 w-full flex-col rounded-2xl border shadow-xs"
           >
             <div class="flex items-center justify-between p-2">
               <Logo class="size-8 shrink-0 p-2" />
@@ -412,7 +412,9 @@ useHead(() => ({
               </div>
             </div>
           </div>
-          <div class="bg-background mx-auto -mt-10 border p-1.5 shadow-xs">
+          <div
+            class="bg-background mx-auto -mt-10 rounded-full border p-1.5 shadow-xs"
+          >
             <div v-if="user || team">
               <AppAvatar
                 class="size-20"
@@ -449,7 +451,9 @@ useHead(() => ({
         </div>
 
         <div class="flex flex-col items-center justify-center p-2">
-          <div class="bg-background flex w-full grow border p-4 shadow-xs">
+          <div
+            class="bg-background flex w-full grow rounded-2xl border p-4 shadow-xs"
+          >
             Content
           </div>
         </div>

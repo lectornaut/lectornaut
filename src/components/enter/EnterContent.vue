@@ -481,7 +481,7 @@ const authenticateApple = () =>
                       <AlertDialogFooter>
                         <AlertDialogCancel>
                           {{ t("enter.cancel") }}
-                          <Kbd aria-hidden="true">Esc</Kbd>
+                          <Kbd>Esc</Kbd>
                         </AlertDialogCancel>
                         <Button
                           data-dialog-action
@@ -490,7 +490,7 @@ const authenticateApple = () =>
                         >
                           <Spinner v-if="resettingPassword" />
                           {{ t("enter.forgotPassword.send") }}
-                          <Kbd aria-hidden="true">↩</Kbd>
+                          <Kbd>↩</Kbd>
                         </Button>
                       </AlertDialogFooter>
                     </AlertDialogContent>
@@ -618,7 +618,7 @@ const authenticateApple = () =>
                   <AlertDialogFooter>
                     <AlertDialogCancel>
                       {{ t("enter.cancel") }}
-                      <Kbd aria-hidden="true">Esc</Kbd>
+                      <Kbd>Esc</Kbd>
                     </AlertDialogCancel>
                     <Button
                       data-dialog-action
@@ -627,7 +627,7 @@ const authenticateApple = () =>
                     >
                       <Spinner v-if="authenticateEmailInProgress" />
                       {{ t("enter.magicLink.send") }}
-                      <Kbd aria-hidden="true">↩</Kbd>
+                      <Kbd>↩</Kbd>
                     </Button>
                   </AlertDialogFooter>
                 </AlertDialogContent>

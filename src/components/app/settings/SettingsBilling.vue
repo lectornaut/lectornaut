@@ -595,8 +595,7 @@ const handleSubscriptionAction = async (): Promise<void> => {
       </AlertDialogHeader>
       <AlertDialogFooter>
         <AlertDialogCancel
-          >{{ t("settings.billing.cancelConfirmKeep")
-          }}<Kbd aria-hidden="true">Esc</Kbd>
+          >{{ t("settings.billing.cancelConfirmKeep") }}<Kbd>Esc</Kbd>
         </AlertDialogCancel>
         <AlertDialogAction
           :disabled="billingAction === 'cancel'"
@@ -611,7 +610,7 @@ const handleSubscriptionAction = async (): Promise<void> => {
           <template v-else>{{
             t("settings.billing.cancelConfirmCancel")
           }}</template>
-          <Kbd aria-hidden="true">↩</Kbd>
+          <Kbd>↩</Kbd>
         </AlertDialogAction>
       </AlertDialogFooter>
     </AlertDialogContent>

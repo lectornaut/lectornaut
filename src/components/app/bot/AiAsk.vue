@@ -61,8 +61,8 @@ const openHistory = () => {
               {{ t("pages.start.askAi") }}
             </Badge>
             <KbdGroup>
-              <Kbd aria-hidden="true">{{ getPlatformSpecialKey() }}</Kbd>
-              <Kbd aria-hidden="true">↩</Kbd>
+              <Kbd>{{ getPlatformSpecialKey() }}</Kbd>
+              <Kbd>↩</Kbd>
             </KbdGroup>
           </TooltipContent>
         </SheetTrigger>

@@ -691,20 +691,6 @@
   @apply opacity-0;
 }
 
-/* [data-tauri-drag-region] {
-  @apply border;
-  @apply border-red-500;
-} */
-
-/* [data-slot="context-menu-trigger"] {
-  @apply border;
-  @apply border-red-500;
-} */
-
-/* :where(button, [role="button"]):not([disabled]) {
-  cursor: pointer;
-} */
-
 [data-slot="sidebar-inner"] {
   @apply bg-transparent!;
 }
@@ -736,6 +722,55 @@
   max-width: var(--reka-dropdown-menu-content-available-width, 100vw);
 }
 
+/*
+  Dialog action buttons (e.g. "Cancel", "Save changes") are often rendered as
+  `<kbd>` to semantically indicate a user action, but the library's default
+  styles for that element are too subtle against our background. Add a little
+  weight and a faint background so they read as interactive elements.
+*/
+[data-dialog-action] [data-slot="kbd"],
+[data-slot="alert-dialog-action"] [data-slot="kbd"] {
+  @apply text-current;
+  @apply bg-current/25;
+}
+
+/*
+  Keep an open dialog's content interactive. reka grants `pointer-events: auto`
+  only to the modal layer it computes as top-most and writes an inline
+  `pointer-events: none` on every other one. A stale entry leaking into its
+  app-wide DismissableLayer singleton (a layer added but never deleted on
+  teardown) can rank a dialog opened "cold" — via emitter/shortcut with no
+  preceding reka layer — BELOW the ghost, so its content renders non-interactive
+  and the overlay behind swallows every click; the SAME dialog opened from a
+  menu works because the menu's open/close rewrites the layer stack. An open
+  dialog is always meant to be clickable, so force it. `!important` beats reka's
+  inline style; unlayered (like the rules around it) so it reliably wins.
+*/
+[data-slot="alert-dialog-content"][data-state="open"],
+[data-slot="dialog-content"][data-state="open"] {
+  @apply pointer-events-auto;
+}
+
+/*
+  Hugeicons's SVGs are unstyled and default to 1em stroke/0 fill, so they inherit
+  the current text color but come with a hairline stroke. Add a little weight so
+  they look intentional and match the rest of the iconography. This is a global
+  override since the library doesn't namespace its icons
+*/
 [data-hg] path {
   @apply stroke-2;
 }
+
+/* [data-tauri-drag-region] {
+  @apply border;
+  @apply border-red-500;
+} */
+
+/* [data-slot="context-menu-trigger"] {
+  @apply border;
+  @apply border-red-500;
+} */
+
+/* :where(button, [role="button"]):not([disabled]) {
+  cursor: pointer;
+} */

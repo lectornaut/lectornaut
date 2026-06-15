@@ -857,7 +857,7 @@ watch(selectedCreateFiles, async (files) => {
           <DialogClose as-child>
             <Button variant="outline">
               {{ t("actions.cancel") }}
-              <Kbd aria-hidden="true">Esc</Kbd>
+              <Kbd>Esc</Kbd>
             </Button>
           </DialogClose>
           <Button
@@ -867,7 +867,7 @@ watch(selectedCreateFiles, async (files) => {
           >
             <Spinner v-if="isSavingEdit" />
             {{ t("actions.save") }}
-            <Kbd aria-hidden="true">↩</Kbd>
+            <Kbd>↩</Kbd>
           </Button>
         </DialogFooter>
       </form>
@@ -895,7 +895,7 @@ watch(selectedCreateFiles, async (files) => {
       <AlertDialogFooter>
         <AlertDialogCancel>
           {{ t("actions.cancel") }}
-          <Kbd aria-hidden="true">Esc</Kbd>
+          <Kbd>Esc</Kbd>
         </AlertDialogCancel>
         <AlertDialogAction
           :disabled="
@@ -912,7 +912,7 @@ watch(selectedCreateFiles, async (files) => {
         >
           <Spinner v-if="deletingId === attachmentToDelete?.id" />
           {{ t("actions.delete") }}
-          <Kbd aria-hidden="true">↩</Kbd>
+          <Kbd>↩</Kbd>
         </AlertDialogAction>
       </AlertDialogFooter>
     </AlertDialogContent>

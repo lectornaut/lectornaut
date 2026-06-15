@@ -1124,7 +1124,7 @@ const handleEditorSave = async (): Promise<void> => {
           -->
           <Button variant="outline" :disabled="isSaving">
             {{ t("common.cancel") }}
-            <Kbd aria-hidden="true">Esc</Kbd>
+            <Kbd>Esc</Kbd>
           </Button>
         </DialogClose>
         <!--
@@ -1141,7 +1141,7 @@ const handleEditorSave = async (): Promise<void> => {
         >
           <Spinner v-if="isSaving" />
           {{ isNew ? t("settings.agents.custom.create") : t("common.save") }}
-          <Kbd aria-hidden="true">↩</Kbd>
+          <Kbd>↩</Kbd>
         </Button>
       </DialogFooter>
     </DialogContent>

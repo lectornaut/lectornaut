@@ -83,7 +83,7 @@ const deferNodesUntilVisible = computed(() =>
 
 // HTML policy by content provenance: LLM output is `safe` (blocks
 // active/embed/form tags); author-written changelog content is
-// `trusted` so we can use `<Kbd aria-hidden="true">`, `<details>`, `<sup>`, `<video>`.
+// `trusted` so we can use `<Kbd >`, `<details>`, `<sup>`, `<video>`.
 const htmlPolicy = computed<"safe" | "trusted">(() =>
   props.surface === "chat" ? "safe" : "trusted"
 )

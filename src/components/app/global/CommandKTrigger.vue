@@ -26,8 +26,8 @@ const openCommandDialog = () => {
       <TooltipContent class="flex items-center gap-2 pr-2">
         {{ t("components.global.commandK.tooltip") }}
         <KbdGroup>
-          <Kbd aria-hidden="true">{{ getPlatformSpecialKey() }}</Kbd>
-          <Kbd aria-hidden="true">K</Kbd>
+          <Kbd>{{ getPlatformSpecialKey() }}</Kbd>
+          <Kbd>K</Kbd>
         </KbdGroup>
       </TooltipContent>
     </Tooltip>

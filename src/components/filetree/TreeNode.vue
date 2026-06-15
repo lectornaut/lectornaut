@@ -274,7 +274,6 @@ const showEmptyState = computed(
               v-if="selectionMode === 'multiple'"
               :model-value="isSelected"
               tabindex="-1"
-              aria-hidden="true"
               class="pointer-events-none"
             />
             <span
@@ -427,7 +426,6 @@ const showEmptyState = computed(
             v-if="selectionMode === 'multiple'"
             :model-value="isSelected"
             tabindex="-1"
-            aria-hidden="true"
             class="pointer-events-none"
           />
           <span

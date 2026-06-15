@@ -385,11 +385,11 @@ const handleRemoveAgent = async (agent: ITeamAgent): Promise<void> => {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>
-              {{ t("common.cancel") }}<Kbd aria-hidden="true">Esc</Kbd>
+              {{ t("common.cancel") }}<Kbd>Esc</Kbd>
             </AlertDialogCancel>
             <AlertDialogAction @click="handleResetConfirmed">
               {{ t("settings.agents.builtInAgents.reset") }}
-              <Kbd aria-hidden="true">↩</Kbd>
+              <Kbd>↩</Kbd>
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

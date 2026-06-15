@@ -77,13 +77,13 @@ const remove = () => {
           <DialogClose as-child>
             <Button variant="outline">
               {{ t("actions.cancel") }}
-              <Kbd aria-hidden="true">Esc</Kbd>
+              <Kbd>Esc</Kbd>
             </Button>
           </DialogClose>
           <Button data-dialog-action @click="submit">
             <IconLink />
             {{ t("components.textEditor.linkDialog.apply") }}
-            <Kbd aria-hidden="true">↩</Kbd>
+            <Kbd>↩</Kbd>
           </Button>
         </div>
       </DialogFooter>

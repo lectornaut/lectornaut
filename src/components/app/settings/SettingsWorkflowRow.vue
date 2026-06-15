@@ -214,11 +214,11 @@ const onToggleEnabled = (value: boolean | string): void => {
       </AlertDialogHeader>
       <AlertDialogFooter>
         <AlertDialogCancel
-          >{{ t("settings.workflows.cancel") }}<Kbd aria-hidden="true">Esc</Kbd>
+          >{{ t("settings.workflows.cancel") }}<Kbd>Esc</Kbd>
         </AlertDialogCancel>
         <AlertDialogAction @click="handleDeleteConfirmed">
           {{ t("settings.workflows.delete") }}
-          <Kbd aria-hidden="true">↩</Kbd>
+          <Kbd>↩</Kbd>
         </AlertDialogAction>
       </AlertDialogFooter>
     </AlertDialogContent>

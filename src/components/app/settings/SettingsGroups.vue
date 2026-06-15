@@ -428,7 +428,7 @@ onMounted(() => {
                                   <AlertDialogFooter>
                                     <AlertDialogCancel>
                                       {{ t("actions.cancel") }}
-                                      <Kbd aria-hidden="true">Esc</Kbd>
+                                      <Kbd>Esc</Kbd>
                                     </AlertDialogCancel>
                                     <AlertDialogAction
                                       :disabled="isDeleting(group.id)"
@@ -436,7 +436,7 @@ onMounted(() => {
                                     >
                                       <Spinner v-if="isDeleting(group.id)" />
                                       {{ t("settings.groups.delete") }}
-                                      <Kbd aria-hidden="true">↩</Kbd>
+                                      <Kbd>↩</Kbd>
                                     </AlertDialogAction>
                                   </AlertDialogFooter>
                                 </AlertDialogContent>

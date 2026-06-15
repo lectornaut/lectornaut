@@ -435,7 +435,7 @@ const handleToggleEnabled = async (enabled: boolean): Promise<void> => {
           <DialogClose as-child>
             <Button variant="outline">
               {{ t("common.close") }}
-              <Kbd aria-hidden="true">Esc</Kbd>
+              <Kbd>Esc</Kbd>
             </Button>
           </DialogClose>
         </DialogFooter>

@@ -131,9 +131,7 @@ watch(canPreview, (ok) => {
     <TooltipContent class="flex items-center gap-2 pr-2">
       <slot name="tooltip">{{ tooltipLabel }}</slot>
       <KbdGroup v-if="shortcutKeys?.length">
-        <Kbd v-for="key in shortcutKeys" :key="key" aria-hidden="true">{{
-          key
-        }}</Kbd>
+        <Kbd v-for="key in shortcutKeys" :key="key">{{ key }}</Kbd>
       </KbdGroup>
     </TooltipContent>
   </Tooltip>

@@ -101,11 +101,7 @@ const runCommand = (command: PaletteCommand) => {
                   class="group-data-highlighted/command-item:text-foreground"
                 >
                   <KbdGroup>
-                    <Kbd
-                      v-for="key in command.keys"
-                      :key="key"
-                      aria-hidden="true"
-                    >
+                    <Kbd v-for="key in command.keys" :key="key">
                       {{ key }}
                     </Kbd>
                   </KbdGroup>

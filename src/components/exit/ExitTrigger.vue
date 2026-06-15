@@ -29,11 +29,11 @@ emitter.on("Dialog.Exit.Open", () => {
       <AlertDialogFooter>
         <AlertDialogCancel>
           {{ t("actions.cancel") }}
-          <Kbd aria-hidden="true">Esc</Kbd>
+          <Kbd>Esc</Kbd>
         </AlertDialogCancel>
         <AlertDialogAction @click="handleLogout()">
           {{ t("pages.exit.dialog.logout") }}
-          <Kbd aria-hidden="true">↩</Kbd>
+          <Kbd>↩</Kbd>
         </AlertDialogAction>
       </AlertDialogFooter>
     </AlertDialogContent>

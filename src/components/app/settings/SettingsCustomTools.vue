@@ -1490,7 +1490,7 @@ const handleEditorSave = async (): Promise<void> => {
         <DialogClose as-child>
           <Button variant="outline" :disabled="isSaving">
             {{ t("common.cancel") }}
-            <Kbd aria-hidden="true">Esc</Kbd>
+            <Kbd>Esc</Kbd>
           </Button>
         </DialogClose>
         <Button
@@ -1502,7 +1502,7 @@ const handleEditorSave = async (): Promise<void> => {
           {{
             isNew ? t("settings.agents.customTools.create") : t("common.save")
           }}
-          <Kbd aria-hidden="true">↩</Kbd>
+          <Kbd>↩</Kbd>
         </Button>
       </DialogFooter>
     </DialogContent>

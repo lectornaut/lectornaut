@@ -523,7 +523,6 @@ const openInfoDialog = (provider: ConnectionProvider): void => {
                             <span
                               v-if="isFilterActive"
                               class="bg-primary absolute -top-0.5 -right-0.5 size-2 rounded-full"
-                              aria-hidden="true"
                             />
                           </InputGroupButton>
                         </DropdownMenuTrigger>
@@ -1107,11 +1106,11 @@ const openInfoDialog = (provider: ConnectionProvider): void => {
         </AlertDialogHeader>
         <AlertDialogFooter>
           <AlertDialogCancel>
-            {{ t("actions.cancel") }}<Kbd aria-hidden="true">Esc</Kbd>
+            {{ t("actions.cancel") }}<Kbd>Esc</Kbd>
           </AlertDialogCancel>
           <AlertDialogAction @click="handleUninstallConfirmed()">
             {{ t("settings.connections.uninstallApp") }}
-            <Kbd aria-hidden="true">↩</Kbd>
+            <Kbd>↩</Kbd>
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>
@@ -1140,11 +1139,11 @@ const openInfoDialog = (provider: ConnectionProvider): void => {
         </AlertDialogHeader>
         <AlertDialogFooter>
           <AlertDialogCancel>
-            {{ t("actions.cancel") }}<Kbd aria-hidden="true">Esc</Kbd>
+            {{ t("actions.cancel") }}<Kbd>Esc</Kbd>
           </AlertDialogCancel>
           <AlertDialogAction @click="handleDisconnectConfirmed()">
             {{ t("settings.connections.disconnect") }}
-            <Kbd aria-hidden="true">↩</Kbd>
+            <Kbd>↩</Kbd>
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>

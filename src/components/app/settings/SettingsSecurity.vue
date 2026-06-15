@@ -876,7 +876,7 @@ const handleDeleteSso = () => deleteSsoDialog.confirm(() => deleteSsoConfig())
                 <DialogClose as-child>
                   <Button variant="outline">
                     {{ t("actions.cancel") }}
-                    <Kbd aria-hidden="true">Esc</Kbd>
+                    <Kbd>Esc</Kbd>
                   </Button>
                 </DialogClose>
                 <Button
@@ -890,7 +890,7 @@ const handleDeleteSso = () => deleteSsoDialog.confirm(() => deleteSsoConfig())
                       ? t("settings.security.sso.updateSso")
                       : t("settings.security.sso.enableSso")
                   }}
-                  <Kbd aria-hidden="true">↩</Kbd>
+                  <Kbd>↩</Kbd>
                 </Button>
               </div>
             </DialogFooter>
@@ -911,7 +911,7 @@ const handleDeleteSso = () => deleteSsoDialog.confirm(() => deleteSsoConfig())
         </AlertDialogHeader>
         <AlertDialogFooter>
           <AlertDialogCancel
-            >{{ t("actions.cancel") }}<Kbd aria-hidden="true">Esc</Kbd>
+            >{{ t("actions.cancel") }}<Kbd>Esc</Kbd>
           </AlertDialogCancel>
           <AlertDialogAction
             :disabled="deleting"
@@ -919,7 +919,7 @@ const handleDeleteSso = () => deleteSsoDialog.confirm(() => deleteSsoConfig())
           >
             <Spinner v-if="deleting" />
             {{ t("settings.security.sso.removeLabel") }}
-            <Kbd aria-hidden="true">↩</Kbd>
+            <Kbd>↩</Kbd>
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>

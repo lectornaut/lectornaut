@@ -477,7 +477,7 @@ const formatCreatedAt = (
       </AlertDialogHeader>
       <AlertDialogFooter>
         <AlertDialogCancel
-          >{{ t("actions.cancel") }}<Kbd aria-hidden="true">Esc</Kbd>
+          >{{ t("actions.cancel") }}<Kbd>Esc</Kbd>
         </AlertDialogCancel>
         <AlertDialogAction
           :disabled="
@@ -493,7 +493,7 @@ const formatCreatedAt = (
             "
           />
           {{ t("settings.teamsList.exitTitle") }}
-          <Kbd aria-hidden="true">↩</Kbd>
+          <Kbd>↩</Kbd>
         </AlertDialogAction>
       </AlertDialogFooter>
     </AlertDialogContent>
@@ -518,7 +518,7 @@ const formatCreatedAt = (
       </AlertDialogHeader>
       <AlertDialogFooter>
         <AlertDialogCancel
-          >{{ t("actions.cancel") }}<Kbd aria-hidden="true">Esc</Kbd>
+          >{{ t("actions.cancel") }}<Kbd>Esc</Kbd>
         </AlertDialogCancel>
         <AlertDialogAction
           :disabled="
@@ -538,7 +538,7 @@ const formatCreatedAt = (
             "
           />
           {{ t("settings.teamsList.deleteTitle") }}
-          <Kbd aria-hidden="true">↩</Kbd>
+          <Kbd>↩</Kbd>
         </AlertDialogAction>
       </AlertDialogFooter>
     </AlertDialogContent>

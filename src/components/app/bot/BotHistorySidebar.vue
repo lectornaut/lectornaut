@@ -686,12 +686,12 @@ const onArchiveToggle = (session: IBotSession) => {
       <AlertDialogFooter>
         <AlertDialogCancel :disabled="isMutating">
           {{ t("actions.cancel") }}
-          <Kbd aria-hidden="true">Esc</Kbd>
+          <Kbd>Esc</Kbd>
         </AlertDialogCancel>
         <AlertDialogAction :disabled="isMutating" @click.prevent="submitDelete">
           <Spinner v-if="isMutating" />
           {{ t("actions.delete") }}
-          <Kbd aria-hidden="true">↩</Kbd>
+          <Kbd>↩</Kbd>
         </AlertDialogAction>
       </AlertDialogFooter>
     </AlertDialogContent>

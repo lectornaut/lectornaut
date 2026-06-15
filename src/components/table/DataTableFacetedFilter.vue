@@ -92,7 +92,7 @@ const selectedValues = computed(
               {{ option.label }}
               <CommandShortcut>
                 <KbdGroup>
-                  <Kbd v-if="facets?.get(option.value)" aria-hidden="true">
+                  <Kbd v-if="facets?.get(option.value)">
                     {{ facets.get(option.value) }}
                   </Kbd>
                 </KbdGroup>

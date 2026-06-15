@@ -389,7 +389,7 @@ const restoreDefaultShortcut = () => {
             >
               <InputGroupAddon>
                 <KbdGroup>
-                  <Kbd v-for="key in displayKeys" :key="key" aria-hidden="true">
+                  <Kbd v-for="key in displayKeys" :key="key">
                     {{ key }}
                   </Kbd>
                 </KbdGroup>

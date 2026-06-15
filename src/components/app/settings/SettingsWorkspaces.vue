@@ -456,7 +456,7 @@ const formatCreatedAt = (value: IWorkspace["createdAt"] | null | undefined) => {
       </AlertDialogHeader>
       <AlertDialogFooter>
         <AlertDialogCancel
-          >{{ t("actions.cancel") }}<Kbd aria-hidden="true">Esc</Kbd>
+          >{{ t("actions.cancel") }}<Kbd>Esc</Kbd>
         </AlertDialogCancel>
         <AlertDialogAction
           :disabled="
@@ -476,7 +476,7 @@ const formatCreatedAt = (value: IWorkspace["createdAt"] | null | undefined) => {
             "
           />
           {{ t("settings.workspacesList.deleteTitle") }}
-          <Kbd aria-hidden="true">↩</Kbd>
+          <Kbd>↩</Kbd>
         </AlertDialogAction>
       </AlertDialogFooter>
     </AlertDialogContent>

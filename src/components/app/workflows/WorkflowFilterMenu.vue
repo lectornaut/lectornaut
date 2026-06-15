@@ -57,7 +57,6 @@ const keepMenuOpen = (event: Event): void => {
               <span
                 v-if="showActiveDot"
                 class="bg-primary absolute -top-0.5 -right-0.5 size-2 rounded-full"
-                aria-hidden="true"
               />
             </InputGroupButton>
           </DropdownMenuTrigger>
