@@ -336,11 +336,13 @@ export const botSessionMessageSchema = z.object({
 
 export const botAgentProviderSchema = z.enum(AI_PROVIDERS)
 
-export const botAgentProviderTogglesSchema = z.object({
-  google: z.boolean(),
-  anthropic: z.boolean(),
-  openai: z.boolean(),
-})
+// Derived from `AI_PROVIDERS` (the single source) rather than hand-listed, so a
+// new provider family flows in automatically — same idiom as the per-model
+// toggles below.
+export const botAgentProviderTogglesSchema = z.record(
+  botAgentProviderSchema,
+  z.boolean()
+)
 
 /**
  * Models the bot can be pinned to, spanning all three providers. Mirrors
@@ -348,7 +350,8 @@ export const botAgentProviderTogglesSchema = z.object({
  * — keep the two in sync. The UI catalog (label/description/provider
  * per model) lives in `helpers/defaults.ts`. Wire-name prefixes are
  * load-bearing — the server's `resolveModel()` dispatches by prefix
- * (`gemini-*` → Google, `claude-*` → Anthropic, `gpt-*` → OpenAI).
+ * (`gemini-*` → Google, `claude-*` → Anthropic, `gpt-*` → OpenAI,
+ * `grok-*` → xAI, `deepseek-*` → DeepSeek).
  */
 export const botAgentModelSchema = z.enum(BOT_AGENT_MODELS)
 
@@ -911,8 +914,13 @@ export const botSessionSchema = z.object({
    * before writing, so a model an admin has since disabled cannot be
    * persisted further (the next send falls back to the team default
    * and overwrites this field accordingly).
+   *
+   * `.catch(undefined)` so a value retired from `BOT_AGENT_MODELS` (e.g. an
+   * old thread whose last turn ran on a model we've since renamed/removed)
+   * reads as "absent" rather than failing the whole doc — the same
+   * fall-back-to-default path handles it, and the next turn rewrites it.
    */
-  lastModel: botAgentModelSchema.optional(),
+  lastModel: botAgentModelSchema.optional().catch(undefined),
   /**
    * Currently active custom agent for this session. `null` (or absent)
    * means the team's default bot persona handles every turn. Set by the

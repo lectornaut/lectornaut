@@ -447,14 +447,25 @@ const openInfoDialog = (provider: ConnectionProvider): void => {
            search/category predicate. -->
         <Tabs default-value="discover" orientation="horizontal">
           <div class="flex items-center justify-between gap-2">
-            <TabsList class="grid grid-cols-3 rounded-full!">
-              <TabsTrigger value="discover">
+            <TabsList
+              class="no-scrollbar bg-input/50 grid shrink-0 grid-cols-3 justify-start overflow-x-auto rounded-full! border"
+            >
+              <TabsTrigger
+                value="discover"
+                class="data-[state=active]:border-border! data-[state=active]:bg-background"
+              >
                 {{ t("settings.connections.tabDiscover") }}
               </TabsTrigger>
-              <TabsTrigger value="installed">
+              <TabsTrigger
+                value="installed"
+                class="data-[state=active]:border-border! data-[state=active]:bg-background"
+              >
                 {{ t("settings.connections.tabInstalled") }}
               </TabsTrigger>
-              <TabsTrigger value="manage">
+              <TabsTrigger
+                value="manage"
+                class="data-[state=active]:border-border! data-[state=active]:bg-background"
+              >
                 {{ t("settings.connections.tabManage") }}
               </TabsTrigger>
             </TabsList>

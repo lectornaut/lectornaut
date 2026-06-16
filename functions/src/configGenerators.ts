@@ -35,7 +35,7 @@ import { assertAdminRole as assertTeamAdminRole } from "./authGuards.js"
 import { loadTeamAgentConfig } from "./botAgentConfig.js"
 import { WORKFLOW_UPDATE_MODES } from "./domain.js"
 import { GENKIT_OPTS } from "./runtimeConfig.js"
-import { anthropicApiKey, geminiApiKey, openaiApiKey } from "./secrets.js"
+import { aiProviderSecrets } from "./secrets.js"
 import { runStructuredGeneration } from "./structuredGeneration.js"
 import type { WorkspaceNodeScope } from "./types.js"
 
@@ -318,7 +318,7 @@ interface GenerateConfigRequest {
 export const generateTeamAgentConfig = onCall<GenerateConfigRequest>(
   {
     ...GENKIT_OPTS,
-    secrets: [geminiApiKey, anthropicApiKey, openaiApiKey],
+    secrets: aiProviderSecrets,
     enforceAppCheck: true,
   },
   async (request): Promise<GeneratedAgentConfig> => {
@@ -616,7 +616,7 @@ function normalizeAction(raw: RawAction | undefined): NormalizedAction {
 export const generateTeamCustomToolConfig = onCall<GenerateConfigRequest>(
   {
     ...GENKIT_OPTS,
-    secrets: [geminiApiKey, anthropicApiKey, openaiApiKey],
+    secrets: aiProviderSecrets,
     enforceAppCheck: true,
   },
   async (request): Promise<GeneratedToolConfig> => {
@@ -897,7 +897,7 @@ function normalizeWorkflowTrigger(
 export const generateTeamWorkflowConfig = onCall<GenerateConfigRequest>(
   {
     ...GENKIT_OPTS,
-    secrets: [geminiApiKey, anthropicApiKey, openaiApiKey],
+    secrets: aiProviderSecrets,
     enforceAppCheck: true,
   },
   async (request): Promise<GeneratedWorkflowConfig> => {

@@ -409,6 +409,8 @@ export const botModelProviders = [
   { id: "google", name: "Google Gemini" },
   { id: "anthropic", name: "Anthropic Claude" },
   { id: "openai", name: "OpenAI" },
+  { id: "xai", name: "xAI Grok" },
+  { id: "deepseek", name: "DeepSeek" },
 ] as const satisfies readonly { id: IBotModelProvider; name: string }[]
 
 export const defaultBotModelProviderToggles: Record<
@@ -418,45 +420,70 @@ export const defaultBotModelProviderToggles: Record<
   google: true,
   anthropic: true,
   openai: true,
+  xai: true,
+  deepseek: true,
 }
 
 export const botModels = [
   // Google Gemini
   {
-    id: "gemini-3-flash-preview",
+    id: "gemini-3.5-flash",
     provider: "google",
-    name: "Gemini 3 Flash (Preview)",
-    description: "Latest preview — fast, capable, multimodal.",
-    badge: "Preview",
+    name: "Gemini 3.5 Flash",
+    description: "Fast, capable, multimodal — great everyday default.",
+    badge: "Flash",
   },
   {
-    id: "gemini-2.5-pro",
+    id: "gemini-3.1-pro-preview",
     provider: "google",
-    name: "Gemini 2.5 Pro",
+    name: "Gemini 3.1 Pro (Preview)",
     description: "Most capable Gemini — best for complex reasoning.",
-    badge: "Pro",
+    badge: "Preview",
   },
   // Anthropic Claude
   {
-    id: "claude-opus-4-5",
+    id: "claude-opus-4-8",
     provider: "anthropic",
-    name: "Claude Opus 4.5",
-    description: "Most capable Claude — long-form reasoning and writing.",
+    name: "Claude Opus 4.8",
+    description: "Most capable Claude — long-horizon reasoning and writing.",
     badge: "Opus",
   },
   {
-    id: "claude-sonnet-4-5",
+    id: "claude-sonnet-4-6",
     provider: "anthropic",
-    name: "Claude Sonnet 4.5",
+    name: "Claude Sonnet 4.6",
     description: "Balanced Claude — strong general-purpose default.",
     badge: null,
   },
   // OpenAI
   {
-    id: "gpt-5",
+    id: "gpt-5.1",
     provider: "openai",
-    name: "GPT-5",
+    name: "GPT-5.1",
     description: "OpenAI flagship — unified reasoning across speed and depth.",
+    badge: "Reasoning",
+  },
+  // xAI Grok
+  {
+    id: "grok-3",
+    provider: "xai",
+    name: "Grok 3",
+    description: "xAI's flagship — strong reasoning and broad knowledge.",
+    badge: null,
+  },
+  // DeepSeek
+  {
+    id: "deepseek-chat",
+    provider: "deepseek",
+    name: "DeepSeek Chat",
+    description: "DeepSeek V3 — fast, capable, cost-efficient.",
+    badge: null,
+  },
+  {
+    id: "deepseek-reasoner",
+    provider: "deepseek",
+    name: "DeepSeek Reasoner",
+    description: "DeepSeek R1 — step-by-step chain-of-thought reasoning.",
     badge: "Reasoning",
   },
 ] as const satisfies readonly {
@@ -548,7 +575,7 @@ export const defaultBotModelToggles: IBotAgentModelToggles = Object.fromEntries(
 export const defaultBotAgentConfig: IBotAgentConfig = {
   providers: { ...defaultBotModelProviderToggles },
   models: { ...defaultBotModelToggles },
-  model: "gemini-3-flash-preview",
+  model: "gemini-3.5-flash",
   temperature: 0.7,
   topP: 0.95,
   topK: 40,

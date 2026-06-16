@@ -1790,6 +1790,12 @@
         },
         "openai": {
           "description": "{count} OpenAI models available for team AI features."
+        },
+        "xai": {
+          "description": "{count} Grok models available for team AI features."
+        },
+        "deepseek": {
+          "description": "{count} DeepSeek models available for team AI features."
         }
       },
       "model": {

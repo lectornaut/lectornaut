@@ -13,37 +13,37 @@ const { t } = useI18n()
 
 <template>
   <Sidebar collapsible="none" class="w-full">
-    <Tabs default-value="bot" class="min-h-0 min-w-0 grow gap-0">
+    <Tabs default-value="bot" class="p-2">
       <TabsList
-        class="no-scrollbar bg-input/50 m-2 w-[-webkit-fill-available] shrink-0 justify-start overflow-x-auto border"
+        class="no-scrollbar bg-input/50 w-[-webkit-fill-available] shrink-0 justify-start overflow-x-auto border"
       >
         <TabsTrigger
           value="bot"
-          class="data-[state=active]:border-border! data-[state=active]:bg-background text-xs"
+          class="data-[state=active]:border-border! data-[state=active]:bg-background"
         >
           {{ t("ai.bot") }}
         </TabsTrigger>
         <TabsTrigger
           value="attachments"
-          class="data-[state=active]:border-border! data-[state=active]:bg-background text-xs"
+          class="data-[state=active]:border-border! data-[state=active]:bg-background"
         >
           {{ t("inspector.tabs.attachments") }}
         </TabsTrigger>
         <TabsTrigger
           value="related"
-          class="data-[state=active]:border-border! data-[state=active]:bg-background text-xs"
+          class="data-[state=active]:border-border! data-[state=active]:bg-background"
         >
           {{ t("inspector.tabs.related") }}
         </TabsTrigger>
         <TabsTrigger
           value="details"
-          class="data-[state=active]:border-border! data-[state=active]:bg-background text-xs"
+          class="data-[state=active]:border-border! data-[state=active]:bg-background"
         >
           {{ t("inspector.tabs.details") }}
         </TabsTrigger>
         <TabsTrigger
           value="activity"
-          class="data-[state=active]:border-border! data-[state=active]:bg-background text-xs"
+          class="data-[state=active]:border-border! data-[state=active]:bg-background"
         >
           {{ t("inspector.tabs.activity") }}
         </TabsTrigger>

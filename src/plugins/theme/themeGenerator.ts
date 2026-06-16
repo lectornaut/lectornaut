@@ -36,13 +36,13 @@ const LIGHT_ACCENT_SHADES = {
   primary: 300,
   destructive: 400,
   ring: 400,
-  charts: [300, 500, 700, 800, 900],
+  charts: [500, 600, 700, 800, 900],
 } as const
 const DARK_ACCENT_SHADES = {
   primary: 700,
   destructive: 600,
   ring: 600,
-  charts: [700, 500, 300, 200, 100],
+  charts: [500, 400, 300, 200, 100],
 } as const
 
 type ThemeTokens = Record<string, string>

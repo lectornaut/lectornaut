@@ -38,7 +38,7 @@ import { db } from "./firebase.js"
 import { assertAiModelProviderConfigured } from "./genkitClient.js"
 import { isAdminRole } from "./permissions.js"
 import { CALLABLE_OPTS } from "./runtimeConfig.js"
-import { anthropicApiKey, geminiApiKey, openaiApiKey } from "./secrets.js"
+import { aiProviderSecrets } from "./secrets.js"
 
 // ===========================================================================
 // Title / preview truncation defaults
@@ -124,19 +124,24 @@ export type BotModelProvider = (typeof BOT_MODEL_PROVIDERS)[number]
  *
  * Prefix conventions are also load-bearing — `resolveModel(name)` in
  * `genkitClient.ts` dispatches by prefix (`gemini-*`, `claude-*`,
- * `gpt-*`/`o1-*`/`o3-*`). Adding a model here that doesn't match one
- * of those prefixes will throw at chat time. To add a new family,
- * extend `resolveModel` first, then this list.
+ * `gpt-*`, `grok-*`, `deepseek-*`). Adding a model here that doesn't
+ * match one of those prefixes will throw at chat time. To add a new
+ * family, extend `resolveModel` first, then this list.
  */
 const BOT_AGENT_MODEL_REGISTRY = [
   // Google Gemini
-  { id: "gemini-3-flash-preview", provider: "google" },
-  { id: "gemini-2.5-pro", provider: "google" },
+  { id: "gemini-3.5-flash", provider: "google" },
+  { id: "gemini-3.1-pro-preview", provider: "google" },
   // Anthropic Claude
-  { id: "claude-opus-4-5", provider: "anthropic" },
-  { id: "claude-sonnet-4-5", provider: "anthropic" },
+  { id: "claude-opus-4-8", provider: "anthropic" },
+  { id: "claude-sonnet-4-6", provider: "anthropic" },
   // OpenAI
-  { id: "gpt-5", provider: "openai" },
+  { id: "gpt-5.1", provider: "openai" },
+  // xAI Grok
+  { id: "grok-3", provider: "xai" },
+  // DeepSeek
+  { id: "deepseek-chat", provider: "deepseek" },
+  { id: "deepseek-reasoner", provider: "deepseek" },
 ] as const satisfies ReadonlyArray<{
   id: BotAgentModel
   provider: BotModelProvider
@@ -165,6 +170,8 @@ const DEFAULT_BOT_AGENT_PROVIDERS: Record<BotModelProvider, boolean> = {
   google: true,
   anthropic: true,
   openai: true,
+  xai: true,
+  deepseek: true,
 }
 
 export type BotAgentModelToggles = Record<BotAgentModel, boolean>
@@ -396,11 +403,15 @@ const BOT_AGENT_BOUNDS = {
 } as const
 
 const botAgentConfigUpdateSchema = z.object({
+  // Keep keys in step with AI_PROVIDERS — an omitted provider here is
+  // silently stripped from the update, so the admin toggle never persists.
   providers: z
     .object({
       google: z.boolean(),
       anthropic: z.boolean(),
       openai: z.boolean(),
+      xai: z.boolean(),
+      deepseek: z.boolean(),
     })
     .partial()
     .optional(),
@@ -832,7 +843,7 @@ interface UpdateTeamAgentConfigResponse {
 export const updateTeamAgentConfig = onCall<UpdateTeamAgentConfigRequest>(
   {
     ...CALLABLE_OPTS,
-    secrets: [geminiApiKey, anthropicApiKey, openaiApiKey],
+    secrets: aiProviderSecrets,
     enforceAppCheck: true,
   },
   async (request): Promise<UpdateTeamAgentConfigResponse> => {

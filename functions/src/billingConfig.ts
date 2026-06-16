@@ -337,13 +337,16 @@ const MODEL_PRICE_PER_MTOK: {
   input: number
   output: number
 }[] = [
-  { match: "opus", input: 15, output: 75 },
+  { match: "opus", input: 5, output: 25 },
   { match: "sonnet", input: 3, output: 15 },
   { match: "haiku", input: 1, output: 5 },
   { match: "gemini-2.5-pro", input: 1.25, output: 10 },
   { match: "gemini", input: 0.3, output: 2.5 },
   { match: "gpt-4o-mini", input: 0.15, output: 0.6 },
   { match: "gpt", input: 2.5, output: 10 },
+  { match: "grok", input: 3, output: 15 },
+  { match: "deepseek-reasoner", input: 0.55, output: 2.19 },
+  { match: "deepseek", input: 0.27, output: 1.1 },
 ]
 const DEFAULT_PRICE_PER_MTOK = { input: 3, output: 15 }
 

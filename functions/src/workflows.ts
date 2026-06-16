@@ -68,10 +68,8 @@ import {
   TRIGGER_OPTS,
 } from "./runtimeConfig.js"
 import {
-  anthropicApiKey,
+  aiProviderSecrets,
   CONNECTION_OAUTH_SECRETS,
-  geminiApiKey,
-  openaiApiKey,
   postmarkApiKey,
 } from "./secrets.js"
 import { getTeamAdminsAndOwners } from "./teams.js"
@@ -1618,9 +1616,7 @@ export const executeWorkflowRun = onDocumentCreated(
     // they fail-soft with "not connected", but the refresh path must never
     // die on a missing binding instead of a missing secret).
     secrets: [
-      geminiApiKey,
-      anthropicApiKey,
-      openaiApiKey,
+      ...aiProviderSecrets,
       postmarkApiKey,
       ...CONNECTION_OAUTH_SECRETS,
     ],

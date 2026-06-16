@@ -12,7 +12,9 @@
  */
 
 import { anthropic } from "@genkit-ai/anthropic"
+import { deepSeek } from "@genkit-ai/compat-oai/deepseek"
 import { openAI } from "@genkit-ai/compat-oai/openai"
+import { xAI } from "@genkit-ai/compat-oai/xai"
 import { enableFirebaseTelemetry } from "@genkit-ai/firebase"
 import { googleAI } from "@genkit-ai/google-genai"
 import { HttpsError } from "firebase-functions/v2/https"
@@ -30,12 +32,16 @@ const providerSecretEnvKey: Record<AiModelProvider, string> = {
   google: "GEMINI_API_KEY",
   anthropic: "ANTHROPIC_API_KEY",
   openai: "OPENAI_API_KEY",
+  xai: "XAI_API_KEY",
+  deepseek: "DEEPSEEK_API_KEY",
 }
 
 const providerLabels: Record<AiModelProvider, string> = {
   google: "Google Gemini",
   anthropic: "Anthropic Claude",
   openai: "OpenAI",
+  xai: "xAI Grok",
+  deepseek: "DeepSeek",
 }
 
 function readSecret(provider: AiModelProvider): string | undefined {
@@ -76,6 +82,8 @@ function readSecret(provider: AiModelProvider): string | undefined {
 const googleKey = readSecret("google")
 const anthropicKey = readSecret("anthropic")
 const openaiKey = readSecret("openai")
+const xaiKey = readSecret("xai")
+const deepseekKey = readSecret("deepseek")
 
 /**
  * Dotprompt directory — resolved at module-load time relative to this
@@ -105,6 +113,8 @@ export const ai = genkit({
     ...(googleKey ? [googleAI({ apiKey: googleKey })] : []),
     ...(anthropicKey ? [anthropic({ apiKey: anthropicKey })] : []),
     ...(openaiKey ? [openAI({ apiKey: openaiKey })] : []),
+    ...(xaiKey ? [xAI({ apiKey: xaiKey })] : []),
+    ...(deepseekKey ? [deepSeek({ apiKey: deepseekKey })] : []),
   ],
 })
 
@@ -112,9 +122,11 @@ export function getModelProvider(name: string): AiModelProvider {
   if (name.startsWith("gemini-")) return "google"
   if (name.startsWith("claude-")) return "anthropic"
   if (name.startsWith("gpt-")) return "openai"
+  if (name.startsWith("grok-")) return "xai"
+  if (name.startsWith("deepseek-")) return "deepseek"
   throw new HttpsError(
     "invalid-argument",
-    `Unknown bot model "${name}". Expected a gemini-/claude-/gpt- prefixed wire-name.`
+    `Unknown bot model "${name}". Expected a gemini-/claude-/gpt-/grok-/deepseek- prefixed wire-name.`
   )
 }
 
@@ -138,14 +150,16 @@ export function assertAiModelProviderConfigured(
 /**
  * Model-wire-name → provider dispatch.
  *
- * Bot agent config stores the model as a flat string (e.g. `claude-sonnet-4-5`
+ * Bot agent config stores the model as a flat string (e.g. `claude-sonnet-4-6`
  * or `gpt-5`). At chat time we map the string to the right plugin's
  * `model(...)` helper so the rest of the flow stays provider-agnostic.
  *
  * Prefix-based to avoid maintaining a per-model switch:
- *   - "gemini-*" → googleAI
- *   - "claude-*" → anthropic
- *   - "gpt-*"    → openAI
+ *   - "gemini-*"   → googleAI
+ *   - "claude-*"   → anthropic
+ *   - "gpt-*"      → openAI
+ *   - "grok-*"     → xAI
+ *   - "deepseek-*" → deepSeek
  *
  * Unknown prefixes throw — the per-team config schema validates against
  * a known allowlist (see `BOT_AGENT_MODELS` in `bot.ts`), so reaching
@@ -163,5 +177,7 @@ export function resolveModel(name: string) {
 
   if (provider === "google") return googleAI.model(name)
   if (provider === "anthropic") return anthropic.model(name)
-  return openAI.model(name)
+  if (provider === "openai") return openAI.model(name)
+  if (provider === "xai") return xAI.model(name)
+  return deepSeek.model(name)
 }

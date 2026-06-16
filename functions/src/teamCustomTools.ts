@@ -17,6 +17,7 @@ import type { BotActionContext } from "./botBuiltinTools.js"
 import { searchWorkspaceNodesTool } from "./botRag.js"
 import {
   ai,
+  type AiModelProvider,
   isAiModelProviderConfigured,
   resolveModel,
 } from "./genkitClient.js"
@@ -290,12 +291,12 @@ async function executeWorkspaceSearch(
  * silent "not configured → fall back to chat model" branch, not an
  * exception bubbling up from a tool call mid-turn.
  */
-function modelProvider(
-  modelId: string
-): "google" | "anthropic" | "openai" | null {
+function modelProvider(modelId: string): AiModelProvider | null {
   if (modelId.startsWith("gemini-")) return "google"
   if (modelId.startsWith("claude-")) return "anthropic"
   if (modelId.startsWith("gpt-")) return "openai"
+  if (modelId.startsWith("grok-")) return "xai"
+  if (modelId.startsWith("deepseek-")) return "deepseek"
   return null
 }
 

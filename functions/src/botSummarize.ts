@@ -41,7 +41,7 @@ import { db } from "./firebase.js"
 import { ai } from "./genkitClient.js"
 import { redactText } from "./genkitMiddleware.js"
 import { GENKIT_OPTS } from "./runtimeConfig.js"
-import { anthropicApiKey, geminiApiKey, openaiApiKey } from "./secrets.js"
+import { aiProviderSecrets } from "./secrets.js"
 import { runStructuredGeneration } from "./structuredGeneration.js"
 import { extractPlainText } from "./tiptapText.js"
 import type { NodeType, WorkspaceNodeScope } from "./types.js"
@@ -410,7 +410,7 @@ async function runSummarize(
 export const summarizeNode = onCall<SummarizeNodeInput>(
   {
     ...GENKIT_OPTS,
-    secrets: [geminiApiKey, anthropicApiKey, openaiApiKey],
+    secrets: aiProviderSecrets,
     enforceAppCheck: true,
   },
   async (request): Promise<SummarizeNodeResult> => {

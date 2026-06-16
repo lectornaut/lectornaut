@@ -4,6 +4,20 @@ export const postmarkApiKey = defineSecret("POSTMARK_API_KEY")
 export const geminiApiKey = defineSecret("GEMINI_API_KEY")
 export const anthropicApiKey = defineSecret("ANTHROPIC_API_KEY")
 export const openaiApiKey = defineSecret("OPENAI_API_KEY")
+export const xaiApiKey = defineSecret("XAI_API_KEY")
+export const deepseekApiKey = defineSecret("DEEPSEEK_API_KEY")
+
+// Bind on EVERY callable that resolves a team-selectable chat model: any of the
+// five providers may be chosen, and `resolveModel` raises failed-precondition if
+// the picked provider's secret isn't bound. One array so adding a provider is a
+// single edit, not a sweep across every AI callsite. See genkitClient.ts.
+export const aiProviderSecrets = [
+  geminiApiKey,
+  anthropicApiKey,
+  openaiApiKey,
+  xaiApiKey,
+  deepseekApiKey,
+]
 export const appCheckExchangeSharedSecret = defineSecret(
   "APPCHECK_EXCHANGE_SHARED_SECRET"
 )

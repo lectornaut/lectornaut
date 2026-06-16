@@ -377,7 +377,13 @@ export type WorkflowRunStatus = (typeof WORKFLOW_RUN_STATUSES)[number]
 // ============================================================================
 
 /** Model provider families the bot/agent layer can call. */
-export const AI_PROVIDERS = ["google", "anthropic", "openai"] as const
+export const AI_PROVIDERS = [
+  "google",
+  "anthropic",
+  "openai",
+  "xai",
+  "deepseek",
+] as const
 export type AiProvider = (typeof AI_PROVIDERS)[number]
 
 /**
@@ -389,13 +395,18 @@ export type AiProvider = (typeof AI_PROVIDERS)[number]
  */
 export const BOT_AGENT_MODELS = [
   // Google Gemini
-  "gemini-3-flash-preview",
-  "gemini-2.5-pro",
+  "gemini-3.5-flash",
+  "gemini-3.1-pro-preview",
   // Anthropic Claude
-  "claude-opus-4-5",
-  "claude-sonnet-4-5",
+  "claude-opus-4-8",
+  "claude-sonnet-4-6",
   // OpenAI
-  "gpt-5",
+  "gpt-5.1",
+  // xAI Grok
+  "grok-3",
+  // DeepSeek
+  "deepseek-chat",
+  "deepseek-reasoner",
 ] as const
 export type BotAgentModel = (typeof BOT_AGENT_MODELS)[number]
 

@@ -149,12 +149,7 @@ import { buildMemoryContextBlock } from "./memoryRag.js"
 import { recallMemoryTool, saveMemoryTool } from "./memoryTools.js"
 import { can, Capabilities } from "./permissions.js"
 import { GENKIT_OPTS } from "./runtimeConfig.js"
-import {
-  anthropicApiKey,
-  CONNECTION_OAUTH_SECRETS,
-  geminiApiKey,
-  openaiApiKey,
-} from "./secrets.js"
+import { aiProviderSecrets, CONNECTION_OAUTH_SECRETS } from "./secrets.js"
 import type { TeamAgentDoc } from "./teamAgents.js"
 import {
   buildCustomToolForChat,
@@ -3480,12 +3475,7 @@ export const sendBotMessage = onCallGenkit(
     ...GENKIT_OPTS,
     // The OAuth client pair rides along so a connection tool can refresh a
     // member's token mid-turn (connections.ts reads them via process.env).
-    secrets: [
-      geminiApiKey,
-      anthropicApiKey,
-      openaiApiKey,
-      ...CONNECTION_OAUTH_SECRETS,
-    ],
+    secrets: [...aiProviderSecrets, ...CONNECTION_OAUTH_SECRETS],
     authPolicy: (auth) => !!auth?.token?.email_verified,
     enforceAppCheck: true,
   },
@@ -3956,12 +3946,7 @@ export const respondToBotInterrupt = onCallGenkit(
   {
     ...GENKIT_OPTS,
     // Same OAuth pair as sendBotMessage — resumed turns run tools too.
-    secrets: [
-      geminiApiKey,
-      anthropicApiKey,
-      openaiApiKey,
-      ...CONNECTION_OAUTH_SECRETS,
-    ],
+    secrets: [...aiProviderSecrets, ...CONNECTION_OAUTH_SECRETS],
     authPolicy: (auth) => !!auth?.token?.email_verified,
     enforceAppCheck: true,
   },
