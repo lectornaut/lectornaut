@@ -469,21 +469,23 @@ const keepMenuOpen = (event: Event) => {
                         :key="model.id"
                         :value="model.id"
                       >
-                        <div class="flex flex-col items-start gap-0.5">
-                          <span class="flex items-center gap-2">
-                            {{ model.name }}
-                            <Badge
-                              v-if="model.badge"
-                              variant="secondary"
-                              class="text-xs"
-                            >
-                              {{ model.badge }}
-                            </Badge>
-                          </span>
-                          <span class="text-muted-foreground text-xs">
-                            {{ model.description }}
-                          </span>
-                        </div>
+                        <Item size="xs" class="p-0">
+                          <ItemContent>
+                            <ItemTitle>
+                              {{ model.name }}
+                              <Badge
+                                v-if="model.badge"
+                                variant="secondary"
+                                class="text-xs"
+                              >
+                                {{ model.badge }}
+                              </Badge>
+                            </ItemTitle>
+                            <ItemDescription class="text-xs">
+                              {{ model.description }}
+                            </ItemDescription>
+                          </ItemContent>
+                        </Item>
                       </SelectItem>
                     </SelectGroup>
                     <SelectSeparator
@@ -525,12 +527,14 @@ const keepMenuOpen = (event: Event) => {
                       :key="mode.id"
                       :value="mode.id"
                     >
-                      <div class="flex flex-col items-start gap-0.5">
-                        <span>{{ mode.name }}</span>
-                        <span class="text-muted-foreground text-xs">
-                          {{ mode.description }}
-                        </span>
-                      </div>
+                      <Item size="xs" class="p-0">
+                        <ItemContent>
+                          <ItemTitle>{{ mode.name }}</ItemTitle>
+                          <ItemDescription class="text-xs">
+                            {{ mode.description }}
+                          </ItemDescription>
+                        </ItemContent>
+                      </Item>
                     </SelectItem>
                   </SelectGroup>
                 </SelectContent>

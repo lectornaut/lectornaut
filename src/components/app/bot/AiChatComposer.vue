@@ -540,25 +540,6 @@ const phantomActiveAgent = computed<ITeamAgent | null>(() => {
   return agent
 })
 
-/**
- * Label suffix appended to the active badge when its status is
- * anything other than "active". Localized via the `ai.agents.status*`
- * key family. Empty string when no decoration is needed so the badge
- * just shows the agent's name.
- */
-const activeStatusLabel = computed<string>(() => {
-  switch (activeAgentStatus.value) {
-    case "disabled":
-      return t("ai.agents.statusDisabled")
-    case "archived":
-      return t("ai.agents.statusArchived")
-    case "deleted":
-      return t("ai.agents.statusDeleted")
-    default:
-      return ""
-  }
-})
-
 // Sentinel value for the "Default" option. `<Select>` items need a
 // non-empty string value, and `null` (clear back to the built-in
 // persona) can't round-trip through reka-ui's string-keyed model — so we
@@ -1315,42 +1296,17 @@ const onToolMenuCloseAutoFocus = (event: Event) => {
             <Tooltip>
               <TooltipTrigger as-child>
                 <InputGroupButton variant="ghost" class="ml-auto" as-child>
-                  <SelectTrigger>
+                  <SelectTrigger class="bg-transparent">
                     <SelectValue :placeholder="t('ai.agents.label')">
                       <InputGroupText>
-                        <!-- Default persona: no avatar, just the bot glyph. -->
-                        <template v-if="activeAgentId === null">
-                          <IconBot />
-                          {{ t("ai.agents.default") }}
-                        </template>
-                        <!-- Active agent we still have a record for (selectable
-                         or phantom): avatar + name + optional status suffix. -->
-                        <template v-else-if="activeAgent">
-                          <AppAvatar
-                            variant="beam"
-                            :name="agentAvatarSeed(activeAgent)"
-                            class="size-4"
-                          />
-                          {{ activeAgent.name }}
-                          <span
-                            v-if="activeStatusLabel"
-                            class="text-muted-foreground text-xs"
-                          >
-                            · {{ activeStatusLabel }}
-                          </span>
-                        </template>
-                        <!-- Hard-deleted agent: no record left, fall back to a
-                         generic label + the "Deleted" suffix. -->
-                        <template v-else>
-                          <IconBot />
-                          {{ t("ai.agents.deletedAgentLabel") }}
-                          <span
-                            v-if="activeStatusLabel"
-                            class="text-muted-foreground text-xs"
-                          >
-                            · {{ activeStatusLabel }}
-                          </span>
-                        </template>
+                        <!-- Icon/avatar only — name hidden. -->
+                        <AppAvatar
+                          v-if="activeAgentId !== null && activeAgent"
+                          variant="beam"
+                          :name="agentAvatarSeed(activeAgent)"
+                          class="size-4"
+                        />
+                        <IconBot v-else />
                       </InputGroupText>
                     </SelectValue>
                   </SelectTrigger>
@@ -1363,7 +1319,7 @@ const onToolMenuCloseAutoFocus = (event: Event) => {
             <SelectGroup>
               <SelectLabel>{{ t("ai.agents.groupBuiltIn") }}</SelectLabel>
               <SelectItem :value="AGENT_DEFAULT_VALUE">
-                <Item size="xs" class="border-0 p-0">
+                <Item size="xs" class="p-0">
                   <ItemMedia variant="icon">
                     <IconBot />
                   </ItemMedia>
@@ -1380,7 +1336,7 @@ const onToolMenuCloseAutoFocus = (event: Event) => {
                 :key="agent.id"
                 :value="agent.id"
               >
-                <Item size="xs" class="border-0 p-0">
+                <Item size="xs" class="p-0">
                   <ItemMedia variant="icon">
                     <AppAvatar
                       variant="beam"
@@ -1420,7 +1376,7 @@ const onToolMenuCloseAutoFocus = (event: Event) => {
                   :key="agent.id"
                   :value="agent.id"
                 >
-                  <Item size="xs" class="border-0 p-0">
+                  <Item size="xs" class="p-0">
                     <ItemMedia variant="icon">
                       <AppAvatar
                         variant="beam"
@@ -1510,7 +1466,7 @@ const onToolMenuCloseAutoFocus = (event: Event) => {
           <Tooltip>
             <TooltipTrigger as-child>
               <InputGroupButton variant="ghost" as-child>
-                <SelectTrigger>
+                <SelectTrigger class="bg-transparent">
                   <SelectValue :placeholder="t('ai.mode')">
                     <InputGroupText class="text-xs">
                       {{ modeLabel(mode) }}
@@ -1529,14 +1485,14 @@ const onToolMenuCloseAutoFocus = (event: Event) => {
               :key="option.value"
               :value="option.value"
             >
-              <div class="flex flex-col gap-0.5">
-                <span class="flex items-center gap-2 text-sm font-medium">
-                  {{ modeLabel(option.value) }}
-                </span>
-                <span class="text-muted-foreground text-xs">
-                  {{ option.shortDescription }}
-                </span>
-              </div>
+              <Item size="xs" class="p-0">
+                <ItemContent>
+                  <ItemTitle>{{ modeLabel(option.value) }}</ItemTitle>
+                  <ItemDescription class="text-xs">
+                    {{ option.shortDescription }}
+                  </ItemDescription>
+                </ItemContent>
+              </Item>
             </SelectItem>
           </SelectGroup>
         </SelectContent>
@@ -1550,7 +1506,7 @@ const onToolMenuCloseAutoFocus = (event: Event) => {
           <Tooltip>
             <TooltipTrigger as-child>
               <InputGroupButton variant="ghost" class="ml-auto" as-child>
-                <SelectTrigger>
+                <SelectTrigger class="bg-transparent">
                   <SelectValue :placeholder="t('ai.model')">
                     <InputGroupText class="text-xs">
                       {{ activeModel.name }}
@@ -1581,21 +1537,23 @@ const onToolMenuCloseAutoFocus = (event: Event) => {
                 :key="entry.id"
                 :value="entry.id"
               >
-                <div class="flex flex-col gap-0.5">
-                  <span class="flex items-center gap-2 text-sm font-medium">
-                    {{ entry.name }}
-                    <Badge
-                      v-if="entry.badge"
-                      variant="secondary"
-                      class="text-xs"
-                    >
-                      {{ entry.badge }}
-                    </Badge>
-                  </span>
-                  <span class="text-muted-foreground text-xs">
-                    {{ entry.description }}
-                  </span>
-                </div>
+                <Item size="xs" class="p-0">
+                  <ItemContent>
+                    <ItemTitle>
+                      {{ entry.name }}
+                      <Badge
+                        v-if="entry.badge"
+                        variant="secondary"
+                        class="text-xs"
+                      >
+                        {{ entry.badge }}
+                      </Badge>
+                    </ItemTitle>
+                    <ItemDescription class="text-xs">
+                      {{ entry.description }}
+                    </ItemDescription>
+                  </ItemContent>
+                </Item>
               </SelectItem>
             </SelectGroup>
             <SelectSeparator

@@ -1057,22 +1057,24 @@ const handleEditorSave = async (): Promise<void> => {
                           :key="kind"
                           :value="kind"
                         >
-                          <div class="flex flex-col items-start gap-0.5">
-                            <span>
-                              {{
-                                t(
-                                  `settings.agents.customTools.action.kinds.${kind}`
-                                )
-                              }}
-                            </span>
-                            <span class="text-muted-foreground text-xs">
-                              {{
-                                t(
-                                  `settings.agents.customTools.action.kindDescriptions.${kind}`
-                                )
-                              }}
-                            </span>
-                          </div>
+                          <Item size="xs" class="p-0">
+                            <ItemContent>
+                              <ItemTitle>
+                                {{
+                                  t(
+                                    `settings.agents.customTools.action.kinds.${kind}`
+                                  )
+                                }}
+                              </ItemTitle>
+                              <ItemDescription class="text-xs">
+                                {{
+                                  t(
+                                    `settings.agents.customTools.action.kindDescriptions.${kind}`
+                                  )
+                                }}
+                              </ItemDescription>
+                            </ItemContent>
+                          </Item>
                         </SelectItem>
                       </SelectGroup>
                     </SelectContent>

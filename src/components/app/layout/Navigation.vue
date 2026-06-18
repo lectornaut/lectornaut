@@ -1,12 +1,18 @@
 <script lang="ts" setup>
 import { useNavigation } from "@/composables/useNavigation"
-import { IconBadgeCheck, IconGrid2X2Plus, IconRotateCcw } from "@/data/icons"
-import { defaultMenu } from "@/helpers/defaults"
+import {
+  IconBadgeCheck,
+  IconGrid2X2Plus,
+  IconGripVertical,
+  IconRotateCcw,
+} from "@/data/icons"
 
 const { t } = useI18n()
 
-// Drag-reorder target for the nav list; the wiring lives in useNavigation.
+// Drag-reorder targets; the wiring lives in useNavigation. `el` is the live
+// sidebar list, `rosterListEl` is the edit dialog's roster list.
 const el = ref<HTMLElement>()
+const rosterListEl = ref<HTMLElement>()
 
 // Navigation roster + drag-reorder wiring (see useNavigation). The stores stay
 // the source of truth; the composable derives the agent roster metadata and
@@ -23,7 +29,11 @@ const {
   memberAgentIds,
   agentKindIcon,
   agentKindLabel,
-} = useNavigation(el)
+  agentAvatarSeed,
+  editOpen,
+  rosterItems,
+  isItemActive,
+} = useNavigation(el, rosterListEl)
 </script>
 
 <template>
@@ -55,72 +65,119 @@ const {
             </SidebarMenuButton>
           </SidebarMenuItem>
         </template>
-        <DropdownMenu>
-          <DropdownMenuTrigger as-child>
+        <Dialog v-model:open="editOpen">
+          <DialogTrigger as-child>
             <SidebarMenuItem>
               <SidebarMenuButton :tooltip="t('navigation.showMore')">
                 <IconGrid2X2Plus />
                 {{ t("common.edit") }}
               </SidebarMenuButton>
             </SidebarMenuItem>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent>
-            <DropdownMenuGroup>
-              <DropdownMenuLabel>
+          </DialogTrigger>
+          <DialogContent
+            class="grid max-h-[85svh] grid-rows-[auto_minmax(0,1fr)_auto] overflow-hidden sm:max-w-md"
+          >
+            <DialogHeader>
+              <DialogTitle>{{ t("common.edit") }}</DialogTitle>
+              <DialogDescription>
+                {{ t("navigation.showMore") }}
+              </DialogDescription>
+            </DialogHeader>
+            <OverlayScrollbarsWrapper>
+              <!--
+                Unified, draggable roster: every menu item as an Item row with a
+                drag handle (reorder) + Checkbox (visibility). Reordering this
+                list persists the active subset's order; see useNavigation.
+              -->
+              <Label class="text-muted-foreground py-4 text-xs">
                 {{ t("navigation.groups.navigation") }}
-              </DropdownMenuLabel>
-              <DropdownMenuCheckboxItem
-                v-for="item in defaultMenu"
-                :key="item.id"
-                :model-value="activeNavItems.some((i) => i.id === item.id)"
-                @update:model-value="toggleNavItem(item.id, $event)"
-                @select.prevent
-              >
-                {{ t("navigation.menu." + item.id) }}
-              </DropdownMenuCheckboxItem>
-            </DropdownMenuGroup>
-            <DropdownMenuSeparator />
-            <DropdownMenuSub>
-              <DropdownMenuSubTrigger>
-                {{ t("navigation.groups.agents") }}
-              </DropdownMenuSubTrigger>
-              <DropdownMenuSubContent>
-                <!--
-                  Master toggle for the whole Agents section (mirrors the
-                  MainSidebar `v-if`). Kept at the top so the per-agent
-                  rows read as "within" it; they go disabled when it's off.
-                -->
-                <DropdownMenuCheckboxItem
-                  :model-value="agentsSidebarVisible"
-                  @update:model-value="agentsSidebarVisible = $event"
-                  @select.prevent
+              </Label>
+              <ItemGroup ref="rosterListEl" class="gap-2">
+                <Item
+                  v-for="item in rosterItems"
+                  :key="item.id"
+                  variant="outline"
+                  size="xs"
+                  class="roster-item"
                 >
-                  {{ t("navigation.agentsSidebar") }}
-                </DropdownMenuCheckboxItem>
-                <DropdownMenuSeparator />
+                  <Button
+                    class="nav-drag-handle cursor-grab touch-none active:cursor-grabbing"
+                    variant="outline"
+                    size="icon-xs"
+                    :aria-label="t('common.reorder')"
+                  >
+                    <IconGripVertical />
+                  </Button>
+                  <ItemMedia variant="icon">
+                    <Component :is="item.icon" />
+                  </ItemMedia>
+                  <ItemContent>
+                    <ItemTitle>{{ t("navigation.menu." + item.id) }}</ItemTitle>
+                  </ItemContent>
+                  <ItemActions>
+                    <Checkbox
+                      :model-value="isItemActive(item.id)"
+                      @update:model-value="
+                        toggleNavItem(item.id, $event === true)
+                      "
+                    />
+                  </ItemActions>
+                </Item>
+              </ItemGroup>
+
+              <!--
+                Agents section, flattened from the old submenu. The master
+                toggle gates the per-agent rows (mirrors the MainSidebar `v-if`);
+                per-agent rows go disabled when it's off.
+              -->
+              <Label class="text-muted-foreground py-4 text-xs">
+                {{ t("navigation.groups.agents") }}
+              </Label>
+              <ItemGroup class="gap-2">
+                <Item variant="outline" size="xs">
+                  <ItemContent>
+                    <ItemTitle>{{ t("navigation.agentsSidebar") }}</ItemTitle>
+                  </ItemContent>
+                  <ItemActions>
+                    <Checkbox
+                      :model-value="agentsSidebarVisible"
+                      @update:model-value="
+                        agentsSidebarVisible = $event === true
+                      "
+                    />
+                  </ItemActions>
+                </Item>
                 <template v-if="pickerAgents.length">
-                  <DropdownMenuCheckboxItem
+                  <Item
                     v-for="agent in pickerAgents"
                     :key="agent.id"
-                    :model-value="isAgentVisible(agent.id)"
-                    :disabled="!agentsSidebarVisible"
-                    @update:model-value="setAgentVisible(agent.id, $event)"
-                    @select.prevent
+                    variant="outline"
+                    size="xs"
+                    :data-disabled="!agentsSidebarVisible || undefined"
+                    class="data-disabled:opacity-50"
                   >
-                    {{ agent.name }}
-                    <!--
-                      Indicator cluster, right-aligned via DropdownMenuShortcut.
-                      The membership check (badge-check) sits to the LEFT of the
-                      agent-kind glyph (sparkle = custom, sparkles = built-in).
-                      Mirrors the Agents sidebar treatment.
-                    -->
-                    <TooltipProvider>
-                      <DropdownMenuShortcut class="flex items-center gap-1">
+                    <ItemMedia variant="image" class="rounded-full">
+                      <AppAvatar
+                        variant="beam"
+                        :name="agentAvatarSeed(agent)"
+                        class="size-4"
+                      />
+                    </ItemMedia>
+                    <ItemContent>
+                      <ItemTitle class="truncate">
+                        {{ agent.name }}
+                      </ItemTitle>
+                    </ItemContent>
+                    <ItemActions>
+                      <!--
+                          Indicator cluster: membership check (badge-check) to
+                          the LEFT of the agent-kind glyph (sparkle = custom,
+                          sparkles = built-in). Mirrors the Agents sidebar.
+                        -->
+                      <TooltipProvider>
                         <Tooltip v-if="memberAgentIds.has(agent.id)">
                           <TooltipTrigger as-child>
-                            <span>
-                              <IconBadgeCheck />
-                            </span>
+                            <span><IconBadgeCheck /></span>
                           </TooltipTrigger>
                           <TooltipContent side="top">
                             {{ t("ai.agents.teamMember") }}
@@ -128,30 +185,43 @@ const {
                         </Tooltip>
                         <Tooltip>
                           <TooltipTrigger as-child>
-                            <span>
-                              <Component :is="agentKindIcon(agent.id)" />
-                            </span>
+                            <span
+                              ><Component :is="agentKindIcon(agent.id)"
+                            /></span>
                           </TooltipTrigger>
                           <TooltipContent side="top">
                             {{ agentKindLabel(agent.id) }}
                           </TooltipContent>
                         </Tooltip>
-                      </DropdownMenuShortcut>
-                    </TooltipProvider>
-                  </DropdownMenuCheckboxItem>
+                      </TooltipProvider>
+                      <Checkbox
+                        :model-value="isAgentVisible(agent.id)"
+                        :disabled="!agentsSidebarVisible"
+                        @update:model-value="
+                          setAgentVisible(agent.id, $event === true)
+                        "
+                      />
+                    </ItemActions>
+                  </Item>
                 </template>
-                <DropdownMenuItem v-else disabled>
-                  {{ t("navigation.agentsEmpty") }}
-                </DropdownMenuItem>
-              </DropdownMenuSubContent>
-            </DropdownMenuSub>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem @click="resetNavItems">
-              <IconRotateCcw />
-              {{ t("common.reset") }}
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+                <Empty v-else class="py-6">
+                  <EmptyDescription>
+                    {{ t("navigation.agentsEmpty") }}
+                  </EmptyDescription>
+                </Empty>
+              </ItemGroup>
+            </OverlayScrollbarsWrapper>
+            <DialogFooter class="sm:justify-between">
+              <Button variant="ghost" @click="resetNavItems">
+                <IconRotateCcw />
+                {{ t("common.reset") }}
+              </Button>
+              <DialogClose as-child>
+                <Button variant="secondary">{{ t("common.close") }}</Button>
+              </DialogClose>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </SidebarMenu>
     </SidebarGroupContent>
   </SidebarGroup>

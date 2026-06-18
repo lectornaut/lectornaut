@@ -7,13 +7,15 @@
         <TabsTrigger
           value="details"
           class="data-[state=active]:border-border! data-[state=active]:bg-background"
-          >Details</TabsTrigger
         >
+          Details
+        </TabsTrigger>
         <TabsTrigger
           value="actions"
           class="data-[state=active]:border-border! data-[state=active]:bg-background"
-          >Actions</TabsTrigger
         >
+          Actions
+        </TabsTrigger>
         <TabsTrigger
           value="attachments"
           class="data-[state=active]:border-border! data-[state=active]:bg-background"

@@ -1,7 +1,8 @@
 /**
  * Derived navigation views for Navigation.vue: the merged built-in + custom
- * agent roster the "edit" submenu renders (with team-membership dots and
- * built-in/custom glyphs) plus the drag-reorder wiring over the nav items.
+ * agent roster the "edit" dialog renders (with team-membership dots and
+ * built-in/custom glyphs), the draggable nav-item roster that dialog edits,
+ * plus the drag-reorder wiring over the live sidebar nav items.
  *
  * Canonical state stays in the stores — {@link useNavigationStore} owns the nav
  * items, {@link useUiPreferencesStore} owns agent visibility. This composable
@@ -11,26 +12,37 @@
  */
 import { isBuiltInAgentId } from "@/data/builtInAgents"
 import { IconSparkle, IconSparkles } from "@/data/icons"
+import { defaultMenu } from "@/helpers/defaults"
 import { useMembershipStore } from "@/stores/membershipStore"
-import { useNavigationStore } from "@/stores/navigationStore"
+import { useNavigationStore, type NavItem } from "@/stores/navigationStore"
 import { useTeamAgentsStore } from "@/stores/teamAgentsStore"
 import { useUiPreferencesStore } from "@/stores/uiPreferencesStore"
 import { isAgentMembership } from "@/types/membership"
 import { useSortable } from "@vueuse/integrations/useSortable"
 import { storeToRefs } from "pinia"
-import { computed, type Ref } from "vue"
+import { computed, nextTick, ref, watch, type Ref } from "vue"
 import { useI18n } from "vue-i18n"
 
 /**
- * @param el Template ref for the sidebar menu list. Owned by the component (it
- *   is the `ref="el"` binding point); the drag-reorder wiring lives here.
+ * @param el Template ref for the live sidebar menu list. Owned by the component
+ *   (the `ref="el"` binding point); its drag-reorder wiring lives here.
+ * @param rosterListEl Template ref for the edit dialog's roster list. Owned by
+ *   the component (the `ref="rosterListEl"` binding point); the dialog's
+ *   drag-reorder wiring lives here.
  */
-export function useNavigation(el: Ref<HTMLElement | undefined>) {
+export function useNavigation(
+  el: Ref<HTMLElement | undefined>,
+  rosterListEl: Ref<HTMLElement | undefined>
+) {
   const { t } = useI18n()
 
   const navigationStore = useNavigationStore()
   const { activeNavItems, isLoading } = storeToRefs(navigationStore)
-  const { toggleNavItem, resetNavItems } = navigationStore
+  const {
+    toggleNavItem,
+    resetNavItems: resetNavItemsStore,
+    setNavItems,
+  } = navigationStore
 
   const uiPreferencesStore = useUiPreferencesStore()
   const { agentsSidebarVisible } = storeToRefs(uiPreferencesStore)
@@ -65,6 +77,14 @@ export function useNavigation(el: Ref<HTMLElement | undefined>) {
       ? t("ai.agents.builtInTooltip")
       : t("ai.agents.customTooltip")
 
+  // Generative-avatar seed, mirroring the Agents sidebar: explicit `avatarSeed`,
+  // else the name, else the id — so the blob stays deterministic from the label.
+  const agentAvatarSeed = (agent: {
+    avatarSeed: string
+    name: string
+    id: string
+  }) => agent.avatarSeed.trim() || agent.name.trim() || agent.id
+
   // Drag-reorder the nav items in place via the component-owned `el`;
   // reordering mutates `activeNavItems`, which the store persists (debounced).
   useSortable(el, activeNavItems, {
@@ -73,6 +93,57 @@ export function useNavigation(el: Ref<HTMLElement | undefined>) {
     ghostClass: "cursor-grab",
     chosenClass: "cursor-grabbing",
     dragClass: "cursor-grabbing",
+  })
+
+  // ── Edit dialog ───────────────────────────────────────────────────────────
+  // The dialog shows one unified, draggable roster: active items first (in
+  // their saved order) then the rest, so a single list covers both ordering
+  // (drag) and visibility (checkbox). Rebuilt each open so it starts from the
+  // persisted state.
+  const editOpen = ref(false)
+  const rosterItems = ref<NavItem[]>([])
+
+  const isItemActive = (id: string) =>
+    activeNavItems.value.some((item) => item.id === id)
+
+  function buildRoster() {
+    const activeIds = new Set(activeNavItems.value.map((item) => item.id))
+    rosterItems.value = [
+      ...activeNavItems.value,
+      ...defaultMenu.filter((item) => !activeIds.has(item.id)),
+    ]
+  }
+
+  watch(editOpen, (open) => {
+    if (open) buildRoster()
+  })
+
+  // Reset restores the default menu (store) AND rebuilds the dialog roster, so
+  // its drag order + checkboxes reflect the reset immediately rather than
+  // keeping the snapshot taken when the dialog opened.
+  async function resetNavItems() {
+    await resetNavItemsStore()
+    buildRoster()
+  }
+
+  // Persist the active subset in current roster order after a drag. Visibility
+  // toggles go through `toggleNavItem`; re-enabling an item appends it (store
+  // behaviour), and the next drag reconciles it to its roster slot.
+  // ponytail: re-add lands at the end until the next reorder — acceptable.
+  const persistRosterOrder = () =>
+    void setNavItems(rosterItems.value.filter((item) => isItemActive(item.id)))
+
+  useSortable(rosterListEl, rosterItems, {
+    animation: 150,
+    handle: ".nav-drag-handle",
+    // The dialog content is unmounted while closed, so `rosterListEl` is empty
+    // at mount time. `watchElement` makes useSortable (re)attach SortableJS
+    // each time the list appears instead of only once on mount (which no-ops).
+    watchElement: true,
+    // useSortable defers its array reassignment to nextTick (its `onUpdate`
+    // runs before this `onEnd`), so read the reordered roster one tick later —
+    // the FIFO microtask queue guarantees the reorder lands first.
+    onEnd: () => void nextTick(persistRosterOrder),
   })
 
   return {
@@ -87,5 +158,9 @@ export function useNavigation(el: Ref<HTMLElement | undefined>) {
     memberAgentIds,
     agentKindIcon,
     agentKindLabel,
+    agentAvatarSeed,
+    editOpen,
+    rosterItems,
+    isItemActive,
   }
 }

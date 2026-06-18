@@ -803,7 +803,7 @@ const handleSave = async (): Promise<void> => {
                       }}</SelectLabel>
                       <!-- Default agent — always available, always a member. -->
                       <SelectItem :value="DEFAULT_AGENT_ID">
-                        <Item size="xs" class="border-0 p-0">
+                        <Item size="xs" class="p-0">
                           <ItemMedia variant="icon">
                             <IconBot />
                           </ItemMedia>
@@ -837,7 +837,7 @@ const handleSave = async (): Promise<void> => {
                         :key="agent.id"
                         :value="agent.id"
                       >
-                        <Item size="xs" class="border-0 p-0">
+                        <Item size="xs" class="p-0">
                           <ItemMedia variant="icon">
                             <AppAvatar
                               variant="beam"
@@ -880,7 +880,7 @@ const handleSave = async (): Promise<void> => {
                           :key="agent.id"
                           :value="agent.id"
                         >
-                          <Item size="xs" class="border-0 p-0">
+                          <Item size="xs" class="p-0">
                             <ItemMedia variant="icon">
                               <AppAvatar
                                 variant="beam"

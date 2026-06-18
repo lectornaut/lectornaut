@@ -700,7 +700,7 @@
   DropdownMenuContent ships `w-(--reka-dropdown-menu-trigger-width) min-w-48`
   (src/components/ui/dropdown-menu/DropdownMenuContent.vue): reka writes the
   trigger's measured width into that custom property, so a menu opened from a
-  small icon button is pinned to the 12rem (`min-w-48`) floor and longer labels
+  small icon button is pinned to the 16rem (`min-w-64`) floor and longer labels
   ("Recently closed", "Enabled for the team") wrap onto a second line. That
   trigger-width binding is right for `<Select>` (SelectContent keeps it on
   purpose) but wrong for an action menu, which should fit its widest item.
@@ -708,17 +708,17 @@
   Let the menu grow to its content instead. `width: max-content` is the
   single-line width of the longest row, so every label fits on one line and the
   per-item `ml-auto` shortcuts/chevrons still right-align to that edge. The
-  trigger width becomes a MINIMUM, not a cap (`max()` keeps it >=12rem so short
+  trigger width becomes a MINIMUM, not a cap (`max()` keeps it >=16rem so short
   menus aren't cramped, and >= the trigger so a wide trigger still yields a wide
   menu); `max-width` caps growth at the space reka measured, so a pathologically
   long item wraps in place rather than running off-screen. Unlayered like the
-  rules around it, so it beats the `w-(...)`/`min-w-48` utilities without editing
+  rules around it, so it beats the `w-(...)`/`min-w-64` utilities without editing
   the shadcn component. Sub-content and context menus carry no trigger-width
   binding, so they already auto-size and are intentionally left alone.
 */
 [data-slot="dropdown-menu-content"] {
   width: max-content;
-  min-width: max(12rem, var(--reka-dropdown-menu-trigger-width, 0px));
+  min-width: max(16rem, var(--reka-dropdown-menu-trigger-width, 0px));
   max-width: var(--reka-dropdown-menu-content-available-width, 100vw);
 }
 

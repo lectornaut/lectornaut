@@ -211,14 +211,14 @@ const formatInvitationTimestamp = (
                 <Tooltip v-for="invite in pendingInvitations" :key="invite.id">
                   <TooltipTrigger as-child>
                     <SelectItem :value="invite.code">
-                      <SelectText class="font-semibold">
+                      <span class="font-semibold">
                         {{ invite.teamName }}
                         <span class="text-muted-foreground/50 text-xs">
                           [{{ invite.role }}]
                           {{ $t("pages.join.labels.invitedBy") }}
                           {{ invite.inviterName }}
                         </span>
-                      </SelectText>
+                      </span>
                     </SelectItem>
                   </TooltipTrigger>
                   <TooltipContent side="right">
@@ -240,13 +240,13 @@ const formatInvitationTimestamp = (
                 <Tooltip v-for="invite in declinedInvitations" :key="invite.id">
                   <TooltipTrigger as-child>
                     <SelectItem :value="invite.code">
-                      <SelectText class="font-semibold">
+                      <span class="font-semibold">
                         {{ invite.teamName }}
                         <span class="text-muted-foreground/50 text-xs">
                           [{{ invite.role }}] invited by
                           {{ invite.inviterName }}
                         </span>
-                      </SelectText>
+                      </span>
                     </SelectItem>
                   </TooltipTrigger>
                   <TooltipContent side="right">

@@ -230,11 +230,19 @@ const handleToggleEnabled = async (enabled: boolean): Promise<void> => {
         </DialogHeader>
 
         <Tabs v-model="activeTab" class="min-h-0">
-          <TabsList class="self-start">
-            <TabsTrigger value="overview">
+          <TabsList
+            class="no-scrollbar bg-input/50 shrink-0 justify-start overflow-x-auto border"
+          >
+            <TabsTrigger
+              value="overview"
+              class="data-[state=active]:border-border! data-[state=active]:bg-background"
+            >
               {{ t("settings.connections.info.tabOverview") }}
             </TabsTrigger>
-            <TabsTrigger value="accounts">
+            <TabsTrigger
+              value="accounts"
+              class="data-[state=active]:border-border! data-[state=active]:bg-background"
+            >
               {{
                 t("settings.connections.info.tabAccounts", {
                   count: activeRow.bindingCount,
@@ -242,7 +250,11 @@ const handleToggleEnabled = async (enabled: boolean): Promise<void> => {
               }}
             </TabsTrigger>
             <!-- Governance tab — install provenance + kill switch. -->
-            <TabsTrigger v-if="canManage" value="settings">
+            <TabsTrigger
+              v-if="canManage"
+              value="settings"
+              class="data-[state=active]:border-border! data-[state=active]:bg-background"
+            >
               {{ t("settings.connections.info.tabSettings") }}
             </TabsTrigger>
           </TabsList>

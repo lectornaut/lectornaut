@@ -341,6 +341,7 @@ const closeTab = (id: string) => {
             class="data-[resize-handle-state=drag]:after:bg-foreground data-[resize-handle-state=hover]:after:bg-muted focus-visible:after:bg-muted! z-30 bg-transparent transition before:pointer-events-auto before:absolute before:inset-y-0 before:left-1/2 before:w-3 before:-translate-x-1/2 after:rounded-full focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:outline-none focus-visible:after:inset-y-2 data-resize-handle:after:w-1 data-[resize-handle-state=drag]:after:inset-y-2 data-[resize-handle-state=hover]:after:inset-y-2"
             :class="{
               'bg-muted': !sidebarPanel?.isCollapsed,
+              'w-0!': sidebarPanel?.isCollapsed,
             }"
             @dblclick="
               sidebarPanel?.isCollapsed
@@ -437,6 +438,7 @@ const closeTab = (id: string) => {
                       class="data-[resize-handle-state=drag]:after:bg-foreground data-[resize-handle-state=hover]:after:bg-muted focus-visible:after:bg-muted! z-20 bg-transparent transition before:pointer-events-auto before:absolute before:inset-y-0 before:left-1/2 before:w-3 before:-translate-x-1/2 after:rounded-full focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:outline-none focus-visible:after:inset-y-2 data-resize-handle:after:w-1 data-[resize-handle-state=drag]:after:inset-y-2 data-[resize-handle-state=hover]:after:inset-y-2"
                       :class="{
                         'bg-muted': !leftPanel?.isCollapsed,
+                        'w-0!': leftPanel?.isCollapsed,
                       }"
                       @dblclick="
                         leftPanel?.isCollapsed
@@ -535,6 +537,8 @@ const closeTab = (id: string) => {
                             'bg-muted':
                               !bottomPanel?.isCollapsed &&
                               !topPanel?.isCollapsed,
+                            'h-0!':
+                              bottomPanel?.isCollapsed || topPanel?.isCollapsed,
                           }"
                           @dblclick="
                             bottomPanel?.isCollapsed
@@ -781,6 +785,7 @@ const closeTab = (id: string) => {
                       class="data-[resize-handle-state=drag]:after:bg-foreground data-[resize-handle-state=hover]:after:bg-muted focus-visible:after:bg-muted! z-20 bg-transparent transition before:pointer-events-auto before:absolute before:inset-y-0 before:left-1/2 before:w-3 before:-translate-x-1/2 after:rounded-full focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:outline-none focus-visible:after:inset-y-2 data-resize-handle:after:w-1 data-[resize-handle-state=drag]:after:inset-y-2 data-[resize-handle-state=hover]:after:inset-y-2"
                       :class="{
                         'bg-muted': !rightPanel?.isCollapsed,
+                        'w-0!': rightPanel?.isCollapsed,
                       }"
                       @dblclick="
                         rightPanel?.isCollapsed
