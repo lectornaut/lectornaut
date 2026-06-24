@@ -60,8 +60,8 @@ const handleClick = () => {
 
 const productTour = driver({
   showButtons: ["next", "previous"],
-  onDestroyed: () => {
-    handleClick()
+  onDestroyed: (_element, _step, { state, config }) => {
+    if (state.activeIndex === (config.steps?.length ?? 0) - 1) handleClick()
   },
   overlayColor: state.value === "light" ? "black" : "white",
   smoothScroll: true,

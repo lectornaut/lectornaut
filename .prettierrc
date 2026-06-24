@@ -7,5 +7,5 @@
     "prettier-plugin-organize-imports",
     "prettier-plugin-tailwindcss"
   ],
-  "tailwindFunctions": ["cva", "clsx", "cn"]
+  "tailwindFunctions": ["clsx", "cn"]
 }

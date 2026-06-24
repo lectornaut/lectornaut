@@ -1,3 +1,37 @@
 packages:
   - functions
   - shared
+
+allowBuilds:
+  '@firebase/util': false
+  esbuild: false
+  maplibre-gl: false
+  protobufjs: false
+  unrs-resolver: false
+  vue-demi: false
+
+minimumReleaseAgeExclude:
+  - '@genkit-ai/ai@1.38.0'
+  - '@genkit-ai/compat-oai@1.38.0'
+  - '@genkit-ai/core@1.38.0'
+  - '@genkit-ai/firebase@1.38.0'
+  - '@genkit-ai/google-cloud@1.38.0'
+  - '@genkit-ai/google-genai@1.38.0'
+  - '@hugeicons/vue@1.0.7'
+  - '@iconify/json@2.2.490'
+  - '@unhead/bundler@3.1.5'
+  - '@unhead/vue@3.1.5'
+  - driver.js@1.5.0
+  - genkit@1.38.0
+  - markdown-it-ts@1.0.2
+  - markstream-vue@1.0.4
+  - stream-markdown-parser@1.0.7
+  - unhead@3.1.5
+
+overrides:
+  # Pin sharp so vite-plugin-image-optimizer shares the app's newer build binary (Node 22 prebuilds)
+  sharp: ^0.35.2
+  # Single-instance pins: @lezer/common (NodeType identity) and @internationalized/date (CalendarDate
+  # identity) break at runtime with duplicate copies — keep deduped to one version.
+  "@lezer/common": 1.5.2
+  "@internationalized/date": 3.12.2
