@@ -7,6 +7,7 @@ allowBuilds:
   esbuild: false
   maplibre-gl: false
   protobufjs: false
+  sharp: false
   unrs-resolver: false
   vue-demi: false
 
@@ -27,11 +28,3 @@ minimumReleaseAgeExclude:
   - markstream-vue@1.0.4
   - stream-markdown-parser@1.0.7
   - unhead@3.1.5
-
-overrides:
-  # Pin sharp so vite-plugin-image-optimizer shares the app's newer build binary (Node 22 prebuilds)
-  sharp: ^0.35.2
-  # Single-instance pins: @lezer/common (NodeType identity) and @internationalized/date (CalendarDate
-  # identity) break at runtime with duplicate copies — keep deduped to one version.
-  "@lezer/common": 1.5.2
-  "@internationalized/date": 3.12.2
