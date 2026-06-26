@@ -237,7 +237,13 @@ watch(copied, (isCopied) => {
             v-else-if="isMobile || (!open && sidebarPinned)"
             v-motion-fade-visible
           />
-          <BackForth v-if="!open || isMobile" v-motion-fade-visible />
+          <span
+            v-if="!open || isMobile"
+            v-motion-fade-visible
+            class="inline-flex items-center"
+          >
+            <BackForth />
+          </span>
           <nav
             ref="el"
             class="relative flex min-w-0 items-stretch justify-start gap-2 empty:hidden"

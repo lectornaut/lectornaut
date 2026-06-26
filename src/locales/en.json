@@ -654,6 +654,7 @@
       "notConnected": "Your account isn't connected.",
       "connecting": "Waiting for Google sign-in...",
       "needsReauth": "Your connection needs re-authorization.",
+      "needsReauthBadge": "Reauthorize",
       "membersConnected": "{count} member connected | {count} members connected",
       "infoButton": "App details",
       "filterByCategory": "Filter by category",

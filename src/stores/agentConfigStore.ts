@@ -27,12 +27,15 @@
 
 import {
   getTeamAgentConfig as getTeamAgentConfigFn,
+  type GetTeamAgentConfigResponse,
   updateTeamAgentConfig as updateTeamAgentConfigFn,
   type UpdateTeamAgentConfigPatch,
 } from "@/composables/useFunctions"
 import { defaultBotAgentConfig } from "@/helpers/defaults"
+import { auth } from "@/modules/firebase"
 import { useAuthStore } from "@/stores/authStore"
 import type { IBotAgentConfig } from "@/types/domain"
+import { hasFirebaseErrorCode } from "@/utils/firebase/firebase-errors"
 import { defineStore, storeToRefs } from "pinia"
 import { ref, watch } from "vue"
 
@@ -91,7 +94,22 @@ export const useAgentConfigStore = defineStore("agentConfig", () => {
     isLoading.value = true
     loadError.value = null
     try {
-      const { data } = await getTeamAgentConfigFn({ teamId })
+      let data: GetTeamAgentConfigResponse
+      try {
+        ;({ data } = await getTeamAgentConfigFn({ teamId }))
+      } catch (error) {
+        // Cold-start / post-login token warm-up race: the callable can fire
+        // before the Firebase ID token is attached, which the server rejects
+        // as `unauthenticated` ("Sign-in required."). Realtime reads heal this
+        // via the query layer's retry; a one-shot callable has no such retry,
+        // so we do it here — wait for the token, then try once more.
+        // ponytail: one retry covers the warm-up window; a real denial still
+        // throws on the second attempt.
+        if (!hasFirebaseErrorCode(error, "unauthenticated")) throw error
+        await auth.authStateReady()
+        await auth.currentUser?.getIdToken()
+        ;({ data } = await getTeamAgentConfigFn({ teamId }))
+      }
       // Race guard: if the user switched teams during the fetch, the
       // response is for the wrong team — discard rather than clobber.
       if (currentTeamId.value !== teamId) return

@@ -611,6 +611,17 @@ const openInfoDialog = (provider: ConnectionProvider): void => {
                       <Badge v-if="row.disabled" variant="outline">
                         {{ t("settings.connections.disabledBadge") }}
                       </Badge>
+                      <!-- Member's own grant expired (token refresh came back
+                     invalid_grant). At-a-glance indicator mirroring the
+                     Disabled badge; the footer carries the Reconnect verb.
+                     Disabled wins (v-else-if): a team kill switch makes the
+                     reauth moot, same precedence as the footer chain. -->
+                      <Badge
+                        v-else-if="row.myBinding?.status === 'needs_reauth'"
+                        variant="destructive"
+                      >
+                        {{ t("settings.connections.needsReauthBadge") }}
+                      </Badge>
                     </ItemTitle>
                     <ItemDescription>{{ row.app.description }}</ItemDescription>
                   </ItemContent>

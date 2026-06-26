@@ -37,7 +37,15 @@ import "~console/theme-detect"
 
 OverlayScrollbars.plugin(ClickScrollPlugin)
 
-const head = createHead()
+const head = createHead({
+  init: [
+    {
+      title: "Lectornaut",
+      titleTemplate: "%s | Lectornaut",
+      meta: [{ name: "description", content: "Lectornaut" }],
+    },
+  ],
+})
 const pinia = createPinia()
 const app = createApp(App)
 
