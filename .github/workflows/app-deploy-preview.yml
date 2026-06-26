@@ -3,8 +3,10 @@ on:
   push:
     branches:
       - "*"
-  pull_request:
   workflow_dispatch:
+concurrency:
+  group: app-preview-${{ github.ref }}
+  cancel-in-progress: true
 jobs:
   deploy-preview:
     if: ${{ !contains(github.event.head_commit.message, 'skip app preview') }}
@@ -30,9 +32,9 @@ jobs:
     runs-on: ${{ matrix.platform }}
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v5
+        uses: actions/checkout@v7
       - name: Setup pnpm
-        uses: pnpm/action-setup@v4
+        uses: pnpm/action-setup@v6
       - name: Setup node
         uses: actions/setup-node@v6
         with:
@@ -86,7 +88,7 @@ jobs:
           VITE_APPLE_TOKEN_URL: ${{ secrets.VITE_APPLE_TOKEN_URL }}
           VITE_APPLE_REDIRECT_URI: ${{ secrets.VITE_APPLE_REDIRECT_URI }}
       - name: Upload artifacts
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: artifact-${{ matrix.identifier }}
           path: |

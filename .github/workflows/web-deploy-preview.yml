@@ -3,17 +3,19 @@ on:
   push:
     branches:
       - "*"
-  pull_request:
   workflow_dispatch:
+concurrency:
+  group: web-preview-${{ github.ref }}
+  cancel-in-progress: true
 jobs:
   deploy-preview:
     if: ${{ !contains(github.event.head_commit.message, 'skip web preview') }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v5
+        uses: actions/checkout@v7
       - name: Setup pnpm
-        uses: pnpm/action-setup@v4
+        uses: pnpm/action-setup@v6
       - name: Setup node
         uses: actions/setup-node@v6
         with:

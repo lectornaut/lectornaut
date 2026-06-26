@@ -4,15 +4,18 @@ on:
     branches:
       - release
   workflow_dispatch:
+concurrency:
+  group: web-release
+  cancel-in-progress: false
 jobs:
   deploy-release:
     if: ${{ !contains(github.event.head_commit.message, 'skip web release') }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v5
+        uses: actions/checkout@v7
       - name: Setup pnpm
-        uses: pnpm/action-setup@v4
+        uses: pnpm/action-setup@v6
       - name: Setup node
         uses: actions/setup-node@v6
         with:
