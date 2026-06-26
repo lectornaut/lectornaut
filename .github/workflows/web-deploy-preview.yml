@@ -3,6 +3,8 @@ on:
   push:
     branches:
       - "*"
+      - "!main"
+      - "!release"
   workflow_dispatch:
 concurrency:
   group: web-preview-${{ github.ref }}
@@ -54,6 +56,10 @@ jobs:
           VITE_APPLE_AUTH_URL: ${{ secrets.VITE_APPLE_AUTH_URL }}
           VITE_APPLE_TOKEN_URL: ${{ secrets.VITE_APPLE_TOKEN_URL }}
           VITE_APPLE_REDIRECT_URI: ${{ secrets.VITE_APPLE_REDIRECT_URI }}
+      - name: Stamp build version
+        env:
+          SHA: ${{ github.sha }}
+        run: echo "$SHA" > dist/build-version.txt
       - name: Deploy to Firebase Hosting
         uses: FirebaseExtended/action-hosting-deploy@v0
         with:
