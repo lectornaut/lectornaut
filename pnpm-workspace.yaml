@@ -3,6 +3,7 @@ packages:
   - shared
 
 allowBuilds:
+  re2: false
   '@firebase/util': false
   esbuild: false
   maplibre-gl: false
