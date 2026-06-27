@@ -25,7 +25,10 @@ import {
 } from "./audit.js"
 import { authorize, requireAuthorized } from "./authorize.js"
 import { getMembershipRole } from "./bot.js"
-import { materializeSessionAttachments } from "./botMedia.js"
+import {
+  materializeSessionAttachments,
+  type PendingSessionAttachmentInput,
+} from "./botMedia.js"
 import { resolveBindingAccessToken } from "./connections.js"
 import { defineCallable } from "./defineCallable.js"
 import { NODE_SCOPES } from "./domain.js"
@@ -313,6 +316,87 @@ async function fetchDriveImportPayload(
       : file.name
   )
   return { bytes, contentType, fileName, displayName: file.name }
+}
+
+/**
+ * Stage Drive files for a SINGLE chat turn (brand-new-chat first-message
+ * path). Resolves the caller's own Drive binding, fetches each file's bytes
+ * Google→Functions, saves them to the session's attachment Storage path, and
+ * returns refs in the exact shape `materializeSessionAttachments` consumes —
+ * so `prepareChatTurn` folds them into the same metadata-doc write + media
+ * load as client-uploaded `pendingAttachments`, and the Drive file reaches
+ * the model on turn 1.
+ *
+ * Unlike {@link importDriveSessionAttachment}, the `botSessions/{sessionId}`
+ * doc need NOT exist yet — Firestore lets us land blobs at its Storage path
+ * before the parent doc, and `createSession({ sessionId })` mints the doc at
+ * end-of-turn save. The MANAGE_WORKSPACE_CONTENT gate is the CALLER's
+ * responsibility (prepareChatTurn checks it once for both upload kinds); this
+ * helper is pure resolve→fetch→store. On any failure the already-saved blobs
+ * are best-effort deleted so a rejected turn leaves no orphans.
+ */
+export async function stageDriveImportsForTurn(opts: {
+  teamId: string
+  workspaceId: string
+  sessionId: string
+  actorUid: string
+  fileIds: readonly string[]
+}): Promise<PendingSessionAttachmentInput[]> {
+  const { teamId, workspaceId, sessionId, actorUid, fileIds } = opts
+  if (fileIds.length === 0) return []
+
+  const token = await resolveBindingAccessToken(
+    teamId,
+    "google-drive",
+    actorUid
+  )
+  if (!token.ok) throwBindingError(token.reason)
+
+  const staged: PendingSessionAttachmentInput[] = []
+  try {
+    for (const rawFileId of fileIds) {
+      const fileId = extractDriveFileId(rawFileId)
+      if (!fileId) {
+        throw new HttpsError(
+          "invalid-argument",
+          "fileId must be a Drive file id or URL."
+        )
+      }
+      const { bytes, contentType, fileName, displayName } =
+        await fetchDriveImportPayload(token.accessToken, fileId)
+      const attachmentId = db.collection("_ids").doc().id
+      // `/1/` is the version segment — a turn import is always a fresh
+      // attachment, so it starts at version 1 like client uploads.
+      const storagePath = `${getBotSessionAttachmentStoragePrefix({
+        teamId,
+        workspaceId,
+        sessionId,
+        attachmentId,
+      })}/1/${fileName}`
+      await getStorage().bucket().file(storagePath).save(bytes, {
+        contentType,
+        resumable: false,
+      })
+      staged.push({
+        attachmentId,
+        storagePath,
+        displayName,
+        originalName: fileName,
+      })
+    }
+  } catch (error) {
+    await Promise.all(
+      staged.map((ref) =>
+        getStorage()
+          .bucket()
+          .file(ref.storagePath)
+          .delete({ ignoreNotFound: true })
+          .catch(() => undefined)
+      )
+    )
+    throw error
+  }
+  return staged
 }
 
 export const importDriveSessionAttachment = defineCallable({

@@ -38,8 +38,18 @@ interface DriveImportedAttachment {
 const props = defineProps<{
   /** Team whose member binding backs the browse; null disables the picker. */
   teamId: string | null
-  /** Target-specific import callable (session vs node attachment). */
-  importFile: ((fileId: string) => Promise<DriveImportedAttachment>) | null
+  /**
+   * Target-specific import callable (session vs node attachment). Receives the
+   * picked file's id plus its Drive display name — the real import callables
+   * re-derive the name server-side and ignore the second arg, but the chat
+   * "buffer for first message" path uses it to label the pending chip.
+   */
+  importFile:
+    | ((
+        fileId: string,
+        displayName: string
+      ) => Promise<DriveImportedAttachment>)
+    | null
 }>()
 
 const open = defineModel<boolean>("open", { default: false })
@@ -147,7 +157,7 @@ const pick = async (file: DriveFileRow) => {
   importingId.value = file.id
   importError.value = null
   try {
-    const imported = await importFile(file.id)
+    const imported = await importFile(file.id, file.name)
     emit("imported", imported.attachmentId, imported.displayName)
     open.value = false
   } catch (error) {

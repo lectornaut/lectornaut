@@ -4,7 +4,7 @@ packages:
 
 allowBuilds:
   re2: false
-  '@firebase/util': false
+  "@firebase/util": false
   esbuild: false
   maplibre-gl: false
   protobufjs: false
@@ -13,16 +13,16 @@ allowBuilds:
   vue-demi: false
 
 minimumReleaseAgeExclude:
-  - '@genkit-ai/ai@1.38.0'
-  - '@genkit-ai/compat-oai@1.38.0'
-  - '@genkit-ai/core@1.38.0'
-  - '@genkit-ai/firebase@1.38.0'
-  - '@genkit-ai/google-cloud@1.38.0'
-  - '@genkit-ai/google-genai@1.38.0'
-  - '@hugeicons/vue@1.0.7'
-  - '@iconify/json@2.2.490'
-  - '@unhead/bundler@3.1.5'
-  - '@unhead/vue@3.1.5'
+  - "@genkit-ai/ai@1.38.0"
+  - "@genkit-ai/compat-oai@1.38.0"
+  - "@genkit-ai/core@1.38.0"
+  - "@genkit-ai/firebase@1.38.0"
+  - "@genkit-ai/google-cloud@1.38.0"
+  - "@genkit-ai/google-genai@1.38.0"
+  - "@hugeicons/vue@1.0.7"
+  - "@iconify/json@2.2.490"
+  - "@unhead/bundler@3.1.5"
+  - "@unhead/vue@3.1.5"
   - driver.js@1.5.0
   - genkit@1.38.0
   - markdown-it-ts@1.0.2

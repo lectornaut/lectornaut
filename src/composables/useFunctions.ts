@@ -854,6 +854,15 @@ export interface SendBotMessageRequest {
    * uploads use the `createBotSessionAttachment` callable + `attachmentIds`.
    */
   pendingAttachments?: BotSessionPendingAttachment[]
+  /**
+   * Google Drive file ids to import + attach on THIS turn. The client can't
+   * stage Drive bytes (only the server holds the OAuth token), so it passes
+   * the ids and the server fetches Google→Functions→Storage, then includes
+   * them as media — so a Drive file rides the brand-new-chat first message
+   * exactly like a direct upload. Existing-session imports use the
+   * `importDriveSessionAttachment` callable instead.
+   */
+  pendingDriveImports?: string[]
 }
 
 export interface SendBotMessageResponse {

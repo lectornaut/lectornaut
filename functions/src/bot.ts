@@ -122,6 +122,7 @@ import {
   type BotChatRole,
   type BotSessionVisibility,
 } from "./domain.js"
+import { stageDriveImportsForTurn } from "./driveImport.js"
 import { db } from "./firebase.js"
 import {
   ai,
@@ -1772,6 +1773,17 @@ const SendBotMessageInput = z.object({
     .max(6)
     .default([]),
   /**
+   * Google Drive file ids the user picked for THIS turn whose bytes the
+   * client can't stage (only the server holds the Drive OAuth token). The
+   * server resolves the caller's Drive binding, fetches each file
+   * Google→Functions→Storage, and folds them into the same materialization +
+   * media load as `pendingAttachments` — so a Drive file rides the very first
+   * message exactly like a direct upload. Requires MANAGE_WORKSPACE_CONTENT.
+   * Existing-session Drive imports use the `importDriveSessionAttachment`
+   * callable + `attachmentIds` instead.
+   */
+  pendingDriveImports: z.array(z.string().min(1).max(2048)).max(6).default([]),
+  /**
    * Set only when creating a new session, to bind it to a specific
    * workspace node. Enables `findBotSessionByPinnedNode` to resume the
    * same chat the next time the node's inspector tab opens. Ignored on
@@ -2402,6 +2414,11 @@ async function prepareChatTurn(opts: {
    * transfer/interrupt/headless callers leave them empty.
    */
   pendingAttachments?: readonly PendingSessionAttachmentInput[]
+  /**
+   * Drive file ids to fetch + attach for this turn (server-side bytes). Folded
+   * into `pendingAttachments` materialization below. Interactive sends only.
+   */
+  pendingDriveImports?: readonly string[]
   activeAgentId: string | null | undefined
   model: BotAgentModel | undefined
   pinnedNode?: NodeRef
@@ -2454,6 +2471,7 @@ async function prepareChatTurn(opts: {
     message,
     attachmentIds,
     pendingAttachments,
+    pendingDriveImports,
     activeAgentId,
     pinnedNode,
     requireExistingSession,
@@ -2522,7 +2540,8 @@ async function prepareChatTurn(opts: {
     !!sessionId &&
     !existingSession &&
     !requireExistingSession &&
-    (pendingAttachments?.length ?? 0) > 0
+    ((pendingAttachments?.length ?? 0) > 0 ||
+      (pendingDriveImports?.length ?? 0) > 0)
   if (sessionId && !creatingNewSessionWithClientId) {
     if (!existingSession) {
       throw new HttpsError("not-found", "Session not found.")
@@ -2560,11 +2579,13 @@ async function prepareChatTurn(opts: {
   // materialized by `createSession({ sessionId })` at end-of-turn save (so
   // `isNew` stays true and the title derives correctly).
   const materializedAttachmentIds: string[] = []
-  if (pendingAttachments && pendingAttachments.length > 0) {
+  const hasPendingUploads = (pendingAttachments?.length ?? 0) > 0
+  const hasPendingDriveImports = (pendingDriveImports?.length ?? 0) > 0
+  if (hasPendingUploads || hasPendingDriveImports) {
     if (!sessionId) {
       throw new HttpsError(
         "invalid-argument",
-        "pendingAttachments require a sessionId."
+        "Pending attachments require a sessionId."
       )
     }
     if (
@@ -2579,13 +2600,30 @@ async function prepareChatTurn(opts: {
         "You do not have permission to upload chat attachments."
       )
     }
+    // Drive imports: the client can't stage these (only the server holds the
+    // Drive OAuth token), so fetch the bytes Google→Functions→Storage here and
+    // fold the resulting refs into the SAME materialization as client uploads —
+    // both kinds then ride this turn as media. A failed Drive fetch throws
+    // (and self-cleans its blobs), failing the send before the session commits.
+    const stagedDriveAttachments = hasPendingDriveImports
+      ? await stageDriveImportsForTurn({
+          teamId,
+          workspaceId,
+          sessionId,
+          actorUid: actingId,
+          fileIds: pendingDriveImports ?? [],
+        })
+      : []
     materializedAttachmentIds.push(
       ...(await materializeSessionAttachments({
         teamId,
         workspaceId,
         sessionId,
         actorId: actingId,
-        pendingAttachments,
+        pendingAttachments: [
+          ...(pendingAttachments ?? []),
+          ...stagedDriveAttachments,
+        ],
       }))
     )
   }
@@ -3104,6 +3142,11 @@ interface RunAgentTurnOptions {
    * headless/interrupt callers leave it empty.
    */
   pendingAttachments?: readonly PendingSessionAttachmentInput[]
+  /**
+   * Drive file ids to import + attach for this turn (server fetches the
+   * bytes). Interactive `sendBotMessage` only; headless/interrupt leave empty.
+   */
+  pendingDriveImports?: readonly string[]
   activeAgentId: string | null | undefined
   pinnedNode?: NodeRef
   /** Stream sink. Omitted → a no-op, for headless runs with no client. */
@@ -3197,6 +3240,7 @@ async function runAgentTurn(
       message: opts.message,
       attachmentIds: opts.attachmentIds,
       pendingAttachments: opts.pendingAttachments,
+      pendingDriveImports: opts.pendingDriveImports,
       activeAgentId: opts.activeAgentId,
       model: opts.model,
       pinnedNode: opts.pinnedNode,
@@ -3463,6 +3507,7 @@ const sendBotMessageFlow = ai.defineFlow(
       pinnedNode: input.pinnedNode,
       attachmentIds: input.attachmentIds,
       pendingAttachments: input.pendingAttachments,
+      pendingDriveImports: input.pendingDriveImports,
       sendChunk,
       archivedSessionMessage:
         "This chat is archived. Restore it before sending new messages.",

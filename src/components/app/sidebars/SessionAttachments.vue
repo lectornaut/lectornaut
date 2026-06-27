@@ -22,7 +22,10 @@ import {
   IconUpload,
   IconX,
 } from "@/data/icons"
-import { formatAttachmentSize } from "@/helpers/node-attachments"
+import {
+  formatAttachmentSize,
+  NODE_ATTACHMENT_MAX_FILE_SIZE_BYTES,
+} from "@/helpers/node-attachments"
 import { showErrorToast, showSuccessToast } from "@/helpers/toast"
 import { useAuthStore } from "@/stores/authStore"
 import {
@@ -56,6 +59,26 @@ const canEdit = computed(
 const selectedIds = computed(() => botChat?.selectedAttachmentIds.value ?? [])
 const isSelected = (id: string) => selectedIds.value.includes(id)
 const toggleSelected = (id: string) => botChat?.toggleAttachmentSelection(id)
+
+// Brand-new chat (no session id yet): files are buffered on the shared
+// BotChatContext and staged + sent by the composer's `handleSend` with the
+// first message — so uploads work before a session exists, mirroring the
+// composer's own "Upload files" action.
+const pendingUploadFiles = computed(
+  () => botChat?.pendingUploadFiles.value ?? []
+)
+const canBufferPending = computed(
+  () => !sessionId.value && !!currentTeamId.value && !!currentWorkspaceId.value
+)
+const removePendingUpload = (index: number) => {
+  botChat?.pendingUploadFiles.value.splice(index, 1)
+}
+const pendingDriveImports = computed(
+  () => botChat?.pendingDriveImports.value ?? []
+)
+const removePendingDriveImport = (index: number) => {
+  botChat?.pendingDriveImports.value.splice(index, 1)
+}
 
 // Null until a session exists (a brand-new chat has no id until the first
 // message is sent), which disables the composable's queries + mutations.
@@ -97,7 +120,17 @@ const { files: selectedFiles, open: openFileDialog } = useFileDialog({
 // (Settings → Connections is the discovery surface for the rest).
 const { available: driveAvailable } = useMyConnectionFeature("google-drive")
 const drivePickerOpen = ref(false)
-const importDriveFile = async (fileId: string) => {
+const importDriveFile = async (fileId: string, displayName: string) => {
+  // Brand-new chat: buffer the pick instead of importing. The first send
+  // forwards the id as `pendingDriveImports` and the server fetches the bytes
+  // (Drive bytes can't be staged client-side), so the file rides the first
+  // message. Return a synthetic ref so the picker can close + emit.
+  if (canBufferPending.value && botChat) {
+    if (!botChat.pendingDriveImports.value.some((d) => d.fileId === fileId)) {
+      botChat.pendingDriveImports.value.push({ fileId, displayName })
+    }
+    return { attachmentId: fileId, displayName }
+  }
   const context = attachmentContext.value
   // Unreachable in practice — the button is disabled without a session.
   if (!context) throw new Error("Send a message to start this chat first.")
@@ -105,6 +138,11 @@ const importDriveFile = async (fileId: string) => {
   return data
 }
 const onDriveImported = (attachmentId: string, displayName: string) => {
+  // Buffered for the first message — no live attachment to select yet.
+  if (!sessionId.value) {
+    showSuccessToast(`"${displayName}" will be sent with your first message.`)
+    return
+  }
   // Auto-include in the next send, mirroring fresh uploads.
   if (!isSelected(attachmentId)) toggleSelected(attachmentId)
   showSuccessToast(`Imported "${displayName}" from Google Drive.`)
@@ -156,12 +194,25 @@ const dismissUploadState = (id: string) => {
 }
 
 const triggerUpload = () => {
-  if (!canEdit.value) return
+  if (!canEdit.value && !canBufferPending.value) return
   openFileDialog()
 }
 
 const processFiles = async (files: File[]) => {
-  if (!files.length || !canEdit.value) return
+  if (!files.length) return
+  // No session yet: buffer for the first message instead of uploading. Size
+  // is checked up front (the stage step + server re-check it too).
+  if (canBufferPending.value && botChat) {
+    for (const file of files) {
+      if (file.size > NODE_ATTACHMENT_MAX_FILE_SIZE_BYTES) {
+        showErrorToast("File too large", `${file.name} is larger than 25 MB.`)
+        continue
+      }
+      botChat.pendingUploadFiles.value.push(file)
+    }
+    return
+  }
+  if (!canEdit.value) return
   let success = 0
   let failure = 0
   for (const file of files) {
@@ -281,7 +332,7 @@ const handleDelete = async (attachment: IBotSessionAttachment) => {
         variant="outline"
         size="sm"
         class="grow justify-start"
-        :disabled="!canEdit || uploadInProgress"
+        :disabled="(!canEdit && !canBufferPending) || uploadInProgress"
         @click="triggerUpload"
       >
         <IconUpload />
@@ -291,7 +342,7 @@ const handleDelete = async (attachment: IBotSessionAttachment) => {
         v-if="driveAvailable"
         variant="outline"
         size="sm"
-        :disabled="!canEdit || uploadInProgress"
+        :disabled="(!canEdit && !canBufferPending) || uploadInProgress"
         @click="drivePickerOpen = true"
       >
         <IconLogosGoogleDrive />
@@ -302,26 +353,90 @@ const handleDelete = async (attachment: IBotSessionAttachment) => {
     <DriveFilePicker
       v-if="driveAvailable"
       v-model:open="drivePickerOpen"
-      :team-id="attachmentContext?.teamId ?? null"
+      :team-id="currentTeamId ?? null"
       :import-file="importDriveFile"
       @imported="onDriveImported"
     />
 
     <OverlayScrollbarsWrapper>
       <div>
-        <!-- No session yet -->
-        <Empty v-if="!sessionId" class="rounded-xl border border-dashed p-6">
-          <EmptyHeader>
-            <EmptyMedia variant="icon">
-              <IconUpload />
-            </EmptyMedia>
-            <EmptyTitle>No chat yet</EmptyTitle>
-            <EmptyDescription>
-              Send a message to start this chat, then upload files to share with
-              the assistant.
-            </EmptyDescription>
-          </EmptyHeader>
-        </Empty>
+        <!-- No session yet: buffered uploads ride along with the first message -->
+        <template v-if="!sessionId">
+          <article
+            v-for="(file, index) in pendingUploadFiles"
+            :key="`pending:${index}:${file.name}`"
+            class="rounded-xl border p-2"
+          >
+            <div class="flex items-start gap-2">
+              <div
+                class="bg-muted flex size-9 shrink-0 items-center justify-center rounded border"
+              >
+                <IconUpload class="text-muted-foreground" />
+              </div>
+              <div class="min-w-0 grow">
+                <p class="truncate text-sm font-medium">{{ file.name }}</p>
+                <p class="text-muted-foreground truncate text-xs">
+                  {{ formatAttachmentSize(file.size) }} · Sent with first
+                  message
+                </p>
+              </div>
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                @click="removePendingUpload(index)"
+              >
+                <IconX />
+              </Button>
+            </div>
+          </article>
+
+          <article
+            v-for="(file, index) in pendingDriveImports"
+            :key="`drive:${index}:${file.fileId}`"
+            class="rounded-xl border p-2"
+          >
+            <div class="flex items-start gap-2">
+              <div
+                class="bg-muted flex size-9 shrink-0 items-center justify-center rounded border"
+              >
+                <IconLogosGoogleDrive />
+              </div>
+              <div class="min-w-0 grow">
+                <p class="truncate text-sm font-medium">
+                  {{ file.displayName }}
+                </p>
+                <p class="text-muted-foreground truncate text-xs">
+                  Google Drive · Sent with first message
+                </p>
+              </div>
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                @click="removePendingDriveImport(index)"
+              >
+                <IconX />
+              </Button>
+            </div>
+          </article>
+
+          <Empty
+            v-if="
+              pendingUploadFiles.length === 0 &&
+              pendingDriveImports.length === 0
+            "
+            class="rounded-xl border border-dashed p-6"
+          >
+            <EmptyHeader>
+              <EmptyMedia variant="icon">
+                <IconUpload />
+              </EmptyMedia>
+              <EmptyTitle>No attachments</EmptyTitle>
+              <EmptyDescription>
+                Upload files to send with your first message.
+              </EmptyDescription>
+            </EmptyHeader>
+          </Empty>
+        </template>
 
         <template v-else>
           <!-- In-flight uploads -->

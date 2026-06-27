@@ -208,12 +208,15 @@ export interface BotChatContext {
    * brand-new-chat single-send upload path: the composer mints a session id,
    * uploads the buffered files' bytes to it, and passes the refs here so the
    * very first message carries them (the server writes the attachment docs).
+   * `opts.pendingDriveImports` is the Drive sibling — file ids the server
+   * fetches + attaches on this same first turn (no client-side bytes).
    */
   sendMessage: (
     text: string,
     opts?: {
       newSessionId?: string
       pendingAttachments?: BotSessionPendingAttachment[]
+      pendingDriveImports?: string[]
     }
   ) => Promise<void>
   /**
@@ -268,6 +271,23 @@ export interface BotChatContext {
   toggleAttachmentSelection: (attachmentId: string) => void
   /** Drop every attachment selection (does NOT delete the uploaded files). */
   clearAttachmentSelection: () => void
+  /**
+   * Files picked on a brand-new chat (no session id yet), held as local
+   * previews until the first `sendMessage` stages + attaches them. Shared
+   * on the context so both the composer and the Bot inspector's Attachments
+   * tab feed the same buffer — uploads work as the first message from either
+   * surface. Cleared by `startNewSession` and after the first send commits.
+   */
+  pendingUploadFiles: Ref<File[]>
+  /**
+   * Google Drive files picked on a brand-new chat (no session id yet), held as
+   * local previews until the first `sendMessage` forwards their ids as
+   * `pendingDriveImports` — the server fetches the bytes and attaches them to
+   * the first message. The Drive sibling of `pendingUploadFiles`: local bytes
+   * can be staged client-side, Drive bytes can't, so only the id rides along.
+   * `displayName` is preview-only. Cleared by `startNewSession` + after send.
+   */
+  pendingDriveImports: Ref<{ fileId: string; displayName: string }[]>
   // ── Per-node sessions (NodeInspectorSidebar Bot tab) ────────────────
   /**
    * Bind this chat to a workspace node:
@@ -401,6 +421,14 @@ export function useBotChat(): BotChatContext {
   const clearAttachmentSelection = () => {
     selectedAttachmentIds.value = []
   }
+
+  // Brand-new chat upload buffer (see interface doc). Shared by the composer
+  // and the inspector's Attachments tab; staged + sent by the composer's
+  // `handleSend` on the first message.
+  const pendingUploadFiles = ref<File[]>([])
+  // Drive sibling of the above — buffered Drive picks (id + preview name)
+  // forwarded as `pendingDriveImports` on the first send.
+  const pendingDriveImports = ref<{ fileId: string; displayName: string }[]>([])
 
   // Team-scoped agent config — read directly from the Pinia store so
   // we share state with `SettingsAgents.vue`'s form. An admin saving a
@@ -851,6 +879,9 @@ export function useBotChat(): BotChatContext {
     // The per-turn attachment selection is per-session too — clear it (the
     // uploads were scoped to the old session and don't apply to a new chat).
     selectedAttachmentIds.value = []
+    // Buffered (not-yet-sent) uploads are scoped to the abandoned draft.
+    pendingUploadFiles.value = []
+    pendingDriveImports.value = []
     pendingPinnedNode.value = null
     // Reset to the team's configured default mode. The user's prior
     // pick was scoped to the just-ended conversation; a new chat should
@@ -1011,6 +1042,7 @@ export function useBotChat(): BotChatContext {
     opts?: {
       newSessionId?: string
       pendingAttachments?: BotSessionPendingAttachment[]
+      pendingDriveImports?: string[]
     }
   ) => {
     const trimmed = text.trim()
@@ -1093,6 +1125,9 @@ export function useBotChat(): BotChatContext {
           attachmentIds,
           ...(opts?.pendingAttachments && opts.pendingAttachments.length > 0
             ? { pendingAttachments: opts.pendingAttachments }
+            : {}),
+          ...(opts?.pendingDriveImports && opts.pendingDriveImports.length > 0
+            ? { pendingDriveImports: opts.pendingDriveImports }
             : {}),
           ...(pinnedNode ? { pinnedNode } : {}),
           // Always send `activeAgentId` (even when null) so the server
@@ -1507,6 +1542,8 @@ export function useBotChat(): BotChatContext {
     selectedAttachmentIds,
     toggleAttachmentSelection,
     clearAttachmentSelection,
+    pendingUploadFiles,
+    pendingDriveImports,
     selectOrCreateNodeSession,
     startNewPinnedNodeSession,
     pendingPinnedNode,

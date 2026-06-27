@@ -24,6 +24,7 @@ import {
   IconBot,
   IconFile,
   IconFolder,
+  IconLogosGoogleDrive,
   IconMic,
   IconPlus,
   IconUpload,
@@ -297,10 +298,26 @@ const canUploadFiles = computed(() => canOpenAttachSheet.value)
 // upload to send avoids creating a session — or orphaning blobs — for a chat
 // the user never sends. On an existing session the immediate-upload path in
 // `watch(uploadFiles)` is used instead.
-const pendingUploadFiles = ref<File[]>([])
+// Shared on the BotChatContext so the inspector's Attachments tab can buffer
+// into the same first-message staging path (see `useBotChat`). Fallback ref
+// keeps the component self-contained if rendered without a provider.
+const pendingUploadFiles = botChat?.pendingUploadFiles ?? ref<File[]>([])
 const hasPendingUploads = computed(() => pendingUploadFiles.value.length > 0)
 const removePendingUpload = (index: number) => {
   pendingUploadFiles.value.splice(index, 1)
+}
+
+// Drive picks buffered for the first message (see `useBotChat`). Picked in the
+// inspector's Attachments tab, shown here too so the composer reflects exactly
+// what the next send carries.
+const pendingDriveImports =
+  botChat?.pendingDriveImports ??
+  ref<{ fileId: string; displayName: string }[]>([])
+const hasPendingDriveImports = computed(
+  () => pendingDriveImports.value.length > 0
+)
+const removePendingDriveImport = (index: number) => {
+  pendingDriveImports.value.splice(index, 1)
 }
 
 const { files: uploadFiles, open: openUploadDialog } = useFileDialog({
@@ -597,13 +614,20 @@ const handleSend = async () => {
   // them — the server writes the attachment docs + materializes the session in
   // the same call. If nothing stages successfully we fall back to a plain new
   // chat (per-file errors are toasted).
+  // Drive picks (buffered by the inspector's Attachments tab) have no client
+  // bytes to stage — only their ids ride along; the server fetches them.
+  const driveFileIds = botChat.pendingDriveImports.value.map((d) => d.fileId)
   let sendOpts:
     | {
         newSessionId: string
         pendingAttachments: BotSessionPendingAttachment[]
+        pendingDriveImports: string[]
       }
     | undefined
-  if (hasPendingUploads.value && !botChat.sessionId.value) {
+  if (
+    (hasPendingUploads.value || driveFileIds.length > 0) &&
+    !botChat.sessionId.value
+  ) {
     const teamId = currentTeamId.value
     const workspaceId = currentWorkspaceId.value
     if (teamId && workspaceId) {
@@ -621,8 +645,12 @@ const handleSend = async () => {
           toast.error((uploadError as Error).message)
         }
       }
-      if (staged.length > 0) {
-        sendOpts = { newSessionId, pendingAttachments: staged }
+      if (staged.length > 0 || driveFileIds.length > 0) {
+        sendOpts = {
+          newSessionId,
+          pendingAttachments: staged,
+          pendingDriveImports: driveFileIds,
+        }
       }
     }
   }
@@ -633,6 +661,11 @@ const handleSend = async () => {
   // to selected only once the turn commits.
   await botChat.sendMessage(text, sendOpts)
   pendingUploadFiles.value = []
+  // Drive picks were forwarded as ids and attached server-side this turn; the
+  // server minted their attachment ids (we don't have them client-side), so
+  // unlike local uploads they aren't promoted to selected chips — they show up
+  // in the inspector's live attachment list for any follow-up turn.
+  botChat.pendingDriveImports.value = []
   // The uploads are now committed under the freshly-created session. Add them
   // to the per-turn selection so they persist as selected chips for subsequent
   // turns — matching the existing-session upload path, which selects on upload.
@@ -949,7 +982,12 @@ const onToolMenuCloseAutoFocus = (event: Event) => {
         @keydown="handleKeydown"
       />
       <InputGroupAddon
-        v-if="hasAttachedNodes || hasSelectedAttachments || hasPendingUploads"
+        v-if="
+          hasAttachedNodes ||
+          hasSelectedAttachments ||
+          hasPendingUploads ||
+          hasPendingDriveImports
+        "
         align="block-start"
       >
         <ItemGroup>
@@ -1078,6 +1116,46 @@ const onToolMenuCloseAutoFocus = (event: Event) => {
                     <TooltipContent>
                       {{
                         t("ai.detachAttachment", { name: file.name }, file.name)
+                      }}
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </ItemActions>
+            </Item>
+          </template>
+          <template v-if="hasPendingDriveImports">
+            <Item
+              v-for="(file, index) in pendingDriveImports"
+              :key="`drive:${index}:${file.fileId}`"
+              variant="muted"
+              size="xs"
+            >
+              <ItemMedia variant="icon">
+                <IconLogosGoogleDrive />
+              </ItemMedia>
+              <ItemContent>
+                <ItemTitle>{{ file.displayName }}</ItemTitle>
+                <ItemDescription class="text-xs">Pending</ItemDescription>
+              </ItemContent>
+              <ItemActions>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger as-child>
+                      <InputGroupButton
+                        size="icon-xs"
+                        :disabled="isReadOnly || isSending"
+                        @click="removePendingDriveImport(index)"
+                      >
+                        <IconX />
+                      </InputGroupButton>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      {{
+                        t(
+                          "ai.detachAttachment",
+                          { name: file.displayName },
+                          file.displayName
+                        )
                       }}
                     </TooltipContent>
                   </Tooltip>
