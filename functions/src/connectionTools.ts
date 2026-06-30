@@ -216,11 +216,7 @@ function googleAuthRejectionMessage(
 /** Shared model-facing copy for binding/token failures (read + write tools). */
 export function bindingFailureMessage(
   reason:
-    | "not_connected"
-    | "needs_reauth"
-    | "config"
-    | "transient"
-    | "disabled",
+    "not_connected" | "needs_reauth" | "config" | "transient" | "disabled",
   copy: ConnectionAppCopy
 ): string {
   switch (reason) {

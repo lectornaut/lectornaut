@@ -16,10 +16,7 @@ import { defineStore, storeToRefs } from "pinia"
 import { useCurrentUser } from "vuefire"
 
 export type BillingFeatureKey =
-  | "paid"
-  | "professional_plus"
-  | "business_plus"
-  | "enterprise_only"
+  "paid" | "professional_plus" | "business_plus" | "enterprise_only"
 
 export interface BillingFeatureRule {
   minPlan: BillingPlanKey

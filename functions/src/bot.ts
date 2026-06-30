@@ -189,8 +189,7 @@ type AuthData = NonNullable<CallableRequest["auth"]>
  * interactive callables and the server-triggered Workflows worker.
  */
 type TurnPrincipal =
-  | { kind: "user"; uid: string }
-  | { kind: "agent"; agentId: string }
+  { kind: "user"; uid: string } | { kind: "agent"; agentId: string }
 
 /**
  * The id used for membership/role lookups, session ownership, audit + sender
@@ -248,8 +247,7 @@ interface ToolCall {
 }
 
 type MessageSegment =
-  | { kind: "text"; text: string }
-  | { kind: "tool"; tool: ToolCall }
+  { kind: "text"; text: string } | { kind: "tool"; tool: ToolCall }
 
 export interface ChatMessage {
   role: ChatRole
@@ -3799,8 +3797,7 @@ const respondToBotInterruptFlow = ai.defineFlow(
       // resumes are refused (see the length check below) because no safe
       // coverage for the siblings exists on this Genkit version.
       const resumeThread = existing.data?.threads?.[MAIN_THREAD] as
-        | MessageLike[]
-        | undefined
+        MessageLike[] | undefined
       const lastThreadMessage =
         Array.isArray(resumeThread) && resumeThread.length > 0
           ? resumeThread[resumeThread.length - 1]

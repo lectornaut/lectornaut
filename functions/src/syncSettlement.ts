@@ -83,10 +83,7 @@ export interface SyncOperationRoute {
  * catches these and writes the rejection status back to the operation document.
  */
 export type SyncRejectCode =
-  | "invalid-argument"
-  | "permission-denied"
-  | "failed-precondition"
-  | "not-found"
+  "invalid-argument" | "permission-denied" | "failed-precondition" | "not-found"
 
 export class SyncRejectError extends Error {
   // Explicit field (not a constructor parameter property) so the module stays

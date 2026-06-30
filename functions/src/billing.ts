@@ -1176,8 +1176,7 @@ async function markWebhookEventProcessing(eventId: string): Promise<boolean> {
   return db.runTransaction(async (transaction) => {
     const lockSnap = await transaction.get(lockRef)
     const lockData = lockSnap.data() as
-      | { status?: string; updatedAtMs?: number }
-      | undefined
+      { status?: string; updatedAtMs?: number } | undefined
     const status = lockData?.status
     const updatedAtMs = lockData?.updatedAtMs ?? 0
     const isActiveProcessing =

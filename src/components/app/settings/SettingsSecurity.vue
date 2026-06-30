@@ -53,12 +53,7 @@ const {
 } = useSsoConfig(teamId)
 
 type LoginMethodKey =
-  | "emailPassword"
-  | "magicLink"
-  | "google"
-  | "microsoft"
-  | "apple"
-  | "sso"
+  "emailPassword" | "magicLink" | "google" | "microsoft" | "apple" | "sso"
 
 /** Tracks which specific method is currently being saved (null = idle). */
 const updatingMethod = ref<LoginMethodKey | null>(null)

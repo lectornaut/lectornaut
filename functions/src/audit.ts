@@ -3033,8 +3033,7 @@ export const assignRoleToUser = onCall(CALLABLE_OPTS, async (request) => {
     }
 
     const beforeRole = membershipSnap.data()?.role as
-      | IMembershipRole
-      | undefined
+      IMembershipRole | undefined
 
     if (!beforeRole) {
       throw new HttpsError(

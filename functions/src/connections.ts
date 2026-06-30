@@ -781,11 +781,7 @@ export type BindingTokenResult =
   | {
       ok: false
       reason:
-        | "not_connected"
-        | "needs_reauth"
-        | "config"
-        | "transient"
-        | "disabled"
+        "not_connected" | "needs_reauth" | "config" | "transient" | "disabled"
     }
 
 /**

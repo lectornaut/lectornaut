@@ -1117,12 +1117,7 @@ const hasCustomDoneRenderer = computed(() => {
 // exhaustive — adding a `ToolStatus` member is a compile error in
 // `statusBadge` until it's mapped.
 type ToolStatus =
-  | "pending"
-  | "abandoned"
-  | "running"
-  | "resolved"
-  | "done"
-  | "error"
+  "pending" | "abandoned" | "running" | "resolved" | "done" | "error"
 
 const isErrorResult = computed<boolean>(() => {
   // summarizeNode surfaces a structured error (its own destructive card).

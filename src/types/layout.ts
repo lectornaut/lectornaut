@@ -1,9 +1,5 @@
 export type TabIndicatorTone =
-  | "neutral"
-  | "info"
-  | "success"
-  | "warning"
-  | "danger"
+  "neutral" | "info" | "success" | "warning" | "danger"
 
 export interface LayoutTab {
   id: string

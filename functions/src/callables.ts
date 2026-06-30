@@ -692,8 +692,7 @@ export const getPublicAgentProfile = onCall(CALLABLE_OPTS, async (request) => {
       .limit(1)
       .get()
     const membershipData = membershipSnap.docs[0]?.data() as
-      | { teamId?: unknown }
-      | undefined
+      { teamId?: unknown } | undefined
     teamId =
       typeof membershipData?.teamId === "string" ? membershipData.teamId : null
   }

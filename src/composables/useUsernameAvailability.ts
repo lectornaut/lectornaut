@@ -6,11 +6,7 @@ import {
 import { checkUsernameAvailability } from "@/queries/username"
 
 type UsernameCheckState =
-  | "empty"
-  | "unchanged"
-  | "invalid"
-  | "taken"
-  | "available"
+  "empty" | "unchanged" | "invalid" | "taken" | "available"
 
 interface UsernameCheckResult {
   state: UsernameCheckState

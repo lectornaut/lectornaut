@@ -64,9 +64,7 @@ import type { AiProvider } from "./domain.js"
  *                              tail (the transfer re-entry second turn).
  */
 export type TurnDelivery =
-  | { prompt: string | Part[] }
-  | { resume: ResumeOptions }
-  | { kind: "continue" }
+  { prompt: string | Part[] } | { resume: ResumeOptions } | { kind: "continue" }
 
 /**
  * The delivery-specific slice of `chat.sendStream(...)`'s argument object —
@@ -305,8 +303,7 @@ export function buildTransferRoster(args: {
  * it and picks a valid id or just answers.
  */
 export type TransferOutcome =
-  | { kind: "transfer"; agentId: string }
-  | { kind: "rejected"; message: string }
+  { kind: "transfer"; agentId: string } | { kind: "rejected"; message: string }
 
 /**
  * Render a transfer-target id for model-facing messages. The empty

@@ -78,12 +78,7 @@ function nodesCollectionPath(
 
 /** Op kinds a WRITE tool can record for review / audit. */
 export type NodeChangeOp =
-  | "create"
-  | "update"
-  | "rename"
-  | "move"
-  | "archive"
-  | "unarchive"
+  "create" | "update" | "rename" | "move" | "archive" | "unarchive"
 
 /**
  * A node edit recorded by a WRITE tool. In `require_review` (capture-only)

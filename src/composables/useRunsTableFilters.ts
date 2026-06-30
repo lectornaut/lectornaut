@@ -25,8 +25,7 @@ export function useRunsTableFilters(
   const dateRange = computed<RunsDateRange | undefined>({
     get() {
       const value = queuedColumn()?.getFilterValue() as
-        | { start?: string; end?: string }
-        | undefined
+        { start?: string; end?: string } | undefined
       if (!value || (!value.start && !value.end)) return undefined
       try {
         return {
@@ -49,8 +48,7 @@ export function useRunsTableFilters(
   /** Short "start → end" label for a collapsed date-filter trigger. */
   const rangeSummary = computed(() => {
     const value = queuedColumn()?.getFilterValue() as
-      | { start?: string; end?: string }
-      | undefined
+      { start?: string; end?: string } | undefined
     const start = value?.start
     const end = value?.end
     if (start && end) return `${start} → ${end}`

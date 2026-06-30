@@ -61,8 +61,7 @@ export interface BotChatToolCall {
  * they're always a single text run.
  */
 export type BotChatSegment =
-  | { kind: "text"; text: string }
-  | { kind: "tool"; tool: BotChatToolCall }
+  { kind: "text"; text: string } | { kind: "tool"; tool: BotChatToolCall }
 
 export interface BotChatMessage {
   // Stable client-side id for `v-for :key` and parse-tree memoization in

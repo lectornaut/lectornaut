@@ -667,8 +667,7 @@ const updateEditorStats = (currentEditor: TiptapEditor) => {
 
 const syncTableOfContentsScrollParent = (currentEditor: TiptapEditor) => {
   const storage = currentEditor.storage.tableOfContents as
-    | TableOfContentsStorage
-    | undefined
+    TableOfContentsStorage | undefined
 
   if (!storage) {
     return

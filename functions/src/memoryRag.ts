@@ -520,8 +520,7 @@ export const embedMemoryOnWrite = onDocumentWritten(
     const workspaceId = event.params.workspaceId as string
     const memoryId = event.params.memoryId as string
     const before = event.data?.before?.data() as
-      | MemoryDocPartialShape
-      | undefined
+      MemoryDocPartialShape | undefined
     const after = event.data?.after?.data() as MemoryDocPartialShape | undefined
 
     // No-op skip when content is unchanged: the embed writeback refire, any

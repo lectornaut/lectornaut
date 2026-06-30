@@ -31,10 +31,7 @@ const { billing, catalog, isCatalogLoading, status } = storeToRefs(billingStore)
 const { refreshBilling } = billingStore
 
 type BillingActionTrigger =
-  | "payment-method"
-  | "billing-history"
-  | "subscription-action"
-  | "cancel-dialog"
+  "payment-method" | "billing-history" | "subscription-action" | "cancel-dialog"
 
 const billingAction = ref<"portal" | "cancel" | "restore" | null>(null)
 const activeBillingActionTrigger = ref<BillingActionTrigger | null>(null)

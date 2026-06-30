@@ -17,11 +17,7 @@ import { doc, type DocumentReference } from "firebase/firestore"
 import { toValue, type MaybeRefOrGetter } from "vue"
 
 type SsoOperation =
-  | "save"
-  | "delete"
-  | "test"
-  | "loginMethods"
-  | "approvedDomains"
+  "save" | "delete" | "test" | "loginMethods" | "approvedDomains"
 
 /**
  * Composable for managing team SSO configuration in admin settings.

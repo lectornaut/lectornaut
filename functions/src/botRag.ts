@@ -1001,8 +1001,7 @@ function makeEmbedTrigger(scope: WorkspaceNodeScope) {
       const workspaceId = event.params.workspaceId as string
       const nodeId = event.params.nodeId as string
       const before = event.data?.before?.data() as
-        | NodeDocPartialShape
-        | undefined
+        NodeDocPartialShape | undefined
       const after = event.data?.after?.data() as NodeDocPartialShape | undefined
 
       // No-op skip when the write didn't change content. Covers:

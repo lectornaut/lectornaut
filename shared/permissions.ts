@@ -370,8 +370,7 @@ export function scopesFor(capability: Capability): readonly Scope[] {
  *                                  group elevation), or `null` when no grant.
  */
 export type Participation =
-  | { excluded: true }
-  | { excluded: false; role: IMembershipRole | null }
+  { excluded: true } | { excluded: false; role: IMembershipRole | null }
 
 /**
  * Why a denied {@link AuthDecision} was denied — lets a hard-deny caller raise a
@@ -379,9 +378,7 @@ export type Participation =
  * simply under-ranked) instead of one generic string. Absent when `allowed`.
  */
 export type DeniedReason =
-  | "not-team-member"
-  | "excluded"
-  | "insufficient-capability"
+  "not-team-member" | "excluded" | "insufficient-capability"
 
 /**
  * The outcome of {@link resolveAuthorization}: facts, not control flow. A caller

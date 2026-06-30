@@ -119,10 +119,7 @@ interface SyncEngineState {
  * on `listener` means the callable path is failing (soft) somewhere.
  */
 export type SyncSettleSource =
-  | "listener"
-  | "callable"
-  | "inspect"
-  | "deadLetter"
+  "listener" | "callable" | "inspect" | "deadLetter"
 
 interface SyncMetricsState {
   outboxSize: ComputedRef<number>

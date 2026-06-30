@@ -328,8 +328,7 @@ const opStyle = (op: string) => OP_STYLE[op] ?? OP_STYLE.update
       <CollapsibleContent>
         <pre
           class="text-muted-foreground bg-background mt-1 max-h-48 overflow-auto rounded-md border p-2 text-xs wrap-break-word whitespace-pre-wrap"
-          >{{ run.prompt }}</pre
-        >
+          >{{ run.prompt }}</pre>
       </CollapsibleContent>
     </Collapsible>
   </div>

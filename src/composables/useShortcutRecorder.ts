@@ -32,11 +32,7 @@ export type ShortcutRecorderOptions = {
 }
 
 export type ShortcutRecorderTarget =
-  | EventTarget
-  | HTMLElement
-  | { $el?: HTMLElement | null }
-  | null
-  | undefined
+  EventTarget | HTMLElement | { $el?: HTMLElement | null } | null | undefined
 
 const RECORDER_PLATFORM: "mac" | "windows" = IS_APPLE_DEVICE ? "mac" : "windows"
 
