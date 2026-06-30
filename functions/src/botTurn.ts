@@ -67,24 +67,22 @@ export type TurnDelivery =
   { prompt: string | Part[] } | { resume: ResumeOptions } | { kind: "continue" }
 
 /**
- * The delivery-specific slice of `chat.sendStream(...)`'s argument object —
- * exactly `prompt` xor `resume` xor neither. `runChatTurn` spreads this and
- * adds the turn-stable `abortSignal` + `maxTurns`, so this never carries
- * those (a test asserts the boundary).
+ * Map a {@link TurnDelivery} to the `chat.sendStream(...)` input — a bare string
+ * for a plain prompt, or a structural `{ message }` / `{ resume }` object.
+ * (Structural, not the framework's `AgentInput` which isn't publicly exported;
+ * `runChatTurn` casts the result to `chat.sendStream`'s parameter type.)
+ *   - `{ prompt: string }`  → the bare string (the framework wraps it).
+ *   - `{ prompt: Part[] }`  → a `{ message }` carrying the multimodal user turn.
+ *   - `{ resume }`          → `{ resume }` (folds the HITL answer back in).
+ *   - `{ kind: "continue" }`→ `{}` — generate on the (truncated) thread alone,
+ *     which is precisely what the transfer second turn wants.
  */
-export interface ChatSendArgs {
-  prompt?: string | Part[]
-  resume?: ResumeOptions
-}
-
-/**
- * Map a {@link TurnDelivery} to the delivery slice of the sendStream args.
- * `{ kind: "continue" }` yields `{}` — Genkit then generates on the
- * (truncated) thread alone, which is precisely what the transfer second
- * turn wants.
- */
-export function deliveryToSendArgs(delivery: TurnDelivery): ChatSendArgs {
-  if ("prompt" in delivery) return { prompt: delivery.prompt }
+export function deliveryToAgentInput(delivery: TurnDelivery) {
+  if ("prompt" in delivery) {
+    return typeof delivery.prompt === "string"
+      ? delivery.prompt
+      : { message: { role: "user", content: delivery.prompt } }
+  }
   if ("resume" in delivery) return { resume: delivery.resume }
   return {}
 }
