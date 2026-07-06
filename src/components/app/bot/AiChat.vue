@@ -104,22 +104,15 @@ const handleCopyMessage = async (message: BotChatMessage) => {
   toast.success(t("ai.messageCopied"))
 }
 
-// Markdown blockquote: every line prefixed with "> ". An empty line
-// keeps its prefix so the quoted block reads as one contiguous quote
-// in the rendered bubble — without it, markdown-it would split the
-// quote at the gap and the second half would render as a normal
-// paragraph.
-const blockquote = (text: string): string =>
-  text
-    .split("\n")
-    .map((line) => `> ${line}`)
-    .join("\n")
-
+// Reply stages the message's plain text as the composer's reply context —
+// shown as a banner above the input and folded into the next send as a
+// quoted blockquote (see `AiChatComposer`). We store the raw stripped text;
+// the composer owns the blockquote formatting at send time.
 const handleReplyMessage = (message: BotChatMessage) => {
   if (!botChat) return
   const text = stripThinking(message.content)
   if (!text) return
-  botChat.pendingComposerDraft.value = blockquote(text)
+  botChat.replyContext.value = text
 }
 
 // ── Read aloud (Web Speech API) ───────────────────────────────────────────

@@ -117,8 +117,8 @@ const handleChangeRole = (userId: string, role: IMembershipRole) => {
   changeRole(userId, role)
 }
 
-const handleRemoveMember = (userId: string) => {
-  removeMember(userId)
+const handleRemoveMember = (member: ITeamMember) => {
+  if (!isAgentMembership(member)) removeMember(member.userId)
 }
 
 const formatCreatedAt = (
@@ -519,9 +519,7 @@ const formatCreatedAt = (
                                               member.userId
                                             )
                                           "
-                                          @click="
-                                            handleRemoveMember(member.userId)
-                                          "
+                                          @click="handleRemoveMember(member)"
                                         >
                                           <Spinner
                                             v-if="

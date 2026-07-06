@@ -15,8 +15,8 @@
  * `setContent`). `code` nodes are NOT converted (they store raw source).
  *
  * Scope: the common blocks an agent emits — headings, paragraphs, bullet /
- * ordered lists, fenced code blocks, blockquotes, horizontal rules — plus
- * inline bold / italic / code / links. Anything unrecognized degrades to a
+ * ordered lists, fenced code blocks, blockquotes, horizontal rules, images —
+ * plus inline bold / italic / code / links. Anything unrecognized degrades to a
  * plain paragraph rather than throwing, so a malformed snippet can never
  * brick the document. This is deliberately not a CommonMark-complete parser
  * (no nested lists, tables, or reference links); it covers what agents
@@ -48,8 +48,8 @@ const EMPTY_DOC: TiptapNode = {
 // Ordered by precedence: inline code first (its contents are literal, so we
 // must not parse emphasis inside it), then links, then bold, then italic.
 const INLINE_PATTERN =
-  /(`[^`]+`)|(\[[^\]]+\]\([^)\s]+\))|(\*\*[^*]+\*\*)|(__[^_]+__)|(\*[^*]+\*)|(_[^_]+_)/
-const LINK_PATTERN = /^\[([^\]]+)\]\(([^)\s]+)\)$/
+  /(`[^`]+`)|(!?\[[^\]]+\]\([^)\s]+\))|(\*\*[^*]+\*\*)|(__[^_]+__)|(\*[^*]+\*)|(_[^_]+_)/
+const LINK_PATTERN = /^!?\[([^\]]+)\]\(([^)\s]+)\)$/
 
 /**
  * Turn one line of markdown into an array of Tiptap text nodes with marks.
@@ -81,7 +81,9 @@ function parseInline(input: string): TiptapNode[] {
     const token = match[0]
     if (token.startsWith("`")) {
       pushText(token.slice(1, -1), [{ type: "code" }])
-    } else if (token.startsWith("[")) {
+    } else if (token.startsWith("[") || token.startsWith("![")) {
+      // Mid-paragraph images degrade to a link on the alt text — the editor's
+      // Image node is block-level, so it can't live inside a paragraph.
       const link = token.match(LINK_PATTERN)
       if (link) {
         pushText(link[1], [{ type: "link", attrs: { href: link[2] } }])
@@ -110,6 +112,10 @@ function paragraph(text: string): TiptapNode {
 // ─── Block parsing ───────────────────────────────────────────────────────────
 
 const HEADING_RE = /^(#{1,6})\s+(.*)$/
+// A line that is exactly one image (optional title ignored). The editor's
+// Image node is block-level, so images only convert when they stand alone;
+// a mid-paragraph image degrades to a link on its alt text (see parseInline).
+const IMAGE_RE = /^!\[([^\]]*)\]\(([^)\s]+)(?:\s+"[^"]*")?\)$/
 const HR_RE = /^(?:-{3,}|\*{3,}|_{3,})\s*$/
 const BULLET_RE = /^[-*+]\s+(.*)$/
 const ORDERED_RE = /^(\d+)\.\s+(.*)$/
@@ -175,6 +181,17 @@ export function markdownToTiptapDoc(markdown: string): TiptapNode {
     if (HR_RE.test(trimmed)) {
       flushParagraph()
       blocks.push({ type: "horizontalRule" })
+      i += 1
+      continue
+    }
+
+    const image = trimmed.match(IMAGE_RE)
+    if (image) {
+      flushParagraph()
+      blocks.push({
+        type: "image",
+        attrs: { src: image[2], alt: image[1] || null },
+      })
       i += 1
       continue
     }
@@ -370,6 +387,12 @@ function serializeBlock(node: TiptapNode, depth: number): string {
     }
     case "horizontalRule":
       return "---"
+    case "image": {
+      const src = typeof node.attrs?.src === "string" ? node.attrs.src : ""
+      if (!src) return ""
+      const alt = typeof node.attrs?.alt === "string" ? node.attrs.alt : ""
+      return `![${alt}](${src})`
+    }
     case "bulletList":
       return serializeList(node, depth, false)
     case "orderedList":

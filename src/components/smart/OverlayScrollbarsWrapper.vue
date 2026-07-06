@@ -145,7 +145,7 @@ defineExpose({
 
 <template>
   <div
-    class="overlay-scrollbars-wrapper relative flex size-full min-h-0 min-w-0 grow overflow-hidden"
+    class="overlay-scrollbars-wrapper relative flex size-full min-h-0 min-w-0 grow scrollbar-gutter-stable overflow-hidden"
     :class="{
       'overlay-scrollbars-wrapper--block-hints': props.showBlockHints,
       'overlay-scrollbars-wrapper--inline-hints': props.showInlineHints,
@@ -158,7 +158,7 @@ defineExpose({
     <OverlayScrollbarsComponent
       v-if="!props.targetSelector"
       ref="overlayScrollbars"
-      class="overlay-scrollbars-wrapper__viewport size-full min-h-0 min-w-0 grow overflow-auto"
+      class="overlay-scrollbars-wrapper__viewport size-full min-h-0 min-w-0 grow scrollbar-gutter-stable overflow-auto"
       defer
       :options="osOptions"
       @os-initialized="handleInitialized"
@@ -170,7 +170,7 @@ defineExpose({
     <div
       v-else
       ref="overlayContent"
-      class="overlay-scrollbars-wrapper__content size-full min-h-0 min-w-0 grow"
+      class="overlay-scrollbars-wrapper__content size-full min-h-0 min-w-0 grow scrollbar-gutter-stable"
     >
       <slot />
     </div>

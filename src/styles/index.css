@@ -37,6 +37,7 @@
 
     text-box: trim-both cap alphabetic;
     font-variation-settings: "GRAD" var(--grade-axis);
+    interpolate-size: allow-keywords;
 
     @apply h-dvh;
     @apply w-dvw;

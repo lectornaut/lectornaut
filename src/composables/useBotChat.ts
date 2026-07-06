@@ -315,14 +315,16 @@ export interface BotChatContext {
    */
   pendingPinnedNode: Ref<BotChatNodeRef | null>
   /**
-   * One-shot text the composer consumes by prepending to its current
-   * draft and then resetting back to null. Wired by the in-chat context
-   * menu's "Reply" action to inject a Markdown blockquote of the message
-   * being replied to. Kept on the shared context (rather than via an
-   * event bus) so any future "stuff this into the composer" affordance
-   * — quick-prompt buttons, drag-drop, etc. — has a single channel.
+   * The message the user is replying to (raw text), or `null`. Set by the
+   * in-chat "Reply" action (`AiChat`), rendered as a dismissable banner
+   * above the composer (`AiChatComposer`), and folded into the next send
+   * as a Markdown blockquote — quoted context ahead of the user's reply.
+   * Cleared on send, on dismiss, and whenever the active session changes.
+   * Lives on the shared context (not a composer-local ref) so the chat
+   * view and the composer — sibling components — share it without an
+   * event bus.
    */
-  pendingComposerDraft: Ref<string | null>
+  replyContext: Ref<string | null>
 }
 
 export const BotChatContextKey: InjectionKey<BotChatContext> =
@@ -362,13 +364,13 @@ export function useBotChat(): BotChatContext {
 
   const attachedNodes = ref<BotChatNodeRef[]>([])
   const pendingPinnedNode = ref<BotChatNodeRef | null>(null)
-  // One-shot composer prefill. `AiChat` sets this from the context menu
-  // (Reply → blockquote of the message), `AiChatComposer` watches it,
-  // prepends to its local draft, then resets the ref to null. Lives here
-  // (not as a local ref in the composer) so the chat view — a sibling
-  // component — can reach the composer through the already-shared
-  // BotChatContext without a separate event channel.
-  const pendingComposerDraft = ref<string | null>(null)
+  // The message being replied to (raw text). `AiChat` sets it from the
+  // context menu; `AiChatComposer` renders the banner, clears it on
+  // dismiss, and folds it into the outgoing message as a blockquote. Lives
+  // here (not in the composer) so the sibling chat view can reach it via
+  // the shared BotChatContext. Persistent (unlike a one-shot prefill), so
+  // it's cleared on session switches below.
+  const replyContext = ref<string | null>(null)
 
   const canAttachMoreNodes = computed(
     () => attachedNodes.value.length < BOT_CHAT_MAX_ATTACHED_NODES
@@ -898,6 +900,9 @@ export function useBotChat(): BotChatContext {
     // call `selectAgent(id)` right after this resets, so the order
     // (reset then re-select) is the safe path.
     activeAgentId.value = null
+    // A pending reply is scoped to the abandoned draft — drop it so the
+    // banner doesn't linger into an unrelated new chat.
+    replyContext.value = null
   }
 
   /**
@@ -1356,6 +1361,8 @@ export function useBotChat(): BotChatContext {
       // unchanged so restoring the agent re-binds this session.
       activeAgentId.value = matched?.activeAgentId ?? null
       pendingPinnedNode.value = null
+      // A reply staged against the previous chat doesn't belong here.
+      replyContext.value = null
     } catch (error) {
       console.error("[useBotChat] loadBotSession failed:", error)
       // If the session is gone (deleted from another tab, the user
@@ -1547,6 +1554,6 @@ export function useBotChat(): BotChatContext {
     selectOrCreateNodeSession,
     startNewPinnedNodeSession,
     pendingPinnedNode,
-    pendingComposerDraft,
+    replyContext,
   }
 }

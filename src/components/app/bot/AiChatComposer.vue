@@ -27,6 +27,7 @@ import {
   IconLogosGoogleDrive,
   IconMic,
   IconPlus,
+  IconReply,
   IconUpload,
   IconX,
 } from "@/data/icons"
@@ -607,7 +608,12 @@ const isDisabled = computed(
 const handleSend = async () => {
   if (isDisabled.value || !botChat) return
   stopDictation()
-  const text = userInput.value
+  // Fold the reply (if any) into the message as quoted context ahead of the
+  // user's text. The server sees one message; no separate context field.
+  const reply = replyContext.value
+  const text = reply
+    ? `${blockquote(reply)}\n\n${userInput.value}`
+    : userInput.value
 
   // Brand-new chat with buffered uploads: mint a session id, stage each file's
   // bytes to it, and hand the refs to `sendMessage` so the first turn carries
@@ -656,6 +662,9 @@ const handleSend = async () => {
   }
 
   userInput.value = ""
+  // The reply is captured in `text` above; drop the banner now so it clears
+  // in lockstep with the textarea.
+  clearReply()
   // Keep the preview chips visible THROUGH the send (they read from the
   // buffer) so the file doesn't flicker to nothing mid-stream; clear + promote
   // to selected only once the turn commits.
@@ -689,38 +698,31 @@ const handleKeydown = (event: KeyboardEvent) => {
   }
 }
 
-// ── Reply prefill ────────────────────────────────────────────────────────────
+// ── Reply context ────────────────────────────────────────────────────────────
 //
-// `AiChat` (sibling component) writes a Markdown blockquote of the
-// message being replied to into `pendingComposerDraft`. We consume it
-// once: prepend (separated by a blank line so the user's pre-existing
-// draft stays grouped as its own paragraph), focus the textarea, park
-// the caret at the end, then reset the ref to null so the same reply
-// doesn't get re-injected on subsequent runs of the watcher.
-//
-// Read-only / archived sessions: still allowed. The textarea is
-// disabled in those modes so the user can't add to it or send, but
-// they can read the quote and the model's response that prompted it.
-// Suppressing the prefill there would silently swallow the click,
-// which is worse UX than showing the quote in a disabled state.
-watch(
-  () => botChat?.pendingComposerDraft.value ?? null,
-  (next) => {
-    if (next === null) return
-    const existing = userInput.value
-    userInput.value = existing.trim().length
-      ? `${next}\n\n${existing}`
-      : `${next}\n\n`
-    if (botChat) botChat.pendingComposerDraft.value = null
-    nextTick(() => {
-      const el = textareaRef.value?.$el
-      if (!el) return
-      el.focus()
-      const caret = userInput.value.length
-      el.setSelectionRange(caret, caret)
-    })
-  }
-)
+// `AiChat` (sibling component) sets `replyContext` to the message being
+// replied to. We render it as a dismissable banner above the textarea and
+// fold it into the next send as a Markdown blockquote — so the model
+// receives the quoted message as context ahead of the user's reply. The
+// textarea stays clean (just what the user types); focus lands there when a
+// reply is staged so they can start typing immediately.
+const replyContext = computed(() => botChat?.replyContext.value ?? null)
+const clearReply = () => {
+  if (botChat) botChat.replyContext.value = null
+}
+watch(replyContext, (next) => {
+  if (next === null) return
+  nextTick(() => textareaRef.value?.$el?.focus())
+})
+
+// Markdown blockquote: every line prefixed with "> " (empty lines keep the
+// prefix so the quote renders as one contiguous block, not two paragraphs
+// split at the gap). Folds the reply context into the outgoing message.
+const blockquote = (text: string): string =>
+  text
+    .split("\n")
+    .map((line) => `> ${line}`)
+    .join("\n")
 
 // ── Tool picker ──────────────────────────────────────────────────────────────
 //
@@ -981,6 +983,33 @@ const onToolMenuCloseAutoFocus = (event: Event) => {
         :disabled="isSending || isReadOnly"
         @keydown="handleKeydown"
       />
+      <InputGroupAddon v-if="replyContext" align="block-start">
+        <Item variant="muted" size="xs" class="w-full">
+          <ItemMedia variant="icon">
+            <IconReply />
+          </ItemMedia>
+          <ItemContent>
+            <ItemTitle>{{ t("ai.replyingTo") }}</ItemTitle>
+            <ItemDescription>{{ replyContext }}</ItemDescription>
+          </ItemContent>
+          <ItemActions>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger as-child>
+                  <InputGroupButton
+                    size="icon-xs"
+                    :disabled="isSending"
+                    @click="clearReply"
+                  >
+                    <IconX />
+                  </InputGroupButton>
+                </TooltipTrigger>
+                <TooltipContent>{{ t("actions.cancel") }}</TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          </ItemActions>
+        </Item>
+      </InputGroupAddon>
       <InputGroupAddon
         v-if="
           hasAttachedNodes ||
