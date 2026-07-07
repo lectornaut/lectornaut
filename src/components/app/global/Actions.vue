@@ -18,6 +18,9 @@ const visibility = useDocumentVisibility()
 const isDark = usePreferredDark()
 
 const favicon = computed(() => {
+  if (import.meta.env.DEV) {
+    return "/favicon-dev.svg"
+  }
   if (visibility.value === "hidden") {
     return "/favicon-invisible.svg"
   }

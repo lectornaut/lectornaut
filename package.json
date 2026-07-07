@@ -37,7 +37,7 @@
     "@codemirror/language": "^6.12.4",
     "@codemirror/lint": "^6.9.7",
     "@codemirror/search": "^6.7.1",
-    "@codemirror/state": "^6.7.0",
+    "@codemirror/state": "^6.7.1",
     "@codemirror/view": "^6.43.5",
     "@fontsource-variable/bricolage-grotesque": "^5.2.10",
     "@fontsource-variable/geist": "^5.2.9",
@@ -159,7 +159,7 @@
   "devDependencies": {
     "@eslint/css": "^1.4.0",
     "@eslint/js": "^10.0.1",
-    "@iconify/json": "^2.2.495",
+    "@iconify/json": "^2.2.496",
     "@intlify/eslint-plugin-vue-i18n": "^4.5.1",
     "@intlify/unplugin-vue-i18n": "^11.2.4",
     "@tailwindcss/forms": "^0.5.11",
