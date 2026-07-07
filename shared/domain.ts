@@ -495,6 +495,7 @@ export type IntegrationSource = (typeof INTEGRATION_SOURCES)[number]
 export const CONNECTION_PROVIDERS = [
   "google-calendar",
   "google-drive",
+  "google-gmail",
   "github",
 ] as const
 export type ConnectionProvider = (typeof CONNECTION_PROVIDERS)[number]
@@ -530,10 +531,12 @@ export type ConnectionBindingStatus =
  */
 export const GOOGLE_CALENDAR_TOOL_KEY = "googleCalendar"
 export const GOOGLE_DRIVE_TOOL_KEY = "googleDrive"
+export const GOOGLE_GMAIL_TOOL_KEY = "googleGmail"
 export const GITHUB_TOOL_KEY = "gitHub"
 export const CONNECTION_TOOL_KEYS = [
   GOOGLE_CALENDAR_TOOL_KEY,
   GOOGLE_DRIVE_TOOL_KEY,
+  GOOGLE_GMAIL_TOOL_KEY,
   GITHUB_TOOL_KEY,
 ] as const
 export type ConnectionToolKey = (typeof CONNECTION_TOOL_KEYS)[number]
@@ -550,6 +553,12 @@ export const GOOGLE_DRIVE_READ_FILE_TOOL_NAME = "readDriveFile"
  * gitHub install gate, like `readDriveFile` does for googleDrive.
  */
 export const GITHUB_READ_FILE_TOOL_NAME = "readGitHubFile"
+
+/**
+ * Companion read tool to `googleGmail` (message-body fetch) — rides the one
+ * googleGmail install gate, like `readDriveFile` does for googleDrive.
+ */
+export const GOOGLE_GMAIL_READ_MESSAGE_TOOL_NAME = "readGmailMessage"
 
 /**
  * Genkit wire-names of each app's confirm-gated WRITE tools (no integration
@@ -582,6 +591,12 @@ export const GITHUB_WRITE_TOOL_NAMES = [
   "addGitHubComment",
   "updateGitHubIssue",
 ] as const
+/**
+ * Gmail confirm-gated write tools — ONE verb: send (covers new mail AND
+ * in-thread replies via `replyToMessageId`). No draft/modify tools — each
+ * would drag in another restricted scope for marginal value.
+ */
+export const GOOGLE_GMAIL_WRITE_TOOL_NAMES = ["sendGmailMessage"] as const
 
 /**
  * Union of EVERY connection provider's write-tool wire-names — the single
@@ -594,6 +609,7 @@ export const CONNECTION_WRITE_TOOL_NAMES: readonly string[] = [
   ...GOOGLE_CALENDAR_WRITE_TOOL_NAMES,
   ...GOOGLE_DRIVE_WRITE_TOOL_NAMES,
   ...GITHUB_WRITE_TOOL_NAMES,
+  ...GOOGLE_GMAIL_WRITE_TOOL_NAMES,
 ]
 
 // ── OAuth scope hierarchy ───────────────────────────────────────────────────
@@ -615,6 +631,13 @@ export const GOOGLE_DRIVE_READONLY_SCOPE =
   "https://www.googleapis.com/auth/drive.readonly"
 export const GOOGLE_DRIVE_FILE_SCOPE =
   "https://www.googleapis.com/auth/drive.file"
+
+/** Gmail's full-mailbox scope — never requested; satisfier-only. */
+export const GOOGLE_MAIL_FULL_SCOPE = "https://mail.google.com/"
+export const GOOGLE_GMAIL_READONLY_SCOPE =
+  "https://www.googleapis.com/auth/gmail.readonly"
+export const GOOGLE_GMAIL_SEND_SCOPE =
+  "https://www.googleapis.com/auth/gmail.send"
 
 // GitHub is a GitHub App, not an OAuth App: access is governed by the app's
 // granted PERMISSIONS + installed repos, not OAuth scopes — so it has no scope
@@ -639,6 +662,11 @@ const SCOPE_SATISFIERS: Readonly<Record<string, readonly string[]>> = {
     GOOGLE_DRIVE_FULL_SCOPE,
   ],
   [GOOGLE_DRIVE_FILE_SCOPE]: [GOOGLE_DRIVE_FILE_SCOPE, GOOGLE_DRIVE_FULL_SCOPE],
+  [GOOGLE_GMAIL_READONLY_SCOPE]: [
+    GOOGLE_GMAIL_READONLY_SCOPE,
+    GOOGLE_MAIL_FULL_SCOPE,
+  ],
+  [GOOGLE_GMAIL_SEND_SCOPE]: [GOOGLE_GMAIL_SEND_SCOPE, GOOGLE_MAIL_FULL_SCOPE],
   // GitHub needs no rows — a GitHub App requests no scopes; access is governed
   // by its installed-repo permissions, gated at the API (403/404), not here.
 }

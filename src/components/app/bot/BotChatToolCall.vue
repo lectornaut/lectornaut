@@ -77,6 +77,7 @@ import {
   GITHUB_WRITE_TOOL_NAMES,
   GOOGLE_CALENDAR_WRITE_TOOL_NAMES,
   GOOGLE_DRIVE_WRITE_TOOL_NAMES,
+  GOOGLE_GMAIL_WRITE_TOOL_NAMES,
 } from "@lectornaut/shared/domain"
 import { storeToRefs } from "pinia"
 import { computed, inject, ref, watch, type Component } from "vue"
@@ -594,6 +595,90 @@ const gitHubWriteResult = computed<{
   return null
 })
 
+// ── Gmail-send confirmation (connection tools) ──────────────────────────────
+//
+// `sendGmailMessage` follows the calendar/drive/GitHub pattern: the card
+// renders the strict-validated draft from `tool.input`, approval restarts
+// the tool server-side, and the outcome card keys off the
+// `written | declined | failed` discriminator. Names come from the shared
+// vocabulary so the server dispatch and this card can't drift.
+const GMAIL_WRITE_TOOL_NAME_SET: ReadonlySet<string> = new Set(
+  GOOGLE_GMAIL_WRITE_TOOL_NAMES
+)
+const isGmailWrite = computed(() =>
+  GMAIL_WRITE_TOOL_NAME_SET.has(props.tool.name)
+)
+
+interface GmailSendDraftView {
+  to: string[]
+  cc: string[]
+  subject: string | null
+  /** Non-null = a threaded reply; the subject derives "Re: …" server-side. */
+  replyToMessageId: string | null
+  bodyPreview: string
+  bodyChars: number
+}
+
+const GMAIL_PREVIEW_CHARS = 280
+
+const gmailSendDraft = computed<GmailSendDraftView | null>(() => {
+  if (!isGmailWrite.value) return null
+  const raw = props.tool.input
+  if (!raw || typeof raw !== "object") return null
+  const obj = raw as Record<string, unknown>
+  const body = typeof obj.body === "string" ? obj.body : ""
+  const recipients = (value: unknown): string[] =>
+    Array.isArray(value)
+      ? (value as unknown[]).filter(
+          (entry): entry is string => typeof entry === "string"
+        )
+      : []
+  return {
+    to: recipients(obj.to),
+    cc: recipients(obj.cc),
+    subject: draftString(obj.subject),
+    replyToMessageId: draftString(obj.replyToMessageId),
+    bodyPreview:
+      body.length > GMAIL_PREVIEW_CHARS
+        ? `${body.slice(0, GMAIL_PREVIEW_CHARS)}…`
+        : body,
+    bodyChars: body.length,
+  }
+})
+
+/** Gmail-send outcome — same plumbing as the calendar/drive/GitHub results. */
+const gmailSendResult = computed<{
+  kind: "written" | "declined" | "failed" | "deciding"
+  link: string | null
+} | null>(() => {
+  if (!isGmailWrite.value || props.tool.output === undefined) return null
+  const raw = props.tool.output
+  if (!raw || typeof raw !== "object") return null
+  const obj = raw as Record<string, unknown>
+  if (typeof obj.ok === "boolean") {
+    const email =
+      obj.email && typeof obj.email === "object"
+        ? (obj.email as Record<string, unknown>)
+        : null
+    const outcome =
+      obj.outcome === "written" ||
+      obj.outcome === "declined" ||
+      obj.outcome === "failed"
+        ? obj.outcome
+        : obj.ok
+          ? "written"
+          : "failed"
+    return {
+      kind: outcome,
+      link: email && typeof email.link === "string" ? email.link : null,
+    }
+  }
+  if (typeof obj.approved === "boolean") {
+    return { kind: "deciding", link: null }
+  }
+  return null
+})
+
 // ── Per-tool typed accessors ──────────────────────────────────────────────
 //
 // Each accessor narrows `tool.input` / `tool.output` against the
@@ -1100,6 +1185,8 @@ const hasCustomDoneRenderer = computed(() => {
     case "addGitHubComment":
     case "updateGitHubIssue":
       return gitHubWriteResult.value !== null
+    case "sendGmailMessage":
+      return gmailSendResult.value !== null
     default:
       return false
   }
@@ -1129,6 +1216,7 @@ const isErrorResult = computed<boolean>(() => {
   if (isCalendarWrite.value) return calendarWriteResult.value?.kind === "failed"
   if (isDriveWrite.value) return driveWriteResult.value?.kind === "failed"
   if (isGitHubWrite.value) return gitHubWriteResult.value?.kind === "failed"
+  if (isGmailWrite.value) return gmailSendResult.value?.kind === "failed"
   // Tools with a dedicated card render their own success/failure story, so
   // we don't second-guess them — only probe the generic fallback path.
   if (hasCustomDoneRenderer.value) return false
@@ -1486,6 +1574,73 @@ const showChevron = computed(
         </CardFooter>
       </Card>
 
+      <!-- Gmail-send confirm: same contract as the drive card. -->
+      <Card v-else-if="isLiveInterrupt && gmailSendDraft" size="sm">
+        <CardHeader>
+          <CardTitle>
+            {{
+              t(
+                gmailSendDraft.replyToMessageId
+                  ? "ai.toolCall.gmailSend.replyTitle"
+                  : "ai.toolCall.gmailSend.sendTitle"
+              )
+            }}
+          </CardTitle>
+          <CardDescription>
+            {{ t("ai.toolCall.gmailSend.confirmHint") }}
+          </CardDescription>
+        </CardHeader>
+        <CardContent class="grid gap-1 text-sm">
+          <div v-if="gmailSendDraft.to.length > 0" class="font-medium">
+            {{ t("ai.toolCall.gmailSend.to") }}:
+            {{ gmailSendDraft.to.join(", ") }}
+          </div>
+          <div
+            v-if="gmailSendDraft.cc.length > 0"
+            class="text-muted-foreground"
+          >
+            {{ t("ai.toolCall.gmailSend.cc") }}:
+            {{ gmailSendDraft.cc.join(", ") }}
+          </div>
+          <!-- A reply without an explicit subject derives "Re: <original>"
+             server-side — say so rather than showing an empty line. -->
+          <div class="text-foreground">
+            {{
+              gmailSendDraft.subject ??
+              t("ai.toolCall.gmailSend.derivedSubject")
+            }}
+          </div>
+          <div
+            v-if="gmailSendDraft.bodyPreview"
+            class="text-muted-foreground border-border border-l-2 pl-2 text-xs whitespace-pre-wrap"
+          >
+            {{ gmailSendDraft.bodyPreview }}
+          </div>
+          <div class="text-muted-foreground/80 text-xs">
+            {{ t("ai.toolCall.gmailSend.bodyChars", gmailSendDraft.bodyChars) }}
+          </div>
+        </CardContent>
+        <CardFooter class="gap-2">
+          <Button
+            size="sm"
+            :disabled="submittingDecision !== null"
+            @click="submitDecision(true)"
+          >
+            <Spinner v-if="submittingDecision === 'approve'" />
+            {{ t("ai.toolCall.gmailSend.approve") }}
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            :disabled="submittingDecision !== null"
+            @click="submitDecision(false)"
+          >
+            <Spinner v-if="submittingDecision === 'cancel'" />
+            {{ t("ai.toolCall.gmailSend.cancel") }}
+          </Button>
+        </CardFooter>
+      </Card>
+
       <!-- ============================================================== -->
       <!-- Live interrupt with malformed payload — polite escape hatch. -->
       <!-- ============================================================== -->
@@ -1572,6 +1727,27 @@ const showChevron = computed(
         <CardContent class="text-muted-foreground flex items-center gap-2">
           <IconCircleHelp />
           <span>{{ t("ai.toolCall.gitHubWrite.unconfirmed") }}</span>
+        </CardContent>
+      </Card>
+
+      <Card v-else-if="isAbandonedInterrupt && gmailSendDraft" size="sm">
+        <CardHeader>
+          <CardTitle>
+            {{
+              t(
+                gmailSendDraft.replyToMessageId
+                  ? "ai.toolCall.gmailSend.replyTitle"
+                  : "ai.toolCall.gmailSend.sendTitle"
+              )
+            }}
+          </CardTitle>
+          <CardDescription v-if="gmailSendDraft.to.length > 0">
+            {{ gmailSendDraft.to.join(", ") }}
+          </CardDescription>
+        </CardHeader>
+        <CardContent class="text-muted-foreground flex items-center gap-2">
+          <IconCircleHelp />
+          <span>{{ t("ai.toolCall.gmailSend.unconfirmed") }}</span>
         </CardContent>
       </Card>
 
@@ -1724,6 +1900,48 @@ const showChevron = computed(
             <IconTriangleAlert class="text-destructive" />
             <span class="text-destructive">
               {{ t("ai.toolCall.gitHubWrite.failed") }}
+            </span>
+          </template>
+        </CardContent>
+      </Card>
+
+      <!-- Gmail-send outcome: same contract as the calendar/drive cards. -->
+      <Card v-else-if="isGmailWrite && gmailSendResult" size="sm">
+        <CardHeader v-if="gmailSendDraft && gmailSendDraft.to.length > 0">
+          <CardTitle>{{ gmailSendDraft.to.join(", ") }}</CardTitle>
+        </CardHeader>
+        <CardContent class="flex items-center gap-2">
+          <template v-if="gmailSendResult.kind === 'deciding'">
+            <Spinner />
+            <span class="text-muted-foreground">
+              {{ t("ai.toolCall.gmailSend.executing") }}
+            </span>
+          </template>
+          <template v-else-if="gmailSendResult.kind === 'written'">
+            <IconCheck class="text-muted-foreground" />
+            <span class="text-foreground">
+              {{ t("ai.toolCall.gmailSend.written") }}
+              <a
+                v-if="gmailSendResult.link"
+                :href="gmailSendResult.link"
+                target="_blank"
+                rel="noopener noreferrer"
+                class="text-primary underline-offset-2 hover:underline"
+              >
+                {{ t("ai.toolCall.gmailSend.openItem") }}
+              </a>
+            </span>
+          </template>
+          <template v-else-if="gmailSendResult.kind === 'declined'">
+            <IconCircleHelp class="text-muted-foreground" />
+            <span class="text-muted-foreground">
+              {{ t("ai.toolCall.gmailSend.declined") }}
+            </span>
+          </template>
+          <template v-else>
+            <IconTriangleAlert class="text-destructive" />
+            <span class="text-destructive">
+              {{ t("ai.toolCall.gmailSend.failed") }}
             </span>
           </template>
         </CardContent>

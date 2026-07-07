@@ -205,7 +205,7 @@ function requestAuthorizationCodeRedirect(
 
 /**
  * Public OAuth client id per provider. Literal `import.meta.env.VITE_*`
- * accesses (Vite only inlines literal keys, never a dynamic lookup). The two
+ * accesses (Vite only inlines literal keys, never a dynamic lookup). The
  * Google apps share one client; GitHub has its own.
  */
 const OAUTH_CLIENT_ID_BY_PROVIDER: Record<
@@ -214,6 +214,7 @@ const OAUTH_CLIENT_ID_BY_PROVIDER: Record<
 > = {
   "google-calendar": import.meta.env.VITE_GOOGLE_OAUTH_CLIENT_ID,
   "google-drive": import.meta.env.VITE_GOOGLE_OAUTH_CLIENT_ID,
+  "google-gmail": import.meta.env.VITE_GOOGLE_OAUTH_CLIENT_ID,
   github: import.meta.env.VITE_GITHUB_OAUTH_CLIENT_ID,
 }
 

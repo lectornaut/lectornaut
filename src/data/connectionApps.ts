@@ -11,6 +11,7 @@ import {
   IconLogosGithubIcon,
   IconLogosGoogleCalendar,
   IconLogosGoogleDrive,
+  IconLogosGoogleGmail,
 } from "@/data/icons"
 import {
   CONNECTION_PROVIDERS,
@@ -19,6 +20,9 @@ import {
   GOOGLE_DRIVE_FILE_SCOPE,
   GOOGLE_DRIVE_READONLY_SCOPE,
   GOOGLE_DRIVE_TOOL_KEY,
+  GOOGLE_GMAIL_READONLY_SCOPE,
+  GOOGLE_GMAIL_SEND_SCOPE,
+  GOOGLE_GMAIL_TOOL_KEY,
   type ConnectionProvider,
 } from "@lectornaut/shared/domain"
 import type { Component } from "vue"
@@ -144,6 +148,31 @@ const GOOGLE_DRIVE_APP: ConnectionAppDescriptor = {
   manage: GOOGLE_MANAGE,
 }
 
+const GOOGLE_GMAIL_APP: ConnectionAppDescriptor = {
+  provider: "google-gmail",
+  name: "Gmail",
+  description:
+    "Let agents search and read email — and, with per-send confirmation, " +
+    "send it — on members' connected Gmail accounts.",
+  avatarSeed: "google-gmail",
+  categories: ["ai-integrations", "automations"],
+  logo: IconLogosGoogleGmail,
+  // `gmail.readonly` (reads) + `gmail.send` (the confirm-gated send tool) —
+  // NEVER modify/compose (send-only is the narrowest write grant). Bindings
+  // granted before `gmail.send` was declared show the `needsScopeUpgrade`
+  // reconnect hint (calendar P2 precedent).
+  scopes: [
+    "openid",
+    "email",
+    GOOGLE_GMAIL_READONLY_SCOPE,
+    GOOGLE_GMAIL_SEND_SCOPE,
+  ],
+  authorizeUrl: GOOGLE_AUTHORIZE_URL,
+  authParams: GOOGLE_AUTH_PARAMS,
+  toolKeys: [GOOGLE_GMAIL_TOOL_KEY],
+  manage: GOOGLE_MANAGE,
+}
+
 const GITHUB_APP: ConnectionAppDescriptor = {
   provider: "github",
   name: "GitHub",
@@ -175,6 +204,7 @@ const APPS_BY_PROVIDER: Readonly<
 > = {
   "google-calendar": GOOGLE_CALENDAR_APP,
   "google-drive": GOOGLE_DRIVE_APP,
+  "google-gmail": GOOGLE_GMAIL_APP,
   github: GITHUB_APP,
 }
 

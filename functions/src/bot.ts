@@ -124,6 +124,7 @@ import {
   GITHUB_TOOL_KEY,
   GOOGLE_CALENDAR_TOOL_KEY,
   GOOGLE_DRIVE_TOOL_KEY,
+  GOOGLE_GMAIL_TOOL_KEY,
   type BotChatRole,
   type BotSessionVisibility,
 } from "./domain.js"
@@ -143,6 +144,11 @@ import {
   readGitHubFileTool,
   updateGitHubIssueTool,
 } from "./githubTools.js"
+import {
+  googleGmailTool,
+  readGmailMessageTool,
+  sendGmailMessageTool,
+} from "./gmailTools.js"
 import {
   listDispatchable,
   listIntegrations,
@@ -1268,6 +1274,16 @@ function pickChatTools(
     tools.push(googleDriveTool, readDriveFileTool)
     if (allowInterrupts) {
       tools.push(createDriveFileTool, updateDriveFileTool)
+    }
+  }
+  // Gmail: all three tools ride the one googleGmail install gate; reads are
+  // headless-eligible (handlers fall back to `connectionsActsAsUid`). The
+  // confirm-gated send requires an interactive turn — same rationale as the
+  // calendar/drive blocks.
+  if (enabledBuiltInTools.has(GOOGLE_GMAIL_TOOL_KEY)) {
+    tools.push(googleGmailTool, readGmailMessageTool)
+    if (allowInterrupts) {
+      tools.push(sendGmailMessageTool)
     }
   }
   // GitHub (docs/connections-github.prompt.md): the search + file-read tools
@@ -3911,6 +3927,7 @@ const CONFIRM_RESTART_TOOLS = {
   createGitHubIssue: createGitHubIssueTool,
   addGitHubComment: addGitHubCommentTool,
   updateGitHubIssue: updateGitHubIssueTool,
+  sendGmailMessage: sendGmailMessageTool,
 } as const
 
 /** Client decision payload for a confirm-style interrupt. */

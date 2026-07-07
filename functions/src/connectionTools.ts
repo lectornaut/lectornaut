@@ -125,7 +125,7 @@ const failure = (message: string) => ({
 })
 
 /** Pull Google's `error.message`/`error.status` out of an API error body. */
-function googleApiErrorDetail(body: unknown): string | null {
+export function googleApiErrorDetail(body: unknown): string | null {
   if (typeof body !== "object" || body === null) return null
   const error = (body as { error?: unknown }).error
   if (typeof error !== "object" || error === null) return null
@@ -171,7 +171,7 @@ const DRIVE_COPY: ConnectionAppCopy = {
  *     uncheck it — reconnect AND tick the permission);
  *   - the token/grant is genuinely dead (reconnect).
  */
-function googleAuthRejectionMessage(
+export function googleAuthRejectionMessage(
   status: number,
   body: unknown,
   copy: ConnectionAppCopy

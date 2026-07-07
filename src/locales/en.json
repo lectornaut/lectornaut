@@ -235,6 +235,23 @@
         "failed": "Couldn't complete the GitHub action.",
         "openItem": "Open on GitHub"
       },
+      "gmailSend": {
+        "sendTitle": "Send Email",
+        "replyTitle": "Send Reply",
+        "confirmHint": "Nothing is sent from your Gmail until you approve.",
+        "approve": "Approve",
+        "cancel": "Cancel",
+        "to": "To",
+        "cc": "Cc",
+        "derivedSubject": "Re: (original subject)",
+        "bodyChars": "{count} character | {count} characters",
+        "unconfirmed": "Not confirmed - the conversation moved on. Nothing was sent.",
+        "executing": "Applying your decision...",
+        "written": "Email sent.",
+        "declined": "You declined this. Nothing was sent.",
+        "failed": "Couldn't send the email.",
+        "openItem": "Open in Gmail"
+      },
       "labels": {
         "request": "Request",
         "response": "Response",
@@ -695,7 +712,9 @@
           "email": "See your email address",
           "calendarEvents": "View and edit events on your calendar",
           "driveReadonly": "See and download all your Google Drive files",
-          "driveFile": "See, edit, create and delete only the Google Drive files this app creates or that you pick"
+          "driveFile": "See, edit, create and delete only the Google Drive files this app creates or that you pick",
+          "gmailReadonly": "View your email messages and settings",
+          "gmailSend": "Send email on your behalf"
         },
         "accountsEmpty": "No members have connected an account yet.",
         "you": "(you)",
@@ -1893,6 +1912,10 @@
         "googleDrive": {
           "label": "Google Drive",
           "description": "Searches and reads files on the chatting member's connected Google Drive - Docs come back as markdown - and, with per-write confirmation, saves files back to Drive."
+        },
+        "googleGmail": {
+          "label": "Gmail",
+          "description": "Searches and reads email on the chatting member's connected Gmail inbox - and, with per-send confirmation, sends email from it."
         },
         "gitHub": {
           "label": "GitHub",

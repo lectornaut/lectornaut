@@ -41,6 +41,7 @@ import {
   IconArrowRight,
   IconBookmark,
   IconCalendar,
+  IconCircleDot,
   IconColumns,
   IconDices,
   IconFilePlus,
@@ -50,9 +51,13 @@ import {
   IconHelpCircle,
   IconLink,
   IconList,
+  IconLogosGithubIcon,
+  IconMail,
+  IconMessageCircleMore,
   IconPencil,
   IconRotateCcw,
   IconSearch,
+  IconSend,
   IconSparkles,
   IconSquarePen,
 } from "@/data/icons"
@@ -316,6 +321,21 @@ const CONNECTION_TOOL_DISPLAY: Readonly<
   readDriveFile: { label: "Read Drive file", icon: IconFileText },
   createDriveFile: { label: "Create Drive file", icon: IconFilePlus },
   updateDriveFile: { label: "Update Drive file", icon: IconSquarePen },
+  // Gmail — the companion read tool and the confirm-gated send ride the
+  // googleGmail install gate.
+  googleGmail: { label: "Gmail", icon: IconMail },
+  readGmailMessage: { label: "Read email", icon: IconMail },
+  sendGmailMessage: { label: "Send email", icon: IconSend },
+  // GitHub — companion read tool and the confirm-gated writes all ride the
+  // gitHub install gate.
+  gitHub: { label: "GitHub", icon: IconLogosGithubIcon },
+  readGitHubFile: { label: "Read GitHub file", icon: IconFileText },
+  createGitHubIssue: { label: "Create GitHub issue", icon: IconCircleDot },
+  addGitHubComment: {
+    label: "Add GitHub comment",
+    icon: IconMessageCircleMore,
+  },
+  updateGitHubIssue: { label: "Update GitHub issue", icon: IconSquarePen },
 }
 
 export const botToolLabel = (name: string): string | undefined =>

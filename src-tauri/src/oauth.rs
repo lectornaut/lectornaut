@@ -4,7 +4,7 @@ use tauri_plugin_http::reqwest::Client;
 use tauri_plugin_opener::OpenerExt;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::TcpListener;
-use tokio::time::{timeout, Duration};
+use tokio::time::{timeout, timeout_at, Duration, Instant};
 use url::Url;
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -87,23 +87,56 @@ async fn run_loopback_authorization<R: Runtime>(
         .open_url(url.as_str(), None::<String>)
         .map_err(|e| e.to_string())?;
 
-    // 4. Wait for callback with timeout
-    let (mut stream, _) = timeout(Duration::from_secs(120), listener.accept())
-        .await
-        .map_err(|_| "Authentication timed out. Please try again.".to_string())?
-        .map_err(|e| e.to_string())?;
+    // 4. Wait for the REAL callback under one overall deadline. The old
+    //    one-shot accept() with 120s died two ways in practice: browsers open
+    //    speculative preconnect sockets and fetch /favicon.ico against the
+    //    loopback origin (a stray consumed the single accept and closed the
+    //    port — the actual redirect then hit ERR_CONNECTION_REFUSED), and
+    //    restricted-scope consent (unverified-app interstitial + granular
+    //    checkboxes, e.g. gmail.readonly) routinely outlasts 120s. So: loop,
+    //    skip/answer strays, and give the human 5 minutes.
+    let deadline = Instant::now() + Duration::from_secs(300);
+    let (mut stream, path_and_query) = loop {
+        let (mut candidate, _) = timeout_at(deadline, listener.accept())
+            .await
+            .map_err(|_| "Authentication timed out. Please try again.".to_string())?
+            .map_err(|e| e.to_string())?;
 
-    let mut buffer = [0; 4096];
-    let len = stream.read(&mut buffer).await.map_err(|e| e.to_string())?;
-    let request = String::from_utf8_lossy(&buffer[..len]);
+        // A silent preconnect never sends bytes — bound the read so it can't
+        // wedge the loop (the real request waits in the accept backlog).
+        let mut buffer = [0; 4096];
+        let len = match timeout(Duration::from_secs(5), candidate.read(&mut buffer)).await {
+            Ok(Ok(len)) if len > 0 => len,
+            // Empty, aborted, or idle connection — not the callback.
+            _ => continue,
+        };
+        let request = String::from_utf8_lossy(&buffer[..len]).into_owned();
+
+        // Request looks like "GET /callback?code=... HTTP/1.1 ..."
+        let mut parts = request.split_whitespace();
+        let _method = parts.next();
+        let Some(path_and_query) = parts.next().map(str::to_owned) else {
+            continue;
+        };
+
+        // Only the redirect carries the authorization response — answer
+        // anything else (favicon.ico) with a 404 and keep waiting.
+        let full_url = format!("http://localhost:{}{}", port, path_and_query);
+        let is_callback = Url::parse(&full_url)
+            .map(|u| {
+                u.query_pairs()
+                    .any(|(key, _)| key == "code" || key == "error")
+            })
+            .unwrap_or(false);
+        if is_callback {
+            break (candidate, path_and_query);
+        }
+        let _ = candidate
+            .write_all(b"HTTP/1.1 404 Not Found\r\nContent-Length: 0\r\nConnection: close\r\n\r\n")
+            .await;
+    };
 
     // 5. Extract code
-    // Request looks like "GET /callback?code=... HTTP/1.1 ..."
-    let mut parts = request.split_whitespace();
-    let _method = parts.next();
-    let path_and_query = parts.next().ok_or("Malformed request")?;
-
-    // Construct a full URL to parse query params
     let full_url = format!("http://localhost:{}{}", port, path_and_query);
     let parsed_url = Url::parse(&full_url).map_err(|e| e.to_string())?;
 
@@ -118,7 +151,7 @@ async fn run_loopback_authorization<R: Runtime>(
         // 6. Send response to browser
         let response_body = include_str!("oauth_success.html");
         let response = format!(
-            "HTTP/1.1 200 OK\r\nContent-Length: {}\r\nContent-Type: text/html\r\n\r\n{}",
+            "HTTP/1.1 200 OK\r\nContent-Length: {}\r\nContent-Type: text/html\r\nConnection: close\r\n\r\n{}",
             response_body.len(),
             response_body
         );
@@ -127,6 +160,28 @@ async fn run_loopback_authorization<R: Runtime>(
             .await
             .map_err(|e| e.to_string())?;
         stream.flush().await.map_err(|e| e.to_string())?;
+
+        // Grace window: keep serving the success page to immediate
+        // follow-ups (favicon.ico, a reflexive reload, a second navigation
+        // racing the shutdown) — a refused tab right after a SUCCESSFUL
+        // capture reads as failure. Detached so the code returns to the
+        // caller immediately; the listener dies with the task, freeing the
+        // port for the next flow.
+        tokio::spawn(async move {
+            let grace_deadline = Instant::now() + Duration::from_secs(5);
+            while let Ok(Ok((mut extra, _))) = timeout_at(grace_deadline, listener.accept()).await {
+                let mut sink = [0; 4096];
+                let _ = timeout(Duration::from_secs(1), extra.read(&mut sink)).await;
+                let body = include_str!("oauth_success.html");
+                let response = format!(
+                    "HTTP/1.1 200 OK\r\nContent-Length: {}\r\nContent-Type: text/html\r\nConnection: close\r\n\r\n{}",
+                    body.len(),
+                    body
+                );
+                let _ = extra.write_all(response.as_bytes()).await;
+                let _ = extra.flush().await;
+            }
+        });
 
         Ok(CapturedAuthorization {
             code: code.to_string(),
@@ -157,7 +212,7 @@ async fn run_loopback_authorization<R: Runtime>(
         let response_body = response_template.replace("{{error}}", &error_message);
 
         let response = format!(
-            "HTTP/1.1 200 OK\r\nContent-Length: {}\r\nContent-Type: text/html\r\n\r\n{}",
+            "HTTP/1.1 200 OK\r\nContent-Length: {}\r\nContent-Type: text/html\r\nConnection: close\r\n\r\n{}",
             response_body.len(),
             response_body
         );

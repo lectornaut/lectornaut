@@ -25,6 +25,11 @@ import {
   GOOGLE_DRIVE_READONLY_SCOPE,
   GOOGLE_DRIVE_TOOL_KEY,
   GOOGLE_DRIVE_WRITE_TOOL_NAMES,
+  GOOGLE_GMAIL_READ_MESSAGE_TOOL_NAME,
+  GOOGLE_GMAIL_READONLY_SCOPE,
+  GOOGLE_GMAIL_SEND_SCOPE,
+  GOOGLE_GMAIL_TOOL_KEY,
+  GOOGLE_GMAIL_WRITE_TOOL_NAMES,
   type ConnectionProvider,
 } from "@lectornaut/shared/domain"
 
@@ -169,6 +174,45 @@ const GOOGLE_DRIVE: ConnectionProviderSpec = {
   ],
 }
 
+const GOOGLE_GMAIL: ConnectionProviderSpec = {
+  provider: "google-gmail",
+  name: "Gmail",
+  description:
+    "Let agents search and read email — and, with per-send confirmation, " +
+    "send it — on members' connected Gmail accounts.",
+  avatarSeed: "google-gmail",
+  // `gmail.readonly` (reads) + `gmail.send` (the confirm-gated send tool) —
+  // both RESTRICTED, riding the same CASA assessment as drive.readonly (one
+  // OAuth client, one verification). NEVER `gmail.modify`/`gmail.compose` —
+  // send-only is the narrowest write grant. Bindings granted before
+  // `gmail.send` was declared surface the `needsScopeUpgrade` reconnect
+  // hint (calendar P2 precedent).
+  scopes: [
+    "openid",
+    "email",
+    GOOGLE_GMAIL_READONLY_SCOPE,
+    GOOGLE_GMAIL_SEND_SCOPE,
+  ],
+  oauth: GOOGLE_OAUTH,
+  tools: [
+    {
+      sourceKey: GOOGLE_GMAIL_TOOL_KEY,
+      name: "Gmail",
+      description:
+        "Search and read email on the chatting member's connected Gmail " +
+        "inbox — and, with per-send confirmation, send email from it.",
+      avatarSeed: GOOGLE_GMAIL_TOOL_KEY,
+    },
+  ],
+  // `readGmailMessage` + the confirm-gated send ride the ONE googleGmail
+  // install gate (no integration docs of their own).
+  wireNames: [
+    GOOGLE_GMAIL_TOOL_KEY,
+    GOOGLE_GMAIL_READ_MESSAGE_TOOL_NAME,
+    ...GOOGLE_GMAIL_WRITE_TOOL_NAMES,
+  ],
+}
+
 const GITHUB: ConnectionProviderSpec = {
   provider: "github",
   name: "GitHub",
@@ -216,6 +260,7 @@ const PROVIDERS: Readonly<Record<ConnectionProvider, ConnectionProviderSpec>> =
   {
     "google-calendar": GOOGLE_CALENDAR,
     "google-drive": GOOGLE_DRIVE,
+    "google-gmail": GOOGLE_GMAIL,
     github: GITHUB,
   }
 

@@ -230,6 +230,7 @@ import IconLogosGithubIcon from "~icons/logos/github-icon"
 import IconLogosGoogle from "~icons/logos/google"
 import IconLogosGoogleCalendar from "~icons/logos/google-calendar"
 import IconLogosGoogleDrive from "~icons/logos/google-drive"
+import IconLogosGoogleGmail from "~icons/logos/google-gmail"
 import IconLogosGoogleIcon from "~icons/logos/google-icon"
 import IconLogosGooglePlayIcon from "~icons/logos/google-play-icon"
 import IconLogosLinkedin from "~icons/logos/linkedin"
@@ -478,6 +479,7 @@ export {
   IconLogosGoogle,
   IconLogosGoogleCalendar,
   IconLogosGoogleDrive,
+  IconLogosGoogleGmail,
   IconLogosLinkedin,
   IconLogosMeta,
   IconLogosMicrosoftWindows,

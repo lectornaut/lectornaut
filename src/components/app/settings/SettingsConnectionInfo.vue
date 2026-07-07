@@ -10,6 +10,8 @@ import {
   GOOGLE_CALENDAR_EVENTS_SCOPE,
   GOOGLE_DRIVE_FILE_SCOPE,
   GOOGLE_DRIVE_READONLY_SCOPE,
+  GOOGLE_GMAIL_READONLY_SCOPE,
+  GOOGLE_GMAIL_SEND_SCOPE,
   type ConnectionProvider,
 } from "@lectornaut/shared/domain"
 import { storeToRefs } from "pinia"
@@ -169,6 +171,8 @@ const SCOPE_LOCALE_SUFFIX: Record<string, string> = {
   [GOOGLE_CALENDAR_EVENTS_SCOPE]: "calendarEvents",
   [GOOGLE_DRIVE_READONLY_SCOPE]: "driveReadonly",
   [GOOGLE_DRIVE_FILE_SCOPE]: "driveFile",
+  [GOOGLE_GMAIL_READONLY_SCOPE]: "gmailReadonly",
+  [GOOGLE_GMAIL_SEND_SCOPE]: "gmailSend",
 }
 
 const scopeRows = computed(() =>
