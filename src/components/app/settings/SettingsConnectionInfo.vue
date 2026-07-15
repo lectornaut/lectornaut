@@ -222,7 +222,7 @@ const handleToggleEnabled = async (enabled: boolean): Promise<void> => {
       <template v-if="activeRow">
         <DialogHeader>
           <DialogTitle class="flex items-center gap-2">
-            <component :is="activeRow.app.logo" class="size-5 shrink-0" />
+            <Component :is="activeRow.app.logo" class="size-5 shrink-0" />
             {{ activeRow.app.name }}
             <Badge v-if="activeRow.disabled" variant="outline">
               {{ t("settings.connections.disabledBadge") }}

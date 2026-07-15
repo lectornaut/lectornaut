@@ -26,7 +26,7 @@ const { isMobile, state, openMobile, setOpenMobile } = useSidebar()
     data-slot="sidebar"
     :class="
       cn(
-        'bg-sidebar text-sidebar-foreground flex h-full w-(--sidebar-width) flex-col',
+        'bg-sidebar text-sidebar-foreground flex w-(--sidebar-width) flex-col',
         props.class
       )
     "
@@ -105,7 +105,7 @@ const { isMobile, state, openMobile, setOpenMobile } = useSidebar()
       <div
         data-sidebar="sidebar"
         data-slot="sidebar-inner"
-        class="bg-sidebar group-data-[variant=floating]:ring-sidebar-border flex size-full flex-col group-data-[variant=floating]:rounded-2xl group-data-[variant=floating]:shadow-sm group-data-[variant=floating]:ring-1"
+        class="bg-sidebar group-data-[variant=floating]:ring-sidebar-border flex size-full flex-col group-data-[variant=floating]:rounded-lg group-data-[variant=floating]:shadow-sm group-data-[variant=floating]:ring-1"
       >
         <slot />
       </div>

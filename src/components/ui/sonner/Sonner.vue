@@ -9,15 +9,16 @@ import {
 } from "@hugeicons/core-free-icons"
 import { HugeiconsIcon } from "@hugeicons/vue"
 import type { ToasterProps } from "vue-sonner"
+import { reactiveOmit } from "@vueuse/core"
 import { Toaster as Sonner } from "vue-sonner"
 import { cn } from "@/lib/utils"
 
 const props = defineProps<ToasterProps>()
+const delegatedProps = reactiveOmit(props, "class", "toastOptions")
 </script>
 
 <template>
   <Sonner
-    v-bind="props"
     :class="cn('toaster group', props.class)"
     :style="{
       '--normal-bg': 'var(--popover)',
@@ -30,11 +31,14 @@ const props = defineProps<ToasterProps>()
       '--gray5': 'var(--border)',
       '--gray12': 'var(--popover-foreground)',
     }"
-    :toast-options="{
-      classes: {
-        toast: 'rounded-2xl',
-      },
-    }"
+    :toast-options="
+      props.toastOptions ?? {
+        classes: {
+          toast: 'rounded-2xl',
+        },
+      }
+    "
+    v-bind="delegatedProps"
   >
     <template #success-icon>
       <HugeiconsIcon

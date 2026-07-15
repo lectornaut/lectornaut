@@ -1019,43 +1019,49 @@ const onToolMenuCloseAutoFocus = (event: Event) => {
         "
         align="block-start"
       >
-        <ItemGroup>
+        <AttachmentGroup class="w-full">
           <template v-if="hasAttachedNodes">
-            <Item
+            <Attachment
               v-for="node in attachedNodeDetails"
               :key="`${node.scope}:${node.nodeId}`"
-              :variant="node.status === 'ok' ? 'muted' : 'outline'"
               size="xs"
+              :state="node.status === 'deleted' ? 'error' : 'done'"
             >
-              <ItemMedia variant="icon">
+              <AttachmentMedia>
                 <Component
                   :is="node.type === 'folder' ? IconFolder : IconFile"
                 />
-              </ItemMedia>
-              <ItemContent>
-                <ItemTitle v-if="node.status === 'deleted'" class="italic">
+              </AttachmentMedia>
+              <AttachmentContent>
+                <AttachmentTitle
+                  v-if="node.status === 'deleted'"
+                  class="italic"
+                >
                   {{ t("ai.attachedNodeDeleted") }}
-                </ItemTitle>
+                </AttachmentTitle>
                 <template v-else>
-                  <ItemTitle>{{ node.name }}</ItemTitle>
-                  <ItemDescription
-                    v-if="node.status === 'archived'"
-                    class="text-xs"
-                  >
+                  <AttachmentTitle>{{ node.name }}</AttachmentTitle>
+                  <AttachmentDescription v-if="node.status === 'archived'">
                     {{ t("ai.attachedNodeArchived") }}
-                  </ItemDescription>
-                  <ItemDescription v-else class="text-xs">
+                  </AttachmentDescription>
+                  <AttachmentDescription v-else>
                     {{ node.scope }}
-                  </ItemDescription>
+                  </AttachmentDescription>
                 </template>
-              </ItemContent>
-              <ItemActions>
+              </AttachmentContent>
+              <AttachmentActions>
                 <TooltipProvider>
                   <Tooltip>
                     <TooltipTrigger as-child>
-                      <InputGroupButton
-                        size="icon-xs"
+                      <AttachmentAction
                         :disabled="isReadOnly || isSending"
+                        :aria-label="
+                          t(
+                            'ai.detachContextNode',
+                            { name: node.name },
+                            node.name
+                          )
+                        "
                         @click="
                           detachAttachedNode({
                             scope: node.scope,
@@ -1064,7 +1070,7 @@ const onToolMenuCloseAutoFocus = (event: Event) => {
                         "
                       >
                         <IconX />
-                      </InputGroupButton>
+                      </AttachmentAction>
                     </TooltipTrigger>
                     <TooltipContent>
                       {{
@@ -1077,34 +1083,35 @@ const onToolMenuCloseAutoFocus = (event: Event) => {
                     </TooltipContent>
                   </Tooltip>
                 </TooltipProvider>
-              </ItemActions>
-            </Item>
+              </AttachmentActions>
+            </Attachment>
           </template>
           <template v-if="hasSelectedAttachments">
-            <Item
+            <Attachment
               v-for="att in selectedAttachments"
               :key="`att:${att.id}`"
-              variant="muted"
               size="xs"
             >
-              <ItemMedia variant="icon">
+              <AttachmentMedia>
                 <IconUpload />
-              </ItemMedia>
-              <ItemContent>
-                <ItemTitle>{{ att.name }}</ItemTitle>
-                <ItemDescription class="text-xs">File</ItemDescription>
-              </ItemContent>
-              <ItemActions>
+              </AttachmentMedia>
+              <AttachmentContent>
+                <AttachmentTitle>{{ att.name }}</AttachmentTitle>
+                <AttachmentDescription>File</AttachmentDescription>
+              </AttachmentContent>
+              <AttachmentActions>
                 <TooltipProvider>
                   <Tooltip>
                     <TooltipTrigger as-child>
-                      <InputGroupButton
-                        size="icon-xs"
+                      <AttachmentAction
                         :disabled="isReadOnly || isSending"
+                        :aria-label="
+                          t('ai.detachAttachment', { name: att.name }, att.name)
+                        "
                         @click="deselectAttachment(att.id)"
                       >
                         <IconX />
-                      </InputGroupButton>
+                      </AttachmentAction>
                     </TooltipTrigger>
                     <TooltipContent>
                       {{
@@ -1113,34 +1120,40 @@ const onToolMenuCloseAutoFocus = (event: Event) => {
                     </TooltipContent>
                   </Tooltip>
                 </TooltipProvider>
-              </ItemActions>
-            </Item>
+              </AttachmentActions>
+            </Attachment>
           </template>
           <template v-if="hasPendingUploads">
-            <Item
+            <Attachment
               v-for="(file, index) in pendingUploadFiles"
               :key="`pending:${index}:${file.name}`"
-              variant="muted"
               size="xs"
+              state="idle"
             >
-              <ItemMedia variant="icon">
+              <AttachmentMedia>
                 <IconUpload />
-              </ItemMedia>
-              <ItemContent>
-                <ItemTitle>{{ file.name }}</ItemTitle>
-                <ItemDescription class="text-xs">Pending</ItemDescription>
-              </ItemContent>
-              <ItemActions>
+              </AttachmentMedia>
+              <AttachmentContent>
+                <AttachmentTitle>{{ file.name }}</AttachmentTitle>
+                <AttachmentDescription>Pending</AttachmentDescription>
+              </AttachmentContent>
+              <AttachmentActions>
                 <TooltipProvider>
                   <Tooltip>
                     <TooltipTrigger as-child>
-                      <InputGroupButton
-                        size="icon-xs"
+                      <AttachmentAction
                         :disabled="isReadOnly || isSending"
+                        :aria-label="
+                          t(
+                            'ai.detachAttachment',
+                            { name: file.name },
+                            file.name
+                          )
+                        "
                         @click="removePendingUpload(index)"
                       >
                         <IconX />
-                      </InputGroupButton>
+                      </AttachmentAction>
                     </TooltipTrigger>
                     <TooltipContent>
                       {{
@@ -1149,34 +1162,40 @@ const onToolMenuCloseAutoFocus = (event: Event) => {
                     </TooltipContent>
                   </Tooltip>
                 </TooltipProvider>
-              </ItemActions>
-            </Item>
+              </AttachmentActions>
+            </Attachment>
           </template>
           <template v-if="hasPendingDriveImports">
-            <Item
+            <Attachment
               v-for="(file, index) in pendingDriveImports"
               :key="`drive:${index}:${file.fileId}`"
-              variant="muted"
               size="xs"
+              state="idle"
             >
-              <ItemMedia variant="icon">
+              <AttachmentMedia>
                 <IconLogosGoogleDrive />
-              </ItemMedia>
-              <ItemContent>
-                <ItemTitle>{{ file.displayName }}</ItemTitle>
-                <ItemDescription class="text-xs">Pending</ItemDescription>
-              </ItemContent>
-              <ItemActions>
+              </AttachmentMedia>
+              <AttachmentContent>
+                <AttachmentTitle>{{ file.displayName }}</AttachmentTitle>
+                <AttachmentDescription>Pending</AttachmentDescription>
+              </AttachmentContent>
+              <AttachmentActions>
                 <TooltipProvider>
                   <Tooltip>
                     <TooltipTrigger as-child>
-                      <InputGroupButton
-                        size="icon-xs"
+                      <AttachmentAction
                         :disabled="isReadOnly || isSending"
+                        :aria-label="
+                          t(
+                            'ai.detachAttachment',
+                            { name: file.displayName },
+                            file.displayName
+                          )
+                        "
                         @click="removePendingDriveImport(index)"
                       >
                         <IconX />
-                      </InputGroupButton>
+                      </AttachmentAction>
                     </TooltipTrigger>
                     <TooltipContent>
                       {{
@@ -1189,10 +1208,10 @@ const onToolMenuCloseAutoFocus = (event: Event) => {
                     </TooltipContent>
                   </Tooltip>
                 </TooltipProvider>
-              </ItemActions>
-            </Item>
+              </AttachmentActions>
+            </Attachment>
           </template>
-        </ItemGroup>
+        </AttachmentGroup>
       </InputGroupAddon>
       <InputGroupAddon align="block-end">
         <TooltipProvider>

@@ -601,7 +601,7 @@ const openInfoDialog = (provider: ConnectionProvider): void => {
               <template v-for="row in rowsByTab[tab]" :key="row.app.provider">
                 <Item variant="outline">
                   <ItemMedia variant="icon">
-                    <component :is="row.app.logo" />
+                    <Component :is="row.app.logo" />
                   </ItemMedia>
                   <ItemContent>
                     <ItemTitle class="flex items-center gap-1.5">
@@ -906,7 +906,7 @@ const openInfoDialog = (provider: ConnectionProvider): void => {
                     <TableCell>
                       <Item class="group p-0" size="xs">
                         <ItemMedia variant="icon">
-                          <component :is="row.app.logo" />
+                          <Component :is="row.app.logo" />
                         </ItemMedia>
                         <ItemContent>
                           <ItemTitle>{{ row.app.name }}</ItemTitle>

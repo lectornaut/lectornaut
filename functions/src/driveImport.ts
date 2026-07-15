@@ -53,6 +53,7 @@ import {
   normalizeAttachmentDisplayName,
   sanitizeAttachmentFileName,
 } from "./nodeAttachments.js"
+import { CONNECTION_OAUTH_SECRETS } from "./secrets.js"
 import { Capabilities } from "./types.js"
 
 const DRIVE_FILES_ENDPOINT = "https://www.googleapis.com/drive/v3/files"
@@ -145,6 +146,10 @@ export const listDriveFiles = defineCallable({
   name: "listDriveFiles",
   auth: "verified",
   appCheck: true,
+  // Token refresh inside resolveBindingAccessToken needs the Google client
+  // pair — without the binding the env vars are absent and every call past
+  // the first access-token hour fails with "OAuth client isn't configured".
+  secrets: CONNECTION_OAUTH_SECRETS,
   input: listDriveFilesInput,
   handler: async ({ auth, input }) => {
     const { teamId } = input
@@ -403,6 +408,7 @@ export const importDriveSessionAttachment = defineCallable({
   name: "importDriveSessionAttachment",
   auth: "verified",
   appCheck: true,
+  secrets: CONNECTION_OAUTH_SECRETS,
   input: importDriveAttachmentInput,
   handler: async ({ auth, input }) => {
     const { teamId, workspaceId, sessionId } = input
@@ -501,6 +507,7 @@ export const importDriveNodeAttachment = defineCallable({
   name: "importDriveNodeAttachment",
   auth: "verified",
   appCheck: true,
+  secrets: CONNECTION_OAUTH_SECRETS,
   input: importDriveNodeAttachmentInput,
   handler: async ({ auth, input, request }) => {
     const { teamId, workspaceId, scope, nodeId } = input

@@ -1,4 +1,5 @@
 import type { Updater } from "@tanstack/vue-table"
+
 import { isFunction } from "@tanstack/vue-table"
 import type { Ref } from "vue"
 

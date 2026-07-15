@@ -5,8 +5,8 @@ defineProps<{
 </script>
 
 <template>
-  <OverlayScrollbarsWrapper>
+  <div class="flex size-full min-h-0 min-w-0 grow flex-col overflow-hidden">
     <AiChat />
     <AiChatComposer :placeholder="placeholder" />
-  </OverlayScrollbarsWrapper>
+  </div>
 </template>

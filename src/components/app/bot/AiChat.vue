@@ -17,6 +17,9 @@ import {
 } from "@/data/icons"
 import { toast } from "vue-sonner"
 import { useAuthStore } from "@/stores/authStore"
+import { useMembershipStore } from "@/stores/membershipStore"
+import { isUserMembership } from "@/types/membership"
+import { storeToRefs } from "pinia"
 import { inject } from "vue"
 
 const { t } = useI18n()
@@ -24,6 +27,15 @@ const { t } = useI18n()
 const botChat = inject(BotChatContextKey)
 const messages = computed(() => botChat?.messages.value ?? [])
 const isSending = computed(() => botChat?.isSending.value ?? false)
+
+// Remount the scroller per session: `MessageScrollerProvider` applies
+// `defaultScrollPosition` (land at the end) and seeds its turn-anchor
+// bookkeeping only at mount, while `selectSession` swaps `messages` in
+// place — without the key a switch would keep the old session's scroll
+// offset and anchor state. A brand-new chat flips "draft" → real id at
+// first send, before any chunk streams, so the one remount it causes is
+// pre-stream and invisible.
+const scrollerSessionKey = computed(() => botChat?.sessionId.value ?? "draft")
 
 // Avatar seed for a user turn. `vue-boring-avatars` is a deterministic
 // hash of the `name` string, so feeding it the *real* sender uid gives
@@ -64,6 +76,56 @@ const messageAvatarSeed = (message: BotChatMessage): string =>
 const isOwnMessage = (message: BotChatMessage): boolean =>
   message.role === "user" &&
   messageAvatarSeed(message) === authStore.currentUser?.uid
+
+// ── Group chat (shared sessions with multiple humans) ────────────────────
+//
+// A session becomes a group chat once its user turns carry more than one
+// distinct human author — admins posting into the same shared/public chat.
+// In that mode, other people's turns get a `MessageHeader` naming the
+// sender; the anonymous avatar blob alone distinguishes people but doesn't
+// identify them. Own turns stay header-less (they're right-aligned and
+// yours), and 1:1 chats show no headers at all. Agent turns get no header
+// either: only the session-level `activeAgent` is known, and stamping the
+// *currently selected* agent's name onto historical turns would mislabel
+// them after a mid-session agent switch.
+const { teamMembers } = storeToRefs(useMembershipStore())
+const memberNamesByUid = computed(() => {
+  const names = new Map<string, string>()
+  for (const member of teamMembers.value) {
+    if (!isUserMembership(member)) continue
+    const name = member.user?.displayName || member.user?.email
+    if (name) names.set(member.userId, name)
+  }
+  return names
+})
+
+const isGroupChat = computed(() => {
+  const authors = new Set<string>()
+  for (const message of messages.value) {
+    if (message.role === "user") authors.add(messageAvatarSeed(message))
+  }
+  return authors.size > 1
+})
+
+// Sender line above a bubble, or null for "no header". A departed member
+// (no roster entry) resolves to null too — their identity blob still marks
+// the turn as someone else's, we just can't name them.
+const messageSenderName = (message: BotChatMessage): string | null => {
+  if (!isGroupChat.value || message.role !== "user" || isOwnMessage(message))
+    return null
+  return memberNamesByUid.value.get(messageAvatarSeed(message)) ?? null
+}
+
+// Same-sender runs — the `MessageGroup` idea from the kit, applied
+// per-message. Wrapping runs in an actual `MessageGroup` div would break
+// the scroller: the engine walks `MessageScrollerContent`'s DIRECT children
+// for `data-scroll-anchor`, so anchors inside a group wrapper would be
+// missed and new-turn placement would stop working. Instead each message
+// learns whether it starts/ends a run: the header renders once per run and
+// the avatar renders on the run's last message (earlier members keep an
+// empty spacer for alignment, per the kit's Group pattern).
+const senderKey = (message: BotChatMessage): string =>
+  message.role === "user" ? `user:${messageAvatarSeed(message)}` : "agent"
 
 // ── Copy / Reply (context menu actions) ──────────────────────────────────
 //
@@ -212,6 +274,10 @@ type RenderedBlock = TextBlock | ToolBlock
 const renderedMessages = computed(() =>
   displayMessages.value.map((message, messageIndex) => {
     const isLastMessage = messageIndex === displayMessages.value.length - 1
+    const previous = displayMessages.value[messageIndex - 1]
+    const next = displayMessages.value[messageIndex + 1]
+    const isRunStart = !previous || senderKey(previous) !== senderKey(message)
+    const isRunEnd = !next || senderKey(next) !== senderKey(message)
     const blocks: RenderedBlock[] = []
 
     if (
@@ -266,307 +332,349 @@ const renderedMessages = computed(() =>
       })
     }
 
-    return { message, blocks }
+    return { message, blocks, isRunStart, isRunEnd }
   })
 )
 </script>
 
 <template>
-  <OverlayScrollbarsWrapper>
-    <Empty v-if="messages.length === 0 && !isSending" class="h-full">
-      <EmptyHeader>
-        <EmptyMedia variant="icon">
-          <IconAiFill />
-        </EmptyMedia>
-        <EmptyTitle>{{ t("ai.chatEmpty") }}</EmptyTitle>
-      </EmptyHeader>
-    </Empty>
-    <div v-else class="messages-list mt-auto grid grid-cols-1 px-2 py-4">
-      <ContextMenu
-        v-for="{ message, blocks } in renderedMessages"
-        :key="message.id"
-      >
-        <ContextMenuTrigger class="group relative">
-          <div
-            :class="[
-              'flex items-end gap-2 px-2 pb-8',
-              { 'flex-row-reverse': isOwnMessage(message) },
-            ]"
+  <Empty v-if="messages.length === 0 && !isSending" class="flex-1">
+    <EmptyHeader>
+      <EmptyMedia variant="icon">
+        <IconAiFill />
+      </EmptyMedia>
+      <EmptyTitle>{{ t("ai.chatEmpty") }}</EmptyTitle>
+    </EmptyHeader>
+  </Empty>
+  <!-- `MessageScroller` owns all scroll behavior: lands at the end on
+       mount, follows the streamed tail only while the reader is pinned
+       to the bottom (scrolling up opts out — no forced auto-follow),
+       preserves the viewport on history prepends, and surfaces a
+       jump-to-latest button. This replaces the OverlayScrollbars
+       viewport for the chat surface only; if streaming ever feels
+       janky again, drop `auto-scroll` first. -->
+  <MessageScrollerProvider v-else :key="scrollerSessionKey" auto-scroll>
+    <MessageScroller class="flex-1">
+      <MessageScrollerViewport>
+        <MessageScrollerContent
+          class="messages-list justify-end gap-0 px-2 py-4"
+        >
+          <MessageScrollerItem
+            v-for="{
+              message,
+              blocks,
+              isRunStart,
+              isRunEnd,
+            } in renderedMessages"
+            :key="message.id"
+            :message-id="message.id"
+            :scroll-anchor="message.role === 'user'"
           >
-            <AppAvatar
-              v-if="message.role === 'user' && !isOwnMessage(message)"
-              variant="beam"
-              :name="messageAvatarSeed(message)"
-              class="sticky bottom-0 size-5"
-            />
-            <div
-              :class="[
-                'markdown-bubble flex flex-col gap-2 text-sm',
-                message.role === 'user' && [
-                  'bg-destructive/25 max-w-2/3 rounded-lg p-2',
-                  isOwnMessage(message) ? 'rounded-br-xs' : 'rounded-bl-xs',
-                ],
-                message.role === 'agent' && 'w-full',
-              ]"
-            >
-              <template v-for="block in blocks" :key="block.id">
-                <AppMarkdown
-                  v-if="block.kind === 'text'"
-                  surface="chat"
-                  :content="block.text"
-                  :final="block.final"
-                  class="select-auto"
-                />
-                <BotChatToolCall
-                  v-else
-                  :tool="block.segment.tool"
-                  :message-id="message.id"
-                />
-              </template>
-            </div>
-          </div>
-          <!-- Hover action bar — the same actions as the context menu, surfaced
-               on hover for discoverability (right-click is easy to miss). It
-               calls the identical handlers and reuses the identical i18n
-               labels, so the two entry points can never drift; only the
-               presentation differs (a floating segmented `ButtonGroup` of
-               icon-only buttons vs. menu rows). Tooltips name each icon. -->
-          <div
-            :class="[
-              'pointer-events-none absolute bottom-1 z-10 flex items-center gap-1 opacity-0 transition group-hover:pointer-events-auto group-hover:opacity-100',
-              isOwnMessage(message) ? 'right-2' : 'left-2',
-            ]"
-          >
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger as-child>
-                  <Button
-                    variant="ghost"
-                    size="icon-xs"
-                    :disabled="!message.content"
-                    @click="handleCopyMessage(message)"
+            <ContextMenu>
+              <ContextMenuTrigger class="group relative block">
+                <Message
+                  :align="isOwnMessage(message) ? 'end' : 'start'"
+                  class="px-2"
+                >
+                  <template
+                    v-if="message.role === 'user' && !isOwnMessage(message)"
                   >
-                    <IconCheck v-if="isCopied(message.id)" class="size-3!" />
-                    <IconCopy v-else class="size-3!" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  {{
-                    isCopied(message.id)
-                      ? t("ai.messageCopied")
-                      : t("actions.copy")
-                  }}
-                </TooltipContent>
-              </Tooltip>
-              <Tooltip>
-                <TooltipTrigger as-child>
-                  <Button
-                    variant="ghost"
-                    size="icon-xs"
-                    :disabled="!message.content"
-                    @click="handleReplyMessage(message)"
-                  >
-                    <IconReply class="size-3!" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>{{ t("ai.reply") }}</TooltipContent>
-              </Tooltip>
+                    <MessageAvatar
+                      v-if="isRunEnd"
+                      class="sticky bottom-0 min-w-0 bg-transparent"
+                    >
+                      <AppAvatar
+                        variant="beam"
+                        :name="messageAvatarSeed(message)"
+                        class="size-5"
+                      />
+                    </MessageAvatar>
+                    <!-- Earlier messages of a same-sender run keep an empty
+                         avatar spacer so their bubbles stay aligned with the
+                         avatar on the run's last message. -->
+                    <MessageAvatar v-else class="w-5 min-w-0 bg-transparent" />
+                  </template>
+                  <MessageContent>
+                    <MessageHeader
+                      v-if="isRunStart && messageSenderName(message)"
+                    >
+                      {{ messageSenderName(message) }}
+                    </MessageHeader>
+                    <Bubble
+                      :variant="
+                        message.role === 'agent'
+                          ? 'ghost'
+                          : isOwnMessage(message)
+                            ? 'tinted'
+                            : 'muted'
+                      "
+                      :class="message.role === 'agent' && 'w-full'"
+                    >
+                      <BubbleContent
+                        :class="[
+                          'markdown-bubble flex flex-col gap-2',
+                          message.role === 'agent' && 'w-full',
+                        ]"
+                      >
+                        <template v-for="block in blocks" :key="block.id">
+                          <AppMarkdown
+                            v-if="block.kind === 'text'"
+                            surface="chat"
+                            :content="block.text"
+                            :final="block.final"
+                            class="select-auto"
+                          />
+                          <BotChatToolCall
+                            v-else
+                            :tool="block.segment.tool"
+                            :message-id="message.id"
+                          />
+                        </template>
+                      </BubbleContent>
+                    </Bubble>
+                    <!-- Hover action bar — the same actions as the context
+                         menu, surfaced on hover for discoverability
+                         (right-click is easy to miss). Identical handlers and
+                         i18n labels, so the two entry points can never drift.
+                         `MessageFooter` keeps the actions in-flow (no overlap
+                         with tall content) and follows the message side on
+                         align="end" rows. Revealed on hover, on keyboard
+                         focus, and while this message is being read aloud (so
+                         the pause/stop controls stay reachable). -->
+                    <MessageFooter
+                      :class="[
+                        'pointer-events-none gap-1 opacity-0 transition group-focus-within:pointer-events-auto group-focus-within:opacity-100 group-hover:pointer-events-auto group-hover:opacity-100',
+                        (isSpeaking(message.id) || isPaused(message.id)) &&
+                          'pointer-events-auto opacity-100',
+                      ]"
+                    >
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger as-child>
+                            <Button
+                              variant="ghost"
+                              size="icon-xs"
+                              :aria-label="t('actions.copy')"
+                              :disabled="!message.content"
+                              @click="handleCopyMessage(message)"
+                            >
+                              <IconCheck
+                                v-if="isCopied(message.id)"
+                                class="size-3!"
+                              />
+                              <IconCopy v-else class="size-3!" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            {{
+                              isCopied(message.id)
+                                ? t("ai.messageCopied")
+                                : t("actions.copy")
+                            }}
+                          </TooltipContent>
+                        </Tooltip>
+                        <Tooltip>
+                          <TooltipTrigger as-child>
+                            <Button
+                              variant="ghost"
+                              size="icon-xs"
+                              :aria-label="t('ai.reply')"
+                              :disabled="!message.content"
+                              @click="handleReplyMessage(message)"
+                            >
+                              <IconReply class="size-3!" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>{{ t("ai.reply") }}</TooltipContent>
+                        </Tooltip>
 
-              <!-- Read aloud — same three states as the context menu: idle ⇒
+                        <!-- Read aloud — same three states as the context menu: idle ⇒
                      a single "Read aloud" button; active (playing OR paused) ⇒
                      a play/pause toggle + Stop. Hidden when the browser lacks
                      SpeechSynthesis. -->
-              <template v-if="isReadAloudAvailable">
-                <template v-if="isSpeaking(message.id) || isPaused(message.id)">
-                  <Tooltip v-if="isSpeaking(message.id)">
-                    <TooltipTrigger as-child>
-                      <Button
-                        variant="ghost"
-                        size="icon-xs"
-                        @click="pauseReadAloud()"
-                      >
-                        <IconPause class="size-3!" />
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      {{ t("ai.readAloudPause") }}
-                    </TooltipContent>
-                  </Tooltip>
-                  <Tooltip v-else>
-                    <TooltipTrigger as-child>
-                      <Button
-                        variant="ghost"
-                        size="icon-xs"
-                        @click="resumeReadAloud()"
-                      >
-                        <IconPlay class="size-3!" />
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      {{ t("ai.readAloudResume") }}
-                    </TooltipContent>
-                  </Tooltip>
-                  <Tooltip>
-                    <TooltipTrigger as-child>
-                      <Button
-                        variant="ghost"
-                        size="icon-xs"
-                        @click="stopReadAloud()"
-                      >
-                        <IconSquare class="size-3!" />
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      {{ t("ai.readAloudStop") }}
-                    </TooltipContent>
-                  </Tooltip>
-                </template>
-                <Tooltip v-else>
-                  <TooltipTrigger as-child>
-                    <Button
-                      variant="ghost"
-                      size="icon-xs"
-                      :disabled="!message.content"
-                      @click="handleReadAloud(message)"
-                    >
-                      <IconVolume2 class="size-3!" />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>{{ t("ai.readAloud") }}</TooltipContent>
-                </Tooltip>
-              </template>
-            </TooltipProvider>
-          </div>
-        </ContextMenuTrigger>
-        <ContextMenuContent>
-          <ContextMenuItem
-            :disabled="!message.content"
-            @select="handleCopyMessage(message)"
-          >
-            <IconCopy />
-            {{ t("actions.copy") }}
-          </ContextMenuItem>
-          <ContextMenuItem
-            :disabled="!message.content"
-            @select="handleReplyMessage(message)"
-          >
-            <IconReply />
-            {{ t("ai.reply") }}
-          </ContextMenuItem>
+                        <template v-if="isReadAloudAvailable">
+                          <template
+                            v-if="
+                              isSpeaking(message.id) || isPaused(message.id)
+                            "
+                          >
+                            <Tooltip v-if="isSpeaking(message.id)">
+                              <TooltipTrigger as-child>
+                                <Button
+                                  variant="ghost"
+                                  size="icon-xs"
+                                  :aria-label="t('ai.readAloudPause')"
+                                  @click="pauseReadAloud()"
+                                >
+                                  <IconPause class="size-3!" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                {{ t("ai.readAloudPause") }}
+                              </TooltipContent>
+                            </Tooltip>
+                            <Tooltip v-else>
+                              <TooltipTrigger as-child>
+                                <Button
+                                  variant="ghost"
+                                  size="icon-xs"
+                                  :aria-label="t('ai.readAloudResume')"
+                                  @click="resumeReadAloud()"
+                                >
+                                  <IconPlay class="size-3!" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                {{ t("ai.readAloudResume") }}
+                              </TooltipContent>
+                            </Tooltip>
+                            <Tooltip>
+                              <TooltipTrigger as-child>
+                                <Button
+                                  variant="ghost"
+                                  size="icon-xs"
+                                  :aria-label="t('ai.readAloudStop')"
+                                  @click="stopReadAloud()"
+                                >
+                                  <IconSquare class="size-3!" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                {{ t("ai.readAloudStop") }}
+                              </TooltipContent>
+                            </Tooltip>
+                          </template>
+                          <Tooltip v-else>
+                            <TooltipTrigger as-child>
+                              <Button
+                                variant="ghost"
+                                size="icon-xs"
+                                :aria-label="t('ai.readAloud')"
+                                :disabled="!message.content"
+                                @click="handleReadAloud(message)"
+                              >
+                                <IconVolume2 class="size-3!" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>{{
+                              t("ai.readAloud")
+                            }}</TooltipContent>
+                          </Tooltip>
+                        </template>
+                      </TooltipProvider>
+                    </MessageFooter>
+                  </MessageContent>
+                </Message>
+              </ContextMenuTrigger>
+              <ContextMenuContent>
+                <ContextMenuItem
+                  :disabled="!message.content"
+                  @select="handleCopyMessage(message)"
+                >
+                  <IconCopy />
+                  {{ t("actions.copy") }}
+                </ContextMenuItem>
+                <ContextMenuItem
+                  :disabled="!message.content"
+                  @select="handleReplyMessage(message)"
+                >
+                  <IconReply />
+                  {{ t("ai.reply") }}
+                </ContextMenuItem>
 
-          <!-- Read aloud (Web Speech API). A single "Read aloud" row when
+                <!-- Read aloud (Web Speech API). A single "Read aloud" row when
                idle; while a read is active (playing OR paused) it splits
                into two inline controls — a play/pause toggle + Stop. Hidden
                entirely when the browser lacks SpeechSynthesis. -->
-          <template v-if="isReadAloudAvailable">
-            <ContextMenuSeparator />
-            <div
-              v-if="isSpeaking(message.id) || isPaused(message.id)"
-              class="flex gap-1"
-            >
-              <ContextMenuItem
-                v-if="isSpeaking(message.id)"
-                class="flex-1 justify-center"
-                @select="pauseReadAloud()"
-              >
-                <IconPause />
-                {{ t("ai.readAloudPause") }}
-              </ContextMenuItem>
-              <ContextMenuItem
-                v-else
-                class="flex-1 justify-center"
-                @select="resumeReadAloud()"
-              >
-                <IconPlay />
-                {{ t("ai.readAloudResume") }}
-              </ContextMenuItem>
-              <ContextMenuItem
-                class="flex-1 justify-center"
-                @select="stopReadAloud()"
-              >
-                <IconSquare />
-                {{ t("ai.readAloudStop") }}
-              </ContextMenuItem>
-            </div>
-            <ContextMenuItem
-              v-else
-              :disabled="!message.content"
-              @select="handleReadAloud(message)"
-            >
-              <IconVolume2 />
-              {{ t("ai.readAloud") }}
-            </ContextMenuItem>
-          </template>
-        </ContextMenuContent>
-      </ContextMenu>
-      <div
-        v-if="showThinking"
-        class="text-muted-foreground flex items-center gap-2 px-3 py-6 text-xs"
-      >
-        <span
-          class="bg-muted-foreground inline-block size-2 animate-pulse rounded-full"
-        />
-        <span>{{ t("ai.thinking") }}</span>
+                <template v-if="isReadAloudAvailable">
+                  <ContextMenuSeparator />
+                  <div
+                    v-if="isSpeaking(message.id) || isPaused(message.id)"
+                    class="flex gap-1"
+                  >
+                    <ContextMenuItem
+                      v-if="isSpeaking(message.id)"
+                      class="flex-1 justify-center"
+                      @select="pauseReadAloud()"
+                    >
+                      <IconPause />
+                      {{ t("ai.readAloudPause") }}
+                    </ContextMenuItem>
+                    <ContextMenuItem
+                      v-else
+                      class="flex-1 justify-center"
+                      @select="resumeReadAloud()"
+                    >
+                      <IconPlay />
+                      {{ t("ai.readAloudResume") }}
+                    </ContextMenuItem>
+                    <ContextMenuItem
+                      class="flex-1 justify-center"
+                      @select="stopReadAloud()"
+                    >
+                      <IconSquare />
+                      {{ t("ai.readAloudStop") }}
+                    </ContextMenuItem>
+                  </div>
+                  <ContextMenuItem
+                    v-else
+                    :disabled="!message.content"
+                    @select="handleReadAloud(message)"
+                  >
+                    <IconVolume2 />
+                    {{ t("ai.readAloud") }}
+                  </ContextMenuItem>
+                </template>
+              </ContextMenuContent>
+            </ContextMenu>
+          </MessageScrollerItem>
+          <Marker v-if="showThinking" role="status" class="px-3 py-6">
+            <MarkerContent class="shimmer">
+              {{ t("ai.thinking") }}
+            </MarkerContent>
+          </Marker>
+        </MessageScrollerContent>
+      </MessageScrollerViewport>
+      <MessageScrollerButton direction="end" />
+      <!-- Transcript outline — a tick rail on the right edge that tracks
+           the reader's position (the tick for `currentAnchorId` lights up)
+           and expands on hover into a jump menu over the user turns. Must
+           sit inside the provider: it injects the scroller context. -->
+      <div class="absolute top-1/2 right-2 z-10 -translate-y-1/2">
+        <BotChatOutline />
       </div>
-    </div>
-  </OverlayScrollbarsWrapper>
+    </MessageScroller>
+  </MessageScrollerProvider>
 </template>
 
 <style scoped>
 /* Typography, animation, and node-level rules for the markstream
  * subtree live in `AppMarkdown.vue` and key off `[data-custom-id="chat"]`.
- * What stays here is bubble-shape stuff: width clamping, overflow,
- * and containment. */
+ * What stays here is bubble-shape stuff the shadcn Bubble doesn't
+ * cover: token wrapping and layout containment. Width clamping
+ * (`w-fit max-w-full min-w-0`) now comes from `BubbleContent` itself. */
 
-/* ── Width / overflow ───────────────────────────────────────────────
-   `w-max` (Tailwind `width: max-content`) gives bubbles their natural
-   content-sized silhouette — short messages stay short, long ones
-   grow. Without an upper bound, a single unbreakable token (URL,
-   hash, long inline code, KaTeX run, tool-output row) lets the
-   bubble grow past the column and produces a horizontal scroll on
-   the OverlayScrollbars viewport even when nothing visibly clips.
-   Capping at `max-width: 100%` keeps the natural sizing intact while
-   binding the bubble to its row.
+/* `overflow-wrap: anywhere` — BubbleContent ships `wrap-break-word`
+   (`break-word`), but only `anywhere` factors mid-token break points
+   into flex min-content sizing, which is what stops an unbreakable
+   token (URL, hash, KaTeX run) from widening the bubble past the
+   viewport. Normal prose still wraps on spaces; code blocks
+   (`white-space: pre`) ignore it and scroll themselves.
 
-   The cap only binds because of `min-width: 0`: flex items default
-   to `min-width: auto` ("don't shrink below intrinsic content"), and
-   that default silently overrides `max-width` — the bubble would
-   refuse the cap because content would have to overflow. Resetting
-   to 0 releases the constraint.
-
-   `overflow-wrap: anywhere` is the final piece: with `max-width`
-   active, long tokens have to break somewhere to stay inside. The
-   `anywhere` value (vs `break-word`) only breaks mid-token when no
-   other break point fits, so normal prose still wraps on spaces.
-   Code blocks (`white-space: pre`) ignore `overflow-wrap` and scroll
-   themselves via markstream's `pre` styles — no double-handling.
-
-   ── Performance ───────────────────────────────────────────────────
-   `contain: layout style` isolates each bubble's layout & paint from
-   its neighbours. When the streaming tail's height grows, the
-   browser only re-lays-out *that* bubble's subtree — prior bubbles
-   are skipped. Without `contain`, every chunk invalidates the full
+   `contain: layout style` isolates each bubble's layout from its
+   neighbours: when the streaming tail grows, only that bubble's
+   subtree re-lays-out. Without it, every chunk invalidates the full
    chat column, so streaming gets jankier as history grows. */
 .markdown-bubble {
-  max-width: 100%;
-  min-width: 0;
   overflow-wrap: anywhere;
   contain: layout style;
 }
 
-/* ── Grid-track width binding ──────────────────────────────────────
-   `grid-cols-1` resolves to `grid-template-columns: minmax(0, 1fr)`,
-   which *should* clamp the column to the container width. It doesn't
-   in practice, because grid items default to `min-width: auto` — the
-   item refuses to shrink below intrinsic content, the column grows
-   with it, and the OverlayScrollbars viewport gets a horizontal
-   scroll. The actual grid child is reka-ui's
-   `[data-slot="context-menu-trigger"]` (ContextMenuRoot renders no
-   DOM), so we pin both the direct child *and* the trigger to
-   `min-width: 0`. The `> *` rule alone covers most cases; the
-   `:deep()` selector is belt-and-suspenders in case reka-ui ever
-   adds an intermediate wrapper. */
-.messages-list > *,
+/* reka-ui's ContextMenuRoot renders no DOM, so the scroller item's
+   direct child is `[data-slot="context-menu-trigger"]`. Pin it so a
+   wide bubble can never stretch the row past the viewport (flex items
+   default to `min-width: auto` and refuse to shrink below intrinsic
+   content). */
 .messages-list :deep([data-slot="context-menu-trigger"]) {
   min-width: 0;
   max-width: 100%;

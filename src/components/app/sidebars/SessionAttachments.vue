@@ -45,6 +45,8 @@ interface UploadState {
   error?: string
 }
 
+const { t } = useI18n()
+
 const botChat = inject(BotChatContextKey)
 const { currentTeamId, currentWorkspaceId } = storeToRefs(useAuthStore())
 
@@ -362,62 +364,63 @@ const handleDelete = async (attachment: IBotSessionAttachment) => {
       <div>
         <!-- No session yet: buffered uploads ride along with the first message -->
         <template v-if="!sessionId">
-          <article
+          <Attachment
             v-for="(file, index) in pendingUploadFiles"
             :key="`pending:${index}:${file.name}`"
-            class="rounded-xl border p-2"
+            state="idle"
+            class="w-full"
           >
-            <div class="flex items-start gap-2">
-              <div
-                class="bg-muted flex size-9 shrink-0 items-center justify-center rounded border"
-              >
-                <IconUpload class="text-muted-foreground" />
-              </div>
-              <div class="min-w-0 grow">
-                <p class="truncate text-sm font-medium">{{ file.name }}</p>
-                <p class="text-muted-foreground truncate text-xs">
-                  {{ formatAttachmentSize(file.size) }} · Sent with first
-                  message
-                </p>
-              </div>
-              <Button
-                variant="ghost"
-                size="icon-sm"
+            <AttachmentMedia>
+              <IconUpload />
+            </AttachmentMedia>
+            <AttachmentContent>
+              <AttachmentTitle>{{ file.name }}</AttachmentTitle>
+              <AttachmentDescription>
+                {{ formatAttachmentSize(file.size) }} · Sent with first message
+              </AttachmentDescription>
+            </AttachmentContent>
+            <AttachmentActions>
+              <AttachmentAction
+                :aria-label="
+                  t('ai.detachAttachment', { name: file.name }, file.name)
+                "
                 @click="removePendingUpload(index)"
               >
                 <IconX />
-              </Button>
-            </div>
-          </article>
+              </AttachmentAction>
+            </AttachmentActions>
+          </Attachment>
 
-          <article
+          <Attachment
             v-for="(file, index) in pendingDriveImports"
             :key="`drive:${index}:${file.fileId}`"
-            class="rounded-xl border p-2"
+            state="idle"
+            class="w-full"
           >
-            <div class="flex items-start gap-2">
-              <div
-                class="bg-muted flex size-9 shrink-0 items-center justify-center rounded border"
-              >
-                <IconLogosGoogleDrive />
-              </div>
-              <div class="min-w-0 grow">
-                <p class="truncate text-sm font-medium">
-                  {{ file.displayName }}
-                </p>
-                <p class="text-muted-foreground truncate text-xs">
-                  Google Drive · Sent with first message
-                </p>
-              </div>
-              <Button
-                variant="ghost"
-                size="icon-sm"
+            <AttachmentMedia>
+              <IconLogosGoogleDrive />
+            </AttachmentMedia>
+            <AttachmentContent>
+              <AttachmentTitle>{{ file.displayName }}</AttachmentTitle>
+              <AttachmentDescription>
+                Google Drive · Sent with first message
+              </AttachmentDescription>
+            </AttachmentContent>
+            <AttachmentActions>
+              <AttachmentAction
+                :aria-label="
+                  t(
+                    'ai.detachAttachment',
+                    { name: file.displayName },
+                    file.displayName
+                  )
+                "
                 @click="removePendingDriveImport(index)"
               >
                 <IconX />
-              </Button>
-            </div>
-          </article>
+              </AttachmentAction>
+            </AttachmentActions>
+          </Attachment>
 
           <Empty
             v-if="
@@ -439,33 +442,36 @@ const handleDelete = async (attachment: IBotSessionAttachment) => {
         </template>
 
         <template v-else>
-          <!-- In-flight uploads -->
-          <div
-            v-if="uploadStates.length"
-            class="space-y-2 rounded-2xl border p-2"
-          >
-            <div
+          <!-- In-flight uploads — `state="uploading"` shimmers the title
+               automatically while the upload is in flight -->
+          <div v-if="uploadStates.length" class="flex flex-col gap-2">
+            <Attachment
               v-for="item in uploadStates"
               :key="item.id"
-              class="flex items-start gap-2 rounded-2xl border p-2"
+              :state="item.status === 'uploading' ? 'uploading' : 'error'"
+              class="w-full"
             >
-              <Spinner v-if="item.status === 'uploading'" />
-              <IconCircleAlert v-else class="text-destructive shrink-0" />
-              <div class="min-w-0 grow">
-                <p class="truncate text-xs font-medium">{{ item.name }}</p>
-                <p class="text-muted-foreground text-xs">
+              <AttachmentMedia>
+                <Spinner v-if="item.status === 'uploading'" />
+                <IconCircleAlert v-else />
+              </AttachmentMedia>
+              <AttachmentContent>
+                <AttachmentTitle>{{ item.name }}</AttachmentTitle>
+                <AttachmentDescription>
                   {{ item.status === "uploading" ? "Uploading…" : item.error }}
-                </p>
-              </div>
-              <Button
-                v-if="item.status === 'error'"
-                variant="ghost"
-                size="icon-sm"
-                @click="dismissUploadState(item.id)"
-              >
-                <IconX />
-              </Button>
-            </div>
+                </AttachmentDescription>
+              </AttachmentContent>
+              <AttachmentActions v-if="item.status === 'error'">
+                <AttachmentAction
+                  :aria-label="
+                    t('ai.detachAttachment', { name: item.name }, item.name)
+                  "
+                  @click="dismissUploadState(item.id)"
+                >
+                  <IconX />
+                </AttachmentAction>
+              </AttachmentActions>
+            </Attachment>
           </div>
 
           <LoadingState
@@ -497,79 +503,70 @@ const handleDelete = async (attachment: IBotSessionAttachment) => {
             </EmptyHeader>
           </Empty>
 
-          <article
+          <Attachment
             v-for="attachment in attachments"
             v-else
             :key="attachment.id"
-            class="rounded-xl border p-2"
-            :class="isSelected(attachment.id) ? 'border-primary' : ''"
+            :class="['w-full', isSelected(attachment.id) && 'border-primary']"
           >
-            <div class="flex items-start gap-2">
-              <div
-                class="bg-muted flex size-9 shrink-0 items-center justify-center rounded border"
+            <AttachmentMedia>
+              <IconCheck v-if="isSelected(attachment.id)" />
+              <Component :is="resolveIcon(attachment)" v-else />
+            </AttachmentMedia>
+            <AttachmentContent>
+              <AttachmentTitle>{{ attachment.displayName }}</AttachmentTitle>
+              <AttachmentDescription>
+                {{ formatAttachmentSize(attachment.size) }} ·
+                {{
+                  isSelected(attachment.id)
+                    ? "Included in next message"
+                    : (attachment.mimeType ?? "unknown type")
+                }}
+              </AttachmentDescription>
+            </AttachmentContent>
+            <AttachmentActions>
+              <AttachmentAction
+                :aria-label="t('actions.download')"
+                :disabled="downloadingIds.includes(attachment.id)"
+                @click="downloadAttachment(attachment)"
               >
-                <Component
-                  :is="resolveIcon(attachment)"
-                  class="text-muted-foreground"
-                />
-              </div>
-              <div class="min-w-0 grow space-y-2">
-                <div class="flex items-start justify-between gap-2">
-                  <div class="min-w-0">
-                    <p class="truncate text-sm font-medium">
-                      {{ attachment.displayName }}
-                    </p>
-                    <p class="text-muted-foreground truncate text-xs">
-                      {{ formatAttachmentSize(attachment.size) }} ·
-                      {{ attachment.mimeType ?? "unknown type" }}
-                    </p>
-                  </div>
-                  <div class="flex shrink-0 items-center gap-1">
-                    <Button
-                      variant="ghost"
-                      size="icon-sm"
-                      :disabled="downloadingIds.includes(attachment.id)"
-                      @click="downloadAttachment(attachment)"
-                    >
-                      <Spinner v-if="downloadingIds.includes(attachment.id)" />
-                      <IconArrowDownToLine v-else />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon-sm"
-                      :disabled="!canEdit"
-                      @click="openEditDialog(attachment)"
-                    >
-                      <IconPencil />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon-sm"
-                      :disabled="!canEdit || deletingId === attachment.id"
-                      @click="openDeleteDialog(attachment)"
-                    >
-                      <Spinner v-if="deletingId === attachment.id" />
-                      <IconTrash2 v-else />
-                    </Button>
-                  </div>
-                </div>
-                <Button
-                  :variant="isSelected(attachment.id) ? 'default' : 'outline'"
-                  size="sm"
-                  class="w-full justify-start"
-                  :disabled="!canEdit"
-                  @click="toggleSelected(attachment.id)"
-                >
-                  <IconCheck v-if="isSelected(attachment.id)" />
-                  {{
-                    isSelected(attachment.id)
-                      ? "Included in next message"
-                      : "Include in next message"
-                  }}
-                </Button>
-              </div>
-            </div>
-          </article>
+                <Spinner v-if="downloadingIds.includes(attachment.id)" />
+                <IconArrowDownToLine v-else />
+              </AttachmentAction>
+              <AttachmentAction
+                :aria-label="t('actions.rename')"
+                :disabled="!canEdit"
+                @click="openEditDialog(attachment)"
+              >
+                <IconPencil />
+              </AttachmentAction>
+              <AttachmentAction
+                :aria-label="t('actions.delete')"
+                :disabled="!canEdit || deletingId === attachment.id"
+                @click="openDeleteDialog(attachment)"
+              >
+                <Spinner v-if="deletingId === attachment.id" />
+                <IconTrash2 v-else />
+              </AttachmentAction>
+            </AttachmentActions>
+            <!-- Whole-card toggle. The trigger fills the card behind the
+                 actions (z-10 vs z-20), so download/rename/delete stay
+                 independently clickable — and the card's has-[>button]
+                 hover tint now reads as intended because the card IS
+                 clickable. Selection stays conveyed beyond color: check
+                 icon in the media, state text in the description, and
+                 aria-pressed on the trigger. -->
+            <AttachmentTrigger
+              :aria-label="
+                isSelected(attachment.id)
+                  ? `Remove ${attachment.displayName} from next message`
+                  : `Include ${attachment.displayName} in next message`
+              "
+              :aria-pressed="isSelected(attachment.id)"
+              :disabled="!canEdit"
+              @click="toggleSelected(attachment.id)"
+            />
+          </Attachment>
         </template>
       </div>
     </OverlayScrollbarsWrapper>

@@ -1,10 +1,69 @@
+import {
+  ApertureIcon,
+  ArrowDownToLineIcon,
+  ArrowLeftToLineIcon,
+  ArrowRightToLineIcon,
+  ArrowUpToLineIcon,
+  AtSignIcon,
+  BadgeCheckIcon,
+  BanIcon,
+  BellIcon,
+  BellRingIcon,
+  BlocksIcon,
+  BoldIcon,
+  BoltIcon,
+  BotIcon,
+  BotMessageSquareIcon,
+  BoxIcon,
+  BracesIcon,
+  CheckCheckIcon,
+  CheckIcon,
+  ChevronLeftIcon,
+  ChevronRightIcon,
+  ChevronUpIcon,
+  ChevronsDownUpIcon,
+  ChevronsLeftRightEllipsisIcon,
+  CircleCheckBigIcon,
+  CircleCheckIcon,
+  CircleDashedIcon,
+  CircleDotDashedIcon,
+  CircleDotIcon,
+  CirclePlusIcon,
+  CircleXIcon,
+  CloudCheckIcon,
+  CloudRainIcon,
+  CloudSyncIcon,
+  CodeIcon,
+  ContrastIcon,
+  DicesIcon,
+  EllipsisIcon,
+  ExternalLinkIcon,
+  EyeIcon,
+  EyeOffIcon,
+  FilePlusIcon,
+  GraduationCapIcon,
+  Grid2X2Icon,
+  Grid2X2PlusIcon,
+  GripHorizontalIcon,
+  GripVerticalIcon,
+  HandIcon,
+  HashIcon,
+  HeartIcon,
+  HistoryIcon,
+  TableIcon,
+  TerminalIcon,
+  TextIcon,
+  ZapIcon,
+} from "@hugeicons/core-free-icons"
+import { HugeiconsIcon } from "@hugeicons/vue"
+import type { FunctionalComponent } from "vue"
+import { h } from "vue"
 import IconBiApple from "~icons/bi/apple"
 import IconBxBxsZap from "~icons/bx/bxs-zap"
 import IconJapan from "~icons/circle-flags/jp"
 import IconUSA from "~icons/circle-flags/us"
 import IconHgActivity01 from "~icons/hugeicons/activity-01"
 import IconHgAdd01 from "~icons/hugeicons/add-01"
-import IconHgAddCircle from "~icons/hugeicons/add-circle"
 import IconHgAddSquare from "~icons/hugeicons/add-square"
 import IconHgAiChip from "~icons/hugeicons/ai-chip"
 import IconHgAlert02 from "~icons/hugeicons/alert-02"
@@ -12,20 +71,16 @@ import IconHgAlertCircle from "~icons/hugeicons/alert-circle"
 import IconHgArchive from "~icons/hugeicons/archive"
 import IconHgArrowDown01 from "~icons/hugeicons/arrow-down-01"
 import IconHgArrowDown02 from "~icons/hugeicons/arrow-down-02"
-import IconHgArrowLeft01 from "~icons/hugeicons/arrow-left-01"
 import IconHgArrowLeft02 from "~icons/hugeicons/arrow-left-02"
 import IconHgArrowLeftRight from "~icons/hugeicons/arrow-left-right"
 import IconHgArrowReloadHorizontal from "~icons/hugeicons/arrow-reload-horizontal"
-import IconHgArrowRight01 from "~icons/hugeicons/arrow-right-01"
 import IconHgArrowRight02 from "~icons/hugeicons/arrow-right-02"
 import IconHgArrowTurnBackward from "~icons/hugeicons/arrow-turn-backward"
 import IconHgArrowTurnForward from "~icons/hugeicons/arrow-turn-forward"
-import IconHgArrowUp01 from "~icons/hugeicons/arrow-up-01"
 import IconHgArrowUp02 from "~icons/hugeicons/arrow-up-02"
 import IconHgArrowUpDown from "~icons/hugeicons/arrow-up-down"
 import IconHgArrowUpRight01 from "~icons/hugeicons/arrow-up-right-01"
 import IconHgAsterisk from "~icons/hugeicons/asterisk"
-import IconHgAt from "~icons/hugeicons/at"
 import IconHgAudit01 from "~icons/hugeicons/audit-01"
 import IconHgBadgeDollarSign from "~icons/hugeicons/badge-dollar-sign"
 import IconHgBookOpen01 from "~icons/hugeicons/book-open-01"
@@ -38,51 +93,36 @@ import IconHgBuilding06 from "~icons/hugeicons/building-06"
 import IconHgCalculator01 from "~icons/hugeicons/calculator-01"
 import IconHgCalendar01 from "~icons/hugeicons/calendar-01"
 import IconHgCamera01 from "~icons/hugeicons/camera-01"
-import IconHgCameraLens from "~icons/hugeicons/camera-lens"
 import IconHgCancel01 from "~icons/hugeicons/cancel-01"
 import IconHgCancelCircle from "~icons/hugeicons/cancel-circle"
 import IconHgCancelSquare from "~icons/hugeicons/cancel-square"
 import IconHgCells from "~icons/hugeicons/cells"
-import IconHgChatBot from "~icons/hugeicons/chat-bot"
 import IconHgCheckList from "~icons/hugeicons/check-list"
-import IconHgCheckmarkBadge01 from "~icons/hugeicons/checkmark-badge-01"
-import IconHgCheckmarkCircle01 from "~icons/hugeicons/checkmark-circle-01"
 import IconHgCheckmarkCircle02 from "~icons/hugeicons/checkmark-circle-02"
 import IconHgCheckmarkSquare02 from "~icons/hugeicons/checkmark-square-02"
 import IconHgCircle from "~icons/hugeicons/circle"
 import IconHgClock01 from "~icons/hugeicons/clock-01"
-import IconHgClock04 from "~icons/hugeicons/clock-04"
 import IconHgCloudAlert from "~icons/hugeicons/cloud-alert"
-import IconHgCloudLoading from "~icons/hugeicons/cloud-loading"
-import IconHgCloudSavingDone01 from "~icons/hugeicons/cloud-saving-done-01"
 import IconHgCombine from "~icons/hugeicons/combine"
 import IconHgCommand from "~icons/hugeicons/command"
 import IconHgComment01 from "~icons/hugeicons/comment-01"
 import IconHgComponent from "~icons/hugeicons/component"
 import IconHgComputer from "~icons/hugeicons/computer"
-import IconHgComputerTerminal01 from "~icons/hugeicons/computer-terminal-01"
 import IconHgCone01 from "~icons/hugeicons/cone-01"
 import IconHgCopy01 from "~icons/hugeicons/copy-01"
 import IconHgCreditCard from "~icons/hugeicons/credit-card"
 import IconHgCursorMagicSelection01 from "~icons/hugeicons/cursor-magic-selection-01"
 import IconHgCursorPointer01 from "~icons/hugeicons/cursor-pointer-01"
-import IconHgDashboardSquareAdd from "~icons/hugeicons/dashboard-square-add"
-import IconHgDashedLineCircle from "~icons/hugeicons/dashed-line-circle"
 import IconHgDatabase01 from "~icons/hugeicons/database-01"
 import IconHgDelete02 from "~icons/hugeicons/delete-02"
 import IconHgDelete03 from "~icons/hugeicons/delete-03"
-import IconHgDice from "~icons/hugeicons/dice"
 import IconHgDisc from "~icons/hugeicons/disc"
 import IconHgDownload04 from "~icons/hugeicons/download-04"
-import IconHgDragDrop from "~icons/hugeicons/drag-drop"
 import IconHgEdit01 from "~icons/hugeicons/edit-01"
 import IconHgEdit02 from "~icons/hugeicons/edit-02"
-import IconHgFavourite from "~icons/hugeicons/favourite"
 import IconHgFile01 from "~icons/hugeicons/file-01"
 import IconHgFile02 from "~icons/hugeicons/file-02"
-import IconHgFileAdd from "~icons/hugeicons/file-add"
 import IconHgFilter from "~icons/hugeicons/filter"
-import IconHgFlash from "~icons/hugeicons/flash"
 import IconHgFolder01 from "~icons/hugeicons/folder-01"
 import IconHgFolderAdd from "~icons/hugeicons/folder-add"
 import IconHgFolderOpen from "~icons/hugeicons/folder-open"
@@ -90,18 +130,14 @@ import IconHgFullSignal from "~icons/hugeicons/full-signal"
 import IconHgGalleryHorizontalEnd from "~icons/hugeicons/gallery-horizontal-end"
 import IconHgGift from "~icons/hugeicons/gift"
 import IconHgGlobe from "~icons/hugeicons/globe"
-import IconHgGrid from "~icons/hugeicons/grid"
-import IconHgGridTable from "~icons/hugeicons/grid-table"
 import IconHgGridView from "~icons/hugeicons/grid-view"
 import IconHgGroup from "~icons/hugeicons/group"
 import IconHgHardDrive from "~icons/hugeicons/hard-drive"
-import IconHgHashtag from "~icons/hugeicons/hashtag"
 import IconHgHeading01 from "~icons/hugeicons/heading-01"
 import IconHgHeading02 from "~icons/hugeicons/heading-02"
 import IconHgHeading03 from "~icons/hugeicons/heading-03"
 import IconHgHelpCircle from "~icons/hugeicons/help-circle"
 import IconHgHighlighter from "~icons/hugeicons/highlighter"
-import IconHgHold04 from "~icons/hugeicons/hold-04"
 import IconHgHome01 from "~icons/hugeicons/home-01"
 import IconHgHourglass from "~icons/hugeicons/hourglass"
 import IconHgImage01 from "~icons/hugeicons/image-01"
@@ -121,7 +157,6 @@ import IconHgLeftToRightListNumber from "~icons/hugeicons/left-to-right-list-num
 import IconHgLifebuoy from "~icons/hugeicons/lifebuoy"
 import IconHgLink01 from "~icons/hugeicons/link-01"
 import IconHgLink02 from "~icons/hugeicons/link-02"
-import IconHgLinkSquare02 from "~icons/hugeicons/link-square-02"
 import IconHgLoading03 from "~icons/hugeicons/loading-03"
 import IconHgLock from "~icons/hugeicons/lock"
 import IconHgLogout01 from "~icons/hugeicons/logout-01"
@@ -139,18 +174,12 @@ import IconHgMoon02 from "~icons/hugeicons/moon-02"
 import IconHgMoonEclipse from "~icons/hugeicons/moon-eclipse"
 import IconHgMoreHorizontal from "~icons/hugeicons/more-horizontal"
 import IconHgMoreVertical from "~icons/hugeicons/more-vertical"
-import IconHgMortarboard02 from "~icons/hugeicons/mortarboard-02"
-import IconHgNotification02 from "~icons/hugeicons/notification-02"
-import IconHgNotification03 from "~icons/hugeicons/notification-03"
-import IconHgNut from "~icons/hugeicons/nut"
-import IconHgPackage from "~icons/hugeicons/package"
 import IconHgPaintBoard from "~icons/hugeicons/paint-board"
 import IconHgPanelBottomClose from "~icons/hugeicons/panel-bottom-close"
 import IconHgPanelLeft from "~icons/hugeicons/panel-left"
 import IconHgPanelLeftClose from "~icons/hugeicons/panel-left-close"
 import IconHgPanelRight from "~icons/hugeicons/panel-right"
 import IconHgPanelRightClose from "~icons/hugeicons/panel-right-close"
-import IconHgParagraph from "~icons/hugeicons/paragraph"
 import IconHgPause from "~icons/hugeicons/pause"
 import IconHgPauseCircle from "~icons/hugeicons/pause-circle"
 import IconHgPencilEdit02 from "~icons/hugeicons/pencil-edit-02"
@@ -162,15 +191,11 @@ import IconHgPinOff from "~icons/hugeicons/pin-off"
 import IconHgPlay from "~icons/hugeicons/play"
 import IconHgPlayCircle from "~icons/hugeicons/play-circle"
 import IconHgPlug01 from "~icons/hugeicons/plug-01"
-import IconHgPuzzle from "~icons/hugeicons/puzzle"
 import IconHgQuoteUp from "~icons/hugeicons/quote-up"
-import IconHgRain from "~icons/hugeicons/rain"
-import IconHgRecord from "~icons/hugeicons/record"
 import IconHgRefresh from "~icons/hugeicons/refresh"
 import IconHgRemoveCircle from "~icons/hugeicons/remove-circle"
 import IconHgRemoveSquare from "~icons/hugeicons/remove-square"
 import IconHgRepeat from "~icons/hugeicons/repeat"
-import IconHgRobot01 from "~icons/hugeicons/robot-01"
 import IconHgRocket01 from "~icons/hugeicons/rocket-01"
 import IconHgRotateLeft01 from "~icons/hugeicons/rotate-left-01"
 import IconHgScroll from "~icons/hugeicons/scroll"
@@ -181,7 +206,6 @@ import IconHgSettings02 from "~icons/hugeicons/settings-02"
 import IconHgShield01 from "~icons/hugeicons/shield-01"
 import IconHgSmartPhone01 from "~icons/hugeicons/smart-phone-01"
 import IconHgSmile from "~icons/hugeicons/smile"
-import IconHgSourceCode from "~icons/hugeicons/source-code"
 import IconHgSparkles from "~icons/hugeicons/sparkles"
 import IconHgSplit from "~icons/hugeicons/split"
 import IconHgSquare from "~icons/hugeicons/square"
@@ -197,17 +221,13 @@ import IconHgTextAlignCenter from "~icons/hugeicons/text-align-center"
 import IconHgTextAlignJustifyCenter from "~icons/hugeicons/text-align-justify-center"
 import IconHgTextAlignLeft from "~icons/hugeicons/text-align-left"
 import IconHgTextAlignRight from "~icons/hugeicons/text-align-right"
-import IconHgTextBold from "~icons/hugeicons/text-bold"
 import IconHgTextFont from "~icons/hugeicons/text-font"
 import IconHgTextItalic from "~icons/hugeicons/text-italic"
 import IconHgTextStrikethrough from "~icons/hugeicons/text-strikethrough"
 import IconHgTextSubscript from "~icons/hugeicons/text-subscript"
 import IconHgTextSuperscript from "~icons/hugeicons/text-superscript"
 import IconHgTextUnderline from "~icons/hugeicons/text-underline"
-import IconHgTick02 from "~icons/hugeicons/tick-02"
-import IconHgTickDouble02 from "~icons/hugeicons/tick-double-02"
 import IconHgTranslate from "~icons/hugeicons/translate"
-import IconHgUnavailable from "~icons/hugeicons/unavailable"
 import IconHgUnfoldMore from "~icons/hugeicons/unfold-more"
 import IconHgUnlink01 from "~icons/hugeicons/unlink-01"
 import IconHgUpload04 from "~icons/hugeicons/upload-04"
@@ -219,8 +239,6 @@ import IconHgUserMinus01 from "~icons/hugeicons/user-minus-01"
 import IconHgUserMultiple from "~icons/hugeicons/user-multiple"
 import IconHgUserMultiple02 from "~icons/hugeicons/user-multiple-02"
 import IconHgUserSettings01 from "~icons/hugeicons/user-settings-01"
-import IconHgView from "~icons/hugeicons/view"
-import IconHgViewOff from "~icons/hugeicons/view-off"
 import IconHgVolumeHigh from "~icons/hugeicons/volume-high"
 import IconHgWorkflowSquare01 from "~icons/hugeicons/workflow-square-01"
 import IconHgWrench01 from "~icons/hugeicons/wrench-01"
@@ -287,6 +305,79 @@ import IconSimpleIconsRakuten from "~icons/simple-icons/rakuten"
 import IconSimpleIconsShopify from "~icons/simple-icons/shopify"
 import IconTablerBrandWalmart from "~icons/tabler/brand-walmart"
 
+/*
+ * Hugeicons' lucide-named glyphs (the names our aliases are based on) ship only
+ * in @hugeicons/core-free-icons as icon DATA, not in the iconify set that
+ * unplugin-icons compiles (~icons/hugeicons/*). Bridge them through the
+ * HugeiconsIcon renderer, replicating unplugin-icons' defaultClass and the
+ * data-hg hook (stroke-weight CSS) from vite.config.ts so both pipelines
+ * render identically.
+ */
+const hg =
+  (icon: typeof GripHorizontalIcon): FunctionalComponent =>
+  () =>
+    h(HugeiconsIcon, {
+      icon,
+      class: "inline-flex shrink-0 size-4",
+      "data-hg": "",
+    })
+
+const IconAperture = hg(ApertureIcon)
+const IconArrowDownToLine = hg(ArrowDownToLineIcon)
+const IconArrowLeftToLine = hg(ArrowLeftToLineIcon)
+const IconArrowRightToLine = hg(ArrowRightToLineIcon)
+const IconArrowUpToLine = hg(ArrowUpToLineIcon)
+const IconAtSign = hg(AtSignIcon)
+const IconBadgeCheck = hg(BadgeCheckIcon)
+const IconBan = hg(BanIcon)
+const IconBell = hg(BellIcon)
+const IconBellRing = hg(BellRingIcon)
+const IconBlocks = hg(BlocksIcon)
+const IconBold = hg(BoldIcon)
+const IconBolt = hg(BoltIcon)
+const IconBot = hg(BotIcon)
+const IconBotMessageSquare = hg(BotMessageSquareIcon)
+const IconBox = hg(BoxIcon)
+const IconBraces = hg(BracesIcon)
+const IconCheck = hg(CheckIcon)
+const IconCheckCheck = hg(CheckCheckIcon)
+const IconChevronLeft = hg(ChevronLeftIcon)
+const IconChevronRight = hg(ChevronRightIcon)
+const IconChevronsDownUp = hg(ChevronsDownUpIcon)
+const IconChevronsLeftRightEllipsis = hg(ChevronsLeftRightEllipsisIcon)
+const IconChevronUp = hg(ChevronUpIcon)
+const IconCircleCheck = hg(CircleCheckIcon)
+const IconCircleCheckBig = hg(CircleCheckBigIcon)
+const IconCircleDashed = hg(CircleDashedIcon)
+const IconCircleDot = hg(CircleDotIcon)
+const IconCircleDotDashed = hg(CircleDotDashedIcon)
+const IconCirclePlus = hg(CirclePlusIcon)
+const IconCircleX = hg(CircleXIcon)
+const IconCloudCheck = hg(CloudCheckIcon)
+const IconCloudRain = hg(CloudRainIcon)
+const IconCloudSync = hg(CloudSyncIcon)
+const IconCode = hg(CodeIcon)
+const IconContrast = hg(ContrastIcon)
+const IconDices = hg(DicesIcon)
+const IconEllipsis = hg(EllipsisIcon)
+const IconExternalLink = hg(ExternalLinkIcon)
+const IconEye = hg(EyeIcon)
+const IconEyeOff = hg(EyeOffIcon)
+const IconFilePlus = hg(FilePlusIcon)
+const IconGraduationCap = hg(GraduationCapIcon)
+const IconGrid2X2 = hg(Grid2X2Icon)
+const IconGrid2X2Plus = hg(Grid2X2PlusIcon)
+const IconGripHorizontal = hg(GripHorizontalIcon)
+const IconGripVertical = hg(GripVerticalIcon)
+const IconHand = hg(HandIcon)
+const IconHash = hg(HashIcon)
+const IconHeart = hg(HeartIcon)
+const IconHistory = hg(HistoryIcon)
+const IconTable = hg(TableIcon)
+const IconTerminal = hg(TerminalIcon)
+const IconText = hg(TextIcon)
+const IconZap = hg(ZapIcon)
+
 /**
  * Icon Exports
  * Aggregates and re-exports icons from various icon sets (Hugeicons, MDI, etc.)
@@ -302,7 +393,7 @@ export {
   IconHgTextAlignLeft as IconAlignLeft,
   IconHgTextAlignRight as IconAlignRight,
   IconSimpleIconsAmazon as IconAmazon,
-  IconHgCameraLens as IconAperture,
+  IconAperture,
   IconBiApple as IconApple,
   IconLogosAppleAppStore as IconAppleAppStore,
   IconMdiApple as IconAppleFilled,
@@ -310,35 +401,35 @@ export {
   IconHgArchive as IconArchive,
   IconHgArrowUp02 as IconArrowBigUp,
   IconHgArrowDown02 as IconArrowDown,
-  IconHgArrowDown02 as IconArrowDownToLine,
+  IconArrowDownToLine,
   IconHgArrowLeft02 as IconArrowLeft,
-  IconHgArrowLeft02 as IconArrowLeftToLine,
+  IconArrowLeftToLine,
   IconHgArrowRight02 as IconArrowRight,
   IconMdiArrowRightCircle as IconArrowRightCircle,
-  IconHgArrowRight02 as IconArrowRightToLine,
+  IconArrowRightToLine,
   IconMingcuteArrowRightUpCircleFill as IconArrowRightUpCircleFill,
   IconHgArrowUp02 as IconArrowUp,
   IconHgArrowUpDown as IconArrowUpDown,
   IconHgArrowUpRight01 as IconArrowUpRight,
-  IconHgArrowUp02 as IconArrowUpToLine,
+  IconArrowUpToLine,
   IconHgAsterisk as IconAsterisk,
-  IconHgAt as IconAtSign,
+  IconAtSign,
   IconHgAudit01 as IconAudit,
-  IconHgCheckmarkBadge01 as IconBadgeCheck,
+  IconBadgeCheck,
   IconHgBadgeDollarSign as IconBadgeDollarSign,
-  IconHgUnavailable as IconBan,
-  IconHgNotification02 as IconBell,
-  IconHgNotification03 as IconBellRing,
-  IconHgPuzzle as IconBlocks,
-  IconHgTextBold as IconBold,
-  IconHgNut as IconBolt,
+  IconBan,
+  IconBell,
+  IconBellRing,
+  IconBlocks,
+  IconBold,
+  IconBolt,
   IconHgBookOpen01 as IconBookOpen,
   IconHgBookmark02 as IconBookmark,
   IconHgBookmarkCheck01 as IconBookmarkCheck,
-  IconHgRobot01 as IconBot,
-  IconHgChatBot as IconBotMessageSquare,
-  IconHgPackage as IconBox,
-  IconHgSourceCode as IconBraces,
+  IconBot,
+  IconBotMessageSquare,
+  IconBox,
+  IconBraces,
   IconHgBrain as IconBrain,
   IconTablerBrandWalmart as IconBrandWalmart,
   IconHgBriefcase01 as IconBriefcase,
@@ -349,60 +440,60 @@ export {
   IconHgCamera01 as IconCamera,
   IconHgCells as IconCells,
   IconMingcuteChat1Fill as IconChatFill,
-  IconHgTick02 as IconCheck,
-  IconHgTickDouble02 as IconCheckCheck,
+  IconCheck,
+  IconCheckCheck,
   IconHgCheckmarkCircle02 as IconCheckCircle,
   IconHgCheckmarkSquare02 as IconCheckSquare2,
   IconHgArrowDown01 as IconChevronDown,
-  IconHgArrowLeft01 as IconChevronLeft,
-  IconHgArrowRight01 as IconChevronRight,
-  IconHgArrowUp01 as IconChevronUp,
-  IconHgArrowUpDown as IconChevronsDownUp,
-  IconHgMoreHorizontal as IconChevronsLeftRightEllipsis,
+  IconChevronLeft,
+  IconChevronRight,
+  IconChevronUp,
+  IconChevronsDownUp,
+  IconChevronsLeftRightEllipsis,
   IconHgUnfoldMore as IconChevronsUpDown,
   IconHgCircle as IconCircle,
   IconHgAlertCircle as IconCircleAlert,
-  IconHgCheckmarkCircle02 as IconCircleCheck,
-  IconHgCheckmarkCircle01 as IconCircleCheckBig,
-  IconHgDashedLineCircle as IconCircleDashed,
-  IconHgRecord as IconCircleDot,
-  IconHgDashedLineCircle as IconCircleDotDashed,
+  IconCircleCheck,
+  IconCircleCheckBig,
+  IconCircleDashed,
+  IconCircleDot,
+  IconCircleDotDashed,
   IconMdiCircle as IconCircleFilled,
   IconHgHelpCircle as IconCircleHelp,
   IconMdiCircleMedium as IconCircleMedium,
   IconHgPlayCircle as IconCirclePlay,
-  IconHgAddCircle as IconCirclePlus,
+  IconCirclePlus,
   IconMdiCircleSmall as IconCircleSmall,
   IconMaterialSymbolsCircle as IconCircleSolid,
   IconHgUserCircle as IconCircleUser,
   IconHgUserCircle as IconCircleUserRound,
-  IconHgCancelCircle as IconCircleX,
+  IconCircleX,
   IconHgClock01 as IconClock,
   IconHgCloudAlert as IconCloudAlert,
-  IconHgCloudSavingDone01 as IconCloudCheck,
-  IconHgRain as IconCloudRain,
-  IconHgCloudLoading as IconCloudSync,
-  IconHgSourceCode as IconCode,
+  IconCloudCheck,
+  IconCloudRain,
+  IconCloudSync,
+  IconCode,
   IconHgLayout2Column as IconColumns,
   IconHgCombine as IconCombine,
   IconHgCommand as IconCommand,
   IconHgComponent as IconComponent,
   IconHgCone01 as IconCone,
-  IconHgMoonEclipse as IconContrast,
+  IconContrast,
   IconHgCopy01 as IconCopy,
   IconHgCreditCard as IconCreditCard,
   IconHgDatabase01 as IconDatabase,
-  IconHgDice as IconDices,
+  IconDices,
   IconHgDisc as IconDisc,
   IconMdiDotsCircle as IconDotsCircle,
   IconHgDownload04 as IconDownload,
   IconMingcuteDownloadFill as IconDownloadFill,
   IconSimpleIconsEbay as IconEbay,
-  IconHgMoreHorizontal as IconEllipsis,
+  IconEllipsis,
   IconSimpleIconsEtsy as IconEtsy,
-  IconHgLinkSquare02 as IconExternalLink,
-  IconHgView as IconEye,
-  IconHgViewOff as IconEyeOff,
+  IconExternalLink,
+  IconEye,
+  IconEyeOff,
   IconHgFile01 as IconFile,
   IconMdiFileCode as IconFileCode,
   IconMdiFileDelimited as IconFileDelimited,
@@ -411,7 +502,7 @@ export {
   IconMdiFileImage as IconFileImage,
   IconMdiFileMusic as IconFileMusic,
   IconMdiFilePdfBox as IconFilePdf,
-  IconHgFileAdd as IconFilePlus,
+  IconFilePlus,
   IconMdiFilePowerpointBox as IconFilePowerPoint,
   IconMdiFileQuestion as IconFileQuestion,
   IconHgFile02 as IconFileText,
@@ -432,22 +523,22 @@ export {
   IconMdiGoogle as IconGoogle,
   IconLogosGoogleIcon as IconGoogleIcon,
   IconLogosGooglePlayIcon as IconGooglePlayIcon,
-  IconHgMortarboard02 as IconGraduationCap,
-  IconHgGrid as IconGrid2X2,
-  IconHgDashboardSquareAdd as IconGrid2X2Plus,
-  IconHgDragDrop as IconGripHorizontal,
-  IconHgMoreVertical as IconGripVertical,
+  IconGraduationCap,
+  IconGrid2X2,
+  IconGrid2X2Plus,
+  IconGripHorizontal,
+  IconGripVertical,
   IconHgGroup as IconGroup,
-  IconHgHold04 as IconHand,
+  IconHand,
   IconHgHardDrive as IconHardDrive,
-  IconHgHashtag as IconHash,
+  IconHash,
   IconHgHeading01 as IconHeading1,
   IconHgHeading02 as IconHeading2,
   IconHgHeading03 as IconHeading3,
-  IconHgFavourite as IconHeart,
+  IconHeart,
   IconHgHelpCircle as IconHelpCircle,
   IconHgHighlighter as IconHighlighter,
-  IconHgClock04 as IconHistory,
+  IconHistory,
   IconHgHome01 as IconHome,
   IconHgHourglass as IconHourglass,
   IconHgImage01 as IconImage,
@@ -573,10 +664,10 @@ export {
   IconHgMoonEclipse as IconSunMoon,
   IconHgTextSuperscript as IconSuperscript,
   IconHgArrowLeftRight as IconSwitchHorizontal,
-  IconHgGridTable as IconTable,
+  IconTable,
   IconHgTablet01 as IconTablet,
-  IconHgComputerTerminal01 as IconTerminal,
-  IconHgParagraph as IconText,
+  IconTerminal,
+  IconText,
   IconHgDelete02 as IconTrash,
   IconHgDelete03 as IconTrash2,
   IconHgAlert02 as IconTriangleAlert,
@@ -598,7 +689,7 @@ export {
   IconHgCancel01 as IconX,
   IconHgCancelCircle as IconXCircle,
   IconHgCancelSquare as IconXSquare,
-  IconHgFlash as IconZap,
+  IconZap,
   IconRiZoomInLine as IconZoomIn,
   IconRiZoomOutLine as IconZoomOut,
 }

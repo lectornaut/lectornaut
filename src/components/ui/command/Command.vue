@@ -11,6 +11,7 @@ const props = withDefaults(
   defineProps<ListboxRootProps & { class?: HTMLAttributes["class"] }>(),
   {
     modelValue: "",
+    highlightOnHover: true,
   }
 )
 
@@ -87,7 +88,7 @@ provideCommandContext({
     v-bind="forwarded"
     :class="
       cn(
-        'bg-popover text-popover-foreground flex size-full flex-col overflow-hidden rounded-4xl p-1',
+        'bg-popover text-popover-foreground flex size-full flex-col overflow-hidden rounded-xl! p-1',
         props.class
       )
     "

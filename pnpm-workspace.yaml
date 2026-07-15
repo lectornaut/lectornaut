@@ -2,6 +2,8 @@ packages:
   - functions
   - shared
 
+ignoreWorkspaceRootCheck: true
+
 allowBuilds:
   re2: false
   "@firebase/util": false

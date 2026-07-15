@@ -234,27 +234,36 @@ const emptyHint = computed(() =>
         </Empty>
 
         <div v-else class="grid gap-1">
-          <button
+          <!-- `AttachmentTrigger` makes the whole card the pick target
+               (open folder / import file); `state="processing"` shimmers
+               the title of the row being imported. -->
+          <Attachment
             v-for="file in files"
             :key="file.id"
-            type="button"
-            class="hover:bg-accent focus-visible:ring-ring flex w-full items-center gap-2 rounded-xl border p-2 text-left focus-visible:ring-2 focus-visible:outline-none"
-            :disabled="importingId !== null && importingId !== file.id"
-            @click="pick(file)"
+            size="sm"
+            class="w-full"
+            :state="importingId === file.id ? 'processing' : 'done'"
           >
-            <div
-              class="bg-muted flex size-9 shrink-0 items-center justify-center rounded border"
-            >
+            <AttachmentMedia>
               <Spinner v-if="importingId === file.id" />
               <Component :is="rowIcon(file)" v-else />
-            </div>
-            <div class="min-w-0 grow">
-              <p class="truncate text-sm font-medium">{{ file.name }}</p>
-              <p class="text-muted-foreground truncate text-xs">
+            </AttachmentMedia>
+            <AttachmentContent>
+              <AttachmentTitle>{{ file.name }}</AttachmentTitle>
+              <AttachmentDescription>
                 {{ isFolder(file) ? "Folder" : rowMeta(file) }}
-              </p>
-            </div>
-          </button>
+              </AttachmentDescription>
+            </AttachmentContent>
+            <AttachmentTrigger
+              :aria-label="
+                isFolder(file)
+                  ? `Open folder ${file.name}`
+                  : `Import ${file.name}`
+              "
+              :disabled="importingId !== null && importingId !== file.id"
+              @click="pick(file)"
+            />
+          </Attachment>
 
           <Button
             v-if="nextPageToken"

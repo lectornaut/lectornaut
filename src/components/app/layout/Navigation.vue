@@ -4,7 +4,7 @@ import { isTauri, useIsFullscreen } from "@/composables/usePlatform"
 import {
   IconBadgeCheck,
   IconGrid2X2Plus,
-  IconGripVertical,
+  IconGripHorizontal,
   IconRotateCcw,
 } from "@/data/icons"
 
@@ -91,7 +91,7 @@ const {
               <div class="flex grow flex-col gap-4 px-6">
                 <!--
                 Unified, draggable roster: every menu item as an Item row with a
-                drag handle (reorder) + Checkbox (visibility). Reordering this
+                drag handle (reorder) + Switch (visibility). Reordering this
                 list persists the active subset's order; see useNavigation.
               -->
                 <Label class="text-muted-foreground text-xs">
@@ -111,7 +111,7 @@ const {
                       size="icon-xs"
                       :aria-label="t('common.reorder')"
                     >
-                      <IconGripVertical />
+                      <IconGripHorizontal />
                     </Button>
                     <ItemMedia variant="icon">
                       <Component :is="item.icon" />
@@ -122,11 +122,9 @@ const {
                       }}</ItemTitle>
                     </ItemContent>
                     <ItemActions>
-                      <Checkbox
+                      <Switch
                         :model-value="isItemActive(item.id)"
-                        @update:model-value="
-                          toggleNavItem(item.id, $event === true)
-                        "
+                        @update:model-value="toggleNavItem(item.id, $event)"
                       />
                     </ItemActions>
                   </Item>
@@ -146,12 +144,7 @@ const {
                       <ItemTitle>{{ t("navigation.agentsSidebar") }}</ItemTitle>
                     </ItemContent>
                     <ItemActions>
-                      <Checkbox
-                        :model-value="agentsSidebarVisible"
-                        @update:model-value="
-                          agentsSidebarVisible = $event === true
-                        "
-                      />
+                      <Switch v-model="agentsSidebarVisible" />
                     </ItemActions>
                   </Item>
                   <template v-if="pickerAgents.length">
@@ -201,11 +194,11 @@ const {
                             </TooltipContent>
                           </Tooltip>
                         </TooltipProvider>
-                        <Checkbox
+                        <Switch
                           :model-value="isAgentVisible(agent.id)"
                           :disabled="!agentsSidebarVisible"
                           @update:model-value="
-                            setAgentVisible(agent.id, $event === true)
+                            setAgentVisible(agent.id, $event)
                           "
                         />
                       </ItemActions>
