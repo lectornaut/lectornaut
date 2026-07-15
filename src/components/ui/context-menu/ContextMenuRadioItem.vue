@@ -1,11 +1,11 @@
 <script setup lang="ts">
-import { CheckIcon } from "@lucide/vue"
-
 import type {
   ContextMenuRadioItemEmits,
   ContextMenuRadioItemProps,
 } from "reka-ui"
+
 import type { HTMLAttributes } from "vue"
+import { CheckIcon } from "@lucide/vue"
 import { reactiveOmit } from "@vueuse/core"
 import {
   ContextMenuItemIndicator,

@@ -30,3 +30,5 @@ minimumReleaseAgeExclude:
   - markstream-vue@1.0.4
   - stream-markdown-parser@1.0.7
   - unhead@3.1.5
+  - pinia@4.0.2
+  - shadcn-vue@2.8.0

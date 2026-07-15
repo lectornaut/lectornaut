@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import { ChevronLeftIcon } from "@lucide/vue"
-
 import type { WithClassAsProps } from "./interface"
+
 import type { ButtonVariants } from "@/components/ui/button"
+import { ChevronLeftIcon } from "@lucide/vue"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { useCarousel } from "./useCarousel"

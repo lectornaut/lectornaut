@@ -55,13 +55,12 @@ const runCommand = (command: PaletteCommand) => {
           <template v-for="(group, index) in visibleGroups" :key="group.id">
             <CommandGroup
               :heading="group.heading"
-              class="**:data-[slot=command-group-heading]:text-muted-foreground **:data-[slot=command-group-heading]:py-2 **:data-[slot=command-group-heading]:pl-3 **:data-[slot=command-group-heading]:text-xs **:data-[slot=command-group-heading]:font-medium"
+              class="**:data-[slot=command-group-heading]:text-muted-foreground **:data-[slot=command-group-heading]:py-2 **:data-[slot=command-group-heading]:pl-2 **:data-[slot=command-group-heading]:text-xs **:data-[slot=command-group-heading]:font-medium"
             >
               <CommandItem
                 v-for="command in group.commands"
                 :key="command.id"
                 :value="command.id"
-                class="data-highlighted:bg-muted data-highlighted:text-foreground data-highlighted:**:[svg]:text-foreground"
                 @select="() => runCommand(command)"
               >
                 <AppAvatar

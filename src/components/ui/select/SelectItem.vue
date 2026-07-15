@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import { CheckIcon } from "@lucide/vue"
-
 import type { SelectItemProps } from "reka-ui"
+
 import type { HTMLAttributes } from "vue"
+import { CheckIcon } from "@lucide/vue"
 import { reactiveOmit } from "@vueuse/core"
 import {
   SelectItem,
