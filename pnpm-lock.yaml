@@ -52,18 +52,15 @@ importers:
       "@fontsource-variable/geist-mono":
         specifier: ^5.2.8
         version: 5.2.8
-      "@hugeicons/core-free-icons":
-        specifier: ^4.2.2
-        version: 4.2.2
-      "@hugeicons/vue":
-        specifier: ^1.0.7
-        version: 1.0.7(vue@3.5.39(typescript@6.0.3))
       "@internationalized/date":
         specifier: 3.12.2
         version: 3.12.2
       "@lectornaut/shared":
         specifier: workspace:*
         version: link:shared
+      "@lucide/vue":
+        specifier: ^1.24.0
+        version: 1.24.0(vue@3.5.39(typescript@6.0.3))
       "@tailwindcss/vite":
         specifier: ^4.3.2
         version: 4.3.2(vite@8.1.4(@types/node@26.1.1)(esbuild@0.28.1)(jiti@2.7.0)(stylus@0.57.0)(terser@5.48.0)(yaml@2.9.0))
@@ -284,8 +281,8 @@ importers:
         specifier: ^6.0.2
         version: 6.0.2
       driver.js:
-        specifier: ^1.6.0
-        version: 1.6.0
+        specifier: ^1.7.0
+        version: 1.7.0
       embla-carousel-vue:
         specifier: ^8.6.0
         version: 8.6.0(vue@3.5.39(typescript@6.0.3))
@@ -3232,20 +3229,6 @@ packages:
     peerDependencies:
       hono: ^4
 
-  "@hugeicons/core-free-icons@4.2.2":
-    resolution:
-      {
-        integrity: sha512-fjQW3p6cwoJmwK3oCnV8Z3PC5sHihDvr2jkAHax8cxqp62GaV/D7B/Rnao+JwicW8fmLZUQ6QrzWfoyMFOEQlQ==,
-      }
-
-  "@hugeicons/vue@1.0.7":
-    resolution:
-      {
-        integrity: sha512-oUE0ztUNYbsMFpMgbV3bsxQBObNkeouomUThFuFPzYC5eV++VTYonStsltJu2MoLMkxV8mzpoVvIbuMPBZSN0w==,
-      }
-    peerDependencies:
-      vue: ^2.6.0 || ^3.0.0
-
   "@humanfs/core@0.19.2":
     resolution:
       {
@@ -4311,6 +4294,14 @@ packages:
       {
         integrity: sha512-N0SxazMj4k65DBfaf1azqtMZd6u7MqluP84/NZnB/io8Td9aleFmAhz9hcbvSfsxT5tdYlJ5qgv5aMJGY4zEtA==,
       }
+
+  "@lucide/vue@1.24.0":
+    resolution:
+      {
+        integrity: sha512-5bNPX0G2YEWdUlBYk7pE8SgDg/f1mkIFpJ9vtE44pW/cwRz7Ioc0tOTESoVJAPvxIELSmYekX+XXIJMjsswNIg==,
+      }
+    peerDependencies:
+      vue: ">=3.0.1"
 
   "@mapbox/geojson-rewind@0.5.2":
     resolution:
@@ -11074,10 +11065,10 @@ packages:
         integrity: sha512-24EU+eORQbPywBicIP44BiqykzEXFwZq1ZQKO5TEr9KrrENyDA7I1NzqhtmmEdQVfAXka0DEbSLPN5nerCqJ8A==,
       }
 
-  driver.js@1.6.0:
+  driver.js@1.7.0:
     resolution:
       {
-        integrity: sha512-gryo9QS7AZhz8J0bmdf42dwaTzcd1BgSJLnaSM7cPJbu8bTW8wIEuiGDy4MoCvB4Sr8wA9g5o2G9EFNVYZGeVQ==,
+        integrity: sha512-IWkESaVWaoxIWu3TqTpLRDgOFmDdjZsg/Oz7hrrr4ApBUapTFm9YCXYnptu3mKN8l4eAdtrxpU54l7kHLK96tw==,
       }
 
   dunder-proto@1.0.1:
@@ -22594,12 +22585,6 @@ snapshots:
     dependencies:
       hono: 4.12.27
 
-  "@hugeicons/core-free-icons@4.2.2": {}
-
-  "@hugeicons/vue@1.0.7(vue@3.5.39(typescript@6.0.3))":
-    dependencies:
-      vue: 3.5.39(typescript@6.0.3)
-
   "@humanfs/core@0.19.2":
     dependencies:
       "@humanfs/types": 0.15.0
@@ -23320,6 +23305,10 @@ snapshots:
     dependencies:
       "@lezer/common": 1.5.2
       "@lezer/highlight": 1.2.3
+
+  "@lucide/vue@1.24.0(vue@3.5.39(typescript@6.0.3))":
+    dependencies:
+      vue: 3.5.39(typescript@6.0.3)
 
   "@mapbox/geojson-rewind@0.5.2":
     dependencies:
@@ -27673,7 +27662,7 @@ snapshots:
       handlebars: 4.7.9
       yaml: 2.9.0
 
-  driver.js@1.6.0: {}
+  driver.js@1.7.0: {}
 
   dunder-proto@1.0.1:
     dependencies:

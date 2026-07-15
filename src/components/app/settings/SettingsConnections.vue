@@ -807,7 +807,7 @@ const openInfoDialog = (provider: ConnectionProvider): void => {
              distinction), same toolbar narrowing; sorting + actions-menu
              anatomy mirror SettingsGroups/SettingsWorkspaces. -->
           <TabsContent value="manage" class="min-w-0">
-            <div class="min-w-0 overflow-clip rounded-2xl border">
+            <div class="min-w-0 overflow-clip rounded border">
               <Table>
                 <TableHeader>
                   <TableRow>

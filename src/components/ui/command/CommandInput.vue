@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { Search01Icon } from "@hugeicons/core-free-icons"
-import { HugeiconsIcon } from "@hugeicons/vue"
+import { SearchIcon } from "@lucide/vue"
+
 import type { ListboxFilterProps } from "reka-ui"
 import type { HTMLAttributes } from "vue"
 import { reactiveOmit } from "@vueuse/core"
@@ -44,11 +44,7 @@ const { filterState } = useCommand()
         "
       />
       <InputGroupAddon>
-        <HugeiconsIcon
-          :stroke-width="2"
-          :icon="Search01Icon"
-          class="size-4 shrink-0 opacity-50"
-        />
+        <SearchIcon class="size-4 shrink-0 opacity-50" />
       </InputGroupAddon>
     </InputGroup>
   </div>

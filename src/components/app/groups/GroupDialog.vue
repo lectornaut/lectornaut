@@ -298,9 +298,7 @@ const handleSubmit = async () => {
               </EmptyTitle>
             </EmptyHeader>
           </Empty>
-          <ItemGroup
-            class="bg-secondary max-h-56 overflow-y-auto rounded-2xl p-3"
-          >
+          <ItemGroup class="bg-secondary max-h-56 overflow-y-auto rounded p-3">
             <Item
               v-for="member in filteredMembers"
               :key="member.userId"

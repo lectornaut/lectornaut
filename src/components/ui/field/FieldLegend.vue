@@ -19,7 +19,7 @@ const props = withDefaults(
     :data-variant="variant"
     :class="
       cn(
-        'mb-1.5 font-medium data-[variant=label]:text-sm data-[variant=legend]:text-base',
+        'mb-3 font-medium data-[variant=label]:text-sm data-[variant=legend]:text-base',
         props.class
       )
     "

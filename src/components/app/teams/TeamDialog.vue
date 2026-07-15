@@ -1275,7 +1275,7 @@ const handleSubmit = async () => {
                   </EmptyTitle>
                 </EmptyHeader>
               </Empty>
-              <ItemGroup v-else class="bg-secondary rounded-2xl p-3">
+              <ItemGroup v-else class="bg-secondary rounded p-3">
                 <Item
                   v-for="member in activeMembers"
                   :key="member.id"
@@ -1532,7 +1532,7 @@ const handleSubmit = async () => {
                   stagedInvites.length > 0 ||
                   (canShowTeamInvitations && visibleTeamInvitations.length > 0)
                 "
-                class="bg-secondary rounded-2xl p-3"
+                class="bg-secondary rounded p-3"
               >
                 <!-- Staged drafts (not yet sent) -->
                 <Item

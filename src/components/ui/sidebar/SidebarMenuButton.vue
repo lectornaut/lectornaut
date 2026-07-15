@@ -54,7 +54,7 @@ const delegatedProps = reactiveOmit(props, "tooltip")
       <template v-if="typeof tooltip === 'string'">
         {{ tooltip }}
       </template>
-      <Component :is="tooltip" v-else />
+      <component :is="tooltip" v-else />
     </TooltipContent>
   </Tooltip>
 </template>

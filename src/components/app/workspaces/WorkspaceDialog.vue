@@ -686,7 +686,7 @@ const handleSubmit = async () => {
             </TabsList>
 
             <!-- Member access -->
-            <TabsContent value="members" class="bg-secondary rounded-2xl p-3">
+            <TabsContent value="members" class="bg-secondary rounded p-3">
               <LoadingState v-if="rolesLoading" />
               <template v-else>
                 <Empty
@@ -825,7 +825,7 @@ const handleSubmit = async () => {
             </TabsContent>
 
             <!-- Group access -->
-            <TabsContent value="groups" class="bg-secondary rounded-2xl p-3">
+            <TabsContent value="groups" class="bg-secondary rounded p-3">
               <LoadingState v-if="groupRolesLoading" />
               <template v-else>
                 <Empty

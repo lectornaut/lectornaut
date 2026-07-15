@@ -752,16 +752,6 @@
   @apply pointer-events-auto;
 }
 
-/*
-  Hugeicons's SVGs are unstyled and default to 1em stroke/0 fill, so they inherit
-  the current text color but come with a hairline stroke. Add a little weight so
-  they look intentional and match the rest of the iconography. This is a global
-  override since the library doesn't namespace its icons
-*/
-[data-hg] path {
-  @apply stroke-2;
-}
-
 /* [data-tauri-drag-region] {
   @apply border;
   @apply border-red-500;

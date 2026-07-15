@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { Cancel01Icon } from "@hugeicons/core-free-icons"
-import { HugeiconsIcon } from "@hugeicons/vue"
+import { XIcon } from "@lucide/vue"
+
 import type { DialogContentEmits, DialogContentProps } from "reka-ui"
 import type { HTMLAttributes } from "vue"
 import { reactiveOmit } from "@vueuse/core"
@@ -58,11 +58,7 @@ const forwarded = useForwardPropsEmits(delegatedProps, emits)
         <DialogClose
           class="hover:bg-secondary absolute top-4 right-4 rounded-md p-0.5 transition-colors"
         >
-          <HugeiconsIcon
-            :stroke-width="2"
-            :icon="Cancel01Icon"
-            class="h-4 w-4"
-          />
+          <XIcon class="h-4 w-4" />
           <span class="sr-only">Close</span>
         </DialogClose>
       </DialogContent>

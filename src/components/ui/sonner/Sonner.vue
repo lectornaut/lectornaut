@@ -1,13 +1,13 @@
 <script lang="ts" setup>
 import {
-  Alert02Icon,
-  Cancel01Icon,
-  CheckmarkCircle02Icon,
-  InformationCircleIcon,
-  Loading03Icon,
+  CircleCheckIcon,
+  InfoIcon,
+  TriangleAlertIcon,
   OctagonXIcon,
-} from "@hugeicons/core-free-icons"
-import { HugeiconsIcon } from "@hugeicons/vue"
+  Loader2Icon,
+  XIcon,
+} from "@lucide/vue"
+
 import type { ToasterProps } from "vue-sonner"
 import { reactiveOmit } from "@vueuse/core"
 import { Toaster as Sonner } from "vue-sonner"
@@ -41,36 +41,24 @@ const delegatedProps = reactiveOmit(props, "class", "toastOptions")
     v-bind="delegatedProps"
   >
     <template #success-icon>
-      <HugeiconsIcon
-        :stroke-width="2"
-        :icon="CheckmarkCircle02Icon"
-        class="size-4"
-      />
+      <CircleCheckIcon class="size-4" />
     </template>
     <template #info-icon>
-      <HugeiconsIcon
-        :stroke-width="2"
-        :icon="InformationCircleIcon"
-        class="size-4"
-      />
+      <InfoIcon class="size-4" />
     </template>
     <template #warning-icon>
-      <HugeiconsIcon :stroke-width="2" :icon="Alert02Icon" class="size-4" />
+      <TriangleAlertIcon class="size-4" />
     </template>
     <template #error-icon>
-      <HugeiconsIcon :stroke-width="2" :icon="OctagonXIcon" class="size-4" />
+      <OctagonXIcon class="size-4" />
     </template>
     <template #loading-icon>
       <div>
-        <HugeiconsIcon
-          :stroke-width="2"
-          :icon="Loading03Icon"
-          class="size-4 animate-spin"
-        />
+        <Loader2Icon class="size-4 animate-spin" />
       </div>
     </template>
     <template #close-icon>
-      <HugeiconsIcon :stroke-width="2" :icon="Cancel01Icon" class="size-4" />
+      <XIcon class="size-4" />
     </template>
   </Sonner>
 </template>

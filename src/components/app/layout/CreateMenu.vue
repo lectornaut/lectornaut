@@ -16,7 +16,7 @@ const { groups } = useCreateActions()
             class="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
           >
             <div
-              class="bg-sidebar-primary text-sidebar-primary-foreground flex aspect-square items-center justify-center rounded-2xl"
+              class="bg-sidebar-primary text-sidebar-primary-foreground flex aspect-square items-center justify-center rounded"
             >
               <IconPlus />
             </div>

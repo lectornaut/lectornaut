@@ -13,7 +13,7 @@ export { default as ItemSeparator } from "./ItemSeparator.vue"
 export { default as ItemTitle } from "./ItemTitle.vue"
 
 export const itemVariants = cva(
-  "[a]:hover:bg-muted rounded-lg border text-sm group/item flex w-full flex-wrap items-center transition-colors duration-100 outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 [a]:transition-colors",
+  "[a]:hover:bg-muted rounded-md border text-sm group/item flex w-full flex-wrap items-center transition-colors duration-100 outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 [a]:transition-colors",
   {
     variants: {
       variant: {
@@ -22,7 +22,7 @@ export const itemVariants = cva(
         muted: "bg-muted/50 border-transparent",
       },
       size: {
-        default: "gap-2.5 px-3 py-2.5",
+        default: "gap-3.5 px-4 py-3.5",
         sm: "gap-2.5 px-3 py-2.5",
         xs: "gap-2 px-2.5 py-2 in-data-[slot=dropdown-menu-content]:p-0",
       },

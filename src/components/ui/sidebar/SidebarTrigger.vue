@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { PanelLeftIcon } from "@hugeicons/core-free-icons"
-import { HugeiconsIcon } from "@hugeicons/vue"
+import { PanelLeftIcon } from "@lucide/vue"
+
 import type { HTMLAttributes } from "vue"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
@@ -22,11 +22,7 @@ const { toggleSidebar } = useSidebar()
     :class="cn('', props.class)"
     @click="toggleSidebar"
   >
-    <HugeiconsIcon
-      :stroke-width="2"
-      :icon="PanelLeftIcon"
-      class="cn-rtl-flip"
-    />
+    <PanelLeftIcon class="cn-rtl-flip" />
     <span class="sr-only">Toggle Sidebar</span>
   </Button>
 </template>

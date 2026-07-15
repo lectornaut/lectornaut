@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { Loading03Icon } from "@hugeicons/core-free-icons"
-import { HugeiconsIcon } from "@hugeicons/vue"
+import { Loader2Icon } from "@lucide/vue"
+
 import type { HTMLAttributes } from "vue"
 import { cn } from "@/lib/utils"
 
@@ -10,9 +10,7 @@ const props = defineProps<{
 </script>
 
 <template>
-  <HugeiconsIcon
-    :stroke-width="2"
-    :icon="Loading03Icon"
+  <Loader2Icon
     role="status"
     aria-label="Loading"
     :class="cn('size-4 animate-spin', props.class)"

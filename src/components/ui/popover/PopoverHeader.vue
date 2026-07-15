@@ -10,7 +10,7 @@ const props = defineProps<{
 <template>
   <div
     data-slot="popover-header"
-    :class="cn('flex flex-col gap-0.5 text-sm', props.class)"
+    :class="cn('flex flex-col gap-1 text-sm', props.class)"
   >
     <slot />
   </div>

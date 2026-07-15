@@ -69,7 +69,7 @@ const jumpToMessage = (messageId: string) => {
     <HoverCardContent
       side="left"
       align="center"
-      class="flex max-h-80 w-64 flex-col gap-0.5 overflow-y-auto rounded-2xl p-1"
+      class="flex max-h-80 w-64 flex-col gap-0.5 overflow-y-auto rounded p-1"
     >
       <button
         v-for="message in userMessages"

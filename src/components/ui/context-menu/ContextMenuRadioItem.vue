@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { Tick02Icon } from "@hugeicons/core-free-icons"
-import { HugeiconsIcon } from "@hugeicons/vue"
+import { CheckIcon } from "@lucide/vue"
+
 import type {
   ContextMenuRadioItemEmits,
   ContextMenuRadioItemProps,
@@ -30,7 +30,7 @@ const forwarded = useForwardPropsEmits(delegatedProps, emits)
     v-bind="forwarded"
     :class="
       cn(
-        'focus:bg-accent focus:text-accent-foreground relative flex cursor-default items-center gap-1.5 rounded-md py-1 pr-8 pl-1.5 text-sm outline-hidden select-none data-disabled:pointer-events-none data-disabled:opacity-50 data-inset:pl-7 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*=size-])]:size-4',
+        'focus:bg-accent focus:text-accent-foreground relative flex cursor-default items-center gap-2 rounded-sm py-1.5 pr-8 pl-2 text-sm outline-hidden select-none data-disabled:pointer-events-none data-disabled:opacity-50 data-inset:pl-8 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*=size-])]:size-4',
         props.class
       )
     "
@@ -38,7 +38,7 @@ const forwarded = useForwardPropsEmits(delegatedProps, emits)
     <span class="pointer-events-none absolute right-2">
       <ContextMenuItemIndicator>
         <slot name="indicator-icon">
-          <HugeiconsIcon :stroke-width="2" :icon="Tick02Icon" />
+          <CheckIcon />
         </slot>
       </ContextMenuItemIndicator>
     </span>
