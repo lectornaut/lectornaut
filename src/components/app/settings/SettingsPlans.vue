@@ -435,7 +435,7 @@ const getButtonLabel = (planId: BillingPlanKey) => {
                   </div>
                 </CollapsibleTrigger>
                 <CollapsibleContent>
-                  <div class="overflow-clip rounded border">
+                  <div class="overflow-clip rounded-md border">
                     <Table class="bg-secondary overflow-clip">
                       <TableHeader class="bg-secondary">
                         <TableRow class="hover:bg-transparent">

@@ -329,7 +329,7 @@ const detailRows = computed<DetailRow[]>(() => {
 </script>
 
 <template>
-  <div class="flex size-full min-h-0 grow flex-col">
+  <div class="flex size-full min-h-0 grow flex-col gap-2">
     <OverlayScrollbarsWrapper>
       <SidebarGroup>
         <SidebarGroupContent>
@@ -440,7 +440,7 @@ const detailRows = computed<DetailRow[]>(() => {
           </p>
           <Empty
             v-if="availableActionTools.length === 0"
-            class="rounded border border-dashed p-4"
+            class="rounded-md border border-dashed p-4"
           >
             <EmptyHeader>
               <EmptyMedia variant="icon">

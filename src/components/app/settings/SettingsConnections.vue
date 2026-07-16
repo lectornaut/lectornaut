@@ -448,7 +448,7 @@ const openInfoDialog = (provider: ConnectionProvider): void => {
         <Tabs default-value="discover" orientation="horizontal">
           <div class="flex items-center justify-between gap-2">
             <TabsList
-              class="no-scrollbar bg-input/50 grid shrink-0 grid-cols-3 justify-start overflow-x-auto rounded-full! border"
+              class="no-scrollbar bg-input/50 grid shrink-0 grid-cols-3 justify-start overflow-x-auto rounded! border"
             >
               <TabsTrigger
                 value="discover"
@@ -531,7 +531,7 @@ const openInfoDialog = (provider: ConnectionProvider): void => {
                             <IconListFilter />
                             <span
                               v-if="isFilterActive"
-                              class="bg-primary absolute -top-0.5 -right-0.5 size-2 rounded-full"
+                              class="bg-primary absolute -top-0.5 -right-0.5 size-2 rounded-md"
                             />
                           </InputGroupButton>
                         </DropdownMenuTrigger>
@@ -807,7 +807,7 @@ const openInfoDialog = (provider: ConnectionProvider): void => {
              distinction), same toolbar narrowing; sorting + actions-menu
              anatomy mirror SettingsGroups/SettingsWorkspaces. -->
           <TabsContent value="manage" class="min-w-0">
-            <div class="min-w-0 overflow-clip rounded border">
+            <div class="min-w-0 overflow-clip rounded-md border">
               <Table>
                 <TableHeader>
                   <TableRow>

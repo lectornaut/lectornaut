@@ -87,7 +87,7 @@ const onToggleEnabled = (value: boolean | string): void => {
 
 <template>
   <Item variant="outline" :class="{ 'opacity-70': statusBadgeKey !== null }">
-    <ItemMedia variant="image" class="rounded-full">
+    <ItemMedia variant="image" class="rounded-md">
       <AppAvatar
         variant="marble"
         :name="avatarSeedEffective"

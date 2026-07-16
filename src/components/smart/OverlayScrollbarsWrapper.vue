@@ -250,8 +250,10 @@ defineExpose({
 
 .overlay-scrollbars-wrapper {
   contain: layout style;
-  --overlay-scrollbars-block-fade-stop: 16px;
-  --overlay-scrollbars-inline-fade-stop: 16px;
+  /* Matches the shadcn scroll-fade default size:
+     min(12%, calc(var(--spacing) * 10)) = min(12%, 2.5rem). */
+  --overlay-scrollbars-block-fade-stop: min(12%, calc(var(--spacing) * 10));
+  --overlay-scrollbars-inline-fade-stop: min(12%, calc(var(--spacing) * 10));
 }
 
 :deep([data-overlayscrollbars-viewport]) {

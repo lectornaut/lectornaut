@@ -86,12 +86,12 @@ const stats = computed(() => {
           class="text-muted-foreground flex items-center gap-3 px-3 pb-2 text-xs"
         >
           <span class="flex items-center gap-1">
-            <span class="bg-primary size-1.5 rounded-full" />
+            <span class="bg-primary size-1.5 rounded-md" />
             {{ t("pages.runs.legendPast") }}
           </span>
           <span class="flex items-center gap-1">
             <span
-              class="size-1.5 rounded-full border border-current opacity-60"
+              class="size-1.5 rounded-md border border-current opacity-60"
             />
             {{ t("pages.runs.legendScheduled") }}
           </span>
@@ -238,7 +238,7 @@ const stats = computed(() => {
                 class="flex items-center gap-2 text-sm"
               >
                 <span
-                  class="size-2 rounded-full"
+                  class="size-2 rounded-md"
                   :class="runStatusDotClass(status)"
                 />
                 <span class="grow">{{ runStatusLabel(status) }}</span>

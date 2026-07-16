@@ -676,7 +676,7 @@ const submitBulkDelete = async () => {
                 :data="memories"
                 :columns="columns"
                 :column-pinning="{ left: ['select'], right: ['actions'] }"
-                class="overflow-clip rounded border"
+                class="overflow-clip rounded-md border"
               >
                 <template #selection-actions>
                   <DropdownMenuLabel class="text-muted-foreground tabular-nums">

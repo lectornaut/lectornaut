@@ -677,31 +677,29 @@ const expandedCard = ref<number | null>(null)
                     <IconCalendar />
                   </Button>
                 </PopoverTrigger>
-                <PopoverContent class="grid w-full">
-                  <div class="px-2 pt-2">
-                    <Select v-model="range">
-                      <Button
-                        variant="outline"
-                        class="w-full justify-between"
-                        as-child
-                      >
-                        <SelectTrigger>
-                          <SelectValue :placeholder="t('common.select')" />
-                        </SelectTrigger>
-                      </Button>
-                      <SelectContent>
-                        <SelectGroup>
-                          <SelectItem
-                            v-for="preset in presets"
-                            :key="preset.id"
-                            :value="preset.value"
-                          >
-                            {{ preset.label }}
-                          </SelectItem>
-                        </SelectGroup>
-                      </SelectContent>
-                    </Select>
-                  </div>
+                <PopoverContent>
+                  <Select v-model="range">
+                    <Button
+                      variant="outline"
+                      class="w-full justify-between"
+                      as-child
+                    >
+                      <SelectTrigger>
+                        <SelectValue :placeholder="t('common.select')" />
+                      </SelectTrigger>
+                    </Button>
+                    <SelectContent>
+                      <SelectGroup>
+                        <SelectItem
+                          v-for="preset in presets"
+                          :key="preset.id"
+                          :value="preset.value"
+                        >
+                          {{ preset.label }}
+                        </SelectItem>
+                      </SelectGroup>
+                    </SelectContent>
+                  </Select>
                   <RangeCalendar
                     v-model="range"
                     :max-value="today(getLocalTimeZone())"

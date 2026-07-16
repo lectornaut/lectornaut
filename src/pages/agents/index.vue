@@ -210,7 +210,7 @@ const openNewAgentDialog = (): void => {
                 as-child
               >
                 <RouterLink :to="`/agents/${row.id}`">
-                  <ItemMedia variant="image" class="rounded-full">
+                  <ItemMedia variant="image" class="rounded-md">
                     <AppAvatar
                       variant="beam"
                       :name="row.avatarSeed"
@@ -245,7 +245,7 @@ const openNewAgentDialog = (): void => {
                 as-child
               >
                 <RouterLink :to="`/agents/${row.id}`">
-                  <ItemMedia variant="image" class="rounded-full">
+                  <ItemMedia variant="image" class="rounded-md">
                     <AppAvatar
                       variant="beam"
                       :name="row.avatarSeed"

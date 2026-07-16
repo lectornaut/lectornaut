@@ -265,7 +265,7 @@ const opStyle = (op: string) => OP_STYLE[op] ?? OP_STYLE.update
                     {{ opStyle(c.op).sign }}
                   </span>
                   <span
-                    class="shrink-0 rounded px-1 py-0.5 text-[10px] font-semibold uppercase"
+                    class="shrink-0 rounded-md px-1 py-0.5 text-[10px] font-semibold uppercase"
                     :class="opStyle(c.op).badge"
                   >
                     {{ c.op }}

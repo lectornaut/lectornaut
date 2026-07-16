@@ -1,4 +1,18 @@
+import {
+  IconFileCode,
+  IconFileDelimited,
+  IconFileDocument,
+  IconFileExcel,
+  IconFileImage,
+  IconFilePdf,
+  IconFilePowerPoint,
+  IconFileQuestion,
+  IconFileText,
+  IconFileVideo,
+  IconFileWord,
+} from "@/data/icons"
 import { type WorkspaceNodeScope } from "@/types/nodes"
+import type { Component } from "vue"
 
 // Size + blocked-type gates live in the shared domain contract — the
 // server-side Drive import must apply the SAME limits (admin SDK bypasses
@@ -104,6 +118,58 @@ export const buildBotSessionAttachmentStoragePath = ({
   ...params
 }: BotSessionAttachmentStoragePathParams) =>
   `${getBotSessionAttachmentStoragePrefix(params)}/${version}/${sanitizeAttachmentFileName(fileName)}`
+
+// Shared file-type icon for attachment cards — SessionAttachments and
+// NodeAttachments render the same mark for the same file.
+export const resolveAttachmentIcon = (attachment: {
+  mimeType?: string | null
+  originalName?: string
+}): Component => {
+  const mimeType = attachment.mimeType?.toLowerCase() ?? ""
+  const fileName = attachment.originalName?.toLowerCase() ?? ""
+
+  if (mimeType.startsWith("image/")) return IconFileImage
+  if (mimeType.startsWith("video/")) return IconFileVideo
+  if (mimeType.includes("pdf") || fileName.endsWith(".pdf")) return IconFilePdf
+  if (mimeType.includes("spreadsheet") || /\.(csv|tsv)$/i.test(fileName)) {
+    return fileName.endsWith(".csv") || fileName.endsWith(".tsv")
+      ? IconFileDelimited
+      : IconFileExcel
+  }
+  if (mimeType.includes("presentation") || /\.(ppt|pptx)$/i.test(fileName)) {
+    return IconFilePowerPoint
+  }
+  if (
+    mimeType.includes("wordprocessingml") ||
+    mimeType.includes("msword") ||
+    /\.(doc|docx)$/i.test(fileName)
+  ) {
+    return IconFileWord
+  }
+  if (
+    mimeType.includes("json") ||
+    mimeType.includes("javascript") ||
+    mimeType.includes("typescript") ||
+    mimeType.includes("xml") ||
+    mimeType.includes("yaml") ||
+    /\.(astro|cjs|css|go|html|java|js|json|jsx|md|mjs|py|rb|rs|sh|sql|svg|toml|ts|tsx|vue|xml|yaml|yml)$/i.test(
+      fileName
+    )
+  ) {
+    return IconFileCode
+  }
+  if (mimeType.startsWith("text/") || /\.(md|rtf|txt)$/i.test(fileName)) {
+    return IconFileText
+  }
+  if (
+    mimeType.includes("officedocument") ||
+    mimeType.includes("opendocument")
+  ) {
+    return IconFileDocument
+  }
+
+  return IconFileQuestion
+}
 
 export const formatAttachmentSize = (
   size: number | null | undefined

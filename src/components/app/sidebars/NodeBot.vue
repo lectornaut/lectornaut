@@ -95,8 +95,8 @@ const onNewNodeChat = () => {
 </script>
 
 <template>
-  <div class="flex size-full min-h-0 grow flex-col">
-    <ButtonGroup class="w-full px-2 pb-2">
+  <div class="flex size-full min-h-0 grow flex-col gap-2">
+    <ButtonGroup>
       <Button
         variant="outline"
         size="sm"

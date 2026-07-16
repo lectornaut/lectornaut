@@ -177,29 +177,25 @@ const clearFilter = () => {
         </template>
       </Button>
     </PopoverTrigger>
-    <PopoverContent class="grid w-full">
-      <div class="p-2">
-        <Select v-model="range">
-          <Button variant="outline" class="w-full justify-between" as-child>
-            <SelectTrigger>
-              <SelectValue
-                :placeholder="t('components.dataTable.selectRange')"
-              />
-            </SelectTrigger>
-          </Button>
-          <SelectContent>
-            <SelectGroup>
-              <SelectItem
-                v-for="preset in presets"
-                :key="preset.id"
-                :value="preset.value"
-              >
-                {{ preset.label }}
-              </SelectItem>
-            </SelectGroup>
-          </SelectContent>
-        </Select>
-      </div>
+    <PopoverContent>
+      <Select v-model="range">
+        <Button variant="outline" class="w-full justify-between" as-child>
+          <SelectTrigger>
+            <SelectValue :placeholder="t('components.dataTable.selectRange')" />
+          </SelectTrigger>
+        </Button>
+        <SelectContent>
+          <SelectGroup>
+            <SelectItem
+              v-for="preset in presets"
+              :key="preset.id"
+              :value="preset.value"
+            >
+              {{ preset.label }}
+            </SelectItem>
+          </SelectGroup>
+        </SelectContent>
+      </Select>
       <RangeCalendar
         v-model="range"
         :max-value="today(getLocalTimeZone())"

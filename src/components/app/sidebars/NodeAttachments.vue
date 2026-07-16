@@ -13,18 +13,6 @@ import {
   IconAlertTriangle,
   IconArrowDownToLine,
   IconCircleAlert,
-  IconFileCode,
-  IconFileDelimited,
-  IconFileDocument,
-  IconFileExcel,
-  IconFileImage,
-  IconFilePdf,
-  IconFilePowerPoint,
-  IconFileQuestion,
-  IconFileText,
-  IconFileVideo,
-  IconFileWord,
-  IconLink2,
   IconLogosGoogleDrive,
   IconPencil,
   IconRefreshCcw,
@@ -35,6 +23,7 @@ import {
 import {
   formatAttachmentSize,
   normalizeAttachmentDisplayName,
+  resolveAttachmentIcon,
   sanitizeAttachmentFileName,
 } from "@/helpers/node-attachments"
 import { showErrorToast, showSuccessToast } from "@/helpers/toast"
@@ -54,7 +43,6 @@ import { save } from "@tauri-apps/plugin-dialog"
 import { revealItemInDir } from "@tauri-apps/plugin-opener"
 import { getDownloadURL } from "firebase/storage"
 import { storeToRefs } from "pinia"
-import type { Component } from "vue"
 import { toRefs } from "vue"
 
 const { t } = useI18n()
@@ -172,20 +160,6 @@ const hasEditChanges = computed(() => {
   )
 })
 
-const formatTimestamp = (
-  value:
-    | {
-        toDate?: () => Date
-      }
-    | null
-    | undefined
-) => {
-  const timestamp = value?.toDate?.()
-  return timestamp
-    ? useDateFormat(timestamp, "MMM D, YYYY · h:mm A").value
-    : "—"
-}
-
 const formatMimeType = (value: string | null | undefined) => {
   if (!value) return t("components.nodeAttachments.unknownType")
   return value
@@ -220,55 +194,6 @@ const getAttachmentDownloadName = (attachment: WorkspaceNodeAttachment) => {
 
 const getAttachmentDownloadUrl = async (storagePath: string) => {
   return getDownloadURL(getStorageFileRef(storagePath))
-}
-
-const resolveAttachmentIcon = (
-  attachment: WorkspaceNodeAttachment
-): Component => {
-  const mimeType = attachment.mimeType?.toLowerCase() ?? ""
-  const fileName = attachment.originalName.toLowerCase()
-
-  if (mimeType.startsWith("image/")) return IconFileImage
-  if (mimeType.startsWith("video/")) return IconFileVideo
-  if (mimeType.includes("pdf") || fileName.endsWith(".pdf")) return IconFilePdf
-  if (mimeType.includes("spreadsheet") || /\.(csv|tsv)$/i.test(fileName)) {
-    return fileName.endsWith(".csv") || fileName.endsWith(".tsv")
-      ? IconFileDelimited
-      : IconFileExcel
-  }
-  if (mimeType.includes("presentation") || /\.(ppt|pptx)$/i.test(fileName)) {
-    return IconFilePowerPoint
-  }
-  if (
-    mimeType.includes("wordprocessingml") ||
-    mimeType.includes("msword") ||
-    /\.(doc|docx)$/i.test(fileName)
-  ) {
-    return IconFileWord
-  }
-  if (
-    mimeType.includes("json") ||
-    mimeType.includes("javascript") ||
-    mimeType.includes("typescript") ||
-    mimeType.includes("xml") ||
-    mimeType.includes("yaml") ||
-    /\.(astro|cjs|css|go|html|java|js|json|jsx|md|mjs|py|rb|rs|sh|sql|svg|toml|ts|tsx|vue|xml|yaml|yml)$/i.test(
-      fileName
-    )
-  ) {
-    return IconFileCode
-  }
-  if (mimeType.startsWith("text/") || /\.(md|rtf|txt)$/i.test(fileName)) {
-    return IconFileText
-  }
-  if (
-    mimeType.includes("officedocument") ||
-    mimeType.includes("opendocument")
-  ) {
-    return IconFileDocument
-  }
-
-  return IconFileQuestion
 }
 
 const dismissUploadState = (id: string) => {
@@ -555,13 +480,13 @@ watch(selectedCreateFiles, async (files) => {
 </script>
 
 <template>
-  <div class="flex size-full min-h-0 grow flex-col">
-    <ButtonGroup class="w-full px-2 pb-2">
+  <div class="flex size-full min-h-0 grow flex-col gap-2">
+    <ButtonGroup>
       <Button
         variant="outline"
         size="sm"
         class="grow justify-start"
-        :disabled="isReadOnly"
+        :disabled="isReadOnly || uploadInProgress"
         @click="triggerFilePicker"
       >
         <IconUpload />
@@ -571,7 +496,7 @@ watch(selectedCreateFiles, async (files) => {
         v-if="driveAvailable"
         variant="outline"
         size="sm"
-        :disabled="isReadOnly"
+        :disabled="isReadOnly || uploadInProgress"
         @click="drivePickerOpen = true"
       >
         <IconLogosGoogleDrive />
@@ -580,7 +505,6 @@ watch(selectedCreateFiles, async (files) => {
         </span>
       </Button>
     </ButtonGroup>
-
     <DriveFilePicker
       v-if="driveAvailable"
       v-model:open="drivePickerOpen"
@@ -589,7 +513,7 @@ watch(selectedCreateFiles, async (files) => {
       @imported="onDriveImported"
     />
     <OverlayScrollbarsWrapper>
-      <div class="p-2">
+      <div class="flex flex-col gap-2">
         <div v-if="readOnlyMessage" class="text-muted-foreground text-xs">
           {{ readOnlyMessage }}
         </div>
@@ -597,20 +521,6 @@ watch(selectedCreateFiles, async (files) => {
         <!-- In-flight uploads — `state="uploading"` shimmers the title
              automatically while the upload is in flight -->
         <div v-if="uploadStates.length" class="flex flex-col gap-2">
-          <div class="flex items-center justify-between gap-2">
-            <p class="text-xs font-medium">
-              {{ t("components.nodeAttachments.uploadsTitle") }}
-            </p>
-            <Button
-              v-if="!uploadInProgress"
-              variant="ghost"
-              size="sm"
-              @click="uploadStates = []"
-            >
-              {{ t("components.nodeAttachments.clear") }}
-            </Button>
-          </div>
-
           <Attachment
             v-for="item in uploadStates"
             :key="item.id"
@@ -649,7 +559,7 @@ watch(selectedCreateFiles, async (files) => {
           :label="t('components.nodeAttachments.loadingAttachments')"
         />
 
-        <div v-else-if="error" class="space-y-2 rounded border p-2">
+        <div v-else-if="error" class="space-y-2 rounded-md border p-2">
           <div class="text-destructive flex items-start gap-2 text-xs">
             <IconAlertTriangle />
             <span>{{ error }}</span>
@@ -667,7 +577,7 @@ watch(selectedCreateFiles, async (files) => {
         >
           <EmptyHeader>
             <EmptyMedia variant="icon">
-              <IconLink2 />
+              <IconUpload />
             </EmptyMedia>
             <EmptyTitle>
               {{ t("components.nodeAttachments.emptyTitle") }}
@@ -682,100 +592,62 @@ watch(selectedCreateFiles, async (files) => {
           </EmptyHeader>
         </Empty>
 
-        <div v-else class="flex flex-col gap-2">
-          <Attachment
-            v-for="attachment in attachments"
-            :key="attachment.id"
-            class="w-full"
-          >
-            <AttachmentMedia>
-              <Component :is="resolveAttachmentIcon(attachment)" />
-            </AttachmentMedia>
-            <AttachmentContent>
-              <AttachmentTitle>{{ attachment.displayName }}</AttachmentTitle>
-              <AttachmentDescription>
-                {{ attachment.originalName }}
-              </AttachmentDescription>
-            </AttachmentContent>
-            <AttachmentActions>
-              <AttachmentAction
-                :aria-label="t('actions.download')"
-                :disabled="
-                  downloadingIds.includes(attachment.id) ||
-                  isAttachmentPending(attachment.id) ||
-                  !attachment.storagePath
-                "
-                @click="downloadAttachment(attachment)"
-              >
-                <Spinner v-if="downloadingIds.includes(attachment.id)" />
-                <IconArrowDownToLine v-else />
-              </AttachmentAction>
-              <AttachmentAction
-                :aria-label="t('actions.rename')"
-                :disabled="isReadOnly || isAttachmentPending(attachment.id)"
-                @click="openEditDialog(attachment)"
-              >
-                <IconPencil />
-              </AttachmentAction>
-              <AttachmentAction
-                :aria-label="t('actions.delete')"
-                :disabled="
-                  isReadOnly ||
-                  deletingId === attachment.id ||
-                  isAttachmentPending(attachment.id)
-                "
-                @click="openDeleteDialog(attachment)"
-              >
-                <Spinner v-if="deletingId === attachment.id" />
-                <IconTrash2 v-else />
-              </AttachmentAction>
-            </AttachmentActions>
-            <div class="flex w-full flex-wrap gap-2">
-              <Badge
-                v-if="isAttachmentPending(attachment.id)"
-                variant="secondary"
-              >
-                <Spinner />
-                {{ t("components.nodeAttachments.syncing") }}
-              </Badge>
-              <Badge variant="outline">
-                <IconArrowDownToLine />
-                {{ formatAttachmentSize(attachment.size) }}
-              </Badge>
-              <Badge variant="outline">
-                {{ formatMimeType(attachment.mimeType) }}
-              </Badge>
-            </div>
-            <dl
-              class="grid w-full grid-cols-[auto_1fr] gap-x-2 gap-y-1 text-xs"
+        <Attachment
+          v-for="attachment in attachments"
+          v-else
+          :key="attachment.id"
+          class="w-full"
+        >
+          <AttachmentMedia>
+            <Component :is="resolveAttachmentIcon(attachment)" />
+          </AttachmentMedia>
+          <AttachmentContent>
+            <AttachmentTitle>{{ attachment.displayName }}</AttachmentTitle>
+            <AttachmentDescription>
+              {{ formatAttachmentSize(attachment.size) }} ·
+              {{
+                isAttachmentPending(attachment.id)
+                  ? t("components.nodeAttachments.syncing")
+                  : formatMimeType(attachment.mimeType)
+              }}
+            </AttachmentDescription>
+          </AttachmentContent>
+          <AttachmentActions>
+            <AttachmentAction
+              :aria-label="t('actions.download')"
+              :disabled="
+                downloadingIds.includes(attachment.id) ||
+                isAttachmentPending(attachment.id) ||
+                !attachment.storagePath
+              "
+              @click="downloadAttachment(attachment)"
             >
-              <dt class="text-muted-foreground">
-                {{ t("components.nodeAttachments.createdLabel") }}
-              </dt>
-              <dd>{{ formatTimestamp(attachment.createdAt) }}</dd>
-
-              <dt class="text-muted-foreground">
-                {{ t("components.nodeAttachments.updatedLabel") }}
-              </dt>
-              <dd>{{ formatTimestamp(attachment.updatedAt) }}</dd>
-            </dl>
-          </Attachment>
-        </div>
+              <Spinner v-if="downloadingIds.includes(attachment.id)" />
+              <IconArrowDownToLine v-else />
+            </AttachmentAction>
+            <AttachmentAction
+              :aria-label="t('actions.rename')"
+              :disabled="isReadOnly || isAttachmentPending(attachment.id)"
+              @click="openEditDialog(attachment)"
+            >
+              <IconPencil />
+            </AttachmentAction>
+            <AttachmentAction
+              :aria-label="t('actions.delete')"
+              :disabled="
+                isReadOnly ||
+                deletingId === attachment.id ||
+                isAttachmentPending(attachment.id)
+              "
+              @click="openDeleteDialog(attachment)"
+            >
+              <Spinner v-if="deletingId === attachment.id" />
+              <IconTrash2 v-else />
+            </AttachmentAction>
+          </AttachmentActions>
+        </Attachment>
       </div>
     </OverlayScrollbarsWrapper>
-    <div class="p-2">
-      <p class="text-muted-foreground text-xs">
-        {{
-          attachments.length === 1
-            ? t("components.nodeAttachments.countSingular", {
-                count: attachments.length,
-              })
-            : t("components.nodeAttachments.countPlural", {
-                count: attachments.length,
-              })
-        }}
-      </p>
-    </div>
   </div>
 
   <Dialog

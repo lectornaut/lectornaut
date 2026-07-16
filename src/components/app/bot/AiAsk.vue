@@ -70,7 +70,7 @@ const openHistory = () => {
           <AiChatShell />
         </Teleport>
         <SheetContent
-          class="m-2 mt-[calc(var(--spacing-titlebar-height,0px)+(--spacing(2)))] h-auto! gap-0 overflow-clip rounded border"
+          class="m-2 mt-[calc(var(--spacing-titlebar-height,0px)+(--spacing(2)))] h-auto! gap-0 overflow-clip rounded-md border"
           :class="{ 'mt-12': isTauri && !isFullscreen }"
           :show-close-button="false"
         >

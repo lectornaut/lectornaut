@@ -194,7 +194,7 @@ const handleSubmit = async () => {
               <TooltipProvider>
                 <Tooltip>
                   <TooltipTrigger as-child>
-                    <div class="bg-secondary cursor-pointer rounded-full p-3">
+                    <div class="bg-secondary cursor-pointer rounded-md p-3">
                       <AppAvatar
                         class="size-16"
                         :src="photoPreview"
@@ -298,7 +298,9 @@ const handleSubmit = async () => {
               </EmptyTitle>
             </EmptyHeader>
           </Empty>
-          <ItemGroup class="bg-secondary max-h-56 overflow-y-auto rounded p-3">
+          <ItemGroup
+            class="bg-secondary max-h-56 overflow-y-auto rounded-md p-3"
+          >
             <Item
               v-for="member in filteredMembers"
               :key="member.userId"
@@ -330,7 +332,7 @@ const handleSubmit = async () => {
                   <Checkbox
                     :model-value="isSelected(member.userId)"
                     :disabled="isSaving"
-                    class="rounded-full border-none opacity-100! disabled:opacity-25! data-[state=checked]:bg-transparent"
+                    class="rounded-md border-none opacity-100! disabled:opacity-25! data-[state=checked]:bg-transparent"
                     @update:model-value="
                       (value) => toggleMember(member.userId, value === true)
                     "

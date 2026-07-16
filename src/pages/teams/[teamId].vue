@@ -128,9 +128,9 @@ watch(
     <!-- Team Header -->
     <div class="flex flex-col items-center justify-center p-2">
       <div
-        class="aspect-video max-h-40 w-full rounded border bg-[repeating-linear-gradient(45deg,var(--color-muted)_0,var(--color-muted)_1px,transparent_0,transparent_50%)] bg-size-[8px_8px]"
+        class="aspect-video max-h-40 w-full rounded-md border bg-[repeating-linear-gradient(45deg,var(--color-muted)_0,var(--color-muted)_1px,transparent_0,transparent_50%)] bg-size-[8px_8px]"
       ></div>
-      <div class="bg-background mx-auto -mt-10 rounded-full border p-1">
+      <div class="bg-background mx-auto -mt-10 rounded-md border p-1">
         <AppAvatar class="size-20" :src="team.photoURL" :name="team.name" />
       </div>
     </div>

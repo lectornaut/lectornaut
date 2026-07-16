@@ -62,14 +62,14 @@ const jumpToMessage = (messageId: string) => {
           v-for="message in userMessages"
           :key="message.id"
           :data-current="message.id === currentAnchorId"
-          class="bg-muted-foreground/40 data-[current=true]:bg-foreground h-0.5 min-h-px w-2 shrink rounded-full transition-colors"
+          class="bg-muted-foreground/40 data-[current=true]:bg-foreground h-0.5 min-h-px w-2 shrink rounded-md transition-colors"
         />
       </button>
     </HoverCardTrigger>
     <HoverCardContent
       side="left"
       align="center"
-      class="flex max-h-80 w-64 flex-col gap-0.5 overflow-y-auto rounded p-1"
+      class="flex max-h-80 w-64 flex-col gap-0.5 overflow-y-auto rounded-md p-1"
     >
       <button
         v-for="message in userMessages"

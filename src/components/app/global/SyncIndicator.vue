@@ -129,7 +129,7 @@ const errorMessage = computed(
             <Item class="group" size="xs">
               <ItemMedia
                 variant="icon"
-                class="size-8 rounded-full"
+                class="size-8 rounded-md"
                 :class="syncBadgeClass"
               >
                 <Component :is="syncIcon" class="size-4" />

@@ -77,7 +77,7 @@ const {
             </SidebarMenuItem>
           </SheetTrigger>
           <SheetContent
-            class="m-2 mt-[calc(var(--spacing-titlebar-height,0px)+(--spacing(2)))] h-auto! gap-0 overflow-clip rounded border"
+            class="m-2 mt-[calc(var(--spacing-titlebar-height,0px)+(--spacing(2)))] h-auto! gap-0 overflow-clip rounded-md border"
             side="left"
             :class="{ 'mt-12': isTauri && !isFullscreen }"
           >
@@ -156,7 +156,7 @@ const {
                       :data-disabled="!agentsSidebarVisible || undefined"
                       class="data-disabled:opacity-50"
                     >
-                      <ItemMedia variant="image" class="rounded-full">
+                      <ItemMedia variant="image" class="rounded-md">
                         <AppAvatar
                           variant="beam"
                           :name="agentAvatarSeed(agent)"

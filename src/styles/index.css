@@ -138,7 +138,7 @@
     @apply size-1.5;
     @apply bg-muted/50;
     @apply bg-clip-content;
-    @apply rounded-full;
+    @apply rounded;
     @apply border-3;
     @apply border-transparent;
   }
@@ -157,7 +157,7 @@
 
   ::-webkit-color-swatch {
     @apply border-0;
-    @apply rounded-full;
+    @apply rounded;
   }
 
   ::highlight(search-results) {
@@ -719,7 +719,7 @@
 */
 [data-slot="dropdown-menu-content"] {
   width: max-content;
-  min-width: max(16rem, var(--reka-dropdown-menu-trigger-width, 0px));
+  min-width: max(8rem, var(--reka-dropdown-menu-trigger-width, 0px));
   max-width: var(--reka-dropdown-menu-content-available-width, 100vw);
 }
 
@@ -750,6 +750,23 @@
 [data-slot="alert-dialog-content"][data-state="open"],
 [data-slot="dialog-content"][data-state="open"] {
   @apply pointer-events-auto;
+}
+
+/*
+  The re-vendored shadcn Sidebar dropped `h-full` from its `collapsible="none"`
+  branch (upstream ships it). Every page sidebar is a `collapsible="none"`
+  Sidebar teleported into a fixed-height panel slot (#left-sidebar /
+  #right-sidebar), so without it the sidebar shrinks to content height and
+  SidebarContent's `flex-1 min-h-0 overflow-auto` never gets a bound — content
+  overflows the panel with no scroll. Restore the height here instead of
+  editing the vendored component: the none-branch root is the only
+  `data-slot="sidebar"` element without `data-mobile` (Sheet branch) or
+  `data-variant` (desktop wrapper branch). Unlayered like the rules around it
+  so it wins over the component's utilities; a `h-*!` utility on a caller can
+  still override.
+*/
+[data-slot="sidebar"]:not([data-mobile], [data-variant]) {
+  @apply h-full;
 }
 
 /* [data-tauri-drag-region] {

@@ -1041,7 +1041,7 @@ const handleSubmit = async () => {
                   <TooltipTrigger as-child>
                     <div
                       :class="[
-                        'bg-secondary rounded-full p-3',
+                        'dark:bg-input/30 rounded-md border p-2.5 shadow-xs',
                         {
                           'cursor-not-allowed opacity-50':
                             !canUpdateTeam && mode === 'edit',
@@ -1275,7 +1275,10 @@ const handleSubmit = async () => {
                   </EmptyTitle>
                 </EmptyHeader>
               </Empty>
-              <ItemGroup v-else class="bg-secondary rounded p-3">
+              <ItemGroup
+                v-else
+                class="dark:bg-input/30 rounded-md border p-2.5 shadow-xs"
+              >
                 <Item
                   v-for="member in activeMembers"
                   :key="member.id"
@@ -1532,7 +1535,7 @@ const handleSubmit = async () => {
                   stagedInvites.length > 0 ||
                   (canShowTeamInvitations && visibleTeamInvitations.length > 0)
                 "
-                class="bg-secondary rounded p-3"
+                class="dark:bg-input/30 rounded-md border p-2.5 shadow-xs"
               >
                 <!-- Staged drafts (not yet sent) -->
                 <Item

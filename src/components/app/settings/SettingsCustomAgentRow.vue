@@ -86,10 +86,10 @@ const onToggleEnabled = (value: boolean | string): void => {
     <!--
       `variant="image"` on ItemMedia gives the responsive size-10 /
       size-8 / size-6 sizing the family already encodes for different
-      Item sizes. We override `rounded-sm` → `rounded-full` because
+      Item sizes. We override `rounded-sm` → `rounded` because
       boring-avatars renders a SVG portrait that wants a circle clip.
     -->
-    <ItemMedia variant="image" class="rounded-full">
+    <ItemMedia variant="image" class="rounded-md">
       <AppAvatar variant="beam" :name="avatarSeedEffective" class="size-full" />
     </ItemMedia>
 

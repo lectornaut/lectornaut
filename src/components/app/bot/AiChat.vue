@@ -354,7 +354,7 @@ const renderedMessages = computed(() =>
        viewport for the chat surface only; if streaming ever feels
        janky again, drop `auto-scroll` first. -->
   <MessageScrollerProvider v-else :key="scrollerSessionKey" auto-scroll>
-    <MessageScroller class="flex-1">
+    <MessageScroller>
       <MessageScrollerViewport>
         <MessageScrollerContent
           class="messages-list justify-end gap-0 px-2 py-4"

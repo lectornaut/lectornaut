@@ -1,6 +1,6 @@
 <script lang="ts" setup>
 /**
- * DriveFilePicker — in-app "Add from Drive" dialog
+ * DriveFilePicker — in-app "Add from Drive" sheet
  * (docs/connections-google-drive-d3.prompt.md). Browses the member's
  * connected Google Drive through the `listDriveFiles` callable — the
  * deliberate replacement for Google's Picker widget, so OAuth tokens never
@@ -13,9 +13,10 @@
  * one-level folder drill-in (clicking a folder scopes the list to it; the
  * "All files" chip backs out). Pagination via the API's opaque pageToken.
  * Binding problems (not connected / needs reauth / app disabled) surface as
- * the server's own message in the dialog body — the copy steers the member.
+ * the server's own message in the sheet body — the copy steers the member.
  */
 import { listDriveFiles, type DriveFileRow } from "@/composables/useFunctions"
+import { isTauri, useIsFullscreen } from "@/composables/usePlatform"
 import {
   IconFile,
   IconFileImage,
@@ -53,6 +54,8 @@ const props = defineProps<{
 }>()
 
 const open = defineModel<boolean>("open", { default: false })
+
+const isFullscreen = useIsFullscreen()
 
 const emit = defineEmits<{
   /** Fired after a successful import with the new attachment's id. */
@@ -173,110 +176,127 @@ const emptyHint = computed(() =>
 </script>
 
 <template>
-  <Dialog v-model:open="open">
-    <DialogContent class="flex max-h-[80vh] flex-col gap-3 sm:max-w-lg">
-      <DialogHeader>
-        <DialogTitle>Add from Google Drive</DialogTitle>
-        <DialogDescription>
+  <Sheet v-model:open="open">
+    <!-- House floating-sheet treatment (Agents.vue / AiAsk.vue): inset rounded
+         panel, `h-auto!` so inset-y-0 + margins define a definite height — the
+         files list scrolls via OverlayScrollbarsWrapper, whose inner viewport
+         resolves `height: 100%` against this flex column. -->
+    <SheetContent
+      class="m-2 mt-[calc(var(--spacing-titlebar-height,0px)+(--spacing(2)))] h-auto! gap-0 overflow-clip rounded-md border"
+      :class="{ 'mt-12': isTauri && !isFullscreen }"
+    >
+      <SheetHeader>
+        <SheetTitle>Add from Google Drive</SheetTitle>
+        <SheetDescription>
           Pick a file from your connected Drive. Docs are imported as markdown,
           Sheets as CSV.
-        </DialogDescription>
-      </DialogHeader>
+        </SheetDescription>
+      </SheetHeader>
 
-      <InputGroup>
-        <InputGroupAddon>
-          <IconSearch />
-        </InputGroupAddon>
-        <InputGroupInput
-          v-model="search"
-          placeholder="Search your Drive..."
-          :disabled="!!listError && files.length === 0 && !search"
-        />
-      </InputGroup>
+      <!-- SheetContent has no built-in padding (DialogContent did), so the
+           pinned controls carry their own gutters. -->
+      <div class="flex flex-col gap-2 px-4 pb-2">
+        <InputGroup>
+          <InputGroupAddon>
+            <IconSearch />
+          </InputGroupAddon>
+          <InputGroupInput
+            v-model="search"
+            placeholder="Search your Drive..."
+            :disabled="!!listError && files.length === 0 && !search"
+          />
+        </InputGroup>
 
-      <div v-if="folder" class="flex items-center gap-1">
-        <Badge variant="secondary" class="max-w-full">
-          <IconFolder />
-          <span class="truncate">{{ folder.name }}</span>
-        </Badge>
-        <Button variant="ghost" size="icon-sm" @click="exitFolder">
-          <IconX />
-          <span class="sr-only">All files</span>
-        </Button>
-      </div>
-
-      <div
-        v-if="importError"
-        class="text-destructive rounded-xl border p-2 text-xs"
-      >
-        {{ importError }}
-      </div>
-
-      <OverlayScrollbarsWrapper class="min-h-0 grow">
-        <LoadingState v-if="loading" label="Loading your Drive..." />
+        <div v-if="folder" class="flex items-center gap-1">
+          <Badge variant="secondary" class="max-w-full">
+            <IconFolder />
+            <span class="truncate">{{ folder.name }}</span>
+          </Badge>
+          <Button variant="ghost" size="icon-sm" @click="exitFolder">
+            <IconX />
+            <span class="sr-only">All files</span>
+          </Button>
+        </div>
 
         <div
-          v-else-if="listError"
-          class="text-muted-foreground space-y-2 rounded-xl border border-dashed p-4 text-sm"
+          v-if="importError"
+          class="text-destructive rounded-xl border p-2 text-xs"
         >
-          <p>{{ listError }}</p>
-          <Button variant="secondary" size="sm" @click="load()">
-            Try again
-          </Button>
+          {{ importError }}
         </div>
+      </div>
 
-        <Empty v-else-if="files.length === 0" class="border-dashed p-6">
-          <EmptyHeader>
-            <EmptyMedia variant="icon"><IconSearch /></EmptyMedia>
-            <EmptyTitle>Nothing found</EmptyTitle>
-            <EmptyDescription>{{ emptyHint }}</EmptyDescription>
-          </EmptyHeader>
-        </Empty>
+      <!-- House sheet-scroll treatment (Shortcuts.vue / Changelog.vue): bare
+           wrapper as a direct flex child of SheetContent, gutters on the
+           inner scroll content so the scrollbar and fade hints span the
+           sheet's full width. -->
+      <OverlayScrollbarsWrapper>
+        <div class="flex grow flex-col px-4 pb-4">
+          <LoadingState v-if="loading" label="Loading your Drive..." />
 
-        <div v-else class="grid gap-1">
-          <!-- `AttachmentTrigger` makes the whole card the pick target
+          <div
+            v-else-if="listError"
+            class="text-muted-foreground space-y-2 rounded-xl border border-dashed p-4 text-sm"
+          >
+            <p>{{ listError }}</p>
+            <Button variant="secondary" size="sm" @click="load()">
+              Try again
+            </Button>
+          </div>
+
+          <Empty v-else-if="files.length === 0" class="border-dashed p-6">
+            <EmptyHeader>
+              <EmptyMedia variant="icon"><IconSearch /></EmptyMedia>
+              <EmptyTitle>Nothing found</EmptyTitle>
+              <EmptyDescription>{{ emptyHint }}</EmptyDescription>
+            </EmptyHeader>
+          </Empty>
+
+          <div v-else class="grid gap-1">
+            <!-- `AttachmentTrigger` makes the whole card the pick target
                (open folder / import file); `state="processing"` shimmers
                the title of the row being imported. -->
-          <Attachment
-            v-for="file in files"
-            :key="file.id"
-            size="sm"
-            class="w-full"
-            :state="importingId === file.id ? 'processing' : 'done'"
-          >
-            <AttachmentMedia>
-              <Spinner v-if="importingId === file.id" />
-              <Component :is="rowIcon(file)" v-else />
-            </AttachmentMedia>
-            <AttachmentContent>
-              <AttachmentTitle>{{ file.name }}</AttachmentTitle>
-              <AttachmentDescription>
-                {{ isFolder(file) ? "Folder" : rowMeta(file) }}
-              </AttachmentDescription>
-            </AttachmentContent>
-            <AttachmentTrigger
-              :aria-label="
-                isFolder(file)
-                  ? `Open folder ${file.name}`
-                  : `Import ${file.name}`
-              "
-              :disabled="importingId !== null && importingId !== file.id"
-              @click="pick(file)"
-            />
-          </Attachment>
+            <Attachment
+              v-for="file in files"
+              :key="file.id"
+              size="sm"
+              class="w-full"
+              :state="importingId === file.id ? 'processing' : 'done'"
+            >
+              <AttachmentMedia>
+                <Spinner v-if="importingId === file.id" />
+                <Component :is="rowIcon(file)" v-else />
+              </AttachmentMedia>
+              <AttachmentContent>
+                <AttachmentTitle>{{ file.name }}</AttachmentTitle>
+                <AttachmentDescription>
+                  {{ isFolder(file) ? "Folder" : rowMeta(file) }}
+                </AttachmentDescription>
+              </AttachmentContent>
+              <AttachmentTrigger
+                :aria-label="
+                  isFolder(file)
+                    ? `Open folder ${file.name}`
+                    : `Import ${file.name}`
+                "
+                :disabled="importingId !== null && importingId !== file.id"
+                @click="pick(file)"
+              />
+            </Attachment>
 
-          <Button
-            v-if="nextPageToken"
-            variant="ghost"
-            size="sm"
-            :disabled="loadingMore"
-            @click="load(true)"
-          >
-            <Spinner v-if="loadingMore" />
-            Load more
-          </Button>
+            <Button
+              v-if="nextPageToken"
+              variant="ghost"
+              size="sm"
+              :disabled="loadingMore"
+              @click="load(true)"
+            >
+              <Spinner v-if="loadingMore" />
+              Load more
+            </Button>
+          </div>
         </div>
       </OverlayScrollbarsWrapper>
-    </DialogContent>
-  </Dialog>
+    </SheetContent>
+  </Sheet>
 </template>

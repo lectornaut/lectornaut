@@ -91,7 +91,7 @@ const accentSwatchStyle = (option: ColorSwatch<AccentId>) => ({
               id="onboarding-custom-base-color"
               v-model="customBaseColor"
               type="color"
-              class="bg-background aspect-square size-9 cursor-pointer appearance-none rounded-full border p-2.75"
+              class="bg-background aspect-square size-9 cursor-pointer appearance-none rounded-md border p-2.75"
             />
             <Select id="onboarding-base" v-model="base">
               <SelectTrigger>
@@ -146,7 +146,7 @@ const accentSwatchStyle = (option: ColorSwatch<AccentId>) => ({
               id="onboarding-custom-accent-color"
               v-model="customAccentColor"
               type="color"
-              class="bg-background aspect-square size-9 cursor-pointer appearance-none rounded-full border p-2.75"
+              class="bg-background aspect-square size-9 cursor-pointer appearance-none rounded-md border p-2.75"
             />
             <Select id="onboarding-accent" v-model="accent">
               <SelectTrigger>

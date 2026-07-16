@@ -72,7 +72,7 @@ const currentPlanLabel = computed(() => {
                 :tooltip="t('components.teamSwitcher.switchTeam')"
               >
                 <AppAvatar
-                  class="size-8 rounded-md"
+                  class="size-8"
                   :src="currentTeam?.photoURL"
                   :name="currentTeam?.name"
                 />
@@ -137,7 +137,6 @@ const currentPlanLabel = computed(() => {
                 <Item class="group" size="xs">
                   <ItemMedia>
                     <AppAvatar
-                      class="rounded-md"
                       :src="currentTeam?.photoURL"
                       :name="currentTeam?.name"
                     />
@@ -200,7 +199,6 @@ const currentPlanLabel = computed(() => {
                         <Item class="group" size="xs">
                           <ItemMedia>
                             <AppAvatar
-                              class="rounded-md"
                               :src="team.original?.photoURL"
                               :name="team.label"
                             />

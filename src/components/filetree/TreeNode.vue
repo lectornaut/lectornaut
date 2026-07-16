@@ -281,7 +281,7 @@ const showEmptyState = computed(
               role="radio"
               :aria-checked="isSelected"
               :data-state="isSelected ? 'checked' : 'unchecked'"
-              class="border-input data-[state=checked]:bg-primary data-[state=checked]:border-primary relative flex aspect-square size-4 shrink-0 items-center justify-center rounded-full border"
+              class="border-input data-[state=checked]:bg-primary data-[state=checked]:border-primary relative flex aspect-square size-4 shrink-0 items-center justify-center rounded-md border"
             >
               <IconCircleFilled
                 v-if="isSelected"
@@ -433,7 +433,7 @@ const showEmptyState = computed(
             role="radio"
             :aria-checked="isSelected"
             :data-state="isSelected ? 'checked' : 'unchecked'"
-            class="border-input data-[state=checked]:bg-primary data-[state=checked]:border-primary relative flex aspect-square size-4 shrink-0 items-center justify-center rounded-full border"
+            class="border-input data-[state=checked]:bg-primary data-[state=checked]:border-primary relative flex aspect-square size-4 shrink-0 items-center justify-center rounded-md border"
           >
             <IconCircleFilled
               v-if="isSelected"

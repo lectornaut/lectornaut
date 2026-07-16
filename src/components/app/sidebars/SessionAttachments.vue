@@ -12,9 +12,6 @@ import {
   IconArrowDownToLine,
   IconCheck,
   IconCircleAlert,
-  IconFileImage,
-  IconFilePdf,
-  IconFileText,
   IconLogosGoogleDrive,
   IconPencil,
   IconRefreshCcw,
@@ -25,6 +22,7 @@ import {
 import {
   formatAttachmentSize,
   NODE_ATTACHMENT_MAX_FILE_SIZE_BYTES,
+  resolveAttachmentIcon,
 } from "@/helpers/node-attachments"
 import { showErrorToast, showSuccessToast } from "@/helpers/toast"
 import { useAuthStore } from "@/stores/authStore"
@@ -35,7 +33,6 @@ import {
 import { getStorageFileRef } from "@/utils/firebase/firebase-helpers"
 import { getDownloadURL } from "firebase/storage"
 import { storeToRefs } from "pinia"
-import type { Component } from "vue"
 import { computed, inject, ref, watch } from "vue"
 
 interface UploadState {
@@ -184,13 +181,6 @@ const onConfirmDelete = async () => {
   pendingDelete.value = null
 }
 
-const resolveIcon = (attachment: IBotSessionAttachment): Component => {
-  const mime = attachment.mimeType?.toLowerCase() ?? ""
-  if (mime.startsWith("image/")) return IconFileImage
-  if (mime.includes("pdf")) return IconFilePdf
-  return IconFileText
-}
-
 const dismissUploadState = (id: string) => {
   uploadStates.value = uploadStates.value.filter((item) => item.id !== id)
 }
@@ -328,8 +318,8 @@ const handleDelete = async (attachment: IBotSessionAttachment) => {
 </script>
 
 <template>
-  <div class="flex size-full min-h-0 grow flex-col">
-    <ButtonGroup class="w-full px-2 pb-2">
+  <div class="flex size-full min-h-0 grow flex-col gap-2">
+    <ButtonGroup>
       <Button
         variant="outline"
         size="sm"
@@ -351,7 +341,6 @@ const handleDelete = async (attachment: IBotSessionAttachment) => {
         <span class="sr-only">Add from Google Drive</span>
       </Button>
     </ButtonGroup>
-
     <DriveFilePicker
       v-if="driveAvailable"
       v-model:open="drivePickerOpen"
@@ -359,9 +348,8 @@ const handleDelete = async (attachment: IBotSessionAttachment) => {
       :import-file="importDriveFile"
       @imported="onDriveImported"
     />
-
     <OverlayScrollbarsWrapper>
-      <div>
+      <div class="flex flex-col gap-2">
         <!-- No session yet: buffered uploads ride along with the first message -->
         <template v-if="!sessionId">
           <Attachment
@@ -479,7 +467,7 @@ const handleDelete = async (attachment: IBotSessionAttachment) => {
             label="Loading attachments…"
           />
 
-          <div v-else-if="error" class="space-y-2 rounded border p-2">
+          <div v-else-if="error" class="space-y-2 rounded-md border p-2">
             <div class="text-destructive flex items-start gap-2 text-xs">
               <IconAlertTriangle />
               <span>{{ error }}</span>
@@ -511,7 +499,7 @@ const handleDelete = async (attachment: IBotSessionAttachment) => {
           >
             <AttachmentMedia>
               <IconCheck v-if="isSelected(attachment.id)" />
-              <Component :is="resolveIcon(attachment)" v-else />
+              <Component :is="resolveAttachmentIcon(attachment)" v-else />
             </AttachmentMedia>
             <AttachmentContent>
               <AttachmentTitle>{{ attachment.displayName }}</AttachmentTitle>
@@ -570,7 +558,6 @@ const handleDelete = async (attachment: IBotSessionAttachment) => {
         </template>
       </div>
     </OverlayScrollbarsWrapper>
-
     <Dialog
       :open="editDialogOpen"
       @update:open="($event) => !$event && closeEditDialog()"
@@ -607,7 +594,6 @@ const handleDelete = async (attachment: IBotSessionAttachment) => {
         </form>
       </DialogContent>
     </Dialog>
-
     <AlertDialog
       :open="deleteDialogOpen"
       @update:open="(value) => (deleteDialogOpen = value)"
