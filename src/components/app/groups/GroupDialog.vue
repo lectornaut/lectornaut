@@ -332,7 +332,7 @@ const handleSubmit = async () => {
                   <Checkbox
                     :model-value="isSelected(member.userId)"
                     :disabled="isSaving"
-                    class="rounded-md border-none opacity-100! disabled:opacity-25! data-[state=checked]:bg-transparent"
+                    class="rounded border-none opacity-100! disabled:opacity-25! data-[state=checked]:bg-transparent"
                     @update:model-value="
                       (value) => toggleMember(member.userId, value === true)
                     "

@@ -481,7 +481,7 @@ watch(selectedCreateFiles, async (files) => {
 
 <template>
   <div class="flex size-full min-h-0 grow flex-col gap-2">
-    <ButtonGroup>
+    <ButtonGroup class="mx-2 w-auto">
       <Button
         variant="outline"
         size="sm"
@@ -513,7 +513,7 @@ watch(selectedCreateFiles, async (files) => {
       @imported="onDriveImported"
     />
     <OverlayScrollbarsWrapper>
-      <div class="flex flex-col gap-2">
+      <div class="flex flex-col gap-2 px-2 pb-2">
         <div v-if="readOnlyMessage" class="text-muted-foreground text-xs">
           {{ readOnlyMessage }}
         </div>
@@ -559,7 +559,7 @@ watch(selectedCreateFiles, async (files) => {
           :label="t('components.nodeAttachments.loadingAttachments')"
         />
 
-        <div v-else-if="error" class="space-y-2 rounded-md border p-2">
+        <div v-else-if="error" class="space-y-2 rounded border p-2">
           <div class="text-destructive flex items-start gap-2 text-xs">
             <IconAlertTriangle />
             <span>{{ error }}</span>

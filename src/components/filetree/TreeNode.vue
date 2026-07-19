@@ -3,7 +3,7 @@ import { useFileTreeSelection } from "@/composables/useFileTreeSelection"
 import {
   IconArchive,
   IconChevronRight,
-  IconCircleFilled,
+  IconCircle,
   IconFile,
   IconFilePlus,
   IconFolder,
@@ -281,11 +281,11 @@ const showEmptyState = computed(
               role="radio"
               :aria-checked="isSelected"
               :data-state="isSelected ? 'checked' : 'unchecked'"
-              class="border-input data-[state=checked]:bg-primary data-[state=checked]:border-primary relative flex aspect-square size-4 shrink-0 items-center justify-center rounded-md border"
+              class="border-input data-[state=checked]:bg-primary data-[state=checked]:border-primary relative flex aspect-square size-4 shrink-0 items-center justify-center rounded border"
             >
-              <IconCircleFilled
+              <IconCircle
                 v-if="isSelected"
-                class="text-primary-foreground size-2!"
+                class="text-primary-foreground size-2! fill-current"
               />
             </span>
 
@@ -433,11 +433,11 @@ const showEmptyState = computed(
             role="radio"
             :aria-checked="isSelected"
             :data-state="isSelected ? 'checked' : 'unchecked'"
-            class="border-input data-[state=checked]:bg-primary data-[state=checked]:border-primary relative flex aspect-square size-4 shrink-0 items-center justify-center rounded-md border"
+            class="border-input data-[state=checked]:bg-primary data-[state=checked]:border-primary relative flex aspect-square size-4 shrink-0 items-center justify-center rounded border"
           >
-            <IconCircleFilled
+            <IconCircle
               v-if="isSelected"
-              class="text-primary-foreground size-2!"
+              class="text-primary-foreground size-2! fill-current"
             />
           </span>
 

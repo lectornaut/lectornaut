@@ -1,5 +1,5 @@
 import {
-  IconAiFill,
+  IconAi,
   IconCamera,
   IconCreditCard,
   IconLayers,
@@ -66,7 +66,7 @@ const primaryRouteRules = defaultMenu.map((item) =>
 export const tabIconRules: readonly TabIconRule[] = [
   exactPathRule("new", "/new", IconZap),
   exactPathRule("start", "/start", IconRocket),
-  exactPathRule("welcome", "/welcome", IconAiFill),
+  exactPathRule("welcome", "/welcome", IconAi),
   exactPathRule("enter", "/enter", IconUserRound),
   exactPathRule("exit", "/exit", IconLogOut),
   exactPathRule("pricing", "/pricing", IconCreditCard),

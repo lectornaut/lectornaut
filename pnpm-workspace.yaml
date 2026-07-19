@@ -15,20 +15,38 @@ allowBuilds:
   vue-demi: false
 
 minimumReleaseAgeExclude:
-  - "@genkit-ai/ai@1.39.0"
-  - "@genkit-ai/compat-oai@1.39.0"
-  - "@genkit-ai/core@1.39.0"
-  - "@genkit-ai/firebase@1.39.0"
-  - "@genkit-ai/google-cloud@1.39.0"
-  - "@genkit-ai/google-genai@1.39.0"
+  - "@genkit-ai/ai@1.39.0 || 1.40.0"
+  - "@genkit-ai/compat-oai@1.39.0 || 1.40.0"
+  - "@genkit-ai/core@1.39.0 || 1.40.0"
+  - "@genkit-ai/firebase@1.39.0 || 1.40.0"
+  - "@genkit-ai/google-cloud@1.39.0 || 1.40.0"
+  - "@genkit-ai/google-genai@1.39.0 || 1.40.0"
   - "@iconify/json@2.2.490"
   - "@unhead/bundler@3.1.5"
   - "@unhead/vue@3.1.5"
   - driver.js@1.5.0
-  - genkit@1.39.0
+  - genkit@1.39.0 || 1.40.0
   - markdown-it-ts@1.0.2
-  - markstream-vue@1.0.4
-  - stream-markdown-parser@1.0.7
+  - markstream-vue@1.0.4 || 1.0.7-beta.2
+  - stream-markdown-parser@1.0.7 || 1.1.2
   - unhead@3.1.5
   - pinia@4.0.2
   - shadcn-vue@2.8.0
+  - "@tailwindcss/node@4.3.3"
+  - "@tailwindcss/oxide-android-arm64@4.3.3"
+  - "@tailwindcss/oxide-darwin-arm64@4.3.3"
+  - "@tailwindcss/oxide-darwin-x64@4.3.3"
+  - "@tailwindcss/oxide-freebsd-x64@4.3.3"
+  - "@tailwindcss/oxide-linux-arm-gnueabihf@4.3.3"
+  - "@tailwindcss/oxide-linux-arm64-gnu@4.3.3"
+  - "@tailwindcss/oxide-linux-arm64-musl@4.3.3"
+  - "@tailwindcss/oxide-linux-x64-gnu@4.3.3"
+  - "@tailwindcss/oxide-linux-x64-musl@4.3.3"
+  - "@tailwindcss/oxide-wasm32-wasi@4.3.3"
+  - "@tailwindcss/oxide-win32-arm64-msvc@4.3.3"
+  - "@tailwindcss/oxide-win32-x64-msvc@4.3.3"
+  - "@tailwindcss/oxide@4.3.3"
+  - "@tailwindcss/vite@4.3.3"
+  - firebase-functions@7.3.0
+  - tailwindcss@4.3.3
+  - vite@8.1.5

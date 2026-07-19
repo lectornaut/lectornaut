@@ -6,7 +6,7 @@ import {
 } from "@/composables/useBotChat"
 import { useReadAloud } from "@/composables/useReadAloud"
 import {
-  IconAiFill,
+  IconAi,
   IconCheck,
   IconCopy,
   IconPause,
@@ -341,7 +341,7 @@ const renderedMessages = computed(() =>
   <Empty v-if="messages.length === 0 && !isSending" class="flex-1">
     <EmptyHeader>
       <EmptyMedia variant="icon">
-        <IconAiFill />
+        <IconAi />
       </EmptyMedia>
       <EmptyTitle>{{ t("ai.chatEmpty") }}</EmptyTitle>
     </EmptyHeader>
@@ -356,9 +356,7 @@ const renderedMessages = computed(() =>
   <MessageScrollerProvider v-else :key="scrollerSessionKey" auto-scroll>
     <MessageScroller>
       <MessageScrollerViewport>
-        <MessageScrollerContent
-          class="messages-list justify-end gap-0 px-2 py-4"
-        >
+        <MessageScrollerContent class="messages-list container mx-auto p-4">
           <MessageScrollerItem
             v-for="{
               message,
@@ -640,7 +638,7 @@ const renderedMessages = computed(() =>
            the reader's position (the tick for `currentAnchorId` lights up)
            and expands on hover into a jump menu over the user turns. Must
            sit inside the provider: it injects the scroller context. -->
-      <div class="absolute top-1/2 right-2 z-10 -translate-y-1/2">
+      <div class="absolute top-1/2 right-0.75 z-10 -translate-y-1/2">
         <BotChatOutline />
       </div>
     </MessageScroller>

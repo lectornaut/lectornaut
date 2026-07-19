@@ -708,7 +708,7 @@ const handleEditorSave = async (): Promise<void> => {
                       {{ t("settings.agents.custom.ai.previewSystemPrompt") }}
                     </span>
                     <p
-                      class="bg-background text-foreground/90 max-h-48 overflow-auto rounded-md border p-2.5 text-xs whitespace-pre-wrap"
+                      class="bg-background text-foreground/90 max-h-48 overflow-auto rounded border p-2.5 text-xs whitespace-pre-wrap"
                     >
                       {{ draft.systemPromptBase }}
                     </p>

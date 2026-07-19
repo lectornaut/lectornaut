@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import { IconAiFill, IconCheck } from "@/data/icons"
+import { IconAi, IconCheck } from "@/data/icons"
 
 definePage({
   meta: {
@@ -87,7 +87,7 @@ const { t } = useI18n()
                   <div class="flex items-center gap-1.5 font-semibold">
                     <span>{{ t("pages.home.professional") }}</span>
                     <Badge>
-                      <IconAiFill />
+                      <IconAi />
                       AI
                     </Badge>
                   </div>
@@ -151,7 +151,7 @@ const { t } = useI18n()
                   <div class="flex items-center gap-1.5 font-semibold">
                     <span>{{ t("pages.home.business") }}</span>
                     <Badge>
-                      <IconAiFill />
+                      <IconAi />
                       {{ t("pages.home.ai") }}
                     </Badge>
                   </div>
@@ -210,7 +210,7 @@ const { t } = useI18n()
                   <div class="flex items-center gap-1.5 font-semibold">
                     <span>{{ t("pages.home.enterprise") }}</span>
                     <Badge>
-                      <IconAiFill />
+                      <IconAi />
                       {{ t("pages.home.ai") }}
                     </Badge>
                   </div>

@@ -90,9 +90,7 @@ const stats = computed(() => {
             {{ t("pages.runs.legendPast") }}
           </span>
           <span class="flex items-center gap-1">
-            <span
-              class="size-1.5 rounded-md border border-current opacity-60"
-            />
+            <span class="size-1.5 rounded border border-current opacity-60" />
             {{ t("pages.runs.legendScheduled") }}
           </span>
         </div>
@@ -191,13 +189,13 @@ const stats = computed(() => {
           <SidebarGroup class="gap-3">
             <h3 class="text-sm font-medium">{{ t("pages.runs.summary") }}</h3>
             <div class="grid grid-cols-2 gap-2">
-              <div class="rounded-md border p-2">
+              <div class="rounded border p-2">
                 <div class="text-lg font-semibold">{{ stats.total }}</div>
                 <div class="text-muted-foreground text-xs">
                   {{ t("pages.runs.runsShown") }}
                 </div>
               </div>
-              <div class="rounded-md border p-2">
+              <div class="rounded border p-2">
                 <div
                   class="text-lg font-semibold"
                   :class="{
@@ -210,7 +208,7 @@ const stats = computed(() => {
                   {{ t("settings.workflows.needsReview") }}
                 </div>
               </div>
-              <div class="rounded-md border p-2">
+              <div class="rounded border p-2">
                 <div class="text-lg font-semibold tabular-nums">
                   ${{ stats.cost.toFixed(2) }}
                 </div>
@@ -218,7 +216,7 @@ const stats = computed(() => {
                   {{ t("pages.runs.estCost") }}
                 </div>
               </div>
-              <div class="rounded-md border p-2">
+              <div class="rounded border p-2">
                 <div class="text-lg font-semibold tabular-nums">
                   {{ stats.tokens.toLocaleString() }}
                 </div>

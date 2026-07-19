@@ -24,7 +24,13 @@
  */
 
 import { findRelatedNodes } from "@/composables/useFunctions"
-import { IconFile, IconFolder, IconLink, IconRefreshCcw } from "@/data/icons"
+import {
+  IconAlertTriangle,
+  IconFile,
+  IconFolder,
+  IconLink,
+  IconRefreshCcw,
+} from "@/data/icons"
 import type { WorkspaceNode, WorkspaceNodeScope } from "@/types/nodes"
 import { computed, ref, toRefs, watch } from "vue"
 
@@ -141,23 +147,30 @@ const isEmpty = computed(
     </div>
 
     <OverlayScrollbarsWrapper class="min-h-0 grow">
-      <div class="flex flex-col gap-2 px-2 pb-3">
+      <div class="flex flex-col gap-2 px-2 pb-2">
         <!-- Error state — covers the rare callable failure (permission,
              network). The Refresh button above stays usable. -->
-        <Empty v-if="error" class="border p-6">
-          <EmptyHeader>
-            <EmptyMedia variant="icon">
-              <IconLink />
-            </EmptyMedia>
-            <EmptyTitle>{{ t("inspector.related.errorTitle") }}</EmptyTitle>
-            <EmptyDescription>{{ error }}</EmptyDescription>
-          </EmptyHeader>
-        </Empty>
+        <div v-if="error" class="space-y-2 rounded border p-2">
+          <div class="text-destructive flex items-start gap-2 text-xs">
+            <IconAlertTriangle />
+            <span>{{ error }}</span>
+          </div>
+
+          <Button
+            variant="secondary"
+            size="sm"
+            :disabled="loading"
+            @click="load"
+          >
+            <IconRefreshCcw />
+            {{ t("actions.retry") }}
+          </Button>
+        </div>
 
         <!-- Empty state — the embedding may still be pending on a
              brand-new file (the embed-on-write trigger runs async after
              the doc write); the user can hit Refresh to retry. -->
-        <Empty v-else-if="isEmpty" class="border p-6">
+        <Empty v-else-if="isEmpty" class="rounded-xl border border-dashed p-6">
           <EmptyHeader>
             <EmptyMedia variant="icon">
               <IconLink />
@@ -221,13 +234,13 @@ const isEmpty = computed(
              haven't loaded yet (the header spinner already signals
              progress). Skipping the panel-wide loading card keeps the
              panel from "flashing" empty states on every node switch. -->
-        <div v-else-if="loading" class="text-muted-foreground p-3 text-xs">
+        <div v-else-if="loading" class="text-muted-foreground text-xs">
           {{ t("inspector.related.loading") }}
         </div>
 
         <div
           v-if="truncated && results.length > 0"
-          class="text-muted-foreground px-2 pt-1 text-xs"
+          class="text-muted-foreground pt-1 text-xs"
         >
           {{ t("inspector.related.truncated") }}
         </div>

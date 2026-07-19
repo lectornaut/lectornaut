@@ -16,7 +16,7 @@ import {
 import { isBuiltInAgentId } from "@/data/builtInAgents"
 import { BOT_NODE_TOOL_CATALOG, BOT_TOOL_CATALOG } from "@/data/botTools"
 import {
-  IconAiFill,
+  IconAi,
   IconArrowUp,
   IconAsterisk,
   IconAtSign,
@@ -974,7 +974,7 @@ const onToolMenuCloseAutoFocus = (event: Event) => {
 </script>
 
 <template>
-  <div class="mx-2 mb-2 grid gap-2">
+  <div class="container mx-auto grid gap-2 p-2">
     <InputGroup>
       <InputGroupTextarea
         ref="textareaRef"
@@ -1254,7 +1254,7 @@ const onToolMenuCloseAutoFocus = (event: Event) => {
         </TooltipProvider>
         <Sheet v-model:open="attachSheetOpen">
           <SheetContent
-            class="m-2 mt-[calc(var(--spacing-titlebar-height,0px)+(--spacing(2)))] h-auto! gap-0 overflow-clip rounded-md border"
+            class="m-2 mt-[calc(var(--spacing-titlebar-height,0px)+(--spacing(2)))] h-auto! gap-0 overflow-clip rounded border"
           >
             <SheetHeader>
               <SheetTitle>{{ t("ai.attachContext") }}</SheetTitle>
@@ -1335,7 +1335,7 @@ const onToolMenuCloseAutoFocus = (event: Event) => {
               <TooltipTrigger as-child>
                 <DropdownMenuTrigger as-child>
                   <Button variant="ghost" size="icon-xs">
-                    <IconAiFill />
+                    <IconAi />
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent

@@ -233,10 +233,20 @@ watch(copied, (isCopied) => {
               <MainSidebar preview />
             </HoverCardContent>
           </HoverCard>
-          <SidebarTrigger
-            v-else-if="isMobile || (!open && sidebarPinned)"
-            v-motion-fade-visible
-          />
+          <TooltipProvider v-else-if="isMobile || (!open && sidebarPinned)">
+            <Tooltip>
+              <TooltipTrigger as-child>
+                <SidebarTrigger v-motion-fade-visible />
+              </TooltipTrigger>
+              <TooltipContent class="flex items-center gap-2 pr-2">
+                {{ t("components.ui.toggleSidebar") }}
+                <KbdGroup>
+                  <Kbd>{{ getPlatformSpecialKey() }}</Kbd>
+                  <Kbd>B</Kbd>
+                </KbdGroup>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
           <span
             v-if="!open || isMobile"
             v-motion-fade-visible
@@ -485,9 +495,7 @@ watch(copied, (isCopied) => {
                         <Kbd>{{ index + 1 }}</Kbd>
                       </KbdGroup>
                     </div>
-                    <div
-                      class="bg-secondary aspect-video rounded-md border"
-                    ></div>
+                    <div class="bg-secondary aspect-video rounded border"></div>
                   </HoverCardContent>
                 </HoverCard>
               </div>

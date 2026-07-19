@@ -177,10 +177,7 @@ const handleCreateWorkspace = async () => {
                   {{ t("pages.welcome.onboarding.teamWorkspaceFlow.current") }}
                 </Button>
               </div>
-              <Empty
-                v-if="memberships.length === 0"
-                class="rounded-md border p-6"
-              >
+              <Empty v-if="memberships.length === 0" class="rounded border p-6">
                 <EmptyHeader>
                   <EmptyMedia variant="icon">
                     <IconUsers />
@@ -312,10 +309,7 @@ const handleCreateWorkspace = async () => {
                   {{ t("pages.welcome.onboarding.teamWorkspaceFlow.current") }}
                 </Button>
               </div>
-              <Empty
-                v-if="workspaces.length === 0"
-                class="rounded-md border p-6"
-              >
+              <Empty v-if="workspaces.length === 0" class="rounded border p-6">
                 <EmptyHeader>
                   <EmptyMedia variant="icon">
                     <IconBriefcase />

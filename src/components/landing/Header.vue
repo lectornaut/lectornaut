@@ -1,12 +1,7 @@
 <script lang="ts" setup>
 import { navigationMenuTriggerStyle } from "@/components/ui/navigation-menu"
 import { isTauri, useIsFullscreen } from "@/composables/usePlatform"
-import {
-  IconAiFill,
-  IconDownloadFill,
-  IconMenu,
-  IconSignatureFill,
-} from "@/data/icons"
+import { IconAi, IconDownload, IconMenu, IconSignature } from "@/data/icons"
 import {
   companyMenu,
   productsMenu,
@@ -42,16 +37,16 @@ const { t } = useI18n()
             </ContextMenuTrigger>
             <ContextMenuContent>
               <ContextMenuItem>
-                <IconAiFill />
+                <IconAi />
                 {{ t("landing.header.copyIcon") }}
               </ContextMenuItem>
               <ContextMenuItem>
-                <IconSignatureFill />
+                <IconSignature />
                 {{ t("landing.header.copyWordmark") }}
               </ContextMenuItem>
               <ContextMenuSeparator />
               <ContextMenuItem>
-                <IconDownloadFill />
+                <IconDownload />
                 {{ t("landing.header.downloadBrandKit") }}
               </ContextMenuItem>
             </ContextMenuContent>
@@ -298,7 +293,7 @@ const { t } = useI18n()
                     </TooltipContent>
                   </SheetTrigger>
                   <SheetContent
-                    class="m-2 mt-[calc(var(--spacing-titlebar-height,0)+(--spacing(2)))] h-auto! gap-0 overflow-clip rounded-md border"
+                    class="m-2 mt-[calc(var(--spacing-titlebar-height,0)+(--spacing(2)))] h-auto! gap-0 overflow-clip rounded border"
                     :class="{ 'mt-12': isTauri && !isFullscreen }"
                   >
                     <SheetHeader>

@@ -1,5 +1,4 @@
 import IconBiApple from "~icons/bi/apple"
-import IconBxBxsZap from "~icons/bx/bxs-zap"
 import IconJapan from "~icons/circle-flags/jp"
 import IconUSA from "~icons/circle-flags/us"
 import IconLogosAppleAppStore from "~icons/logos/apple-app-store"
@@ -22,6 +21,7 @@ import IconLogosSlack from "~icons/logos/slack"
 import IconLogosSpotify from "~icons/logos/spotify"
 import IconLogosTwitter from "~icons/logos/twitter"
 import IconLogosZoom from "~icons/logos/zoom"
+import IconALargeSmall from "~icons/lucide/a-large-small"
 import IconActivity from "~icons/lucide/activity"
 import IconAlertTriangle from "~icons/lucide/alert-triangle"
 import IconAlignCenter from "~icons/lucide/align-center"
@@ -114,8 +114,15 @@ import IconEye from "~icons/lucide/eye"
 import IconEyeOff from "~icons/lucide/eye-off"
 import IconFile from "~icons/lucide/file"
 import IconAudit from "~icons/lucide/file-clock"
+import IconFileCode from "~icons/lucide/file-code"
+import IconFileImage from "~icons/lucide/file-image"
+import IconFileMusic from "~icons/lucide/file-music"
 import IconFilePlus from "~icons/lucide/file-plus"
+import IconFileQuestion from "~icons/lucide/file-question"
+import IconFileSpreadsheet from "~icons/lucide/file-spreadsheet"
 import IconFileText from "~icons/lucide/file-text"
+import IconFileType from "~icons/lucide/file-type"
+import IconFileVideo from "~icons/lucide/file-video"
 import IconFolder from "~icons/lucide/folder"
 import IconFolderOpen from "~icons/lucide/folder-open"
 import IconFolderPlus from "~icons/lucide/folder-plus"
@@ -218,6 +225,7 @@ import IconShieldCheck from "~icons/lucide/shield-check"
 import IconSignalHigh from "~icons/lucide/signal-high"
 import IconSignalLow from "~icons/lucide/signal-low"
 import IconSignalMedium from "~icons/lucide/signal-medium"
+import IconSignature from "~icons/lucide/signature"
 import IconSmartphone from "~icons/lucide/smartphone"
 import IconSmile from "~icons/lucide/smile"
 import IconSparkle from "~icons/lucide/sparkle"
@@ -264,41 +272,15 @@ import IconX from "~icons/lucide/x"
 import IconXCircle from "~icons/lucide/x-circle"
 import IconXSquare from "~icons/lucide/x-square"
 import IconZap from "~icons/lucide/zap"
-import IconMaterialSymbolsCircle from "~icons/material-symbols/circle"
 import IconMdiApple from "~icons/mdi/apple"
-import IconMdiArrowRightCircle from "~icons/mdi/arrow-right-circle"
-import IconMdiCircle from "~icons/mdi/circle"
-import IconMdiCircleMedium from "~icons/mdi/circle-medium"
-import IconMdiCircleSmall from "~icons/mdi/circle-small"
-import IconMdiDotsCircle from "~icons/mdi/dots-circle"
-import IconMdiFileCode from "~icons/mdi/file-code"
-import IconMdiFileDelimited from "~icons/mdi/file-delimited"
-import IconMdiFileDocument from "~icons/mdi/file-document"
-import IconMdiFileExcelBox from "~icons/mdi/file-excel-box"
-import IconMdiFileImage from "~icons/mdi/file-image"
-import IconMdiFileMusic from "~icons/mdi/file-music"
 import IconMdiFilePdfBox from "~icons/mdi/file-pdf-box"
 import IconMdiFilePowerpointBox from "~icons/mdi/file-powerpoint-box"
-import IconMdiFileQuestion from "~icons/mdi/file-question"
-import IconMdiFileVideo from "~icons/mdi/file-video"
 import IconMdiFileWordBox from "~icons/mdi/file-word-box"
-import IconMdiFormatFont from "~icons/mdi/format-font"
-import IconMdiFormatTextVariant from "~icons/mdi/format-text-variant"
 import IconMdiGoogle from "~icons/mdi/google"
 import IconMdiMicrosoft from "~icons/mdi/microsoft"
-import IconMingcuteAiFill from "~icons/mingcute/ai-fill"
-import IconMingcuteArrowRightUpCircleFill from "~icons/mingcute/arrow-right-up-circle-fill"
-import IconMingcuteChat1Fill from "~icons/mingcute/chat-1-fill"
-import IconMingcuteDownloadFill from "~icons/mingcute/download-fill"
-import IconMingcuteGridFill from "~icons/mingcute/grid-fill"
-import IconMingcuteLayerFill from "~icons/mingcute/layer-fill"
-import IconMingcuteSignatureFill from "~icons/mingcute/signature-fill"
 import IconRiFontMono from "~icons/ri/font-mono"
 import IconRiFontSans from "~icons/ri/font-sans"
 import IconRiFontSansSerif from "~icons/ri/font-sans-serif"
-import IconRiSearchLine from "~icons/ri/search-line"
-import IconRiZoomInLine from "~icons/ri/zoom-in-line"
-import IconRiZoomOutLine from "~icons/ri/zoom-out-line"
 import IconSimpleIconsAmazon from "~icons/simple-icons/amazon"
 import IconSimpleIconsEbay from "~icons/simple-icons/ebay"
 import IconSimpleIconsEtsy from "~icons/simple-icons/etsy"
@@ -309,13 +291,16 @@ import IconTablerBrandWalmart from "~icons/tabler/brand-walmart"
 
 /**
  * Icon Exports
- * Aggregates and re-exports icons from various icon sets (Lucide, MDI, etc.)
- * Used to provide a single source of truth for icons in the app
+ * Single source of truth for icons in the app. Everything is Lucide, except
+ * where Lucide has no equivalent: brand logos (logos/simple-icons/mdi/bi/
+ * tabler), country flags (circle-flags), office file types (PDF, Word,
+ * PowerPoint), and the serif/sans/mono font-family glyphs (ri).
  */
 export {
+  IconALargeSmall,
   IconActivity,
+  IconSparkles as IconAi,
   IconAiChip,
-  IconMingcuteAiFill as IconAiFill,
   IconAlertTriangle,
   IconAlignCenter,
   IconAlignJustify,
@@ -326,7 +311,7 @@ export {
   IconBiApple as IconApple,
   IconLogosAppleAppStore as IconAppleAppStore,
   IconMdiApple as IconAppleFilled,
-  IconMingcuteGridFill as IconApps,
+  IconLayoutGrid as IconApps,
   IconArchive,
   IconArrowBigUp,
   IconArrowDown,
@@ -334,9 +319,7 @@ export {
   IconArrowLeft,
   IconArrowLeftToLine,
   IconArrowRight,
-  IconMdiArrowRightCircle as IconArrowRightCircle,
   IconArrowRightToLine,
-  IconMingcuteArrowRightUpCircleFill as IconArrowRightUpCircleFill,
   IconArrowUp,
   IconArrowUpDown,
   IconArrowUpRight,
@@ -363,12 +346,10 @@ export {
   IconTablerBrandWalmart as IconBrandWalmart,
   IconBriefcase,
   IconBuilding,
-  IconBxBxsZap as IconBxsZap,
   IconCalculator,
   IconCalendar,
   IconCamera,
   IconCells,
-  IconMingcuteChat1Fill as IconChatFill,
   IconCheck,
   IconCheckCheck,
   IconCheckCircle,
@@ -387,13 +368,9 @@ export {
   IconCircleDashed,
   IconCircleDot,
   IconCircleDotDashed,
-  IconMdiCircle as IconCircleFilled,
   IconCircleHelp,
-  IconMdiCircleMedium as IconCircleMedium,
   IconCirclePlay,
   IconCirclePlus,
-  IconMdiCircleSmall as IconCircleSmall,
-  IconMaterialSymbolsCircle as IconCircleSolid,
   IconCircleUser,
   IconCircleUserRound,
   IconCircleX,
@@ -414,9 +391,7 @@ export {
   IconDatabase,
   IconDices,
   IconDisc,
-  IconMdiDotsCircle as IconDotsCircle,
   IconDownload,
-  IconMingcuteDownloadFill as IconDownloadFill,
   IconSimpleIconsEbay as IconEbay,
   IconEllipsis,
   IconSimpleIconsEtsy as IconEtsy,
@@ -424,18 +399,19 @@ export {
   IconEye,
   IconEyeOff,
   IconFile,
-  IconMdiFileCode as IconFileCode,
-  IconMdiFileDelimited as IconFileDelimited,
-  IconMdiFileDocument as IconFileDocument,
-  IconMdiFileExcelBox as IconFileExcel,
-  IconMdiFileImage as IconFileImage,
-  IconMdiFileMusic as IconFileMusic,
+  IconFileCode,
+  IconFileSpreadsheet as IconFileDelimited,
+  IconFileText as IconFileDocument,
+  IconFileSpreadsheet as IconFileExcel,
+  IconFileImage,
+  IconFileMusic,
   IconMdiFilePdfBox as IconFilePdf,
   IconFilePlus,
   IconMdiFilePowerpointBox as IconFilePowerPoint,
-  IconMdiFileQuestion as IconFileQuestion,
+  IconFileQuestion,
   IconFileText,
-  IconMdiFileVideo as IconFileVideo,
+  IconFileType,
+  IconFileVideo,
   IconMdiFileWordBox as IconFileWord,
   IconSimpleIconsFlathub as IconFlathub,
   IconFolder,
@@ -444,7 +420,6 @@ export {
   IconRiFontMono as IconFontMono,
   IconRiFontSans as IconFontSans,
   IconRiFontSansSerif as IconFontSansSerif,
-  IconMdiFormatFont as IconFormatFont,
   IconForward,
   IconGalleryHorizontalEnd,
   IconGift,
@@ -479,7 +454,6 @@ export {
   IconKeyboard,
   IconLanguages,
   IconLaptop,
-  IconMingcuteLayerFill as IconLayerFill,
   IconLayers,
   IconLayoutGrid,
   IconLeaf,
@@ -514,7 +488,6 @@ export {
   IconMail,
   IconMapPin,
   IconMaximize,
-  IconMdiFormatTextVariant,
   IconMenu,
   IconMessageCircle,
   IconMessageCircleMore,
@@ -562,7 +535,6 @@ export {
   IconRows,
   IconScroll,
   IconSearch,
-  IconRiSearchLine as IconSearchLine,
   IconSend,
   IconSettings,
   IconSettings2,
@@ -571,7 +543,7 @@ export {
   IconSignalHigh,
   IconSignalLow,
   IconSignalMedium,
-  IconMingcuteSignatureFill as IconSignatureFill,
+  IconSignature,
   IconSmartphone,
   IconSmile,
   IconSparkle,
@@ -619,6 +591,4 @@ export {
   IconXCircle,
   IconXSquare,
   IconZap,
-  IconRiZoomInLine as IconZoomIn,
-  IconRiZoomOutLine as IconZoomOut,
 }

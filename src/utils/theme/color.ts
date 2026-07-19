@@ -77,9 +77,11 @@ function normalizeHex(value: string): string {
 }
 
 function oklchToRgb(value: string): Rgb {
+  // CSS Color 4 `none` (e.g. Tailwind's achromatic `oklch(87% 0 none)`)
+  // computes as 0 in color math.
   const match =
     /^oklch\(([\d.]+)%\s+([\d.]+)\s+(-?[\d.]+)(?:\s*\/\s*[\d.]+)?\)$/.exec(
-      value
+      value.replaceAll("none", "0")
     )
 
   if (!match) {

@@ -29,7 +29,7 @@ import {
   IconFileQuestion,
   IconFileVideo,
   IconFolder,
-  IconFormatFont,
+  IconFileType,
   IconGrid2X2,
   IconList,
   IconMoreHorizontal,
@@ -156,7 +156,7 @@ const fileKindIcons: Record<FileCaptureFileKind, Component> = {
   archive: IconArchive,
   audio: IconFileMusic,
   video: IconFileVideo,
-  font: IconFormatFont,
+  font: IconFileType,
   folder: IconFolder,
   unknown: IconFileQuestion,
 }
@@ -1114,7 +1114,7 @@ const isFullscreen = useIsFullscreen()
                 {{ t("components.fileDropOverlay.buttons.save") }}
               </Button>
               <SheetContent
-                class="m-2 mt-[calc(var(--spacing-titlebar-height,0px)+(--spacing(2)))] h-auto! gap-0 overflow-clip rounded-md border"
+                class="m-2 mt-[calc(var(--spacing-titlebar-height,0px)+(--spacing(2)))] h-auto! gap-0 overflow-clip rounded border"
                 :class="{ 'mt-12': isTauri && !isFullscreen }"
               >
                 <SheetHeader>

@@ -198,7 +198,7 @@ const submitDelete = async () => {
           <Component :is="modeIcons[activeMode]" />
           {{ t("ai.mode") }}
         </SidebarGroupLabel>
-        <SidebarGroupContent>
+        <SidebarGroupContent class="space-y-2">
           <p class="text-muted-foreground text-xs">
             {{ t("ai.sidebar.modeDescription") }}
           </p>
@@ -239,7 +239,7 @@ const submitDelete = async () => {
           <IconGlobe v-else />
           {{ t("ai.sidebar.visibility") }}
         </SidebarGroupLabel>
-        <SidebarGroupContent>
+        <SidebarGroupContent class="space-y-2">
           <p v-if="!sessionId" class="text-muted-foreground text-xs">
             {{ t("ai.sidebar.noSessionVisibility") }}
           </p>
@@ -287,13 +287,14 @@ const submitDelete = async () => {
 
       <SidebarGroup>
         <SidebarGroupLabel>{{ t("ai.sidebar.manageChat") }}</SidebarGroupLabel>
-        <SidebarGroupContent class="grid gap-2 p-2">
+        <SidebarGroupContent class="grid gap-2">
           <p v-if="!sessionId" class="text-muted-foreground text-xs">
             {{ t("ai.sidebar.noSessionActions") }}
           </p>
           <template v-else>
             <Button
               variant="secondary"
+              size="sm"
               class="justify-start"
               :disabled="!canManage || isMutating"
               @click="openRename"
@@ -303,6 +304,7 @@ const submitDelete = async () => {
             </Button>
             <Button
               variant="secondary"
+              size="sm"
               class="justify-start"
               :disabled="!canManage || isMutating"
               @click="onArchiveToggle"
@@ -316,6 +318,7 @@ const submitDelete = async () => {
             </Button>
             <Button
               variant="destructive"
+              size="sm"
               class="justify-start text-current"
               :disabled="!canManage || isMutating"
               @click="openDelete"

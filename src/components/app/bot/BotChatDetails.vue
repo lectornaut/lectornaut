@@ -332,14 +332,15 @@ const detailRows = computed<DetailRow[]>(() => {
   <div class="flex size-full min-h-0 grow flex-col gap-2">
     <OverlayScrollbarsWrapper>
       <SidebarGroup>
-        <SidebarGroupContent>
-          <div
-            v-if="!sessionId"
-            class="text-muted-foreground flex flex-col items-center gap-2 py-6 text-center text-xs"
-          >
-            <IconHistory />
-            <p>{{ t("ai.details.empty") }}</p>
-          </div>
+        <SidebarGroupContent class="space-y-2">
+          <Empty v-if="!sessionId" class="rounded-xl border border-dashed p-6">
+            <EmptyHeader>
+              <EmptyMedia variant="icon">
+                <IconHistory />
+              </EmptyMedia>
+              <EmptyTitle>{{ t("ai.details.empty") }}</EmptyTitle>
+            </EmptyHeader>
+          </Empty>
           <template v-else>
             <div class="space-y-1">
               <p
@@ -378,7 +379,7 @@ const detailRows = computed<DetailRow[]>(() => {
               </Badge>
             </div>
 
-            <dl class="space-y-3 pt-1">
+            <dl class="space-y-3">
               <div class="flex items-start justify-between gap-2">
                 <dt class="text-muted-foreground flex items-center gap-2">
                   <IconUserRound />
@@ -434,13 +435,13 @@ const detailRows = computed<DetailRow[]>(() => {
           <IconWrench />
           {{ t("ai.sidebar.availableTools") }}
         </SidebarGroupLabel>
-        <SidebarGroupContent>
+        <SidebarGroupContent class="space-y-2">
           <p class="text-muted-foreground text-xs">
             {{ t("ai.sidebar.toolsEnabledHint") }}
           </p>
           <Empty
             v-if="availableActionTools.length === 0"
-            class="rounded-md border border-dashed p-4"
+            class="rounded-xl border border-dashed p-6"
           >
             <EmptyHeader>
               <EmptyMedia variant="icon">
@@ -453,7 +454,7 @@ const detailRows = computed<DetailRow[]>(() => {
             <li
               v-for="tool in availableActionTools"
               :key="tool.key"
-              class="border-border/60 bg-background/40 rounded-md border p-2"
+              class="border-border/60 bg-background/40 rounded border p-2"
             >
               <div class="flex items-center gap-2">
                 <Component :is="tool.icon" />
@@ -491,7 +492,7 @@ const detailRows = computed<DetailRow[]>(() => {
           <IconMessageCircle />
           {{ t("ai.sidebar.humanInTheLoop") }}
         </SidebarGroupLabel>
-        <SidebarGroupContent>
+        <SidebarGroupContent class="space-y-2">
           <i18n-t
             keypath="ai.sidebar.humanInTheLoopHint"
             tag="p"
@@ -505,7 +506,7 @@ const detailRows = computed<DetailRow[]>(() => {
             <li
               v-for="interrupt in availableInterruptTools"
               :key="interrupt.key"
-              class="border-border/60 bg-background/40 rounded-md border p-2"
+              class="border-border/60 bg-background/40 rounded border p-2"
             >
               <div class="flex items-center gap-2">
                 <Component :is="interrupt.icon" />

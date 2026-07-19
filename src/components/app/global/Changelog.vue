@@ -20,7 +20,7 @@ emitter.on("Dialog.Changelog.Open", (id) => {
 <template>
   <Sheet v-model:open="openChangelog">
     <SheetContent
-      class="m-2 mt-[calc(var(--spacing-titlebar-height,0px)+(--spacing(2)))] h-auto! gap-0 overflow-clip rounded-md border"
+      class="m-2 mt-[calc(var(--spacing-titlebar-height,0px)+(--spacing(2)))] h-auto! gap-0 overflow-clip rounded border"
       :class="{ 'mt-12': isTauri && !isFullscreen }"
     >
       <SheetHeader>

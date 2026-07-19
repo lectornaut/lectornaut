@@ -31,6 +31,8 @@ const props = defineProps<{
   documentId: string
 }>()
 
+const { t } = useI18n()
+
 // `useNodeActivityLogs` takes nullable refs because it serves other callers
 // that can be "not yet ready". This component is gated by the inspector's
 // v-if so the values are always non-null here — widen at the boundary.
@@ -239,7 +241,7 @@ useInfiniteScroll(
 <template>
   <div class="flex size-full min-h-0 grow flex-col gap-2">
     <OverlayScrollbarsWrapper ref="scrollableContainer">
-      <div>
+      <div class="px-2 pb-2">
         <div v-if="!canViewLogs" class="text-muted-foreground text-xs">
           You do not have permission to view activity history.
         </div>
@@ -250,12 +252,15 @@ useInfiniteScroll(
           label="Loading activity history..."
         />
 
-        <div v-else-if="error" class="space-y-2">
+        <div v-else-if="error" class="space-y-2 rounded border p-2">
           <div class="text-destructive flex items-start gap-2 text-xs">
             <IconAlertTriangle />
             <span>{{ error }}</span>
           </div>
-          <Button variant="secondary" @click="refreshLogs"> Retry </Button>
+          <Button variant="secondary" size="sm" @click="refreshLogs">
+            <IconRefreshCcw />
+            {{ t("actions.retry") }}
+          </Button>
         </div>
 
         <Empty

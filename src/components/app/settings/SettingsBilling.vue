@@ -420,7 +420,7 @@ const handleSubscriptionAction = async (): Promise<void> => {
           </FieldContent>
         </Field>
         <template v-else>
-          <div class="rounded-md border p-1">
+          <div class="rounded border p-1">
             <Item v-if="hasCurrentPlan" variant="outline" class="bg-secondary">
               <ItemMedia variant="icon">
                 <IconBadgeDollarSign />

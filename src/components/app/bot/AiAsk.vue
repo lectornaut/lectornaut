@@ -1,7 +1,7 @@
 <script lang="ts" setup>
 import { BotChatContextKey, useBotChat } from "@/composables/useBotChat"
 import { isTauri, useIsFullscreen } from "@/composables/usePlatform"
-import { IconAiFill, IconHistory, IconPin, IconPinOff } from "@/data/icons"
+import { IconAi, IconHistory, IconPin, IconPinOff } from "@/data/icons"
 import { getPlatformSpecialKey } from "@/helpers/shortcuts"
 import { emitter } from "@/modules/mitt"
 import { useRouter } from "vue-router"
@@ -51,11 +51,15 @@ const openHistory = () => {
               class="shadow-none"
               size="icon-sm"
             >
-              <IconAiFill />
+              <IconAi />
             </Button>
           </TooltipTrigger>
           <TooltipContent class="flex items-center gap-2 px-2">
-            <Badge variant="secondary" @click="isDocked = !isDocked">
+            <Badge
+              variant="ghost"
+              class="rounded-md"
+              @click="isDocked = !isDocked"
+            >
               <IconPin v-if="!isDocked" />
               <IconPinOff v-else />
               {{ t("pages.start.askAi") }}
@@ -70,7 +74,7 @@ const openHistory = () => {
           <AiChatShell />
         </Teleport>
         <SheetContent
-          class="m-2 mt-[calc(var(--spacing-titlebar-height,0px)+(--spacing(2)))] h-auto! gap-0 overflow-clip rounded-md border"
+          class="m-2 mt-[calc(var(--spacing-titlebar-height,0px)+(--spacing(2)))] h-auto! gap-0 overflow-clip rounded border"
           :class="{ 'mt-12': isTauri && !isFullscreen }"
           :show-close-button="false"
         >

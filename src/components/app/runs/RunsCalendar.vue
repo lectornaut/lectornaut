@@ -91,7 +91,7 @@ const markerFor = (d: CalDate): DayMarker | undefined =>
                   />
                   <span
                     v-if="markerFor(weekDate)!.scheduled"
-                    class="size-1 rounded-md border border-current opacity-50"
+                    class="size-1 rounded border border-current opacity-50"
                   />
                 </span>
               </RangeCalendarCellTrigger>

@@ -224,7 +224,7 @@ const accentSwatchStyle = (option: ColorSwatch<AccentId>) => ({
               id="custom-base-color"
               v-model="selectedCustomBaseColor"
               type="color"
-              class="bg-background aspect-square size-9 cursor-pointer appearance-none rounded-md border p-2.75"
+              class="bg-background aspect-square size-9 cursor-pointer appearance-none rounded border p-2.75"
             />
             <Select id="base" v-model="selectedBase">
               <SelectTrigger>
@@ -282,7 +282,7 @@ const accentSwatchStyle = (option: ColorSwatch<AccentId>) => ({
               id="custom-accent-color"
               v-model="selectedCustomAccentColor"
               type="color"
-              class="bg-background aspect-square size-9 cursor-pointer appearance-none rounded-md border p-2.75"
+              class="bg-background aspect-square size-9 cursor-pointer appearance-none rounded border p-2.75"
             />
             <Select id="accent" v-model="selectedAccent">
               <SelectTrigger>

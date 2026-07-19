@@ -51,10 +51,11 @@ const jumpToMessage = (messageId: string) => {
     :close-delay="100"
   >
     <HoverCardTrigger as-child>
-      <button
+      <Button
         type="button"
         :aria-label="t('ai.outline')"
-        class="focus-visible:ring-ring/30 flex w-8 flex-col items-center justify-center gap-1 overflow-hidden rounded-md transition-colors outline-none focus-visible:ring-3"
+        variant="ghost"
+        class="grid h-full grid-cols-1 items-center justify-center gap-1 overflow-hidden py-2"
       >
         <!-- One tick per turn. `shrink min-h-px` lets long chats compress
              the ticks instead of overflowing the 36px trigger. -->
@@ -62,28 +63,37 @@ const jumpToMessage = (messageId: string) => {
           v-for="message in userMessages"
           :key="message.id"
           :data-current="message.id === currentAnchorId"
-          class="bg-muted-foreground/40 data-[current=true]:bg-foreground h-0.5 min-h-px w-2 shrink rounded-md transition-colors"
+          class="bg-muted-foreground/50 data-[current=true]:bg-foreground h-0.5 min-h-px w-2 shrink rounded-md transition-colors"
         />
-      </button>
+      </Button>
     </HoverCardTrigger>
     <HoverCardContent
       side="left"
       align="center"
-      class="flex max-h-80 w-64 flex-col gap-0.5 overflow-y-auto rounded-md p-1"
+      class="size-64 max-h-[80svh] overflow-clip p-1"
     >
-      <button
-        v-for="message in userMessages"
-        :key="message.id"
-        type="button"
-        :aria-current="currentAnchorId === message.id ? 'location' : undefined"
-        :data-current="currentAnchorId === message.id"
-        class="hover:bg-accent hover:text-accent-foreground focus-visible:bg-accent focus-visible:text-accent-foreground data-[current=true]:bg-accent data-[current=true]:text-accent-foreground flex min-h-7 items-center rounded-xl px-2 py-1.5 text-left text-sm transition-colors outline-none"
-        @click="jumpToMessage(message.id)"
-      >
-        <span class="line-clamp-1 min-w-0">
-          {{ outlineLabel(message.content) }}
-        </span>
-      </button>
+      <!-- The height cap must sit on the OS viewport itself: the popover's
+           height is auto, so percentage/stretch sizing never reaches the
+           scroll element and OS measures zero overflow (dead wheel). The
+           outer max-h-80 only guards the frame before deferred init. -->
+      <OverlayScrollbarsWrapper>
+        <Button
+          v-for="message in userMessages"
+          :key="message.id"
+          type="button"
+          size="sm"
+          :variant="currentAnchorId === message.id ? 'secondary' : 'ghost'"
+          :aria-current="
+            currentAnchorId === message.id ? 'location' : undefined
+          "
+          class="justify-start text-left"
+          @click="jumpToMessage(message.id)"
+        >
+          <span class="min-w-0 truncate">
+            {{ outlineLabel(message.content) }}
+          </span>
+        </Button>
+      </OverlayScrollbarsWrapper>
     </HoverCardContent>
   </HoverCard>
 </template>

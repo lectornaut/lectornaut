@@ -276,7 +276,7 @@ const handleToggleEnabled = async (enabled: boolean): Promise<void> => {
                   <div
                     v-for="toolKey in activeRow.app.toolKeys"
                     :key="toolKey"
-                    class="bg-muted/40 rounded-md border p-2.5"
+                    class="bg-muted/40 rounded border p-2.5"
                   >
                     <p class="flex items-center gap-1.5 text-sm font-medium">
                       <IconWrench class="text-muted-foreground size-3.5" />

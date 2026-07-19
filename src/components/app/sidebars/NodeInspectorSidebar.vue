@@ -13,9 +13,9 @@ const { t } = useI18n()
 
 <template>
   <Sidebar collapsible="none" class="w-full">
-    <Tabs default-value="bot" class="min-h-0 min-w-0 grow p-2">
+    <Tabs default-value="bot" class="min-h-0 min-w-0 grow">
       <TabsList
-        class="no-scrollbar bg-input/50 w-[-webkit-fill-available] shrink-0 justify-start overflow-x-auto border"
+        class="no-scrollbar bg-input/50 mx-2 mt-2 w-[-webkit-fill-available] shrink-0 justify-start overflow-x-auto border"
       >
         <TabsTrigger
           value="bot"
@@ -57,7 +57,7 @@ const { t } = useI18n()
           :scope="scope"
           :node="node"
         />
-        <div v-else class="text-muted-foreground p-3 text-xs">
+        <div v-else class="text-muted-foreground px-2 text-xs">
           {{ t("inspector.details.empty") }}
         </div>
       </TabsContent>
@@ -73,7 +73,7 @@ const { t } = useI18n()
           :scope="scope"
           :node="node"
         />
-        <div v-else class="text-muted-foreground p-3 text-xs">
+        <div v-else class="text-muted-foreground px-2 text-xs">
           {{ t("inspector.attachments.empty") }}
         </div>
       </TabsContent>
@@ -86,7 +86,7 @@ const { t } = useI18n()
           :scope="scope"
           :node="node"
         />
-        <div v-else class="text-muted-foreground p-3 text-xs">
+        <div v-else class="text-muted-foreground px-2 text-xs">
           {{ t("inspector.related.empty") }}
         </div>
       </TabsContent>
@@ -98,7 +98,7 @@ const { t } = useI18n()
           :workspace-id="workspaceId"
           :document-id="node.id"
         />
-        <div v-else class="text-muted-foreground p-3 text-xs">
+        <div v-else class="text-muted-foreground px-2 text-xs">
           {{ t("inspector.activity.empty") }}
         </div>
       </TabsContent>
@@ -111,7 +111,7 @@ const { t } = useI18n()
           :scope="scope"
           :node="node"
         />
-        <div v-else class="text-muted-foreground p-3 text-xs">
+        <div v-else class="text-muted-foreground px-2 text-xs">
           {{ t("ai.botEmpty") }}
         </div>
       </TabsContent>

@@ -524,7 +524,7 @@ const handleSubmit = async () => {
                   <TooltipTrigger as-child>
                     <div
                       :class="[
-                        'dark:bg-input/30 rounded-md border p-2.5 shadow-xs',
+                        'dark:bg-input/30 rounded border p-2.5 shadow-xs',
                         {
                           'cursor-not-allowed opacity-50':
                             (!canCreateWorkspace && mode === 'create') ||
@@ -688,7 +688,7 @@ const handleSubmit = async () => {
             <!-- Member access -->
             <TabsContent
               value="members"
-              class="dark:bg-input/30 rounded-md border p-2.5 shadow-xs"
+              class="dark:bg-input/30 rounded border p-2.5 shadow-xs"
             >
               <LoadingState v-if="rolesLoading" />
               <template v-else>
@@ -808,7 +808,7 @@ const handleSubmit = async () => {
                                 :disabled="
                                   isLoading || isParticipationLocked(member)
                                 "
-                                class="rounded-md border-none opacity-100! disabled:opacity-25! data-[state=checked]:bg-transparent"
+                                class="rounded border-none opacity-100! disabled:opacity-25! data-[state=checked]:bg-transparent"
                                 @update:model-value="
                                   (value) =>
                                     handleMemberToggle(member, value === true)
@@ -830,7 +830,7 @@ const handleSubmit = async () => {
             <!-- Group access -->
             <TabsContent
               value="groups"
-              class="dark:bg-input/30 rounded-md border p-2.5 shadow-xs"
+              class="dark:bg-input/30 rounded border p-2.5 shadow-xs"
             >
               <LoadingState v-if="groupRolesLoading" />
               <template v-else>
@@ -907,7 +907,7 @@ const handleSubmit = async () => {
                         <Checkbox
                           :model-value="!!workspaceGroupGrants[group.id]"
                           :disabled="isLoading"
-                          class="rounded-md border-none opacity-100! disabled:opacity-25! data-[state=checked]:bg-transparent"
+                          class="rounded border-none opacity-100! disabled:opacity-25! data-[state=checked]:bg-transparent"
                           @update:model-value="
                             (value) =>
                               handleGroupGrantToggle(group.id, value === true)

@@ -348,6 +348,7 @@
   "inspector": {
     "tabs": {
       "details": "Details",
+      "actions": "Actions",
       "attachments": "Attachments",
       "related": "Related",
       "activity": "Activity"
@@ -366,7 +367,6 @@
       "empty": "No related nodes yet.",
       "emptyHint": "Add or edit content and we'll surface connections from across the workspace.",
       "loading": "Finding related nodes...",
-      "errorTitle": "Couldn't load related nodes",
       "errorFallback": "Something went wrong while looking up related nodes.",
       "truncated": "More matches available — refine the source to narrow."
     },
@@ -418,6 +418,7 @@
     "remove": "Remove",
     "rename": "Rename",
     "reset": "Reset",
+    "retry": "Retry",
     "save": "Save",
     "saveChanges": "Save changes",
     "search": "Search",
@@ -3195,7 +3196,7 @@
       "close": "Close",
       "sidebar": "Sidebar",
       "sidebarDescription": "Displays the mobile sidebar.",
-      "toggleSidebar": "Toggle Sidebar",
+      "toggleSidebar": "Toggle sidebar",
       "previousSlide": "Previous slide",
       "nextSlide": "Next slide",
       "more": "More",

@@ -162,7 +162,7 @@ const nodeStatusLabel = computed(() =>
 
 <template>
   <div class="flex size-full min-h-0 grow flex-col gap-2">
-    <Card size="sm" class="m-2 shadow-none">
+    <Card size="sm" class="mx-2 shadow-none">
       <CardHeader>
         <CardTitle class="flex items-center gap-2">
           <IconSparkles class="text-muted-foreground" />
@@ -264,7 +264,7 @@ const nodeStatusLabel = computed(() =>
       </CardFooter>
     </Card>
     <OverlayScrollbarsWrapper>
-      <dl>
+      <dl class="space-y-3 px-2 pb-2 [&_dd]:font-medium">
         <div class="flex items-start justify-between gap-2">
           <dt class="text-muted-foreground flex items-center gap-2">
             <IconUserRound />

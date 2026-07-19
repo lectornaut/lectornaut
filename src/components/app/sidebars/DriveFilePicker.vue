@@ -4,8 +4,9 @@
  * (docs/connections-google-drive-d3.prompt.md). Browses the member's
  * connected Google Drive through the `listDriveFiles` callable — the
  * deliberate replacement for Google's Picker widget, so OAuth tokens never
- * reach the browser — and imports a picked file via the caller-provided
- * `importFile` (bytes move entirely server-side). Target-agnostic: chat
+ * reach the browser — and imports the multi-selected files via the
+ * caller-provided `importFile`, one call per file from the footer's Add
+ * button (bytes move entirely server-side). Target-agnostic: chat
  * sessions (SessionAttachments) and workspace nodes (NodeAttachments) each
  * pass their own import callable; the picker only knows Drive.
  *
@@ -18,6 +19,7 @@
 import { listDriveFiles, type DriveFileRow } from "@/composables/useFunctions"
 import { isTauri, useIsFullscreen } from "@/composables/usePlatform"
 import {
+  IconCheck,
   IconFile,
   IconFileImage,
   IconFilePdf,
@@ -69,7 +71,11 @@ const nextPageToken = ref<string | null>(null)
 const loading = ref(false)
 const loadingMore = ref(false)
 const listError = ref<string | null>(null)
+// Selection is a Map (id → row) so picks survive folder drill-in, search
+// re-queries and pagination — the footer imports whatever has accumulated.
+const selected = ref(new Map<string, DriveFileRow>())
 const importingId = ref<string | null>(null)
+const importing = computed(() => importingId.value !== null)
 const importError = ref<string | null>(null)
 
 const isFolder = (file: DriveFileRow) =>
@@ -133,6 +139,7 @@ watch(open, (value) => {
   if (!value) return
   search.value = ""
   folder.value = null
+  selected.value = new Map()
   importError.value = null
   void load()
 })
@@ -150,18 +157,32 @@ const exitFolder = () => {
   void load()
 }
 
-const pick = async (file: DriveFileRow) => {
-  const importFile = props.importFile
-  if (!importFile || importingId.value) return
+const isPicked = (file: DriveFileRow) => selected.value.has(file.id)
+
+const pick = (file: DriveFileRow) => {
+  if (importing.value) return
   if (isFolder(file)) {
     enterFolder(file)
     return
   }
-  importingId.value = file.id
+  if (selected.value.has(file.id)) selected.value.delete(file.id)
+  else selected.value.set(file.id, file)
+}
+
+// Sequential on purpose: each import is a heavy server-side Drive fetch, and
+// one-at-a-time keeps error handling honest — a failure stops the batch with
+// the failed file (and everything after it) still selected for retry.
+const importSelected = async () => {
+  const importFile = props.importFile
+  if (!importFile || importing.value || selected.value.size === 0) return
   importError.value = null
   try {
-    const imported = await importFile(file.id, file.name)
-    emit("imported", imported.attachmentId, imported.displayName)
+    for (const file of [...selected.value.values()]) {
+      importingId.value = file.id
+      const imported = await importFile(file.id, file.name)
+      emit("imported", imported.attachmentId, imported.displayName)
+      selected.value.delete(file.id)
+    }
     open.value = false
   } catch (error) {
     importError.value = (error as Error).message
@@ -169,6 +190,12 @@ const pick = async (file: DriveFileRow) => {
     importingId.value = null
   }
 }
+
+const addLabel = computed(() => {
+  const count = selected.value.size
+  if (count === 0) return "Add files"
+  return count === 1 ? "Add 1 file" : `Add ${count} files`
+})
 
 const emptyHint = computed(() =>
   search.value.trim() ? "No files matched your search." : "No files here yet."
@@ -182,13 +209,13 @@ const emptyHint = computed(() =>
          files list scrolls via OverlayScrollbarsWrapper, whose inner viewport
          resolves `height: 100%` against this flex column. -->
     <SheetContent
-      class="m-2 mt-[calc(var(--spacing-titlebar-height,0px)+(--spacing(2)))] h-auto! gap-0 overflow-clip rounded-md border"
+      class="m-2 mt-[calc(var(--spacing-titlebar-height,0px)+(--spacing(2)))] h-auto! gap-0 overflow-clip rounded border"
       :class="{ 'mt-12': isTauri && !isFullscreen }"
     >
       <SheetHeader>
         <SheetTitle>Add from Google Drive</SheetTitle>
         <SheetDescription>
-          Pick a file from your connected Drive. Docs are imported as markdown,
+          Pick files from your connected Drive. Docs are imported as markdown,
           Sheets as CSV.
         </SheetDescription>
       </SheetHeader>
@@ -254,17 +281,21 @@ const emptyHint = computed(() =>
 
           <div v-else class="grid gap-1">
             <!-- `AttachmentTrigger` makes the whole card the pick target
-               (open folder / import file); `state="processing"` shimmers
-               the title of the row being imported. -->
+               (open folder / toggle selection — the footer button runs the
+               import); `state="processing"` shimmers the title of the row
+               currently importing. Selection follows the SessionAttachments
+               card-toggle convention: check icon in the media, border tint,
+               aria-pressed on the trigger. -->
             <Attachment
               v-for="file in files"
               :key="file.id"
               size="sm"
-              class="w-full"
+              :class="['w-full', isPicked(file) && 'border-primary']"
               :state="importingId === file.id ? 'processing' : 'done'"
             >
               <AttachmentMedia>
                 <Spinner v-if="importingId === file.id" />
+                <IconCheck v-else-if="isPicked(file)" />
                 <Component :is="rowIcon(file)" v-else />
               </AttachmentMedia>
               <AttachmentContent>
@@ -277,9 +308,12 @@ const emptyHint = computed(() =>
                 :aria-label="
                   isFolder(file)
                     ? `Open folder ${file.name}`
-                    : `Import ${file.name}`
+                    : isPicked(file)
+                      ? `Unselect ${file.name}`
+                      : `Select ${file.name}`
                 "
-                :disabled="importingId !== null && importingId !== file.id"
+                :aria-pressed="isFolder(file) ? undefined : isPicked(file)"
+                :disabled="importing"
                 @click="pick(file)"
               />
             </Attachment>
@@ -297,6 +331,21 @@ const emptyHint = computed(() =>
           </div>
         </div>
       </OverlayScrollbarsWrapper>
+
+      <!-- `data-dialog-action` gives the sheet macOS default-button semantics
+           via the app-level useDialogActionHotkey (SheetContent renders as
+           role="dialog"), matching every dialog footer's ↩ hint. -->
+      <SheetFooter>
+        <Button
+          data-dialog-action
+          :disabled="!importFile || importing || selected.size === 0"
+          @click="importSelected"
+        >
+          <Spinner v-if="importing" />
+          {{ addLabel }}
+          <Kbd>↩</Kbd>
+        </Button>
+      </SheetFooter>
     </SheetContent>
   </Sheet>
 </template>

@@ -2,7 +2,7 @@
 import {
   IconApple,
   IconAppleAppStore,
-  IconCircleSolid,
+  IconCircle,
   IconDisc,
   IconFlathub,
   IconGooglePlayIcon,
@@ -192,7 +192,7 @@ const { t } = useI18n()
             </HoverCardTrigger>
             <HoverCardContent class="w-auto px-3 py-2">
               <div class="flex items-center gap-3">
-                <IconCircleSolid class="h-8 w-8" />
+                <IconCircle class="h-8 w-8 fill-current" />
                 <div class="flex flex-col">
                   <p class="text-muted-foreground">
                     {{ t("landing.overview.open") }}

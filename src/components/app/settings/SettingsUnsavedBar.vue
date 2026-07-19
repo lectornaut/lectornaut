@@ -25,7 +25,7 @@ const { t } = useI18n()
 
 <template>
   <DialogFooter
-    class="bg-popover sticky bottom-3 z-10 m-3 flex items-center gap-2 rounded-md border p-2 shadow-xl"
+    class="bg-popover sticky bottom-3 z-10 m-3 flex items-center gap-2 rounded border p-2 shadow-xl"
   >
     <p class="text-muted-foreground mr-auto ml-1 text-xs">
       {{ t("settings.unsavedChanges") }}

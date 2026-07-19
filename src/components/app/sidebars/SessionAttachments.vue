@@ -319,7 +319,7 @@ const handleDelete = async (attachment: IBotSessionAttachment) => {
 
 <template>
   <div class="flex size-full min-h-0 grow flex-col gap-2">
-    <ButtonGroup>
+    <ButtonGroup class="mx-2 w-auto">
       <Button
         variant="outline"
         size="sm"
@@ -349,7 +349,7 @@ const handleDelete = async (attachment: IBotSessionAttachment) => {
       @imported="onDriveImported"
     />
     <OverlayScrollbarsWrapper>
-      <div class="flex flex-col gap-2">
+      <div class="flex flex-col gap-2 px-2 pb-2">
         <!-- No session yet: buffered uploads ride along with the first message -->
         <template v-if="!sessionId">
           <Attachment
@@ -467,7 +467,7 @@ const handleDelete = async (attachment: IBotSessionAttachment) => {
             label="Loading attachments…"
           />
 
-          <div v-else-if="error" class="space-y-2 rounded-md border p-2">
+          <div v-else-if="error" class="space-y-2 rounded border p-2">
             <div class="text-destructive flex items-start gap-2 text-xs">
               <IconAlertTriangle />
               <span>{{ error }}</span>

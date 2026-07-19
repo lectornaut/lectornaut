@@ -388,12 +388,12 @@ const closeTab = (id: string) => {
           >
             <div
               id="left-dock"
-              class="shadow-muted-foreground/5 bg-background flex max-w-80 shrink-0 flex-col overflow-clip rounded-md border shadow empty:hidden"
+              class="shadow-muted-foreground/5 bg-background flex max-w-80 shrink-0 flex-col overflow-clip rounded border shadow empty:hidden"
             ></div>
             <ResizablePanelGroup
               :style="{ overflow: 'clip' }"
               :class="[
-                'shadow-muted-foreground/5 size-full min-h-0 min-w-0 rounded-md border shadow',
+                'shadow-muted-foreground/5 size-full min-h-0 min-w-0 rounded border shadow',
                 { 'animate-layout-panels': animatePanels },
               ]"
               direction="horizontal"
@@ -415,7 +415,7 @@ const closeTab = (id: string) => {
                   >
                     <div class="grid size-full min-h-0 min-w-0">
                       <div class="mr-0 min-h-0 min-w-0">
-                        <!-- overflow-clip rounded-md border -->
+                        <!-- overflow-clip rounded border -->
                         <div
                           id="left-sidebar"
                           ref="leftSidebarEl"
@@ -501,12 +501,12 @@ const closeTab = (id: string) => {
                         <div
                           class="bg-background flex min-h-0 min-w-0 grow flex-col"
                         >
-                          <!-- overflow-clip rounded-md border -->
+                          <!-- overflow-clip rounded border -->
                           <!-- Non-scrollable sub-header with backdrop blur -->
                           <SubNavigation />
                           <!-- Scrollable content area -->
                           <div
-                            class="mx-2 mb-2 flex min-h-0 min-w-0 grow flex-col overflow-clip rounded-md border"
+                            class="mx-2 mb-2 flex min-h-0 min-w-0 grow flex-col overflow-clip rounded border"
                           >
                             <OverlayScrollbarsWrapper>
                               <RouterView />
@@ -595,7 +595,7 @@ const closeTab = (id: string) => {
                           class="size-full min-h-0 min-w-0"
                         >
                           <div class="size-full min-h-0 min-w-0">
-                            <!-- overflow-clip rounded-md border -->
+                            <!-- overflow-clip rounded border -->
                             <div
                               id="bottom-sidebar"
                               class="bg-background flex size-full min-h-0 min-w-0 flex-col overflow-clip overscroll-none"
@@ -839,7 +839,7 @@ const closeTab = (id: string) => {
                   >
                     <div class="grid size-full min-h-0 min-w-0">
                       <div class="ml-0 min-h-0 min-w-0">
-                        <!-- overflow-clip rounded-md border -->
+                        <!-- overflow-clip rounded border -->
                         <div
                           id="right-sidebar"
                           ref="rightSidebarEl"
@@ -895,7 +895,7 @@ const closeTab = (id: string) => {
                               height: `${observedSize.height}px`,
                             }
                       "
-                      class="bg-background pointer-events-auto absolute flex min-w-64 flex-col overflow-clip rounded-md border will-change-transform"
+                      class="bg-background pointer-events-auto absolute flex min-w-64 flex-col overflow-clip rounded border will-change-transform"
                       :class="
                         isPoppedOutMinimized
                           ? 'border-foreground shadow ring-1'
@@ -989,7 +989,7 @@ const closeTab = (id: string) => {
             </Transition>
             <div
               id="right-dock"
-              class="shadow-muted-foreground/5 bg-background flex max-w-80 shrink-0 flex-col overflow-clip rounded-md border shadow empty:hidden"
+              class="shadow-muted-foreground/5 bg-background flex max-w-80 shrink-0 flex-col overflow-clip rounded border shadow empty:hidden"
             ></div>
           </div>
         </div>
