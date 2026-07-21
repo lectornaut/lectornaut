@@ -237,11 +237,7 @@ const emptyHint = computed(() =>
       <Tooltip>
         <TooltipTrigger as-child>
           <SheetTrigger as-child>
-            <Button
-              variant="outline"
-              size="icon-sm"
-              :aria-label="triggerLabel"
-            >
+            <Button variant="outline" size="icon-sm" :aria-label="triggerLabel">
               <IconLogosGoogleDrive />
             </Button>
           </SheetTrigger>

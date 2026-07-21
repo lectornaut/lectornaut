@@ -415,7 +415,8 @@ export function modelSupportsEffort(
   provider: AiProvider,
   name: string
 ): boolean {
-  if (provider === "anthropic") return /^claude-(opus|sonnet)-4-[6-9]/.test(name)
+  if (provider === "anthropic")
+    return /^claude-(opus|sonnet)-4-[6-9]/.test(name)
   if (provider === "google") return /^gemini-3/.test(name)
   return false
 }
