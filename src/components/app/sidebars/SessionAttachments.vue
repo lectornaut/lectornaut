@@ -1,7 +1,6 @@
 <script lang="ts" setup>
 import DriveFilePicker from "@/components/app/sidebars/DriveFilePicker.vue"
 import { BotChatContextKey } from "@/composables/useBotChat"
-import { useMyConnectionFeature } from "@/composables/useConnections"
 import { importDriveSessionAttachment } from "@/composables/useFunctions"
 import {
   useSessionAttachmentsState,
@@ -114,10 +113,8 @@ const { files: selectedFiles, open: openFileDialog } = useFileDialog({
 })
 
 // "Add from Drive" — the in-app picker (docs/connections-google-drive-d3
-// .prompt.md). Offered only while the Drive feature is actually usable:
-// app installed + admin kill switch off + the member's own account linked
-// (Settings → Connections is the discovery surface for the rest).
-const { available: driveAvailable } = useMyConnectionFeature("google-drive")
+// .prompt.md). Availability lives inside the picker: an unconnected member
+// gets its in-sheet connect-Drive steer instead of a hidden button.
 const drivePickerOpen = ref(false)
 const importDriveFile = async (fileId: string, displayName: string) => {
   // Brand-new chat: buffer the pick instead of importing. The first send
@@ -330,24 +327,16 @@ const handleDelete = async (attachment: IBotSessionAttachment) => {
         <IconUpload />
         <span>Upload files</span>
       </Button>
-      <Button
-        v-if="driveAvailable"
-        variant="outline"
-        size="sm"
-        :disabled="(!canEdit && !canBufferPending) || uploadInProgress"
-        @click="drivePickerOpen = true"
-      >
-        <IconLogosGoogleDrive />
-        <span class="sr-only">Add from Google Drive</span>
-      </Button>
+      <!-- Sheet root + trigger render no wrapper DOM, so the Button stays a
+           direct child of ButtonGroup for its joined-corner selectors. -->
+      <DriveFilePicker
+        v-model:open="drivePickerOpen"
+        :team-id="currentTeamId ?? null"
+        :import-file="importDriveFile"
+        trigger-label="Add from Google Drive"
+        @imported="onDriveImported"
+      />
     </ButtonGroup>
-    <DriveFilePicker
-      v-if="driveAvailable"
-      v-model:open="drivePickerOpen"
-      :team-id="currentTeamId ?? null"
-      :import-file="importDriveFile"
-      @imported="onDriveImported"
-    />
     <OverlayScrollbarsWrapper>
       <div class="flex flex-col gap-2 px-2 pb-2">
         <!-- No session yet: buffered uploads ride along with the first message -->

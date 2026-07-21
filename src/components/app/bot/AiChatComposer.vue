@@ -1,6 +1,7 @@
 <script lang="ts" setup>
 import {
   BotChatContextKey,
+  BOT_CHAT_EFFORT_OPTIONS,
   BOT_CHAT_MAX_ATTACHED_NODES,
   BOT_CHAT_MODE_OPTIONS,
   type BotChatMode,
@@ -42,6 +43,7 @@ import { useTeamAgentsStore } from "@/stores/teamAgentsStore"
 import { useTeamCustomToolsStore } from "@/stores/teamCustomToolsStore"
 import type {
   IBotAgentModel,
+  IBotChatEffort,
   ITeamAgent,
   ITeamCustomTool,
 } from "@/types/domain"
@@ -466,6 +468,44 @@ const onModelChange = (next: unknown) => {
   botChat.model.value = next as IBotAgentModel
 }
 
+// ── Effort picker ────────────────────────────────────────────────────────────
+//
+// Mirrors the mode/model pattern: bind to `botChat.effort` so the next
+// `sendMessage` picks it up. `null` = provider default. The submenu only
+// renders for models whose full stack can deliver a level
+// (`activeModel.supportsEffort`); the server independently drops picks the
+// dispatched model can't take, so hiding here is purely cosmetic.
+const effortOptions = BOT_CHAT_EFFORT_OPTIONS
+const effort = computed<IBotChatEffort | null>(
+  () => botChat?.effort.value ?? null
+)
+
+// Sentinel mirrors AGENT_DEFAULT_VALUE: radio items need a non-empty string
+// value, and `null` (provider default) can't round-trip through reka-ui's
+// string-keyed model.
+const EFFORT_DEFAULT_VALUE = "__default__"
+
+const effortSelectValue = computed(() => effort.value ?? EFFORT_DEFAULT_VALUE)
+
+const onEffortChange = (next: unknown) => {
+  if (!botChat) return
+  if (typeof next !== "string") return
+  if (next === EFFORT_DEFAULT_VALUE) {
+    botChat.effort.value = null
+    return
+  }
+  if (!effortOptions.some((o) => o.value === next)) return
+  botChat.effort.value = next as IBotChatEffort
+}
+
+const effortLabel = (value: IBotChatEffort): string => {
+  // Explicit map (rather than `t(\`ai.effort${value}\`)`) so the
+  // i18n-extractor toolchain can statically discover the keys.
+  if (value === "low") return t("ai.effortLow")
+  if (value === "medium") return t("ai.effortMedium")
+  return t("ai.effortHigh")
+}
+
 // ── Active agent picker (multi-agent persona swap) ────────────────────────
 //
 // Sidebar/inline badges let the user swap the conversation's persona
@@ -558,7 +598,7 @@ const phantomActiveAgent = computed<ITeamAgent | null>(() => {
   return agent
 })
 
-// Sentinel value for the "Default" option. `<Select>` items need a
+// Sentinel value for the "Default" option. Radio items need a
 // non-empty string value, and `null` (clear back to the built-in
 // persona) can't round-trip through reka-ui's string-keyed model — so we
 // map null↔sentinel at the boundary. Double-underscore can't collide
@@ -566,9 +606,10 @@ const phantomActiveAgent = computed<ITeamAgent | null>(() => {
 // `_researcher`).
 const AGENT_DEFAULT_VALUE = "__default__"
 
-// Drives the Select trigger. A phantom (disabled/archived/deleted) active
-// agent keeps its id here even though it has no matching SelectItem — the
-// trigger renders it via the SelectValue slot regardless.
+// Drives the agent radio group. A phantom (disabled/archived/deleted)
+// active agent keeps its id here even though it has no matching radio
+// item — nothing shows as checked, but the menu trigger still renders
+// its avatar.
 const agentSelectValue = computed(
   () => activeAgentId.value ?? AGENT_DEFAULT_VALUE
 )
@@ -1329,25 +1370,51 @@ const onToolMenuCloseAutoFocus = (event: Event) => {
             </SheetFooter>
           </SheetContent>
         </Sheet>
-        <DropdownMenu v-model:open="toolsOpen">
-          <TooltipProvider>
-            <Tooltip>
+        <TooltipProvider>
+          <Tooltip>
+            <DropdownMenu v-model:open="toolsOpen">
               <TooltipTrigger as-child>
                 <DropdownMenuTrigger as-child>
                   <Button variant="ghost" size="icon-xs">
                     <IconAi />
                   </Button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent
-                  v-if="availableTools.length > 0"
-                  @close-auto-focus="onToolMenuCloseAutoFocus"
-                >
-                  <DropdownMenuGroup v-if="builtInTools.length > 0">
+              </TooltipTrigger>
+              <TooltipContent>
+                {{ toolsOpen ? t("ai.hideTools") : t("ai.showTools") }}
+              </TooltipContent>
+              <DropdownMenuContent
+                v-if="availableTools.length > 0"
+                @close-auto-focus="onToolMenuCloseAutoFocus"
+              >
+                <DropdownMenuGroup v-if="builtInTools.length > 0">
+                  <DropdownMenuLabel>
+                    {{ t("ai.tools.groupBuiltIn") }}
+                  </DropdownMenuLabel>
+                  <DropdownMenuItem
+                    v-for="tool in builtInTools"
+                    :key="tool.key"
+                    :disabled="isReadOnly"
+                    @select="insertToolPrompt(tool)"
+                  >
+                    <Component :is="tool.icon" />
+                    {{ tool.label }}
+                  </DropdownMenuItem>
+                </DropdownMenuGroup>
+                <!--
+                    Node-CRUD tools — only render when the active agent is
+                    a content-capable team member (mirrors `pickChatTools`
+                    in `functions/src/bot.ts`). Read-only agents get the
+                    READ entry; full editors get the WRITE entries too.
+                  -->
+                <template v-if="contentTools.length > 0">
+                  <DropdownMenuSeparator v-if="builtInTools.length > 0" />
+                  <DropdownMenuGroup>
                     <DropdownMenuLabel>
-                      {{ t("ai.tools.groupBuiltIn") }}
+                      {{ t("ai.tools.groupContent") }}
                     </DropdownMenuLabel>
                     <DropdownMenuItem
-                      v-for="tool in builtInTools"
+                      v-for="tool in contentTools"
                       :key="tool.key"
                       :disabled="isReadOnly"
                       @select="insertToolPrompt(tool)"
@@ -1356,186 +1423,327 @@ const onToolMenuCloseAutoFocus = (event: Event) => {
                       {{ tool.label }}
                     </DropdownMenuItem>
                   </DropdownMenuGroup>
-                  <!--
-                    Node-CRUD tools — only render when the active agent is
-                    a content-capable team member (mirrors `pickChatTools`
-                    in `functions/src/bot.ts`). Read-only agents get the
-                    READ entry; full editors get the WRITE entries too.
-                  -->
-                  <template v-if="contentTools.length > 0">
-                    <DropdownMenuSeparator v-if="builtInTools.length > 0" />
-                    <DropdownMenuGroup>
-                      <DropdownMenuLabel>
-                        {{ t("ai.tools.groupContent") }}
-                      </DropdownMenuLabel>
-                      <DropdownMenuItem
-                        v-for="tool in contentTools"
-                        :key="tool.key"
-                        :disabled="isReadOnly"
-                        @select="insertToolPrompt(tool)"
-                      >
-                        <Component :is="tool.icon" />
-                        {{ tool.label }}
-                      </DropdownMenuItem>
-                    </DropdownMenuGroup>
-                  </template>
-                  <template v-if="customTools.length > 0">
-                    <DropdownMenuSeparator
-                      v-if="builtInTools.length > 0 || contentTools.length > 0"
-                    />
-                    <DropdownMenuGroup>
-                      <DropdownMenuLabel>
-                        {{ t("ai.tools.groupCustom") }}
-                      </DropdownMenuLabel>
-                      <!--
+                </template>
+                <template v-if="customTools.length > 0">
+                  <DropdownMenuSeparator
+                    v-if="builtInTools.length > 0 || contentTools.length > 0"
+                  />
+                  <DropdownMenuGroup>
+                    <DropdownMenuLabel>
+                      {{ t("ai.tools.groupCustom") }}
+                    </DropdownMenuLabel>
+                    <!--
                         Custom tools render the wire-name in a monospace
                         span — a cue that this is an identifier the model
                         invokes by, vs. built-ins whose labels are prose.
                       -->
-                      <DropdownMenuItem
-                        v-for="tool in customTools"
-                        :key="tool.key"
-                        :disabled="isReadOnly"
-                        @select="insertToolPrompt(tool)"
-                      >
-                        <Component :is="tool.icon" />
-                        {{ tool.label }}
-                      </DropdownMenuItem>
-                    </DropdownMenuGroup>
-                  </template>
-                </DropdownMenuContent>
-              </TooltipTrigger>
-              <TooltipContent>
-                {{ toolsOpen ? t("ai.hideTools") : t("ai.showTools") }}
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-        </DropdownMenu>
+                    <DropdownMenuItem
+                      v-for="tool in customTools"
+                      :key="tool.key"
+                      :disabled="isReadOnly"
+                      @select="insertToolPrompt(tool)"
+                    >
+                      <Component :is="tool.icon" />
+                      {{ tool.label }}
+                    </DropdownMenuItem>
+                  </DropdownMenuGroup>
+                </template>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </Tooltip>
+        </TooltipProvider>
         <!-- <InputGroupText class="ml-auto"> 52% used </InputGroupText> -->
-        <Select
-          v-if="showAgentsRow"
-          :model-value="agentSelectValue"
-          :disabled="isReadOnly"
-          @update:model-value="onAgentChange"
-        >
-          <TooltipProvider>
-            <Tooltip>
+        <!--
+          Agent selector — one menu consolidating the chat's per-send
+          knobs. The trigger reflects the active persona (avatar, or the
+          default bot icon); the content nests Agent / Mode / Model as
+          submenus so the composer carries a single picker. Picking
+          "Default" clears back to the built-in persona. The Agent
+          submenu renders only when the team has a selectable agent OR
+          the chat is pinned to a non-selectable (disabled / archived /
+          deleted) one — otherwise it would offer nothing but "Default",
+          which is noise.
+        -->
+        <!--
+          Nesting order matters here: `DropdownMenu` must be the INNERMOST
+          popper root (inside `Tooltip`), with both triggers and both
+          content nodes under it — reka-ui poppers resolve their anchor
+          from the nearest popper root, and `Tooltip` is popper-based too.
+          With `DropdownMenu` outside `Tooltip`, the menu trigger's anchor
+          registers against the tooltip's root while the menu content
+          reads the dropdown's root, and the menu opens positioned
+          off-screen. Mirrors the attach (+) menu above.
+        -->
+        <TooltipProvider>
+          <Tooltip>
+            <DropdownMenu>
               <TooltipTrigger as-child>
-                <InputGroupButton variant="ghost" class="ml-auto" as-child>
-                  <SelectTrigger class="bg-transparent">
-                    <SelectValue :placeholder="t('ai.agents.label')">
-                      <InputGroupText>
-                        <!-- Icon/avatar only — name hidden. -->
-                        <AppAvatar
-                          v-if="activeAgentId !== null && activeAgent"
-                          variant="beam"
-                          :name="agentAvatarSeed(activeAgent)"
-                          class="size-4"
-                        />
-                        <IconBot v-else />
-                      </InputGroupText>
-                    </SelectValue>
-                  </SelectTrigger>
-                </InputGroupButton>
-              </TooltipTrigger>
-              <TooltipContent>{{ t("ai.agents.tooltip") }}</TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-          <SelectContent>
-            <SelectGroup>
-              <SelectLabel>{{ t("ai.agents.groupBuiltIn") }}</SelectLabel>
-              <SelectItem :value="AGENT_DEFAULT_VALUE">
-                <Item size="xs" class="p-0">
-                  <ItemMedia variant="icon">
-                    <IconBot />
-                  </ItemMedia>
-                  <ItemContent>
-                    <ItemTitle>{{ t("ai.agents.default") }}</ItemTitle>
-                    <ItemDescription class="text-xs">
-                      {{ t("ai.agents.defaultTooltip") }}
-                    </ItemDescription>
-                  </ItemContent>
-                </Item>
-              </SelectItem>
-              <SelectItem
-                v-for="agent in builtInAgents"
-                :key="agent.id"
-                :value="agent.id"
-              >
-                <Item size="xs" class="p-0">
-                  <ItemMedia variant="icon">
+                <DropdownMenuTrigger as-child>
+                  <InputGroupButton
+                    variant="ghost"
+                    size="icon-xs"
+                    class="ml-auto"
+                    :disabled="isReadOnly"
+                  >
+                    <!-- Icon/avatar only — name hidden. -->
                     <AppAvatar
+                      v-if="activeAgentId !== null && activeAgent"
                       variant="beam"
-                      :name="agentAvatarSeed(agent)"
+                      :name="agentAvatarSeed(activeAgent)"
                       class="size-4"
                     />
-                  </ItemMedia>
-                  <ItemContent>
-                    <ItemTitle>{{ agent.name }}</ItemTitle>
-                    <ItemDescription v-if="agent.description" class="text-xs">
-                      {{ agent.description }}
-                    </ItemDescription>
-                  </ItemContent>
-                  <ItemActions v-if="memberAgentIds.has(agent.id)">
-                    <TooltipProvider>
-                      <Tooltip>
-                        <TooltipTrigger as-child>
-                          <span>
-                            <IconBadgeCheck />
-                          </span>
-                        </TooltipTrigger>
-                        <TooltipContent side="right">
-                          {{ t("ai.agents.teamMember") }}
-                        </TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
-                  </ItemActions>
-                </Item>
-              </SelectItem>
-            </SelectGroup>
-            <template v-if="customAgents.length > 0">
-              <SelectSeparator />
-              <SelectGroup>
-                <SelectLabel>{{ t("ai.agents.groupCustom") }}</SelectLabel>
-                <SelectItem
-                  v-for="agent in customAgents"
-                  :key="agent.id"
-                  :value="agent.id"
-                >
-                  <Item size="xs" class="p-0">
-                    <ItemMedia variant="icon">
-                      <AppAvatar
-                        variant="beam"
-                        :name="agentAvatarSeed(agent)"
-                        class="size-4"
-                      />
-                    </ItemMedia>
-                    <ItemContent>
-                      <ItemTitle>{{ agent.name }}</ItemTitle>
-                      <ItemDescription v-if="agent.description" class="text-xs">
-                        {{ agent.description }}
-                      </ItemDescription>
-                    </ItemContent>
-                    <ItemActions v-if="memberAgentIds.has(agent.id)">
-                      <TooltipProvider>
-                        <Tooltip>
-                          <TooltipTrigger as-child>
-                            <span>
-                              <IconBadgeCheck />
-                            </span>
-                          </TooltipTrigger>
-                          <TooltipContent side="right">
-                            {{ t("ai.agents.teamMember") }}
-                          </TooltipContent>
-                        </Tooltip>
-                      </TooltipProvider>
-                    </ItemActions>
-                  </Item>
-                </SelectItem>
-              </SelectGroup>
-            </template>
-          </SelectContent>
-        </Select>
+                    <IconBot v-else />
+                  </InputGroupButton>
+                </DropdownMenuTrigger>
+              </TooltipTrigger>
+              <TooltipContent>{{ t("ai.agents.tooltip") }}</TooltipContent>
+              <DropdownMenuContent align="end">
+                <DropdownMenuSub v-if="showAgentsRow">
+                  <DropdownMenuSubTrigger class="[&>svg:last-child]:ml-0">
+                    {{ t("ai.agents.label") }}
+                    <DropdownMenuShortcut class="tracking-normal">
+                      {{ activeAgent?.name ?? t("ai.agents.default") }}
+                    </DropdownMenuShortcut>
+                  </DropdownMenuSubTrigger>
+                  <DropdownMenuSubContent>
+                    <DropdownMenuRadioGroup
+                      :model-value="agentSelectValue"
+                      @update:model-value="onAgentChange"
+                    >
+                      <DropdownMenuGroup>
+                        <DropdownMenuLabel>
+                          {{ t("ai.agents.groupBuiltIn") }}
+                        </DropdownMenuLabel>
+                        <DropdownMenuRadioItem :value="AGENT_DEFAULT_VALUE">
+                          <Item size="xs" class="p-0">
+                            <ItemMedia variant="icon">
+                              <IconBot />
+                            </ItemMedia>
+                            <ItemContent>
+                              <ItemTitle>{{
+                                t("ai.agents.default")
+                              }}</ItemTitle>
+                              <ItemDescription class="text-xs">
+                                {{ t("ai.agents.defaultTooltip") }}
+                              </ItemDescription>
+                            </ItemContent>
+                          </Item>
+                        </DropdownMenuRadioItem>
+                        <DropdownMenuRadioItem
+                          v-for="agent in builtInAgents"
+                          :key="agent.id"
+                          :value="agent.id"
+                        >
+                          <Item size="xs" class="p-0">
+                            <ItemMedia variant="icon">
+                              <AppAvatar
+                                variant="beam"
+                                :name="agentAvatarSeed(agent)"
+                                class="size-4"
+                              />
+                            </ItemMedia>
+                            <ItemContent>
+                              <ItemTitle>{{ agent.name }}</ItemTitle>
+                              <ItemDescription
+                                v-if="agent.description"
+                                class="text-xs"
+                              >
+                                {{ agent.description }}
+                              </ItemDescription>
+                            </ItemContent>
+                            <ItemActions v-if="memberAgentIds.has(agent.id)">
+                              <TooltipProvider>
+                                <Tooltip>
+                                  <TooltipTrigger as-child>
+                                    <span>
+                                      <IconBadgeCheck />
+                                    </span>
+                                  </TooltipTrigger>
+                                  <TooltipContent side="right">
+                                    {{ t("ai.agents.teamMember") }}
+                                  </TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
+                            </ItemActions>
+                          </Item>
+                        </DropdownMenuRadioItem>
+                      </DropdownMenuGroup>
+                      <template v-if="customAgents.length > 0">
+                        <DropdownMenuSeparator />
+                        <DropdownMenuGroup>
+                          <DropdownMenuLabel>
+                            {{ t("ai.agents.groupCustom") }}
+                          </DropdownMenuLabel>
+                          <DropdownMenuRadioItem
+                            v-for="agent in customAgents"
+                            :key="agent.id"
+                            :value="agent.id"
+                          >
+                            <Item size="xs" class="p-0">
+                              <ItemMedia variant="icon">
+                                <AppAvatar
+                                  variant="beam"
+                                  :name="agentAvatarSeed(agent)"
+                                  class="size-4"
+                                />
+                              </ItemMedia>
+                              <ItemContent>
+                                <ItemTitle>{{ agent.name }}</ItemTitle>
+                                <ItemDescription
+                                  v-if="agent.description"
+                                  class="text-xs"
+                                >
+                                  {{ agent.description }}
+                                </ItemDescription>
+                              </ItemContent>
+                              <ItemActions v-if="memberAgentIds.has(agent.id)">
+                                <TooltipProvider>
+                                  <Tooltip>
+                                    <TooltipTrigger as-child>
+                                      <span>
+                                        <IconBadgeCheck />
+                                      </span>
+                                    </TooltipTrigger>
+                                    <TooltipContent side="right">
+                                      {{ t("ai.agents.teamMember") }}
+                                    </TooltipContent>
+                                  </Tooltip>
+                                </TooltipProvider>
+                              </ItemActions>
+                            </Item>
+                          </DropdownMenuRadioItem>
+                        </DropdownMenuGroup>
+                      </template>
+                    </DropdownMenuRadioGroup>
+                  </DropdownMenuSubContent>
+                </DropdownMenuSub>
+                <DropdownMenuSub>
+                  <DropdownMenuSubTrigger class="[&>svg:last-child]:ml-0">
+                    {{ t("ai.mode") }}
+                    <DropdownMenuShortcut class="tracking-normal">
+                      {{ modeLabel(mode) }}
+                    </DropdownMenuShortcut>
+                  </DropdownMenuSubTrigger>
+                  <DropdownMenuSubContent>
+                    <DropdownMenuRadioGroup
+                      :model-value="mode"
+                      @update:model-value="onModeChange"
+                    >
+                      <DropdownMenuRadioItem
+                        v-for="option in modeOptions"
+                        :key="option.value"
+                        :value="option.value"
+                      >
+                        <Item size="xs" class="p-0">
+                          <ItemContent>
+                            <ItemTitle>{{ modeLabel(option.value) }}</ItemTitle>
+                            <ItemDescription class="text-xs">
+                              {{ option.shortDescription }}
+                            </ItemDescription>
+                          </ItemContent>
+                        </Item>
+                      </DropdownMenuRadioItem>
+                    </DropdownMenuRadioGroup>
+                  </DropdownMenuSubContent>
+                </DropdownMenuSub>
+                <DropdownMenuSub>
+                  <DropdownMenuSubTrigger class="[&>svg:last-child]:ml-0">
+                    {{ t("ai.model") }}
+                    <DropdownMenuShortcut class="tracking-normal">
+                      {{ activeModel.name }}
+                    </DropdownMenuShortcut>
+                  </DropdownMenuSubTrigger>
+                  <DropdownMenuSubContent>
+                    <DropdownMenuRadioGroup
+                      :model-value="model"
+                      @update:model-value="onModelChange"
+                    >
+                      <template
+                        v-for="(group, groupIndex) in availableModelsByProvider"
+                        :key="group.id"
+                      >
+                        <DropdownMenuGroup>
+                          <DropdownMenuLabel>{{
+                            group.name
+                          }}</DropdownMenuLabel>
+                          <DropdownMenuRadioItem
+                            v-for="entry in group.models"
+                            :key="entry.id"
+                            :value="entry.id"
+                          >
+                            <Item size="xs" class="p-0">
+                              <ItemContent>
+                                <ItemTitle>
+                                  {{ entry.name }}
+                                  <Badge
+                                    v-if="entry.badge"
+                                    variant="secondary"
+                                    class="text-xs"
+                                  >
+                                    {{ entry.badge }}
+                                  </Badge>
+                                </ItemTitle>
+                                <ItemDescription class="text-xs">
+                                  {{ entry.description }}
+                                </ItemDescription>
+                              </ItemContent>
+                            </Item>
+                          </DropdownMenuRadioItem>
+                        </DropdownMenuGroup>
+                        <DropdownMenuSeparator
+                          v-if="
+                            groupIndex < availableModelsByProvider.length - 1
+                          "
+                        />
+                      </template>
+                    </DropdownMenuRadioGroup>
+                  </DropdownMenuSubContent>
+                </DropdownMenuSub>
+                <DropdownMenuSub v-if="activeModel.supportsEffort">
+                  <DropdownMenuSubTrigger class="[&>svg:last-child]:ml-0">
+                    {{ t("ai.effort") }}
+                    <DropdownMenuShortcut class="tracking-normal">
+                      {{ effort ? effortLabel(effort) : t("ai.effortDefault") }}
+                    </DropdownMenuShortcut>
+                  </DropdownMenuSubTrigger>
+                  <DropdownMenuSubContent>
+                    <DropdownMenuRadioGroup
+                      :model-value="effortSelectValue"
+                      @update:model-value="onEffortChange"
+                    >
+                      <DropdownMenuRadioItem :value="EFFORT_DEFAULT_VALUE">
+                        <Item size="xs" class="p-0">
+                          <ItemContent>
+                            <ItemTitle>{{ t("ai.effortDefault") }}</ItemTitle>
+                            <ItemDescription class="text-xs">
+                              {{ t("ai.effortDefaultDescription") }}
+                            </ItemDescription>
+                          </ItemContent>
+                        </Item>
+                      </DropdownMenuRadioItem>
+                      <DropdownMenuRadioItem
+                        v-for="option in effortOptions"
+                        :key="option.value"
+                        :value="option.value"
+                      >
+                        <Item size="xs" class="p-0">
+                          <ItemContent>
+                            <ItemTitle>
+                              {{ effortLabel(option.value) }}
+                            </ItemTitle>
+                            <ItemDescription class="text-xs">
+                              {{ option.shortDescription }}
+                            </ItemDescription>
+                          </ItemContent>
+                        </Item>
+                      </DropdownMenuRadioItem>
+                    </DropdownMenuRadioGroup>
+                  </DropdownMenuSubContent>
+                </DropdownMenuSub>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </Tooltip>
+        </TooltipProvider>
         <Separator orientation="vertical" class="my-2" />
         <TooltipProvider v-if="isDictationAvailable">
           <Tooltip>
@@ -1573,121 +1781,5 @@ const onToolMenuCloseAutoFocus = (event: Event) => {
         </TooltipProvider>
       </InputGroupAddon>
     </InputGroup>
-    <!--
-      Agent picker. Visible only when the team has a selectable agent OR
-      the chat is pinned to a non-selectable (disabled / archived /
-      deleted) one — otherwise the dropdown would offer nothing but
-      "Default", which is noise. The trigger reflects the active persona
-      (including a phantom one, with a status suffix); the dropdown lists
-      Default + every selectable agent. Picking "Default" clears back to
-      the built-in persona.
-    -->
-    <div class="flex flex-wrap items-center gap-2">
-      <Select
-        :model-value="mode"
-        :disabled="isReadOnly"
-        @update:model-value="onModeChange"
-      >
-        <TooltipProvider>
-          <Tooltip>
-            <TooltipTrigger as-child>
-              <InputGroupButton variant="ghost" as-child>
-                <SelectTrigger class="bg-transparent">
-                  <SelectValue :placeholder="t('ai.mode')">
-                    <InputGroupText class="text-xs">
-                      {{ modeLabel(mode) }}
-                    </InputGroupText>
-                  </SelectValue>
-                </SelectTrigger>
-              </InputGroupButton>
-            </TooltipTrigger>
-            <TooltipContent>{{ t("ai.modeTooltip") }}</TooltipContent>
-          </Tooltip>
-        </TooltipProvider>
-        <SelectContent>
-          <SelectGroup>
-            <SelectItem
-              v-for="option in modeOptions"
-              :key="option.value"
-              :value="option.value"
-            >
-              <Item size="xs" class="p-0">
-                <ItemContent>
-                  <ItemTitle>{{ modeLabel(option.value) }}</ItemTitle>
-                  <ItemDescription class="text-xs">
-                    {{ option.shortDescription }}
-                  </ItemDescription>
-                </ItemContent>
-              </Item>
-            </SelectItem>
-          </SelectGroup>
-        </SelectContent>
-      </Select>
-      <Select
-        :model-value="model"
-        :disabled="isReadOnly"
-        @update:model-value="onModelChange"
-      >
-        <TooltipProvider>
-          <Tooltip>
-            <TooltipTrigger as-child>
-              <InputGroupButton variant="ghost" class="ml-auto" as-child>
-                <SelectTrigger class="bg-transparent">
-                  <SelectValue :placeholder="t('ai.model')">
-                    <InputGroupText class="text-xs">
-                      {{ activeModel.name }}
-                      <Badge
-                        v-if="activeModel.badge"
-                        variant="secondary"
-                        class="text-xs"
-                      >
-                        {{ activeModel.badge }}
-                      </Badge>
-                    </InputGroupText>
-                  </SelectValue>
-                </SelectTrigger>
-              </InputGroupButton>
-            </TooltipTrigger>
-            <TooltipContent>{{ t("ai.modelTooltip") }}</TooltipContent>
-          </Tooltip>
-        </TooltipProvider>
-        <SelectContent>
-          <template
-            v-for="(group, groupIndex) in availableModelsByProvider"
-            :key="group.id"
-          >
-            <SelectGroup>
-              <SelectLabel>{{ group.name }}</SelectLabel>
-              <SelectItem
-                v-for="entry in group.models"
-                :key="entry.id"
-                :value="entry.id"
-              >
-                <Item size="xs" class="p-0">
-                  <ItemContent>
-                    <ItemTitle>
-                      {{ entry.name }}
-                      <Badge
-                        v-if="entry.badge"
-                        variant="secondary"
-                        class="text-xs"
-                      >
-                        {{ entry.badge }}
-                      </Badge>
-                    </ItemTitle>
-                    <ItemDescription class="text-xs">
-                      {{ entry.description }}
-                    </ItemDescription>
-                  </ItemContent>
-                </Item>
-              </SelectItem>
-            </SelectGroup>
-            <SelectSeparator
-              v-if="groupIndex < availableModelsByProvider.length - 1"
-            />
-          </template>
-        </SelectContent>
-      </Select>
-    </div>
   </div>
 </template>

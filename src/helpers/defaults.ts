@@ -432,6 +432,7 @@ export const botModels = [
     name: "Gemini 3.5 Flash",
     description: "Fast, capable, multimodal — great everyday default.",
     badge: "Flash",
+    supportsEffort: true,
   },
   {
     id: "gemini-3.1-pro-preview",
@@ -439,6 +440,7 @@ export const botModels = [
     name: "Gemini 3.1 Pro (Preview)",
     description: "Most capable Gemini — best for complex reasoning.",
     badge: "Preview",
+    supportsEffort: true,
   },
   // Anthropic Claude
   {
@@ -447,6 +449,7 @@ export const botModels = [
     name: "Claude Opus 4.8",
     description: "Most capable Claude — long-horizon reasoning and writing.",
     badge: "Opus",
+    supportsEffort: true,
   },
   {
     id: "claude-sonnet-4-6",
@@ -454,6 +457,7 @@ export const botModels = [
     name: "Claude Sonnet 4.6",
     description: "Balanced Claude — strong general-purpose default.",
     badge: null,
+    supportsEffort: true,
   },
   // OpenAI
   {
@@ -461,7 +465,11 @@ export const botModels = [
     provider: "openai",
     name: "GPT-5.1",
     description: "OpenAI flagship — unified reasoning across speed and depth.",
+    // Takes `reasoning_effort` at the API level, but the installed Genkit
+    // OpenAI plugin has no config key for it yet — flip on (here and in the
+    // server's `modelSupportsEffort`) when the plugin ships one.
     badge: "Reasoning",
+    supportsEffort: false,
   },
   // xAI Grok
   {
@@ -469,7 +477,9 @@ export const botModels = [
     provider: "xai",
     name: "Grok 3",
     description: "xAI's flagship — strong reasoning and broad knowledge.",
+    // xAI honors reasoning_effort only on the grok-mini line.
     badge: null,
+    supportsEffort: false,
   },
   // DeepSeek
   {
@@ -478,13 +488,16 @@ export const botModels = [
     name: "DeepSeek Chat",
     description: "DeepSeek V3 — fast, capable, cost-efficient.",
     badge: null,
+    supportsEffort: false,
   },
   {
     id: "deepseek-reasoner",
     provider: "deepseek",
     name: "DeepSeek Reasoner",
     description: "DeepSeek R1 — step-by-step chain-of-thought reasoning.",
+    // R1 always reasons; there is no depth knob to expose.
     badge: "Reasoning",
+    supportsEffort: false,
   },
 ] as const satisfies readonly {
   id: IBotAgentModel
@@ -492,6 +505,13 @@ export const botModels = [
   name: string
   description: string
   badge: string | null
+  /**
+   * Whether the composer shows the Effort submenu for this model — true
+   * only where the full stack (provider API + installed Genkit plugin +
+   * server mapping) can actually deliver the level. Mirror of the
+   * server's `modelSupportsEffort` in `functions/src/botTurn.ts`.
+   */
+  supportsEffort: boolean
 }[]
 
 export type BotModelEntry = (typeof botModels)[number]
@@ -503,6 +523,8 @@ export interface BotModelInfo {
   badge: string | null
   providerId: IBotModelProvider | null
   providerName: string
+  /** See the catalog field — false for unknown/out-of-catalog ids. */
+  supportsEffort: boolean
 }
 
 // Look up catalog metadata for a model id. Falls back to a synthetic
@@ -518,6 +540,7 @@ export const findBotModel = (id: string | null | undefined): BotModelInfo => {
       badge: null,
       providerId: null,
       providerName: "",
+      supportsEffort: false,
     }
   }
   const entry = botModels.find((m) => m.id === id)
@@ -529,6 +552,7 @@ export const findBotModel = (id: string | null | undefined): BotModelInfo => {
       badge: null,
       providerId: null,
       providerName: "",
+      supportsEffort: false,
     }
   }
   const provider = botModelProviders.find((p) => p.id === entry.provider)
@@ -539,6 +563,7 @@ export const findBotModel = (id: string | null | undefined): BotModelInfo => {
     badge: entry.badge,
     providerId: entry.provider,
     providerName: provider?.name ?? "",
+    supportsEffort: entry.supportsEffort,
   }
 }
 

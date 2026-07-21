@@ -41,7 +41,7 @@
 
 import type { Part, ResumeOptions } from "genkit/beta"
 
-import type { AiProvider } from "./domain.js"
+import type { AiProvider, BotChatEffort } from "./domain.js"
 
 // ===========================================================================
 // Delivery -> sendStream args
@@ -391,6 +391,35 @@ export function modelSupportsThinking(name: string): boolean {
   return false
 }
 
+/**
+ * Claude 4.7+ removed `temperature`/`top_p`/`top_k` from the API entirely —
+ * sending any of them is a 400 regardless of thinking state. 4.6-family
+ * models still accept them.
+ * ponytail: matches the catalog's opus-4-8; extend when a 4.7+/5-family
+ * wire-name lands in BOT_AGENT_MODELS.
+ */
+const ANTHROPIC_SAMPLING_REMOVED_RE = /^claude-opus-4-[78]/
+
+/**
+ * Whether a wire-name accepts the canonical per-turn effort level:
+ *   - Claude 4.6+ (Opus/Sonnet): `output_config.effort` — GA. Excludes
+ *     Haiku 4.5, which rejects the parameter.
+ *   - Gemini 3.x: `thinkingConfig.thinkingLevel` (2.5 only has token
+ *     budgets, and none are in the catalog).
+ * OpenAI gpt-5.1 takes `reasoning_effort` at the API level, but
+ * @genkit-ai/compat-oai 1.40 has no config key for it on OpenAI models
+ * (only xAI's grok-mini line) — flip it on here when the plugin ships one.
+ * deepseek-reasoner reasons unconditionally; grok-3 (non-mini) has no knob.
+ */
+export function modelSupportsEffort(
+  provider: AiProvider,
+  name: string
+): boolean {
+  if (provider === "anthropic") return /^claude-(opus|sonnet)-4-[6-9]/.test(name)
+  if (provider === "google") return /^gemini-3/.test(name)
+  return false
+}
+
 /** Sampling knobs read off the team's agent config (all optional). */
 export interface TurnSampling {
   temperature?: number
@@ -401,15 +430,22 @@ export interface TurnSampling {
 
 /**
  * Build the `config` object handed to `chat(...)` / `ai.generate(...)`,
- * baking in the per-provider thinking enablement so every callsite gets it
- * identically:
+ * baking in the per-provider thinking + effort mapping so every callsite
+ * gets it identically:
  *
- *   - Gemini (2.5+/3): `thinkingConfig.includeThoughts` alongside sampling.
- *   - Claude (3.7/4+): the beta API surface + a `thinking` budget. Anthropic
- *     rejects temperature/top_p/top_k alongside thinking and requires
- *     max_tokens > budget, so we DROP the sampling knobs and add the budget
- *     on top of the agent's answer allotment.
- *   - OpenAI gpt-4*: not reasoning models — sampling only.
+ *   - Gemini (2.5+/3): `thinkingConfig.includeThoughts` alongside sampling;
+ *     an `effort` pick adds `thinkingConfig.thinkingLevel` (Gemini 3's
+ *     reasoning-depth knob, independent of whether thoughts are surfaced).
+ *   - Claude (4.6+): adaptive thinking (`thinking.adaptive`) with
+ *     `display: "summarized"` so reasoning is surfaced — the fixed
+ *     `budgetTokens` shape is deprecated on 4.6 and a hard 400 on 4.7+.
+ *     Adaptive spends thinking inside `max_tokens`, so the old budget is
+ *     kept as headroom on top of the answer allotment. An `effort` pick
+ *     maps to the GA `effort` level. Claude 4.7+ also removed
+ *     temperature/top_p/top_k API-wide (400 if sent), so those models get
+ *     only the token ceiling.
+ *   - OpenAI / xAI / DeepSeek: sampling only (see `modelSupportsEffort`
+ *     for why no effort mapping yet).
  *
  * The stream + reconstruction fold any resulting `reasoning` parts into
  * `<thinking>` blocks uniformly (`createThinkingFolder`), so this only
@@ -423,11 +459,17 @@ export interface TurnSampling {
  */
 export function buildTurnConfig(opts: {
   provider: AiProvider
-  /** Model wire-name — gates `modelSupportsThinking`. */
+  /** Model wire-name — gates `modelSupportsThinking` / `modelSupportsEffort`. */
   model: string
   sampling: TurnSampling
   /** The agent's `thinking` flag; thinking only applies if the model supports it. */
   thinkingEnabled: boolean
+  /**
+   * Per-turn reasoning-effort level picked in the composer. `null`/absent
+   * means provider default; silently dropped for models without a knob so
+   * a stale client pick can never fail a turn.
+   */
+  effort?: BotChatEffort | null
   temperatureCap?: number
 }): Record<string, unknown> {
   const sampling: TurnSampling = { ...opts.sampling }
@@ -435,28 +477,45 @@ export function buildTurnConfig(opts: {
     sampling.temperature = Math.min(sampling.temperature, opts.temperatureCap)
   }
 
-  if (!opts.thinkingEnabled || !modelSupportsThinking(opts.model)) {
-    return { ...sampling }
-  }
+  const thinkingOn = opts.thinkingEnabled && modelSupportsThinking(opts.model)
+  const effort =
+    opts.effort && modelSupportsEffort(opts.provider, opts.model)
+      ? opts.effort
+      : undefined
 
   if (opts.provider === "google") {
-    return { ...sampling, thinkingConfig: { includeThoughts: true } }
+    const thinkingConfig: Record<string, unknown> = {
+      ...(thinkingOn ? { includeThoughts: true } : {}),
+      ...(effort ? { thinkingLevel: effort.toUpperCase() } : {}),
+    }
+    return Object.keys(thinkingConfig).length > 0
+      ? { ...sampling, thinkingConfig }
+      : { ...sampling }
   }
 
   if (opts.provider === "anthropic") {
-    return {
-      maxOutputTokens:
-        (sampling.maxOutputTokens ?? 0) + ANTHROPIC_THINKING_BUDGET_TOKENS,
-      apiVersion: "beta",
-      thinking: {
-        enabled: true,
-        budgetTokens: ANTHROPIC_THINKING_BUDGET_TOKENS,
-      },
+    const base: Record<string, unknown> = ANTHROPIC_SAMPLING_REMOVED_RE.test(
+      opts.model
+    )
+      ? sampling.maxOutputTokens !== undefined
+        ? { maxOutputTokens: sampling.maxOutputTokens }
+        : {}
+      : { ...sampling }
+    if (effort) base.effort = effort
+    if (thinkingOn) {
+      return {
+        ...base,
+        maxOutputTokens:
+          (sampling.maxOutputTokens ?? 0) + ANTHROPIC_THINKING_BUDGET_TOKENS,
+        apiVersion: "beta",
+        thinking: { adaptive: true, display: "summarized" },
+      }
     }
+    return base
   }
 
-  // OpenAI (or any future non-reasoning provider): sampling only. Unreachable
-  // for `openai` in practice because `modelSupportsThinking` already returned
-  // false above, but kept total so the function never falls through.
+  // OpenAI / xAI / DeepSeek (and any future provider): sampling only —
+  // neither a thinking toggle nor an effort knob maps here yet (see
+  // `modelSupportsEffort`). Kept total so the function never falls through.
   return { ...sampling }
 }

@@ -13,9 +13,12 @@
  * Browse model: debounced free-text search over the whole corpus, plus
  * one-level folder drill-in (clicking a folder scopes the list to it; the
  * "All files" chip backs out). Pagination via the API's opaque pageToken.
- * Binding problems (not connected / needs reauth / app disabled) surface as
- * the server's own message in the sheet body — the copy steers the member.
+ * Availability lives here too: the trigger always renders, and an
+ * unconnected member gets an in-sheet steer to Settings → Connections
+ * instead of the browser. Remaining binding problems (needs reauth / app
+ * disabled mid-session) still surface as the server's own message.
  */
+import { useMyConnectionFeature } from "@/composables/useConnections"
 import { listDriveFiles, type DriveFileRow } from "@/composables/useFunctions"
 import { isTauri, useIsFullscreen } from "@/composables/usePlatform"
 import {
@@ -25,10 +28,12 @@ import {
   IconFilePdf,
   IconFileText,
   IconFolder,
+  IconLogosGoogleDrive,
   IconSearch,
   IconX,
 } from "@/data/icons"
 import { formatAttachmentSize } from "@/helpers/node-attachments"
+import { emitter } from "@/modules/mitt"
 import type { Component } from "vue"
 import { computed, ref, watch } from "vue"
 
@@ -53,11 +58,27 @@ const props = defineProps<{
         displayName: string
       ) => Promise<DriveImportedAttachment>)
     | null
+  /**
+   * Accessible name for the built-in trigger button — surfaced as its
+   * tooltip on hover/focus AND as its `aria-label` (the trigger is
+   * icon-only).
+   */
+  triggerLabel: string
 }>()
 
 const open = defineModel<boolean>("open", { default: false })
 
 const isFullscreen = useIsFullscreen()
+
+// Three-condition gate (installed + not killed + own account linked); when
+// it fails the sheet swaps the browser for the connect steer below.
+const { available: driveAvailable } = useMyConnectionFeature("google-drive")
+
+const openConnectionsSettings = () => {
+  // Close first so the Settings dialog doesn't stack on the sheet.
+  open.value = false
+  emitter.emit("Dialog.Settings.Open", "connections")
+}
 
 const emit = defineEmits<{
   /** Fired after a successful import with the new attachment's id. */
@@ -108,7 +129,8 @@ const rowMeta = (file: DriveFileRow): string => {
 
 async function load(append = false) {
   const teamId = props.teamId
-  if (!teamId) return
+  // Single guard for every entry point (open, search, folder, retry, page).
+  if (!teamId || !driveAvailable.value) return
   if (append && !nextPageToken.value) return
   if (append) loadingMore.value = true
   else loading.value = true
@@ -204,6 +226,29 @@ const emptyHint = computed(() =>
 
 <template>
   <Sheet v-model:open="open">
+    <!-- Built-in trigger — the Drive-logo button both call sites shared, so
+         it lives here; parents pass only `triggerLabel`/`triggerDisabled`
+         (and may still force-close via v-model on session/node switch).
+         Tooltip-around-SheetTrigger per the SettingsMemoryRowActions
+         nesting; every layer down to the Button is renderless or as-child,
+         so the button stays a direct DOM child of the parent's ButtonGroup
+         for its joined-corner selectors. -->
+    <TooltipProvider>
+      <Tooltip>
+        <TooltipTrigger as-child>
+          <SheetTrigger as-child>
+            <Button
+              variant="outline"
+              size="icon-sm"
+              :aria-label="triggerLabel"
+            >
+              <IconLogosGoogleDrive />
+            </Button>
+          </SheetTrigger>
+        </TooltipTrigger>
+        <TooltipContent>{{ triggerLabel }}</TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
     <!-- House floating-sheet treatment (Agents.vue / AiAsk.vue): inset rounded
          panel, `h-auto!` so inset-y-0 + margins define a definite height — the
          files list scrolls via OverlayScrollbarsWrapper, whose inner viewport
@@ -221,8 +266,9 @@ const emptyHint = computed(() =>
       </SheetHeader>
 
       <!-- SheetContent has no built-in padding (DialogContent did), so the
-           pinned controls carry their own gutters. -->
-      <div class="flex flex-col gap-2 px-4 pb-2">
+           pinned controls carry their own gutters. Search (and the footer)
+           only make sense once Drive is connected. -->
+      <div v-if="driveAvailable" class="flex flex-col gap-2 px-4 pb-2">
         <InputGroup>
           <InputGroupAddon>
             <IconSearch />
@@ -259,7 +305,29 @@ const emptyHint = computed(() =>
            sheet's full width. -->
       <OverlayScrollbarsWrapper>
         <div class="flex grow flex-col px-4 pb-4">
-          <LoadingState v-if="loading" label="Loading your Drive..." />
+          <!-- Not connected: the trigger is never hidden or disabled for
+               this — the sheet itself steers to Settings → Connections. -->
+          <Empty v-if="!driveAvailable" class="border-dashed p-6">
+            <EmptyHeader>
+              <EmptyMedia variant="icon"><IconLogosGoogleDrive /></EmptyMedia>
+              <EmptyTitle>Connect Google Drive</EmptyTitle>
+              <EmptyDescription>
+                Link your Google account to browse and import your Drive files
+                here.
+              </EmptyDescription>
+            </EmptyHeader>
+            <EmptyContent>
+              <Button
+                variant="secondary"
+                size="sm"
+                @click="openConnectionsSettings"
+              >
+                Open settings
+              </Button>
+            </EmptyContent>
+          </Empty>
+
+          <LoadingState v-else-if="loading" label="Loading your Drive..." />
 
           <div
             v-else-if="listError"
@@ -335,7 +403,7 @@ const emptyHint = computed(() =>
       <!-- `data-dialog-action` gives the sheet macOS default-button semantics
            via the app-level useDialogActionHotkey (SheetContent renders as
            role="dialog"), matching every dialog footer's ↩ hint. -->
-      <SheetFooter>
+      <SheetFooter v-if="driveAvailable">
         <Button
           data-dialog-action
           :disabled="!importFile || importing || selected.size === 0"

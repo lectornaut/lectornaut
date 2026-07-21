@@ -398,20 +398,33 @@ const renderedMessages = computed(() =>
                     >
                       {{ messageSenderName(message) }}
                     </MessageHeader>
+                    <!-- Error turns (server-side graceful fallbacks, persisted
+                         with `status: "error"`) render as a framed destructive
+                         bubble instead of the agent's full-width ghost — the
+                         contained shape is what distinguishes "the turn failed"
+                         from a normal reply at a glance. -->
                     <Bubble
                       :variant="
-                        message.role === 'agent'
-                          ? 'ghost'
-                          : isOwnMessage(message)
-                            ? 'tinted'
-                            : 'muted'
+                        message.status === 'error'
+                          ? 'destructive'
+                          : message.role === 'agent'
+                            ? 'ghost'
+                            : isOwnMessage(message)
+                              ? 'tinted'
+                              : 'muted'
                       "
-                      :class="message.role === 'agent' && 'w-full'"
+                      :class="
+                        message.role === 'agent' &&
+                        message.status !== 'error' &&
+                        'w-full'
+                      "
                     >
                       <BubbleContent
                         :class="[
                           'markdown-bubble flex flex-col gap-2',
-                          message.role === 'agent' && 'w-full',
+                          message.role === 'agent' &&
+                            message.status !== 'error' &&
+                            'w-full',
                         ]"
                       >
                         <template v-for="block in blocks" :key="block.id">

@@ -63,6 +63,22 @@ export const TRIGGER_OPTS = {
 }
 
 /**
+ * Identity blocking-function defaults (`beforeUserCreated` /
+ * `beforeUserSignedIn`). Identity Platform hard-caps blocking functions at
+ * 7 seconds — it never honored more, and firebase-functions ≥7.3.0 now
+ * asserts the cap at load time, so reusing `TRIGGER_OPTS` (120s) fails
+ * deploy analysis. Handlers here sit inline in the user's sign-up/sign-in
+ * path and must stay fast regardless of the configured ceiling.
+ */
+export const BLOCKING_AUTH_OPTS = {
+  region: REGION,
+  memory: "256MiB" as const,
+  timeoutSeconds: 7,
+  maxInstances: 10,
+  concurrency: 10,
+}
+
+/**
  * Scheduled function defaults
  * - Lower maxInstances since schedulers run infrequently
  * - Higher timeout for batch cleanup operations

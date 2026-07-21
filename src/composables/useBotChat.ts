@@ -54,6 +54,7 @@ import { useAuthStore } from "@/stores/authStore"
 import { useTeamAgentsStore } from "@/stores/teamAgentsStore"
 import type {
   IBotAgentModel,
+  IBotChatEffort,
   IBotModelProvider,
   IBotSession,
   IBotSessionVisibility,
@@ -129,6 +130,26 @@ export const BOT_CHAT_MODE_OPTIONS: readonly BotChatModeOption[] = [
 
 const DEFAULT_BOT_CHAT_MODE: BotChatMode = "auto"
 
+/**
+ * Static catalog of reasoning-effort levels for the composer's Effort
+ * submenu. Levels are the canonical ordinal scale from
+ * `@lectornaut/shared/domain`; the server maps them per provider at
+ * dispatch (`buildTurnConfig`), so these descriptions speak to outcomes,
+ * not vendor parameter names. "Default" (null) is not an entry here —
+ * the composer renders it as its own radio item, mirroring the agent
+ * picker's Default row.
+ */
+export interface BotChatEffortOption {
+  value: IBotChatEffort
+  shortDescription: string
+}
+
+export const BOT_CHAT_EFFORT_OPTIONS: readonly BotChatEffortOption[] = [
+  { value: "low", shortDescription: "Fastest replies, minimal reasoning" },
+  { value: "medium", shortDescription: "Balanced depth and speed" },
+  { value: "high", shortDescription: "Deepest reasoning, slower and pricier" },
+] as const
+
 export interface BotChatContext {
   messages: Ref<BotChatMessage[]>
   sessionId: Ref<string | null>
@@ -161,6 +182,16 @@ export interface BotChatContext {
   availableModelsByProvider: Ref<
     { id: IBotModelProvider; name: string; models: BotModelEntry[] }[]
   >
+  /**
+   * Reasoning-effort level for the next `sendMessage`, or `null` for the
+   * provider default. Sent on every turn (explicit null clears the
+   * session's persisted pick server-side); existing chats rehydrate from
+   * the doc's `lastEffort` on `selectSession`, mirroring `model`'s
+   * continuity. The composer hides the picker for models without a knob
+   * (`BotModelInfo.supportsEffort`) — the server also drops unsupported
+   * picks, so a stale value can never fail a turn.
+   */
+  effort: Ref<IBotChatEffort | null>
   /**
    * Id of the custom agent currently driving this chat, or `null` for
    * the team default persona. Mutates on `selectAgent()`; the next
@@ -530,6 +561,10 @@ export function useBotChat(): BotChatContext {
   // team's config doc lands, so this never reads `undefined`.
   const model = ref<IBotAgentModel>(teamDefaultModel.value)
 
+  // Per-turn reasoning-effort pick; null = provider default. No team-level
+  // default exists (unlike mode/model), so new chats always start at null.
+  const effort = ref<IBotChatEffort | null>(null)
+
   // Re-seed when the team's default flips IFF the session is pristine
   // (no messages exchanged AND no session pinned). Mirrors the mode
   // watcher's invariants — admin saves are rare, and racing them
@@ -894,6 +929,9 @@ export function useBotChat(): BotChatContext {
     // default model. Continuity (rehydrating to the last-used model) is
     // an existing-chat concept and handled by `selectSession`.
     model.value = teamDefaultModel.value
+    // Effort resets to provider default — like model, the prior pick was
+    // scoped to the conversation it was made in.
+    effort.value = null
     // Active custom agent resets too — a brand-new chat shouldn't
     // inherit the persona from whatever the user was just talking to.
     // Sidebar-launched chats (which DO want an agent preselected)
@@ -1126,6 +1164,7 @@ export function useBotChat(): BotChatContext {
           message: trimmed,
           mode: mode.value,
           model: model.value,
+          effort: effort.value,
           contextNodes,
           attachmentIds,
           ...(opts?.pendingAttachments && opts.pendingAttachments.length > 0
@@ -1259,6 +1298,7 @@ export function useBotChat(): BotChatContext {
           response: answer,
           mode: mode.value,
           model: model.value,
+          effort: effort.value,
           contextNodes,
           // Forward the current agent selection so a user who flipped
           // agents mid-interrupt has the resume turn dispatched under
@@ -1352,6 +1392,11 @@ export function useBotChat(): BotChatContext {
         persistedModel && isModelAvailable(persistedModel)
           ? persistedModel
           : teamDefaultModel.value
+      // Effort rides the same continuity: restore the chat's last pick
+      // (null/absent both mean provider default). No allowlist to clamp
+      // against — the schema's `.catch(undefined)` already swallowed any
+      // retired level, and the server drops picks the model can't take.
+      effort.value = matched?.lastEffort ?? null
       // Same rehydration story for the active agent: pick up the
       // session's persisted id so the badge matches what the server
       // will dispatch with. The agent record may have been archived
@@ -1518,6 +1563,7 @@ export function useBotChat(): BotChatContext {
     activeModeOption,
     model,
     availableModelsByProvider,
+    effort,
     activeAgentId,
     activeAgent,
     activeAgentStatus,

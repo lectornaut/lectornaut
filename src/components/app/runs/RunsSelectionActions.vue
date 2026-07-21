@@ -92,9 +92,9 @@ const onDelete = (): void => {
     >
       <IconCheck />
       {{ t("settings.workflows.approve") }}
-      <span class="text-muted-foreground ml-auto tabular-nums">
+      <DropdownMenuShortcut class="tabular-nums">
         {{ reviewable.length }}
-      </span>
+      </DropdownMenuShortcut>
       <DropdownMenuShortcut class="ml-0">A</DropdownMenuShortcut>
     </DropdownMenuItem>
     <DropdownMenuItem
@@ -104,9 +104,9 @@ const onDelete = (): void => {
     >
       <IconX />
       {{ t("settings.workflows.reject") }}
-      <span class="text-muted-foreground ml-auto tabular-nums">
+      <DropdownMenuShortcut class="tabular-nums">
         {{ reviewable.length }}
-      </span>
+      </DropdownMenuShortcut>
       <DropdownMenuShortcut class="ml-0">X</DropdownMenuShortcut>
     </DropdownMenuItem>
     <DropdownMenuSeparator />

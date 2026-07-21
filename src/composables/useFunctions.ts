@@ -14,6 +14,7 @@ import type {
   IBotAgentConfig,
   IBotAgentModel,
   IBotAgentToolToggles,
+  IBotChatEffort,
   IBotSessionVisibility,
   ICustomToolAction,
   IIntegration,
@@ -810,6 +811,15 @@ export interface SendBotMessageRequest {
    */
   model?: IBotAgentModel
   /**
+   * Per-turn reasoning-effort level. Tri-state on the wire: a level
+   * requests that depth (applied only where the provider has a knob —
+   * Claude 4.6+, Gemini 3), explicit `null` clears the session's
+   * persisted pick back to the provider default, and omitting the field
+   * leaves the persisted value untouched (legacy-client behavior). The
+   * composer always sends the field.
+   */
+  effort?: IBotChatEffort | null
+  /**
    * Workspace nodes the user attached for this turn. The server fetches
    * each node's content + attachment list and injects them into the
    * system prompt as ground-truth context. Capped at 10 nodes server-
@@ -916,6 +926,13 @@ export interface BotChatHistoryMessage {
 export interface SendBotMessageStreamChunk {
   sessionId?: string
   chunk?: string
+  /**
+   * Rides along with a graceful-fallback `chunk`: the server ended the
+   * turn with an error fallback (and persisted it as an error turn), so
+   * the reducer flips the streaming agent bubble to its failure rendering
+   * immediately instead of waiting for the snapshot reconcile.
+   */
+  status?: "error"
   toolCall?: {
     ref?: string
     name: string
@@ -957,6 +974,12 @@ export interface RespondToBotInterruptRequest {
    * default if the requested model is no longer allowed.
    */
   model?: IBotAgentModel
+  /**
+   * Per-turn reasoning-effort level. Same semantics as
+   * `SendBotMessageRequest.effort` — forwarded so resuming from an
+   * interrupt keeps the depth the user had dialed in.
+   */
+  effort?: IBotChatEffort | null
   /**
    * Forwarded to the resumed turn's system prompt so the model still
    * sees attached files after picking up from an interrupt. Same shape

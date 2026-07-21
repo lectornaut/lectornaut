@@ -13,17 +13,23 @@ import {
 import { sendEmailInternal } from "./email.js"
 import { auth, db } from "./firebase.js"
 import { makeEventIdempotencyKey, runIdempotentEvent } from "./idempotency.js"
-import { sendNotification, sendNotificationToMany } from "./notifier.js"
-import { REGION, TRIGGER_OPTS } from "./runtimeConfig.js"
+import {
+  enqueueNotification,
+  NOTIFICATION_OUTBOX_COLLECTION,
+  sendNotification,
+  sendNotificationToMany,
+} from "./notifier.js"
+import { BLOCKING_AUTH_OPTS, REGION, TRIGGER_OPTS } from "./runtimeConfig.js"
 import { postmarkApiKey } from "./secrets.js"
 import { getTeamMembersByRoles } from "./teams.js"
 import {
   IMembershipRole,
   InvitationData,
   MembershipRoleLabels,
+  normalizeMembershipRole,
+  NotificationPayload,
   NotificationType,
   RoleGroups,
-  normalizeMembershipRole,
 } from "./types.js"
 import { addMemberToWorkspaces } from "./workspaceMembership.js"
 import {
@@ -230,21 +236,24 @@ async function notifyTeamMembers(
 // ============================================================================
 
 /**
- * Trigger: Send Welcome Notification and Email on User Signup
+ * Trigger: Queue Welcome Notification on User Signup
  *
  * Migrated from V1 auth.user().onCreate to V2 identity.beforeUserCreated.
- * This is a blocking function but we fire the notification asynchronously
- * so it doesn't delay account creation. If sending fails, the user is
- * still created — the welcome notification is non-critical.
+ * Blocking functions sit inline in the sign-up handshake under a hard
+ * 7-second platform cap (`BLOCKING_AUTH_OPTS`), and a timeout here fails
+ * the user's account creation itself — so this handler does NOT deliver
+ * anything. It writes one small outbox doc and returns;
+ * `onNotificationOutboxCreated` below does the settings lookup + in-app
+ * write + Postmark send under the normal 120s trigger budget. That also
+ * frees this function of the `postmarkApiKey` secret binding.
  */
 export const onUserCreated = beforeUserCreated(
   {
-    secrets: [postmarkApiKey],
     region: REGION,
-    memory: TRIGGER_OPTS.memory,
-    timeoutSeconds: TRIGGER_OPTS.timeoutSeconds,
-    maxInstances: TRIGGER_OPTS.maxInstances,
-    concurrency: TRIGGER_OPTS.concurrency,
+    memory: BLOCKING_AUTH_OPTS.memory,
+    timeoutSeconds: BLOCKING_AUTH_OPTS.timeoutSeconds,
+    maxInstances: BLOCKING_AUTH_OPTS.maxInstances,
+    concurrency: BLOCKING_AUTH_OPTS.concurrency,
   },
   async (event) => {
     const user = event.data
@@ -255,10 +264,10 @@ export const onUserCreated = beforeUserCreated(
 
     await runIdempotentEvent({ key: lockKey }, async () => {
       try {
-        // Send welcome notification and email
-        // We await this to ensure the function doesn't terminate early,
-        // but wrap in try/catch so failure doesn't block user creation.
-        await sendNotification({
+        // One document write — cheap enough for the blocking path. Wrapped
+        // in try/catch so even an enqueue failure can't block sign-up; the
+        // welcome message is non-critical.
+        await enqueueNotification({
           userId: user.uid,
           userEmail: user.email ?? undefined,
           type: "user.welcome",
@@ -274,8 +283,51 @@ export const onUserCreated = beforeUserCreated(
         })
       } catch (err) {
         // Log error but allow user creation to proceed
-        logger.error("Failed to send welcome notification", err)
+        logger.error("Failed to enqueue welcome notification", err)
       }
+    })
+  }
+)
+
+/**
+ * Trigger: Deliver Queued Notification Payloads
+ *
+ * Drains `NOTIFICATION_OUTBOX_COLLECTION`: each doc carries a full
+ * `NotificationPayload` written by `enqueueNotification` (today only the
+ * sign-up welcome message above). Delivery semantics are identical to a
+ * direct `sendNotification` call — settings gating and channel routing all
+ * happen here, just off the blocking path. The doc is deleted after a
+ * successful send so the collection stays empty; a failed send leaves the
+ * doc in place for inspection (Eventarc doesn't retry by default, and the
+ * welcome message is best-effort — the pre-outbox behavior on a Postmark
+ * failure was likewise a logged error and nothing more).
+ */
+export const onNotificationOutboxCreated = onDocumentCreated(
+  {
+    document: `${NOTIFICATION_OUTBOX_COLLECTION}/{outboxId}`,
+    secrets: [postmarkApiKey],
+    region: REGION,
+    memory: TRIGGER_OPTS.memory,
+    timeoutSeconds: TRIGGER_OPTS.timeoutSeconds,
+    maxInstances: TRIGGER_OPTS.maxInstances,
+    concurrency: TRIGGER_OPTS.concurrency,
+  },
+  async (event) => {
+    const snapshot = event.data
+    if (!snapshot) return
+
+    const eventId = getCloudEventId(event, event.params.outboxId)
+    const lockKey = makeEventIdempotencyKey(
+      "onNotificationOutboxCreated",
+      eventId
+    )
+
+    await runIdempotentEvent({ key: lockKey }, async () => {
+      // Trusted cast: the only writer is `enqueueNotification`, which takes
+      // a typed `NotificationPayload` — no client can reach this collection.
+      const payload = snapshot.data().payload as NotificationPayload
+      await sendNotification(payload)
+      await snapshot.ref.delete()
     })
   }
 )
@@ -614,10 +666,10 @@ export const onGroupGrantWritten = onDocumentWritten(
 export const onUserSignedIn = beforeUserSignedIn(
   {
     region: REGION,
-    memory: TRIGGER_OPTS.memory,
-    timeoutSeconds: TRIGGER_OPTS.timeoutSeconds,
-    maxInstances: TRIGGER_OPTS.maxInstances,
-    concurrency: TRIGGER_OPTS.concurrency,
+    memory: BLOCKING_AUTH_OPTS.memory,
+    timeoutSeconds: BLOCKING_AUTH_OPTS.timeoutSeconds,
+    maxInstances: BLOCKING_AUTH_OPTS.maxInstances,
+    concurrency: BLOCKING_AUTH_OPTS.concurrency,
   },
   async (event) => {
     const user = event.data

@@ -1,7 +1,6 @@
 <script lang="ts" setup>
 import DriveFilePicker from "@/components/app/sidebars/DriveFilePicker.vue"
 import { useConfirmationDialog } from "@/composables/useConfirmationDialog"
-import { useMyConnectionFeature } from "@/composables/useConnections"
 import { importDriveNodeAttachment } from "@/composables/useFunctions"
 import {
   useNodeAttachmentsState,
@@ -13,7 +12,6 @@ import {
   IconAlertTriangle,
   IconArrowDownToLine,
   IconCircleAlert,
-  IconLogosGoogleDrive,
   IconPencil,
   IconRefreshCcw,
   IconTrash2,
@@ -235,9 +233,9 @@ const triggerFilePicker = () => {
 
 // "Add from Drive" — same in-app picker as SessionAttachments, landing the
 // file as a node attachment via `importDriveNodeAttachment` (bytes move
-// entirely server-side). Offered only while the Drive feature is usable:
-// app installed + admin kill switch off + the member's own account linked.
-const { available: driveAvailable } = useMyConnectionFeature("google-drive")
+// entirely server-side). Availability lives inside the picker: an
+// unconnected member gets its in-sheet connect-Drive steer instead of a
+// hidden button.
 const drivePickerOpen = ref(false)
 
 const importDriveFile = async (fileId: string) => {
@@ -492,26 +490,16 @@ watch(selectedCreateFiles, async (files) => {
         <IconUpload />
         <span>{{ t("components.nodeAttachments.upload") }}</span>
       </Button>
-      <Button
-        v-if="driveAvailable"
-        variant="outline"
-        size="sm"
-        :disabled="isReadOnly || uploadInProgress"
-        @click="drivePickerOpen = true"
-      >
-        <IconLogosGoogleDrive />
-        <span class="sr-only">
-          {{ t("components.nodeAttachments.addFromDrive") }}
-        </span>
-      </Button>
+      <!-- Sheet root + trigger render no wrapper DOM, so the Button stays a
+           direct child of ButtonGroup for its joined-corner selectors. -->
+      <DriveFilePicker
+        v-model:open="drivePickerOpen"
+        :team-id="teamId"
+        :import-file="importDriveFile"
+        :trigger-label="t('components.nodeAttachments.addFromDrive')"
+        @imported="onDriveImported"
+      />
     </ButtonGroup>
-    <DriveFilePicker
-      v-if="driveAvailable"
-      v-model:open="drivePickerOpen"
-      :team-id="teamId"
-      :import-file="importDriveFile"
-      @imported="onDriveImported"
-    />
     <OverlayScrollbarsWrapper>
       <div class="flex flex-col gap-2 px-2 pb-2">
         <div v-if="readOnlyMessage" class="text-muted-foreground text-xs">

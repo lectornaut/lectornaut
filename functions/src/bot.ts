@@ -120,11 +120,15 @@ import {
   updateDriveFileTool,
 } from "./connectionTools.js"
 import {
+  BOT_CHAT_EFFORTS,
+  BOT_CHAT_MESSAGE_STATUSES,
   CONNECTION_WRITE_TOOL_NAMES,
   GITHUB_TOOL_KEY,
   GOOGLE_CALENDAR_TOOL_KEY,
   GOOGLE_DRIVE_TOOL_KEY,
   GOOGLE_GMAIL_TOOL_KEY,
+  type BotChatEffort,
+  type BotChatMessageStatus,
   type BotChatRole,
   type BotSessionVisibility,
 } from "./domain.js"
@@ -241,6 +245,15 @@ async function resolveActingRole(
 export type SessionVisibility = BotSessionVisibility
 
 const MAIN_THREAD = "main"
+
+/**
+ * Thread-message metadata key marking a persisted graceful-fallback turn
+ * (value: a {@link TurnErrorKind}). Lives on the raw `MessageData` in
+ * `data.threads.main` — server-internal; the extractor maps it to the
+ * client-facing `ChatMessage.status: "error"`. Metadata is opaque to model
+ * providers, so the marker never leaks into a generate request.
+ */
+const TURN_ERROR_METADATA_KEY = "lectornautTurnError"
 // TITLE_MAX_LENGTH and PREVIEW_MAX_LENGTH are imported from
 // `./botAgentConfig.js` — they double as default truncation knobs for
 // the SessionStore AND as the field-level defaults in
@@ -263,6 +276,13 @@ type MessageSegment =
 export interface ChatMessage {
   role: ChatRole
   content: string
+  /**
+   * `"error"` when this agent bubble is a persisted graceful-fallback turn
+   * (see {@link persistTurnError}) — derived by the extractor from the
+   * thread message's `metadata[TURN_ERROR_METADATA_KEY]`. Absent on every
+   * normal message; the client renders flagged bubbles as failures.
+   */
+  status?: BotChatMessageStatus
   segments?: MessageSegment[]
   /**
    * Firebase uid of the human who sent this message. Only populated for
@@ -311,6 +331,8 @@ interface PartLike {
 interface MessageLike {
   role?: string
   content?: PartLike[] | string
+  /** Message-level metadata; carries {@link TURN_ERROR_METADATA_KEY}. */
+  metadata?: Record<string, unknown>
 }
 
 /**
@@ -456,17 +478,24 @@ export function extractMessagesFromSessionData(
 
     if (role !== "model" && role !== "tool") continue
 
+    // A persisted graceful-fallback turn — flag the bubble it lands in so
+    // the client renders a failure instead of a normal reply. Sticky for
+    // the whole coalesced bubble, which is right: the fallback IS the reply.
+    const isErrorTurn = !!raw.metadata?.[TURN_ERROR_METADATA_KEY]
+
     // Coalesce model + tool turns into the same agent bubble. Genkit
     // sometimes emits a string content for legacy model messages; treat
     // that as a single text part.
     if (typeof content === "string") {
       const agent = ensureAgent()
+      if (isErrorTurn) agent.status = "error"
       appendText(agent, content)
       continue
     }
     if (!Array.isArray(content)) continue
 
     const agent = ensureAgent()
+    if (isErrorTurn) agent.status = "error"
     const thinking = createThinkingFolder((text) => appendText(agent, text))
     for (const part of content) {
       // Gemini reasoning parts (thinkingConfig.includeThoughts) arrive
@@ -630,6 +659,16 @@ interface SessionPersistInfo {
    * Most recent turn wins — earlier turns' models are not retained.
    */
   readonly turnModel?: BotAgentModel
+
+  /**
+   * Reasoning-effort level for the turn that triggered this save.
+   * Persisted as a denormalized `lastEffort` field (same rehydrate role
+   * as `lastModel`). Tri-state: `undefined` leaves the doc's prior value
+   * untouched (legacy clients that never send the field), `null` clears
+   * back to "provider default" (the user picked Default), a level writes
+   * it. Mirrors `turnActiveAgentId`'s null-clearing semantics.
+   */
+  readonly turnEffort?: BotChatEffort | null
 
   /**
    * Firebase uid of the human who triggered this turn (the caller of
@@ -874,6 +913,12 @@ class FirestoreBotSessionStore implements SessionStore {
     // failed the allowlist clamp upstream, this field reflects the
     // fallback model that actually ran, not the rejected request.
     if (p.turnModel) update.lastModel = p.turnModel
+
+    // Most recent turn's effort pick. Explicit-null writes through (clears
+    // a previously-persisted level when the user flips back to Default);
+    // `undefined` (legacy client) leaves the prior value — mirroring
+    // `turnActiveAgentId` below.
+    if (p.turnEffort !== undefined) update.lastEffort = p.turnEffort
 
     // Effective active agent for this turn. Written on every save
     // (including the explicit `null` case) so flipping back to the
@@ -1420,6 +1465,7 @@ async function runTransferTurnIfRequested(opts: {
   mode: BotChatMode
   contextNodes: NodeRef[]
   model: BotAgentModel | undefined
+  effort: BotChatEffort | null | undefined
   /**
    * Forwarded so the handed-off turn captures, meters, and scope-restricts
    * exactly like the first turn. All undefined for interactive chat (the
@@ -1462,18 +1508,24 @@ async function runTransferTurnIfRequested(opts: {
   // A real turn appended the user message AND the agent's reply, so the
   // persisted thread exceeds `preTurnThreadLength + 1`. When it doesn't, turn 1
   // ended in a stub fallback (deadline / tool-iteration cap / missing tool /
-  // invalid arg) whose `saveSnapshot` was SKIPPED (the thread ends on the
-  // auto-added user message), so the doc is unchanged — or, for a fresh headless
-  // session, there's no doc at all (empty thread). Both say "don't run a second
-  // turn": there's nothing to hand off, and a missing-doc resume would throw
-  // `not-found`. Bail; the agent-id commit in the caller's `finally`
-  // (`commitTransferIfRequested`) still routes the next message to the target.
+  // invalid arg) that the store's own save declined — or, for a fresh headless
+  // session, there's no doc at all (empty thread). A GROWN thread can also be a
+  // failed turn now: `persistTurnError` writes prompt-delivery fallbacks as
+  // tagged error turns, so the tail message's marker is checked too. All of
+  // these say "don't run a second turn": there's nothing to hand off, and a
+  // missing-doc resume would throw `not-found`. Bail; the agent-id commit in
+  // the caller's `finally` (`commitTransferIfRequested`) still routes the next
+  // message to the target.
   const serverThread = await readSessionThread(
     opts.teamId,
     opts.workspaceId,
     opts.sessionId
   )
-  if (serverThread.length <= opts.preTurnThreadLength + 1) {
+  const serverThreadTail = serverThread[serverThread.length - 1]
+  if (
+    serverThread.length <= opts.preTurnThreadLength + 1 ||
+    !!serverThreadTail?.metadata?.[TURN_ERROR_METADATA_KEY]
+  ) {
     return opts.firstFinal
   }
 
@@ -1510,6 +1562,7 @@ async function runTransferTurnIfRequested(opts: {
       contextNodes: opts.contextNodes,
       activeAgentId: targetAgentId,
       model: opts.model,
+      effort: opts.effort,
       // Inherit the run's capture/metering/scope so a transferred Workflows
       // turn stages its edits into the same changeset, accumulates into the
       // same per-run usage, and stays inside `targetScope`. Undefined for
@@ -1920,6 +1973,15 @@ const SendBotMessageInput = z.object({
    */
   model: z.enum(BOT_AGENT_MODELS).optional(),
   /**
+   * Per-turn reasoning-effort level. Tri-state: a level requests that
+   * depth (applied only where the provider has a knob — see
+   * `buildTurnConfig`), explicit `null` clears the session back to the
+   * provider default, absent (legacy clients) leaves the persisted
+   * `lastEffort` untouched. Unknown values are rejected by the enum
+   * before they can reach a provider.
+   */
+  effort: z.enum(BOT_CHAT_EFFORTS).nullable().optional(),
+  /**
    * Custom agent the user has selected for this turn. `null`/absent
    * means "use the team default persona". The server resolves the
    * effective agent at dispatch time via `resolveActiveAgent`:
@@ -2014,6 +2076,13 @@ const SendBotMessageOutput = z.object({
 const SendBotMessageStream = z.object({
   sessionId: z.string().optional(),
   chunk: z.string().optional(),
+  /**
+   * Rides along with a graceful-fallback `chunk` so the live bubble flips
+   * to its failure rendering immediately, without waiting for the
+   * persisted doc's snapshot reconcile. Absent on every normal chunk;
+   * legacy clients ignore it.
+   */
+  status: z.enum(BOT_CHAT_MESSAGE_STATUSES).optional(),
   toolCall: z
     .object({
       ref: z.string().optional(),
@@ -2181,6 +2250,39 @@ const TURN_DEADLINE_MS = 90_000
 const TOOL_MAX_TURNS = 8
 
 /**
+ * Coarse classification of a graceful-fallback turn — recorded on the
+ * persisted error turn's thread metadata (under
+ * {@link TURN_ERROR_METADATA_KEY}) and in logs. Server-internal: the
+ * client only ever sees the flat `status: "error"`.
+ */
+type TurnErrorKind =
+  "deadline" | "toolIterations" | "missingTool" | "invalidToolArgs"
+
+/**
+ * Build the stub unary response for a turn that ended in a graceful
+ * fallback. The streaming protocol already concluded via `sendChunk`
+ * (fallback text + `status: "error"`); the stub mirrors the text for the
+ * unary echo and smuggles the {@link TurnErrorKind} to `runChatTurn`,
+ * which persists the error turn (see {@link persistTurnError}) — the
+ * store's own snapshot save declines fallback turns (thread ends on the
+ * user message), so without that persist the fallback would vanish on
+ * reload.
+ */
+const stubTurnResponse = (
+  text: string,
+  turnError: TurnErrorKind
+): Awaited<ChatStreamResult["response"]> =>
+  ({ text, messages: [], turnError }) as unknown as Awaited<
+    ChatStreamResult["response"]
+  >
+
+/** Read back the {@link TurnErrorKind} a stub response carries, if any. */
+const getTurnError = (
+  final: Awaited<ChatStreamResult["response"]>
+): TurnErrorKind | undefined =>
+  (final as { turnError?: TurnErrorKind }).turnError
+
+/**
  * Thrown from the timeout race below so the outer catch can distinguish
  * "deadline elapsed" from genuine model / network errors and convert
  * it into a user-visible fallback chunk. Identity-based detection
@@ -2249,13 +2351,11 @@ async function streamChatToClient(
     if (err instanceof TurnTimeoutError) {
       const fallback =
         "The model is taking longer than usual to reply. Please try sending your message again — provider hiccups usually clear within a minute."
-      sendChunk({ chunk: fallback })
+      sendChunk({ chunk: fallback, status: "error" })
       // Stub return — same pattern as the tool-iterations fallback
       // below. The client's streaming side already saw the fallback
       // chunk; the unary echo just mirrors it.
-      return { text: fallback, messages: [] } as unknown as Awaited<
-        ChatStreamResult["response"]
-      >
+      return stubTurnResponse(fallback, "deadline")
     }
     throw err
   } finally {
@@ -2381,14 +2481,11 @@ async function streamChatToClientInner(
     if (isToolIterationsExceededError(err)) {
       const fallback =
         "I tried a few searches but couldn't pin down what you're after. Could you give me more specific terms — a document name or a phrase from inside it — or attach the file to this turn so I can read it directly?"
-      sendChunk({ chunk: fallback })
-      // Stub return — caller only uses `final.text` for the unary reply.
-      // Cast is justified because the streaming protocol with the client
-      // already concluded successfully via `sendChunk`; the outer flow
-      // is just turning the same text into its unary echo.
-      return { text: fallback, messages: [] } as unknown as Awaited<
-        ChatStreamResult["response"]
-      >
+      sendChunk({ chunk: fallback, status: "error" })
+      // Stub return — caller only uses `final.text` for the unary reply;
+      // the streaming protocol with the client already concluded
+      // successfully via `sendChunk`.
+      return stubTurnResponse(fallback, "toolIterations")
     }
     const missingTool = getMissingToolName(err)
     if (missingTool) {
@@ -2406,10 +2503,8 @@ async function streamChatToClientInner(
         { err: String(err) }
       )
       const fallback = `I tried to use the \`${missingTool}\` tool, but it isn't available in this chat right now — the active agent may not have access to it, or it was disabled since earlier in this conversation. Try switching back to the agent that ran the earlier steps, or ask me to take a different approach.`
-      sendChunk({ chunk: fallback })
-      return { text: fallback, messages: [] } as unknown as Awaited<
-        ChatStreamResult["response"]
-      >
+      sendChunk({ chunk: fallback, status: "error" })
+      return stubTurnResponse(fallback, "missingTool")
     }
     if (isToolInputValidationError(err)) {
       // The model produced a tool argument the tool's schema rejects. Genkit
@@ -2423,10 +2518,8 @@ async function streamChatToClientInner(
       )
       const fallback =
         "I tried to use one of my tools with an argument it wouldn't accept, so I couldn't finish that step. Could you rephrase your request, or break it into a smaller one?"
-      sendChunk({ chunk: fallback })
-      return { text: fallback, messages: [] } as unknown as Awaited<
-        ChatStreamResult["response"]
-      >
+      sendChunk({ chunk: fallback, status: "error" })
+      return stubTurnResponse(fallback, "invalidToolArgs")
     }
     throw err
   }
@@ -2518,8 +2611,8 @@ async function runChatTurn(
   // `abort` carries the deadline signal so the handler can actually cancel the
   // model (the framework's own signal never fires for us) and the store can
   // skip an aborted-turn write.
-  return turnRuntime.run({ ...runtime, abort: turnAbort.signal }, () =>
-    streamChatToClient(
+  return turnRuntime.run({ ...runtime, abort: turnAbort.signal }, async () => {
+    const final = await streamChatToClient(
       chat.sendStream(
         // Cast: our structural `AgentTurnInput` carries a `genkit/beta`
         // `ResumeOptions` whose `Part` identity differs from the one baked into
@@ -2537,7 +2630,83 @@ async function runChatTurn(
         preExistingToolResultCount: opts.preExistingToolResultCount,
       }
     )
-  )
+    // A graceful-fallback turn never reaches the store's snapshot save (it
+    // declines threads ending on the user message), so the fallback the
+    // client just watched stream would otherwise vanish on reload. Persist
+    // it as a tagged error turn — here, still inside the turn's ALS, so
+    // the store resolves the right doc from `runtime.persist`.
+    const turnError = getTurnError(final)
+    if (turnError) await persistTurnError(delivery, final.text, turnError)
+    return final
+  })
+}
+
+/**
+ * Persist a graceful-fallback turn so it survives reload.
+ *
+ * The store's snapshot save deliberately declines fallback turns (the
+ * thread ends on the framework-auto-added user message — see the guard in
+ * `saveSnapshot`), which kept them stream-only: visible live, gone on the
+ * next reconcile/reload, leaving the user's message with no reply at all.
+ * This writes the turn explicitly instead: the user message (rebuilt from
+ * the delivery — the framework's own copy died with the declined snapshot)
+ * plus the fallback text as a `model` message tagged with
+ * {@link TURN_ERROR_METADATA_KEY}, which the extractor projects as a
+ * `status: "error"` bubble. Routing through `saveSnapshot` (inside the
+ * turn's ALS) buys the full derived-field pipeline for free: projection,
+ * author stamping, preview/title/messageCount.
+ *
+ * `{ prompt }` deliveries only. A `continue` delivery streams over the
+ * transfer machinery's truncated thread (its retry contract assumes a
+ * failed attempt persists nothing), and a `resume` delivery lands on a
+ * pending-interrupt tail the resume machinery expects to find intact —
+ * appending an error turn to either would corrupt state other code owns.
+ * Both keep the stream-only fallback behavior.
+ *
+ * Best-effort: a failed write logs and degrades to the stream-only
+ * behavior rather than failing a turn that already delivered its text.
+ */
+async function persistTurnError(
+  delivery: TurnDelivery,
+  fallbackText: string,
+  kind: TurnErrorKind
+): Promise<void> {
+  if (!("prompt" in delivery)) return
+  const p = turnRuntime.getStore()?.persist
+  if (!p) return
+  try {
+    const userMessage: MessageData = {
+      role: "user",
+      content:
+        typeof delivery.prompt === "string"
+          ? [{ text: delivery.prompt }]
+          : delivery.prompt,
+    }
+    const errorReply: MessageData = {
+      role: "model",
+      content: [{ text: fallbackText }],
+      metadata: { [TURN_ERROR_METADATA_KEY]: kind },
+    }
+    await botSessionStore.saveSnapshot(p.sessionId, (snap) => ({
+      snapshotId: p.sessionId,
+      sessionId: p.sessionId,
+      createdAt: new Date().toISOString(),
+      status: "completed",
+      state: {
+        sessionId: p.sessionId,
+        messages: [
+          ...((snap?.state?.messages ?? []) as MessageData[]),
+          userMessage,
+          errorReply,
+        ],
+      },
+    }))
+  } catch (err) {
+    logger.warn(
+      `[persistTurnError] failed to persist ${kind} fallback turn — degrading to stream-only`,
+      { err: String(err), sessionId: p.sessionId }
+    )
+  }
 }
 
 /**
@@ -2642,6 +2811,13 @@ async function prepareChatTurn(opts: {
   pendingDriveImports?: readonly string[]
   activeAgentId: string | null | undefined
   model: BotAgentModel | undefined
+  /**
+   * Per-turn reasoning-effort pick. Tri-state end to end: a level applies
+   * (where the provider has a knob), explicit `null` means the user chose
+   * Default, `undefined` means the client never sent the field (legacy) —
+   * the persisted `lastEffort` is left untouched in that case.
+   */
+  effort: BotChatEffort | null | undefined
   pinnedNode?: NodeRef
   requireExistingSession: boolean
   archivedSessionMessage: string
@@ -3055,6 +3231,7 @@ async function prepareChatTurn(opts: {
     contextNodes,
     turnMode: mode,
     turnModel: effectiveModel,
+    turnEffort: opts.effort,
     senderUid: actingId,
     turnActiveAgentId: persistedActiveAgentId,
   }
@@ -3285,17 +3462,12 @@ async function prepareChatTurn(opts: {
     .filter(Boolean)
     .join("\n\n")
 
-  // Per-provider "thinking" enablement. The stream + reconstruction fold
-  // any resulting `reasoning` parts into <thinking> blocks uniformly
-  // (createThinkingFolder), so this only controls how each provider is
-  // asked to emit reasoning in the first place:
-  //   - Gemini (2.5+/3): `thinkingConfig.includeThoughts`.
-  //   - Claude (3.7/4+): the beta API surface + a `thinking` budget.
-  //     Anthropic rejects temperature/top_p/top_k alongside thinking and
-  //     requires max_tokens > budget, so we drop the sampling knobs and add
-  //     the budget on top of the agent's answer allotment.
-  //   - OpenAI gpt-4*: not reasoning models, nothing to enable;
-  //     `reasoning_content` from a compatible endpoint is still folded.
+  // Per-provider thinking + effort mapping lives in `buildTurnConfig` —
+  // see its doc for the wire shapes (Gemini `thinkingConfig`, Claude
+  // adaptive thinking + `effort`, and why OpenAI/xAI/DeepSeek get sampling
+  // only). The stream + reconstruction fold any resulting `reasoning`
+  // parts into <thinking> blocks uniformly (createThinkingFolder), so this
+  // only controls how each provider is asked to emit reasoning.
   const provider = getModelProvider(effectiveModel)
   const turnConfig = buildTurnConfig({
     provider,
@@ -3307,6 +3479,7 @@ async function prepareChatTurn(opts: {
       maxOutputTokens: agentConfig.maxOutputTokens,
     },
     thinkingEnabled: agentConfig.thinking,
+    effort: opts.effort,
   })
 
   // Anthropic prompt caching: mark the (large, turn-stable) system prompt as
@@ -3377,6 +3550,7 @@ interface RunAgentTurnOptions {
   message: string
   mode: BotChatMode
   model: BotAgentModel | undefined
+  effort: BotChatEffort | null | undefined
   contextNodes: NodeRef[]
   /** Chat-session attachment ids selected for this turn (multimodal media). */
   attachmentIds?: string[]
@@ -3488,6 +3662,7 @@ async function runAgentTurn(
       pendingDriveImports: opts.pendingDriveImports,
       activeAgentId: opts.activeAgentId,
       model: opts.model,
+      effort: opts.effort,
       pinnedNode: opts.pinnedNode,
       requireExistingSession: false,
       archivedSessionMessage,
@@ -3557,6 +3732,7 @@ async function runAgentTurn(
         mode: opts.mode,
         contextNodes: opts.contextNodes,
         model: opts.model,
+        effort: opts.effort,
         // Forward the run's capture/metering/scope so a handed-off Workflows
         // turn is staged + metered like the first (undefined for chat).
         captureChanges: opts.captureChanges,
@@ -3692,6 +3868,8 @@ export async function runHeadlessAgentTurn(opts: {
     message: opts.message,
     mode: opts.mode ?? "agent",
     model: opts.model,
+    // Headless runs have no composer; provider-default reasoning depth.
+    effort: undefined,
     contextNodes: opts.contextNodes ?? [],
     // The workflow's agent is both the authorizing principal AND the persona.
     activeAgentId: opts.agentId,
@@ -3747,6 +3925,7 @@ const sendBotMessageFlow = ai.defineFlow(
       message,
       mode: input.mode,
       model: input.model,
+      effort: input.effort,
       contextNodes: input.contextNodes,
       activeAgentId: input.activeAgentId,
       pinnedNode: input.pinnedNode,
@@ -3827,6 +4006,12 @@ const RespondToBotInterruptInput = z.object({
    * callable.
    */
   model: z.enum(BOT_AGENT_MODELS).optional(),
+  /**
+   * Per-turn reasoning-effort level. Same tri-state semantics as
+   * `SendBotMessageInput.effort` — forwarded so resuming from an
+   * interrupt keeps the depth the user had dialed in.
+   */
+  effort: z.enum(BOT_CHAT_EFFORTS).nullable().optional(),
   /**
    * Same shape as `SendBotMessageInput.contextNodes` — passed through so
    * a chat that resumes from an interrupt keeps the attached files in
@@ -3974,6 +4159,7 @@ const respondToBotInterruptFlow = ai.defineFlow(
           contextNodes: input.contextNodes,
           activeAgentId: input.activeAgentId,
           model: input.model,
+          effort: input.effort,
           // No `pinnedNode` — interrupts always run on an existing session.
           requireExistingSession: true,
           archivedSessionMessage:
@@ -4206,6 +4392,7 @@ const respondToBotInterruptFlow = ai.defineFlow(
           mode: input.mode,
           contextNodes: input.contextNodes,
           model: input.model,
+          effort: input.effort,
           archivedSessionMessage:
             "This chat is archived. Restore it before continuing.",
           sendChunk,

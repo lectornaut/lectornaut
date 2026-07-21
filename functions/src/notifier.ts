@@ -184,6 +184,33 @@ const sendEmailNotification = async (
   }
 }
 
+/**
+ * Server-only Firestore collection holding queued `NotificationPayload`s.
+ * Written by paths that must not pay delivery latency inline — today the
+ * `beforeUserCreated` blocking function, whose 7-second platform cap can't
+ * absorb a slow Postmark call (a blocking-function timeout fails the user's
+ * sign-up itself). `onNotificationOutboxCreated` in `triggers.ts` delivers
+ * each doc via `sendNotification` under a normal trigger budget and deletes
+ * it on success. Clients never touch this collection (rules catch-all
+ * denies), so no rules/index changes ride along.
+ */
+export const NOTIFICATION_OUTBOX_COLLECTION = "notificationOutbox"
+
+/**
+ * Queue a notification for asynchronous delivery instead of sending it
+ * inline. Cheap and fast (one document write) — safe inside blocking
+ * functions. Delivery semantics (settings gating, channel routing) are
+ * unchanged: the outbox trigger just calls `sendNotification` later.
+ */
+export async function enqueueNotification(
+  payload: NotificationPayload
+): Promise<void> {
+  await db.collection(NOTIFICATION_OUTBOX_COLLECTION).add({
+    payload,
+    createdAt: FieldValue.serverTimestamp(),
+  })
+}
+
 export async function sendNotification(payload: NotificationPayload): Promise<{
   inApp: boolean
   email: boolean

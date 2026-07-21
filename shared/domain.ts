@@ -414,9 +414,30 @@ export type BotAgentModel = (typeof BOT_AGENT_MODELS)[number]
 export const BOT_CHAT_MODES = ["auto", "agent", "manual"] as const
 export type BotChatMode = (typeof BOT_CHAT_MODES)[number]
 
+/**
+ * Per-turn reasoning-effort levels the composer can request. A canonical
+ * ordinal scale mapped per provider at dispatch (`buildTurnConfig`):
+ * Anthropic `effort`, Gemini 3 `thinkingConfig.thinkingLevel`. Unset/null
+ * means "provider default" — the wire field is optional so legacy clients
+ * that never send it behave exactly as before the knob existed.
+ */
+export const BOT_CHAT_EFFORTS = ["low", "medium", "high"] as const
+export type BotChatEffort = (typeof BOT_CHAT_EFFORTS)[number]
+
 /** Flat client-facing role denormalized onto a stored session message. */
 export const BOT_CHAT_ROLES = ["user", "agent"] as const
 export type BotChatRole = (typeof BOT_CHAT_ROLES)[number]
+
+/**
+ * Optional per-message status on a stored agent message. `"error"` marks a
+ * turn that ended in a server-side graceful fallback (turn deadline, tool
+ * budget exhausted, missing tool, invalid tool args) — persisted so the
+ * failure survives reload and renders distinctly from a normal reply. The
+ * field is optional on the wire: absent on every normal message, never set
+ * on user messages, and ignored by clients that pre-date it.
+ */
+export const BOT_CHAT_MESSAGE_STATUSES = ["error"] as const
+export type BotChatMessageStatus = (typeof BOT_CHAT_MESSAGE_STATUSES)[number]
 
 export const BOT_SESSION_VISIBILITIES = ["private", "shared", "public"] as const
 export type BotSessionVisibility = (typeof BOT_SESSION_VISIBILITIES)[number]

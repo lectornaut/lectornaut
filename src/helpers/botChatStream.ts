@@ -71,6 +71,15 @@ export interface BotChatMessage {
   id: string
   role: BotChatRole
   content: string
+  /**
+   * `"error"` when this agent turn ended in a server-side graceful
+   * fallback (turn deadline, tool budget, missing tool, invalid tool
+   * args). Set live by the stream chunk that carried the fallback text,
+   * and on reconcile from the persisted message. The chat surface renders
+   * these as failure bubbles instead of normal replies. Never set on user
+   * messages.
+   */
+  status?: "error"
   /** Present on agent messages with tool calls; absent for plain text. */
   segments?: BotChatSegment[]
   /**
@@ -119,12 +128,14 @@ export interface BotChatStreamEffects {
 export const createMessage = (m: {
   role: BotChatRole
   content: string
+  status?: "error"
   segments?: BotChatSegment[]
   authorUid?: string
 }): BotChatMessage => ({
   id: crypto.randomUUID(),
   role: m.role,
   content: m.content,
+  status: m.status,
   authorUid: m.authorUid,
   segments: m.segments
     ? m.segments.map((s) =>
@@ -310,6 +321,13 @@ export const applyStreamChunk = (
   const effects: BotChatStreamEffects = {}
   if (chunk.sessionId) effects.sessionId = chunk.sessionId
   if (chunk.chunk) appendStreamText(messages, agentIndex, chunk.chunk)
+  if (chunk.status === "error") {
+    // The turn ended in a server-side graceful fallback — flip the
+    // streaming bubble to its failure rendering in place (same identity
+    // rules as the text append above).
+    const agent = messages[agentIndex]
+    if (agent?.role === "agent") agent.status = "error"
+  }
   if (chunk.toolCall) {
     const transfer = applyStreamToolCall(messages, agentIndex, chunk.toolCall)
     if (transfer) effects.agentTransfer = transfer

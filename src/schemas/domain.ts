@@ -3,6 +3,8 @@ import {
   BILLING_INTERVALS,
   BILLING_PLAN_KEYS,
   BOT_AGENT_MODELS,
+  BOT_CHAT_EFFORTS,
+  BOT_CHAT_MESSAGE_STATUSES,
   BOT_CHAT_MODES,
   BOT_CHAT_ROLES,
   BOT_SESSION_VISIBILITIES,
@@ -302,6 +304,15 @@ export const botSessionMessageSchema = z.object({
   /** Concatenated text — used for sidebar previews and as a fallback. */
   content: z.string(),
   /**
+   * Set to `"error"` on agent messages persisted by a server-side graceful
+   * fallback (turn deadline, tool budget, missing tool, invalid tool args)
+   * so the bubble renders as a failure instead of a normal reply. MUST stay
+   * `.optional()` — every message written before this field existed (and
+   * every normal message after) omits it, and a required field here would
+   * silently drop those rows at the converter.
+   */
+  status: z.enum(BOT_CHAT_MESSAGE_STATUSES).optional(),
+  /**
    * Structured parts. Present on agent messages that include tool calls,
    * absent for plain text-only messages (and all legacy messages saved
    * before this field existed). When absent, the renderer falls back to
@@ -354,6 +365,13 @@ export const botAgentProviderTogglesSchema = z.record(
  * `grok-*` → xAI, `deepseek-*` → DeepSeek).
  */
 export const botAgentModelSchema = z.enum(BOT_AGENT_MODELS)
+
+/**
+ * Per-turn reasoning-effort level (composer pick). Canonical ordinal scale
+ * from `@lectornaut/shared/domain`; the server maps it per provider at
+ * dispatch. Absent/null everywhere means "provider default".
+ */
+export const botChatEffortSchema = z.enum(BOT_CHAT_EFFORTS)
 
 /**
  * Per-model availability toggles. Layered on top of `providers`: a model
@@ -921,6 +939,15 @@ export const botSessionSchema = z.object({
    * fall-back-to-default path handles it, and the next turn rewrites it.
    */
   lastModel: botAgentModelSchema.optional().catch(undefined),
+  /**
+   * Most recent turn's reasoning-effort pick. Written by
+   * `FirestoreBotSessionStore.save` with `lastModel`'s overwrite-on-save
+   * shape, plus an explicit-null state meaning "user chose Default".
+   * Rehydrates the composer's Effort submenu on session re-open. Absent on
+   * sessions that predate the field; `.catch(undefined)` so a retired
+   * level reads as absent rather than failing the whole doc.
+   */
+  lastEffort: botChatEffortSchema.nullable().optional().catch(undefined),
   /**
    * Currently active custom agent for this session. `null` (or absent)
    * means the team's default bot persona handles every turn. Set by the
