@@ -128,7 +128,14 @@ export const resolveAttachmentIcon = (attachment: {
   const mimeType = attachment.mimeType?.toLowerCase() ?? ""
   const fileName = attachment.originalName?.toLowerCase() ?? ""
 
-  if (mimeType.startsWith("image/")) return IconFileImage
+  // Extension fallback matters for chat-bubble attachment chips, which only
+  // have the parsed display name (no mimeType) to go on.
+  if (
+    mimeType.startsWith("image/") ||
+    /\.(avif|gif|heic|jpe?g|png|webp)$/i.test(fileName)
+  ) {
+    return IconFileImage
+  }
   if (mimeType.startsWith("video/")) return IconFileVideo
   if (mimeType.includes("pdf") || fileName.endsWith(".pdf")) return IconFilePdf
   if (mimeType.includes("spreadsheet") || /\.(csv|tsv)$/i.test(fileName)) {

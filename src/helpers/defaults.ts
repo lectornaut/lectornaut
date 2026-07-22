@@ -427,9 +427,9 @@ export const defaultBotModelProviderToggles: Record<
 export const botModels = [
   // Google Gemini
   {
-    id: "gemini-3.5-flash",
+    id: "gemini-3.6-flash",
     provider: "google",
-    name: "Gemini 3.5 Flash",
+    name: "Gemini 3.6 Flash",
     description: "Fast, capable, multimodal — great everyday default.",
     badge: "Flash",
     supportsEffort: true,
@@ -444,27 +444,35 @@ export const botModels = [
   },
   // Anthropic Claude
   {
+    id: "claude-fable-5",
+    provider: "anthropic",
+    name: "Claude Fable 5",
+    description: "Anthropic's most capable — deepest long-horizon reasoning.",
+    badge: "Frontier",
+    supportsEffort: true,
+  },
+  {
     id: "claude-opus-4-8",
     provider: "anthropic",
     name: "Claude Opus 4.8",
-    description: "Most capable Claude — long-horizon reasoning and writing.",
+    description: "Most capable Opus — long-horizon reasoning and writing.",
     badge: "Opus",
     supportsEffort: true,
   },
   {
-    id: "claude-sonnet-4-6",
+    id: "claude-sonnet-5",
     provider: "anthropic",
-    name: "Claude Sonnet 4.6",
-    description: "Balanced Claude — strong general-purpose default.",
+    name: "Claude Sonnet 5",
+    description: "Near-Opus coding and agentic quality at Sonnet speed.",
     badge: null,
     supportsEffort: true,
   },
   // OpenAI
   {
-    id: "gpt-5.1",
+    id: "gpt-5.6",
     provider: "openai",
-    name: "GPT-5.1",
-    description: "OpenAI flagship — unified reasoning across speed and depth.",
+    name: "GPT-5.6",
+    description: "OpenAI flagship — routes to the Sol tier for hard work.",
     // Takes `reasoning_effort` at the API level, but the installed Genkit
     // OpenAI plugin has no config key for it yet — flip on (here and in the
     // server's `modelSupportsEffort`) when the plugin ships one.
@@ -473,29 +481,30 @@ export const botModels = [
   },
   // xAI Grok
   {
-    id: "grok-3",
+    id: "grok-4.5",
     provider: "xai",
-    name: "Grok 3",
-    description: "xAI's flagship — strong reasoning and broad knowledge.",
-    // xAI honors reasoning_effort only on the grok-mini line.
+    name: "Grok 4.5",
+    description: "xAI's flagship — one model, configurable reasoning.",
+    // grok-4.5 takes reasoning effort at the API level, but the installed
+    // Genkit xAI plugin only maps it for the grok-mini line.
     badge: null,
     supportsEffort: false,
   },
   // DeepSeek
   {
-    id: "deepseek-chat",
+    id: "deepseek-v4-flash",
     provider: "deepseek",
-    name: "DeepSeek Chat",
-    description: "DeepSeek V3 — fast, capable, cost-efficient.",
+    name: "DeepSeek V4 Flash",
+    description: "DeepSeek V4 — fast, capable, cost-efficient.",
     badge: null,
     supportsEffort: false,
   },
   {
-    id: "deepseek-reasoner",
+    id: "deepseek-v4-pro",
     provider: "deepseek",
-    name: "DeepSeek Reasoner",
-    description: "DeepSeek R1 — step-by-step chain-of-thought reasoning.",
-    // R1 always reasons; there is no depth knob to expose.
+    name: "DeepSeek V4 Pro",
+    description: "Top DeepSeek — deep reasoning and agentic strength.",
+    // Reasoning depth is model-managed; no client knob to expose.
     badge: "Reasoning",
     supportsEffort: false,
   },
@@ -600,7 +609,7 @@ export const defaultBotModelToggles: IBotAgentModelToggles = Object.fromEntries(
 export const defaultBotAgentConfig: IBotAgentConfig = {
   providers: { ...defaultBotModelProviderToggles },
   models: { ...defaultBotModelToggles },
-  model: "gemini-3.5-flash",
+  model: "gemini-3.6-flash",
   temperature: 0.7,
   topP: 0.95,
   topK: 40,

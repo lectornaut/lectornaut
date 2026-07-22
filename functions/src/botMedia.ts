@@ -19,6 +19,7 @@
  * `genkitClient.ts`).
  */
 
+import { buildUploadedFileLabel } from "@lectornaut/shared/domain"
 import { FieldValue } from "firebase-admin/firestore"
 import { getStorage } from "firebase-admin/storage"
 import * as logger from "firebase-functions/logger"
@@ -239,7 +240,7 @@ export async function loadSessionAttachmentParts(opts: {
             displayName: name,
           })
 
-      parts.push({ text: `[Uploaded file "${name}"]` })
+      parts.push({ text: buildUploadedFileLabel(name) })
       if (media) {
         parts.push(media)
       } else if (inline) {

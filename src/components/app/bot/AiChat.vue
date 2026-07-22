@@ -15,6 +15,8 @@ import {
   IconSquare,
   IconVolume2,
 } from "@/data/icons"
+import { resolveAttachmentIcon } from "@/helpers/node-attachments"
+import { splitUploadedFileLabels } from "@lectornaut/shared/domain"
 import { toast } from "vue-sonner"
 import { useAuthStore } from "@/stores/authStore"
 import { useMembershipStore } from "@/stores/membershipStore"
@@ -158,8 +160,17 @@ const THINKING_BLOCK_RE = /<thinking\b[^>]*>[\s\S]*?(?:<\/thinking\s*>\s*|$)/gi
 const stripThinking = (text: string): string =>
   text.replace(THINKING_BLOCK_RE, "").trim()
 
+// The plain-text view of a bubble, shared by Copy / Reply / Read aloud.
+// Agent turns shed their <thinking> blocks; user turns shed the server's
+// `[Uploaded file …]` labels — those render as attachment chips, and
+// copying/quoting/reading should carry the user's words, not the markers.
+const messagePlainText = (message: BotChatMessage): string =>
+  message.role === "user"
+    ? splitUploadedFileLabels(message.content).text
+    : stripThinking(message.content)
+
 const handleCopyMessage = async (message: BotChatMessage) => {
-  const text = stripThinking(message.content)
+  const text = messagePlainText(message)
   if (!text) return
   await copyToClipboard(text)
   lastCopiedMessageId.value = message.id
@@ -172,7 +183,7 @@ const handleCopyMessage = async (message: BotChatMessage) => {
 // the composer owns the blockquote formatting at send time.
 const handleReplyMessage = (message: BotChatMessage) => {
   if (!botChat) return
-  const text = stripThinking(message.content)
+  const text = messagePlainText(message)
   if (!text) return
   botChat.replyContext.value = text
 }
@@ -195,7 +206,7 @@ const {
 } = useReadAloud()
 
 const handleReadAloud = (message: BotChatMessage) => {
-  const text = stripThinking(message.content)
+  const text = messagePlainText(message)
   if (!text) return
   readAloud(message.id, text)
 }
@@ -279,6 +290,9 @@ const renderedMessages = computed(() =>
     const isRunStart = !previous || senderKey(previous) !== senderKey(message)
     const isRunEnd = !next || senderKey(next) !== senderKey(message)
     const blocks: RenderedBlock[] = []
+    // File names parsed out of a user turn's `[Uploaded file …]` labels —
+    // rendered as attachment chips above the text instead of raw markers.
+    let attachments: string[] = []
 
     if (
       message.role === "agent" &&
@@ -322,17 +336,27 @@ const renderedMessages = computed(() =>
       // No segments — single markdown block over `content`. Covers user
       // messages (always) and agent messages from before tool support
       // existed (legacy data and pure text turns).
+      let text = message.content
+      if (message.role === "user") {
+        const split = splitUploadedFileLabels(text)
+        text = split.text
+        attachments = split.attachments
+      }
       const isStreamingTail =
         isSending.value && isLastMessage && message.role === "agent"
-      blocks.push({
-        kind: "text",
-        id: `${message.id}-content`,
-        text: message.content,
-        final: !isStreamingTail,
-      })
+      // An attachment-only user turn skips the empty markdown block so the
+      // bubble's flex gap doesn't open up under the chips.
+      if (text || message.role === "agent") {
+        blocks.push({
+          kind: "text",
+          id: `${message.id}-content`,
+          text,
+          final: !isStreamingTail,
+        })
+      }
     }
 
-    return { message, blocks, isRunStart, isRunEnd }
+    return { message, blocks, attachments, isRunStart, isRunEnd }
   })
 )
 </script>
@@ -361,6 +385,7 @@ const renderedMessages = computed(() =>
             v-for="{
               message,
               blocks,
+              attachments,
               isRunStart,
               isRunEnd,
             } in renderedMessages"
@@ -427,6 +452,34 @@ const renderedMessages = computed(() =>
                             'w-full',
                         ]"
                       >
+                        <!-- Files sent with the turn — the same Attachment
+                             card as the sidebar's attachments list, parsed
+                             back out of the server's `[Uploaded file …]`
+                             labels. Only the display name survives in the
+                             message, so the icon resolves from it. -->
+                        <AttachmentGroup
+                          v-if="attachments.length"
+                          class="max-w-full"
+                        >
+                          <Attachment
+                            v-for="(name, index) in attachments"
+                            :key="`${index}:${name}`"
+                            size="sm"
+                          >
+                            <AttachmentMedia>
+                              <Component
+                                :is="
+                                  resolveAttachmentIcon({
+                                    originalName: name,
+                                  })
+                                "
+                              />
+                            </AttachmentMedia>
+                            <AttachmentContent>
+                              <AttachmentTitle>{{ name }}</AttachmentTitle>
+                            </AttachmentContent>
+                          </Attachment>
+                        </AttachmentGroup>
                         <template v-for="block in blocks" :key="block.id">
                           <AppMarkdown
                             v-if="block.kind === 'text'"

@@ -130,18 +130,19 @@ export type BotModelProvider = (typeof BOT_MODEL_PROVIDERS)[number]
  */
 const BOT_AGENT_MODEL_REGISTRY = [
   // Google Gemini
-  { id: "gemini-3.5-flash", provider: "google" },
+  { id: "gemini-3.6-flash", provider: "google" },
   { id: "gemini-3.1-pro-preview", provider: "google" },
   // Anthropic Claude
+  { id: "claude-fable-5", provider: "anthropic" },
   { id: "claude-opus-4-8", provider: "anthropic" },
-  { id: "claude-sonnet-4-6", provider: "anthropic" },
+  { id: "claude-sonnet-5", provider: "anthropic" },
   // OpenAI
-  { id: "gpt-5.1", provider: "openai" },
+  { id: "gpt-5.6", provider: "openai" },
   // xAI Grok
-  { id: "grok-3", provider: "xai" },
-  // DeepSeek
-  { id: "deepseek-chat", provider: "deepseek" },
-  { id: "deepseek-reasoner", provider: "deepseek" },
+  { id: "grok-4.5", provider: "xai" },
+  // DeepSeek (legacy deepseek-chat/-reasoner aliases retired 2026-07-24)
+  { id: "deepseek-v4-flash", provider: "deepseek" },
+  { id: "deepseek-v4-pro", provider: "deepseek" },
 ] as const satisfies ReadonlyArray<{
   id: BotAgentModel
   provider: BotModelProvider

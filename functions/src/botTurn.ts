@@ -387,36 +387,37 @@ export const ANTHROPIC_THINKING_BUDGET_TOKENS = 2048
  */
 export function modelSupportsThinking(name: string): boolean {
   if (/^gemini-(2\.5|3)/.test(name)) return true
-  if (/^claude-(3-7|(opus|sonnet|haiku)-4)/.test(name)) return true
+  if (/^claude-(3-7|(opus|sonnet|haiku)-4|(fable|opus|sonnet)-5)/.test(name))
+    return true
   return false
 }
 
 /**
- * Claude 4.7+ removed `temperature`/`top_p`/`top_k` from the API entirely —
- * sending any of them is a 400 regardless of thinking state. 4.6-family
- * models still accept them.
- * ponytail: matches the catalog's opus-4-8; extend when a 4.7+/5-family
- * wire-name lands in BOT_AGENT_MODELS.
+ * Claude 4.7+ and the Claude 5 family (Fable 5, Sonnet 5) removed
+ * `temperature`/`top_p`/`top_k` from the API entirely — sending any of them
+ * is a 400 regardless of thinking state. 4.6-family models still accept
+ * them.
  */
-const ANTHROPIC_SAMPLING_REMOVED_RE = /^claude-opus-4-[78]/
+const ANTHROPIC_SAMPLING_REMOVED_RE =
+  /^claude-(opus-4-[789]|(fable|opus|sonnet)-5)/
 
 /**
  * Whether a wire-name accepts the canonical per-turn effort level:
- *   - Claude 4.6+ (Opus/Sonnet): `output_config.effort` — GA. Excludes
- *     Haiku 4.5, which rejects the parameter.
+ *   - Claude 4.6+ and the 5 family (Fable/Opus/Sonnet): `output_config.effort`
+ *     — GA. Excludes Haiku 4.5, which rejects the parameter.
  *   - Gemini 3.x: `thinkingConfig.thinkingLevel` (2.5 only has token
  *     budgets, and none are in the catalog).
- * OpenAI gpt-5.1 takes `reasoning_effort` at the API level, but
- * @genkit-ai/compat-oai 1.40 has no config key for it on OpenAI models
- * (only xAI's grok-mini line) — flip it on here when the plugin ships one.
- * deepseek-reasoner reasons unconditionally; grok-3 (non-mini) has no knob.
+ * OpenAI gpt-5.6 and xAI grok-4.5 take `reasoning_effort` at the API level,
+ * but @genkit-ai/compat-oai 1.40 has no config key for it on those models
+ * (only xAI's grok-mini line) — flip them on here when the plugin ships one.
+ * deepseek-v4-pro's reasoning depth is model-managed; no knob to map.
  */
 export function modelSupportsEffort(
   provider: AiProvider,
   name: string
 ): boolean {
   if (provider === "anthropic")
-    return /^claude-(opus|sonnet)-4-[6-9]/.test(name)
+    return /^claude-((opus|sonnet)-4-[6-9]|(fable|opus|sonnet)-5)/.test(name)
   if (provider === "google") return /^gemini-3/.test(name)
   return false
 }

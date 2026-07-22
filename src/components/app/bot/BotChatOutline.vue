@@ -4,6 +4,7 @@ import {
   useMessageScrollerVisibility,
 } from "@/components/ui/message-scroller"
 import { BotChatContextKey } from "@/composables/useBotChat"
+import { splitUploadedFileLabels } from "@lectornaut/shared/domain"
 import { inject } from "vue"
 
 const { t } = useI18n()
@@ -28,13 +29,16 @@ const currentAnchorId = computed(() => visibility.value.currentAnchorId)
 
 // A user turn may open with the reply-quote block staged by the composer
 // ("> quoted text" lines) — label the row with the first line of the actual
-// ask instead of the quote.
+// ask instead of the quote. `[Uploaded file …]` labels render as chips in
+// the bubble, so they're stripped here too; an attachment-only turn falls
+// back to its first file name.
 const outlineLabel = (content: string): string => {
-  for (const line of content.split("\n")) {
-    const text = line.trim()
-    if (text && !text.startsWith(">")) return text
+  const { text, attachments } = splitUploadedFileLabels(content)
+  for (const line of text.split("\n")) {
+    const lineText = line.trim()
+    if (lineText && !lineText.startsWith(">")) return lineText
   }
-  return content.trim()
+  return attachments[0] ?? text
 }
 
 const jumpToMessage = (messageId: string) => {

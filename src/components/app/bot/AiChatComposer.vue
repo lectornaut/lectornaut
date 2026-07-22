@@ -444,7 +444,7 @@ const modeLabel = (value: BotChatMode): string => {
 // component), but matches the mode dropdown's "default to auto"
 // pattern so the trigger always has *something* to render.
 const model = computed<IBotAgentModel>(
-  () => botChat?.model.value ?? "gemini-3.5-flash"
+  () => botChat?.model.value ?? "gemini-3.6-flash"
 )
 const availableModelsByProvider = computed(
   () => botChat?.availableModelsByProvider.value ?? []

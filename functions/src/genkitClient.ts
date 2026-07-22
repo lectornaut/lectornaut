@@ -150,8 +150,8 @@ export function assertAiModelProviderConfigured(
 /**
  * Model-wire-name → provider dispatch.
  *
- * Bot agent config stores the model as a flat string (e.g. `claude-sonnet-4-6`
- * or `gpt-5`). At chat time we map the string to the right plugin's
+ * Bot agent config stores the model as a flat string (e.g. `claude-sonnet-5`
+ * or `gpt-5.6`). At chat time we map the string to the right plugin's
  * `model(...)` helper so the rest of the flow stays provider-agnostic.
  *
  * Prefix-based to avoid maintaining a per-model switch:

@@ -395,18 +395,19 @@ export type AiProvider = (typeof AI_PROVIDERS)[number]
  */
 export const BOT_AGENT_MODELS = [
   // Google Gemini
-  "gemini-3.5-flash",
+  "gemini-3.6-flash",
   "gemini-3.1-pro-preview",
   // Anthropic Claude
+  "claude-fable-5",
   "claude-opus-4-8",
-  "claude-sonnet-4-6",
+  "claude-sonnet-5",
   // OpenAI
-  "gpt-5.1",
+  "gpt-5.6",
   // xAI Grok
-  "grok-3",
-  // DeepSeek
-  "deepseek-chat",
-  "deepseek-reasoner",
+  "grok-4.5",
+  // DeepSeek (legacy deepseek-chat/-reasoner aliases retired 2026-07-24)
+  "deepseek-v4-flash",
+  "deepseek-v4-pro",
 ] as const
 export type BotAgentModel = (typeof BOT_AGENT_MODELS)[number]
 
@@ -735,6 +736,33 @@ export const isBlockedAttachmentMimeType = (
   return BLOCKED_ATTACHMENT_MIME_PATTERNS.some((pattern) =>
     pattern.test(normalized)
   )
+}
+
+// The server labels each chat-turn attachment with one of these text parts
+// (`functions/src/botMedia.ts`), which the history extractor flattens into
+// the user message's `content` — so persisted user turns carry the marker
+// inline. Chat surfaces parse it back out to render attachment chips
+// instead of raw `[Uploaded file …]` prose. Builder and parser sit together
+// here so the two sides can never drift.
+export const buildUploadedFileLabel = (name: string): string =>
+  `[Uploaded file "${name}"]`
+
+// Lazy (`.+?`) so a display name containing quotes still parses — the match
+// ends at the first `"]`, which normalized single-line names can't contain.
+const UPLOADED_FILE_LABEL_RE = /\[Uploaded file "(.+?)"\]/g
+
+/** Split a user turn's content into the typed text + labeled file names. */
+export const splitUploadedFileLabels = (
+  content: string
+): { text: string; attachments: string[] } => {
+  const attachments: string[] = []
+  const text = content
+    .replace(UPLOADED_FILE_LABEL_RE, (_match, name: string) => {
+      attachments.push(name)
+      return ""
+    })
+    .trim()
+  return { text, attachments }
 }
 
 // ============================================================================
