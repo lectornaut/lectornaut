@@ -4,6 +4,7 @@ import { isTauri, useIsFullscreen } from "@/composables/usePlatform"
 import {
   IconChevronRight,
   IconGift,
+  IconGrid2X2Plus,
   IconMinus,
   IconPin,
   IconPinOff,
@@ -31,6 +32,11 @@ const uiPreferencesStore = useUiPreferencesStore()
 const { agentsSidebarVisible, sidebarPinned } = storeToRefs(uiPreferencesStore)
 
 const isFullscreen = useIsFullscreen()
+
+// Navigation owns the edit sheet's state; the context menu below opens it via
+// this exposed handle. (Not named `navigation` — that would shadow the
+// auto-imported <Navigation /> component in the template.)
+const navigationRef = ref<{ openEdit: () => void }>()
 
 // In preview mode (e.g. settings preview) the sidebar must stay fully open and
 // non-collapsible; otherwise pin → icon rail, unpin → slide-out offcanvas.
@@ -86,7 +92,7 @@ function togglePinned() {
         </SidebarHeader>
         <SidebarContent @click.capture="closeSidebarOnMobile">
           <OverlayScrollbarsWrapper>
-            <Navigation />
+            <Navigation ref="navigationRef" />
           </OverlayScrollbarsWrapper>
         </SidebarContent>
         <SidebarFooter v-if="onboarding">
@@ -118,18 +124,11 @@ function togglePinned() {
       </Sidebar>
     </ContextMenuTrigger>
     <ContextMenuContent>
-      <template v-if="!isMobile">
-        <ContextMenuItem @click="togglePinned">
-          <IconPinOff v-if="sidebarPinned" />
-          <IconPin v-else />
-          {{
-            sidebarPinned
-              ? t("layouts.app.sidebar.unpin")
-              : t("layouts.app.sidebar.pin")
-          }}
-        </ContextMenuItem>
-        <ContextMenuSeparator />
-      </template>
+      <ContextMenuItem @click="navigationRef?.openEdit()">
+        <IconGrid2X2Plus />
+        {{ t("layouts.app.sidebar.edit") }}
+      </ContextMenuItem>
+      <ContextMenuSeparator />
       <!--
         Single toggle item whose label depends on (a) which dimension is
         being toggled — desktop `open` vs mobile `openMobile` — and (b) the
@@ -150,6 +149,17 @@ function togglePinned() {
               : t("layouts.app.sidebar.close")
         }}
       </ContextMenuItem>
+      <template v-if="!isMobile">
+        <ContextMenuItem @click="togglePinned">
+          <IconPinOff v-if="sidebarPinned" />
+          <IconPin v-else />
+          {{
+            sidebarPinned
+              ? t("layouts.app.sidebar.unpin")
+              : t("layouts.app.sidebar.pin")
+          }}
+        </ContextMenuItem>
+      </template>
     </ContextMenuContent>
   </ContextMenu>
 </template>

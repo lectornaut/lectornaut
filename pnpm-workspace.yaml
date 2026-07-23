@@ -15,17 +15,17 @@ allowBuilds:
   vue-demi: false
 
 minimumReleaseAgeExclude:
-  - "@genkit-ai/ai@1.39.0 || 1.40.0"
-  - "@genkit-ai/compat-oai@1.39.0 || 1.40.0"
-  - "@genkit-ai/core@1.39.0 || 1.40.0"
-  - "@genkit-ai/firebase@1.39.0 || 1.40.0"
-  - "@genkit-ai/google-cloud@1.39.0 || 1.40.0"
-  - "@genkit-ai/google-genai@1.39.0 || 1.40.0"
+  - "@genkit-ai/ai@1.39.0 || 1.40.0 || 1.40.1"
+  - "@genkit-ai/compat-oai@1.39.0 || 1.40.0 || 1.40.1"
+  - "@genkit-ai/core@1.39.0 || 1.40.0 || 1.40.1"
+  - "@genkit-ai/firebase@1.39.0 || 1.40.0 || 1.40.1"
+  - "@genkit-ai/google-cloud@1.39.0 || 1.40.0 || 1.40.1"
+  - "@genkit-ai/google-genai@1.39.0 || 1.40.0 || 1.40.1"
   - "@iconify/json@2.2.490"
   - "@unhead/bundler@3.1.5"
   - "@unhead/vue@3.1.5"
   - driver.js@1.5.0
-  - genkit@1.39.0 || 1.40.0
+  - genkit@1.39.0 || 1.40.0 || 1.40.1
   - markdown-it-ts@1.0.2
   - markstream-vue@1.0.4 || 1.0.7-beta.2
   - stream-markdown-parser@1.0.7 || 1.1.2

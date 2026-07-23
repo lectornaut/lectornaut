@@ -4153,6 +4153,7 @@
       },
       "sidebar": {
         "close": "Close sidebar",
+        "edit": "Edit navigation",
         "expand": "Expand sidebar",
         "minimize": "Minimize sidebar",
         "pin": "Pin sidebar",

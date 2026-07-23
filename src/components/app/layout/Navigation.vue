@@ -1,12 +1,7 @@
 <script lang="ts" setup>
 import { useNavigation } from "@/composables/useNavigation"
 import { isTauri, useIsFullscreen } from "@/composables/usePlatform"
-import {
-  IconBadgeCheck,
-  IconGrid2X2Plus,
-  IconGripHorizontal,
-  IconRotateCcw,
-} from "@/data/icons"
+import { IconBadgeCheck, IconGripHorizontal, IconRotateCcw } from "@/data/icons"
 
 const { t } = useI18n()
 const isFullscreen = useIsFullscreen()
@@ -36,6 +31,10 @@ const {
   rosterItems,
   isItemActive,
 } = useNavigation(el, rosterListEl)
+
+// The edit sheet has no in-list trigger; MainSidebar's right-click context
+// menu opens it through this.
+defineExpose({ openEdit: () => (editOpen.value = true) })
 </script>
 
 <template>
@@ -68,14 +67,6 @@ const {
           </SidebarMenuItem>
         </template>
         <Sheet v-model:open="editOpen">
-          <SheetTrigger as-child>
-            <SidebarMenuItem>
-              <SidebarMenuButton :tooltip="t('navigation.showMore')">
-                <IconGrid2X2Plus />
-                {{ t("common.edit") }}
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-          </SheetTrigger>
           <SheetContent
             class="m-2 mt-[calc(var(--spacing-titlebar-height,0px)+(--spacing(2)))] h-auto! gap-0 overflow-clip rounded border"
             side="left"
