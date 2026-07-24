@@ -78,7 +78,7 @@ defineExpose({ openEdit: () => (editOpen.value = true) })
                 {{ t("navigation.showMore") }}
               </SheetDescription>
             </SheetHeader>
-            <OverlayScrollbarsWrapper>
+            <ScrollContainer>
               <div class="flex grow flex-col gap-4 px-6">
                 <!--
                 Unified, draggable roster: every menu item as an Item row with a
@@ -202,7 +202,7 @@ defineExpose({ openEdit: () => (editOpen.value = true) })
                   </Empty>
                 </ItemGroup>
               </div>
-            </OverlayScrollbarsWrapper>
+            </ScrollContainer>
             <SheetFooter>
               <Button
                 variant="secondary"

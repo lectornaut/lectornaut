@@ -91,9 +91,9 @@ function togglePinned() {
           <WorkspaceSwitcher />
         </SidebarHeader>
         <SidebarContent @click.capture="closeSidebarOnMobile">
-          <OverlayScrollbarsWrapper>
+          <ScrollContainer>
             <Navigation ref="navigationRef" />
-          </OverlayScrollbarsWrapper>
+          </ScrollContainer>
         </SidebarContent>
         <SidebarFooter v-if="onboarding">
           <SidebarMenu id="tour-onboarding">

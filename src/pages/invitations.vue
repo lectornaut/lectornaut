@@ -265,9 +265,7 @@ const formatInvitationTimestamp = (
         </SelectContent>
       </Select>
     </div>
-    <OverlayScrollbarsWrapper
-      class="w-full max-w-md items-center justify-between p-2"
-    >
+    <ScrollContainer class="w-full max-w-md items-center justify-between p-2">
       <div
         class="bg-sidebar flex size-full flex-col items-center justify-between p-2"
       >
@@ -374,6 +372,6 @@ const formatInvitationTimestamp = (
           </div>
         </div>
       </div>
-    </OverlayScrollbarsWrapper>
+    </ScrollContainer>
   </div>
 </template>

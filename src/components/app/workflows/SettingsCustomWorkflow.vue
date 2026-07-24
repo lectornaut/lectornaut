@@ -582,7 +582,7 @@ const handleSave = async (): Promise<void> => {
                   {{ t("settings.workflows.ai.previewEmptyHint") }}
                 </p>
               </div>
-              <OverlayScrollbarsWrapper v-else class="min-h-0 grow">
+              <ScrollContainer v-else class="min-h-0 grow">
                 <div class="flex flex-col gap-4 p-4">
                   <!-- Identity (avatar + name + description) -->
                   <div class="flex items-center gap-3">
@@ -691,16 +691,14 @@ const handleSave = async (): Promise<void> => {
                     </div>
                   </div>
                 </div>
-              </OverlayScrollbarsWrapper>
+              </ScrollContainer>
             </div>
           </div>
         </TabsContent>
 
         <!-- ── Configure tab — full manual form ───────────────────────── -->
         <TabsContent value="configure" class="min-h-0">
-          <OverlayScrollbarsWrapper
-            class="-mx-6 h-full w-[-webkit-fill-available]"
-          >
+          <ScrollContainer class="-mx-6 h-full w-[-webkit-fill-available]">
             <div class="flex flex-col gap-4 p-6">
               <div class="flex flex-col gap-1.5">
                 <Label for="wf-name">{{ t("settings.workflows.name") }}</Label>
@@ -1209,7 +1207,7 @@ const handleSave = async (): Promise<void> => {
                 </p>
               </div>
             </div>
-          </OverlayScrollbarsWrapper>
+          </ScrollContainer>
         </TabsContent>
       </Tabs>
 

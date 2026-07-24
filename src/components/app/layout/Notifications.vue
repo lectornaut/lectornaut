@@ -20,7 +20,7 @@ import type { INotificationStatus } from "@/types/notification"
 
 const { t } = useI18n()
 
-type OverlayScrollbarsWrapperRef = ComponentPublicInstance<{
+type ScrollContainerRef = ComponentPublicInstance<{
   getScrollElement: () => HTMLElement | undefined
 }>
 
@@ -48,7 +48,7 @@ const {
   deleteAllNotifications,
 } = useNotifications()
 
-const scrollableContainer = useTemplateRef<OverlayScrollbarsWrapperRef>(
+const scrollableContainer = useTemplateRef<ScrollContainerRef>(
   "scrollableContainer"
 )
 const activeTab = ref<INotificationStatus>("inbox")
@@ -157,7 +157,7 @@ useInfiniteScroll(
             </TabsTrigger>
           </TabsList>
         </div>
-        <OverlayScrollbarsWrapper
+        <ScrollContainer
           ref="scrollableContainer"
           class="bg-sidebar aspect-square w-md"
         >
@@ -198,7 +198,7 @@ useInfiniteScroll(
               />
             </div>
           </ItemGroup>
-        </OverlayScrollbarsWrapper>
+        </ScrollContainer>
         <div class="flex items-center justify-between">
           <div>
             <ButtonGroup>
@@ -301,7 +301,7 @@ useInfiniteScroll(
     </PopoverContent>
   </Popover>
   <Teleport v-if="isDocked" defer to="#left-dock" :disabled="!isDocked">
-    <OverlayScrollbarsWrapper>
+    <ScrollContainer>
       <div class="grid size-full w-full min-w-64 grid-cols-1">
         <div
           class="size-full bg-[repeating-linear-gradient(45deg,var(--color-muted)_0,var(--color-muted)_1px,transparent_0,transparent_50%)] bg-size-[8px_8px]"
@@ -309,6 +309,6 @@ useInfiniteScroll(
           {{ t("components.notifications.sampleContent") }}
         </div>
       </div>
-    </OverlayScrollbarsWrapper>
+    </ScrollContainer>
   </Teleport>
 </template>

@@ -97,7 +97,7 @@ const stats = computed(() => {
       </SidebarHeader>
       <Separator />
       <SidebarContent>
-        <OverlayScrollbarsWrapper>
+        <ScrollContainer>
           <p
             v-if="workflowGroups.length === 0"
             class="text-muted-foreground px-4 py-2 text-xs"
@@ -149,7 +149,7 @@ const stats = computed(() => {
               </Collapsible>
             </SidebarGroup>
           </template>
-        </OverlayScrollbarsWrapper>
+        </ScrollContainer>
       </SidebarContent>
       <Separator />
       <SidebarFooter>
@@ -160,32 +160,34 @@ const stats = computed(() => {
     </Sidebar>
   </SidebarSlot>
 
-  <DataTable
-    v-if="canManage"
-    ref="tableRef"
-    :data="allRows"
-    :columns="columns"
-    sticky-header
-    :column-pinning="{ left: ['select'], right: ['actions'] }"
-  >
-    <template #expanded="{ row }">
-      <RunDetails :run="row.original.run" />
-    </template>
-    <template #selection-actions="{ table, rows, count }">
-      <RunsSelectionActions :table="table" :rows="rows" :count="count" />
-    </template>
-  </DataTable>
-  <div
-    v-else
-    class="text-muted-foreground flex h-full items-center justify-center p-8 text-sm"
-  >
-    {{ t("settings.workflows.adminOnly") }}
+  <div class="container mx-auto flex h-full min-h-0 max-w-4xl flex-col">
+    <DataTable
+      v-if="canManage"
+      ref="tableRef"
+      :data="allRows"
+      :columns="columns"
+      sticky-header
+      :column-pinning="{ left: ['select'], right: ['actions'] }"
+    >
+      <template #expanded="{ row }">
+        <RunDetails :run="row.original.run" />
+      </template>
+      <template #selection-actions="{ table, rows, count }">
+        <RunsSelectionActions :table="table" :rows="rows" :count="count" />
+      </template>
+    </DataTable>
+    <div
+      v-else
+      class="text-muted-foreground flex h-full items-center justify-center p-8 text-sm"
+    >
+      {{ t("settings.workflows.adminOnly") }}
+    </div>
   </div>
 
   <SidebarSlot side="right">
     <Sidebar collapsible="none" class="w-full">
       <SidebarContent>
-        <OverlayScrollbarsWrapper>
+        <ScrollContainer>
           <SidebarGroup class="gap-3">
             <h3 class="text-sm font-medium">{{ t("pages.runs.summary") }}</h3>
             <div class="grid grid-cols-2 gap-2">
@@ -246,7 +248,7 @@ const stats = computed(() => {
               </div>
             </div>
           </SidebarGroup>
-        </OverlayScrollbarsWrapper>
+        </ScrollContainer>
       </SidebarContent>
     </Sidebar>
   </SidebarSlot>

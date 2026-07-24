@@ -1,7 +1,10 @@
 <script lang="ts" setup>
 import { useCollabPage } from "@/composables/useCollabPage"
+import { createWorkspaceNodeAttachmentFromFile } from "@/composables/useNodeAttachments"
 import { IconFileText } from "@/data/icons"
 import { useNodeBreadcrumb } from "@/helpers/breadcrumber"
+import { getStorageFileRef } from "@/utils/firebase/firebase-helpers"
+import { getDownloadURL } from "firebase/storage"
 
 const { t } = useI18n()
 
@@ -99,6 +102,28 @@ const {
   flushPendingEdits: () => editorRef.value?.flush?.(),
 })
 
+/**
+ * Editor drop/paste image upload: stores the file as a regular node
+ * attachment (so it appears in the attachment rail and is cleaned up with
+ * the node) and hands the editor a permanent download URL to embed.
+ */
+const uploadEditorImage = async (file: File): Promise<string> => {
+  const team = teamId.value
+  const workspace = workspaceId.value
+  const node = selectedFile.value
+  if (!team || !workspace || !node) {
+    throw new Error("No file is open.")
+  }
+
+  const { storagePath } = await createWorkspaceNodeAttachmentFromFile(file, {
+    teamId: team,
+    workspaceId: workspace,
+    scope: nodeScope,
+    nodeId: node.id,
+  })
+  return getDownloadURL(getStorageFileRef(storagePath))
+}
+
 const collabDoc = computed(() => collabSession.value?.ydoc ?? null)
 
 useHead(() => ({
@@ -112,7 +137,7 @@ useHead(() => ({
   <SidebarSlot side="left">
     <Sidebar collapsible="none" class="w-full">
       <SidebarContent>
-        <OverlayScrollbarsWrapper>
+        <ScrollContainer>
           <FileTree
             v-if="teamId && workspaceId"
             :team-id="teamId"
@@ -129,7 +154,7 @@ useHead(() => ({
               </div>
             </SidebarGroupContent>
           </SidebarGroup>
-        </OverlayScrollbarsWrapper>
+        </ScrollContainer>
       </SidebarContent>
     </Sidebar>
   </SidebarSlot>
@@ -141,23 +166,26 @@ useHead(() => ({
       open (and risked dropping keystrokes typed into the throwaway local
       instance). Keying on the file id alone remounts only on a real file switch.
     -->
-    <OverlayScrollbarsWrapper
+    <ScrollContainer
       v-if="
         teamId && workspaceId && selectedFile && (collabReady || collabError)
       "
     >
-      <TextEditor
-        ref="editorRef"
-        :key="selectedFile.id"
-        v-model="editorContent"
-        :read-only="editorReadOnly"
-        :collaboration-doc="collabDoc"
-        :collaboration-awareness="collabAwareness"
-        :applier-status="collabSession?.isAgentApplier"
-        @baseline="adoptEditorBaseline"
-        @adapter="registerEditorAdapter"
-      />
-    </OverlayScrollbarsWrapper>
+      <div class="container mx-auto flex max-w-4xl grow flex-col">
+        <TextEditor
+          ref="editorRef"
+          :key="selectedFile.id"
+          v-model="editorContent"
+          :read-only="editorReadOnly"
+          :collaboration-doc="collabDoc"
+          :collaboration-awareness="collabAwareness"
+          :applier-status="collabSession?.isAgentApplier"
+          :upload-image="uploadEditorImage"
+          @baseline="adoptEditorBaseline"
+          @adapter="registerEditorAdapter"
+        />
+      </div>
+    </ScrollContainer>
     <LoadingState v-else-if="teamId && workspaceId && selectedFile" />
     <Empty v-else>
       <EmptyHeader>

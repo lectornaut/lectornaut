@@ -169,9 +169,12 @@ defineExpose({ table })
         :show-sorting="props.showSorting"
         :show-view-options="props.showViewOptions"
       />
-      <OverlayScrollbarsWrapper
-        show-inline-hints
-        target-selector="[data-slot='table-container']"
+      <!-- `data-table-viewport` turns the Table's own container into the one
+           native scroller (scroll-fade + thin scrollbar via index.css) so the
+           sticky header and pinned columns stick to it. -->
+      <div
+        data-table-viewport
+        class="relative flex min-h-0 min-w-0 grow flex-col overflow-hidden"
       >
         <Table>
           <TableHeader :class="props.stickyHeader && 'sticky top-0 z-20'">
@@ -321,7 +324,7 @@ defineExpose({ table })
             </template>
           </TableBody>
         </Table>
-      </OverlayScrollbarsWrapper>
+      </div>
       <DataTablePagination v-if="props.showPagination" :table="table">
         <!-- Guarded so the child only "sees" the slot when our own consumer
            provided one — an unconditional forward would always register it. -->

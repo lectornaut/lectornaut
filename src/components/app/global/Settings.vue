@@ -83,7 +83,7 @@ const tabContentClass = "overflow-auto overscroll-none scroll-smooth h-full"
           <Sidebar collapsible="none">
             <TabsList class="contents">
               <SidebarContent>
-                <OverlayScrollbarsWrapper>
+                <ScrollContainer>
                   <SidebarGroup
                     v-for="navigation in defaultSettingsTabs"
                     :key="navigation.id"
@@ -114,12 +114,12 @@ const tabContentClass = "overflow-auto overscroll-none scroll-smooth h-full"
                       </SidebarMenu>
                     </SidebarGroupContent>
                   </SidebarGroup>
-                </OverlayScrollbarsWrapper>
+                </ScrollContainer>
               </SidebarContent>
             </TabsList>
           </Sidebar>
           <Separator orientation="vertical" />
-          <div class="container mx-auto flex grow flex-col">
+          <div class="flex grow flex-col">
             <DialogHeader class="m-6">
               <DialogTitle>{{ t(resolvedTabConfig?.name ?? "") }}</DialogTitle>
               <DialogDescription>
@@ -128,129 +128,129 @@ const tabContentClass = "overflow-auto overscroll-none scroll-smooth h-full"
             </DialogHeader>
             <Separator />
             <TabsContent :class="tabContentClass" value="preferences">
-              <OverlayScrollbarsWrapper>
+              <ScrollContainer>
                 <SettingsPreferences />
-              </OverlayScrollbarsWrapper>
+              </ScrollContainer>
             </TabsContent>
             <TabsContent :class="tabContentClass" value="account">
-              <OverlayScrollbarsWrapper>
+              <ScrollContainer>
                 <SettingsAccount />
-              </OverlayScrollbarsWrapper>
+              </ScrollContainer>
             </TabsContent>
             <TabsContent :class="tabContentClass" value="privacy">
-              <OverlayScrollbarsWrapper>
+              <ScrollContainer>
                 <SettingsPrivacy />
-              </OverlayScrollbarsWrapper>
+              </ScrollContainer>
             </TabsContent>
             <TabsContent :class="tabContentClass" value="appearance">
-              <OverlayScrollbarsWrapper>
+              <ScrollContainer>
                 <SettingsAppearance />
-              </OverlayScrollbarsWrapper>
+              </ScrollContainer>
             </TabsContent>
             <TabsContent :class="tabContentClass" value="models">
-              <OverlayScrollbarsWrapper>
+              <ScrollContainer>
                 <SettingsAi />
-              </OverlayScrollbarsWrapper>
+              </ScrollContainer>
             </TabsContent>
             <TabsContent :class="tabContentClass" value="tools">
-              <OverlayScrollbarsWrapper>
+              <ScrollContainer>
                 <SettingsTools />
-              </OverlayScrollbarsWrapper>
+              </ScrollContainer>
             </TabsContent>
             <TabsContent :class="tabContentClass" value="agents">
-              <OverlayScrollbarsWrapper>
+              <ScrollContainer>
                 <SettingsAgents />
-              </OverlayScrollbarsWrapper>
+              </ScrollContainer>
             </TabsContent>
             <TabsContent :class="tabContentClass" value="workflows">
-              <OverlayScrollbarsWrapper>
+              <ScrollContainer>
                 <SettingsWorkflows />
-              </OverlayScrollbarsWrapper>
+              </ScrollContainer>
             </TabsContent>
             <TabsContent :class="tabContentClass" value="integrations">
-              <OverlayScrollbarsWrapper>
+              <ScrollContainer>
                 <SettingsIntegrations />
-              </OverlayScrollbarsWrapper>
+              </ScrollContainer>
             </TabsContent>
             <TabsContent :class="tabContentClass" value="runs">
-              <OverlayScrollbarsWrapper>
+              <ScrollContainer>
                 <SettingsRuns />
-              </OverlayScrollbarsWrapper>
+              </ScrollContainer>
             </TabsContent>
             <TabsContent :class="tabContentClass" value="sessions">
-              <OverlayScrollbarsWrapper>
+              <ScrollContainer>
                 <SettingsSessions />
-              </OverlayScrollbarsWrapper>
+              </ScrollContainer>
             </TabsContent>
             <TabsContent :class="tabContentClass" value="memory">
-              <OverlayScrollbarsWrapper>
+              <ScrollContainer>
                 <SettingsMemory />
-              </OverlayScrollbarsWrapper>
+              </ScrollContainer>
             </TabsContent>
             <TabsContent :class="tabContentClass" value="storage">
-              <OverlayScrollbarsWrapper>
+              <ScrollContainer>
                 <SettingsStorage />
-              </OverlayScrollbarsWrapper>
+              </ScrollContainer>
             </TabsContent>
             <TabsContent :class="tabContentClass" value="data">
-              <OverlayScrollbarsWrapper>
+              <ScrollContainer>
                 <SettingsData />
-              </OverlayScrollbarsWrapper>
+              </ScrollContainer>
             </TabsContent>
             <TabsContent :class="tabContentClass" value="notifications">
-              <OverlayScrollbarsWrapper>
+              <ScrollContainer>
                 <SettingsNotifications />
-              </OverlayScrollbarsWrapper>
+              </ScrollContainer>
             </TabsContent>
             <TabsContent :class="tabContentClass" value="members">
-              <OverlayScrollbarsWrapper>
+              <ScrollContainer>
                 <SettingsMembers />
-              </OverlayScrollbarsWrapper>
+              </ScrollContainer>
             </TabsContent>
             <TabsContent :class="tabContentClass" value="groups">
-              <OverlayScrollbarsWrapper>
+              <ScrollContainer>
                 <SettingsGroups />
-              </OverlayScrollbarsWrapper>
+              </ScrollContainer>
             </TabsContent>
             <TabsContent :class="tabContentClass" value="connections">
-              <OverlayScrollbarsWrapper>
+              <ScrollContainer>
                 <SettingsConnections />
-              </OverlayScrollbarsWrapper>
+              </ScrollContainer>
             </TabsContent>
             <TabsContent :class="tabContentClass" value="overview">
-              <OverlayScrollbarsWrapper>
+              <ScrollContainer>
                 <SettingsOverview />
-              </OverlayScrollbarsWrapper>
+              </ScrollContainer>
             </TabsContent>
             <TabsContent :class="tabContentClass" value="teams">
-              <OverlayScrollbarsWrapper>
+              <ScrollContainer>
                 <SettingsTeams />
-              </OverlayScrollbarsWrapper>
+              </ScrollContainer>
             </TabsContent>
             <TabsContent :class="tabContentClass" value="workspaces">
-              <OverlayScrollbarsWrapper>
+              <ScrollContainer>
                 <SettingsWorkspaces />
-              </OverlayScrollbarsWrapper>
+              </ScrollContainer>
             </TabsContent>
             <TabsContent :class="tabContentClass" value="billing">
-              <OverlayScrollbarsWrapper>
+              <ScrollContainer>
                 <SettingsBilling />
-              </OverlayScrollbarsWrapper>
+              </ScrollContainer>
             </TabsContent>
             <TabsContent :class="tabContentClass" value="plans">
-              <OverlayScrollbarsWrapper>
+              <ScrollContainer>
                 <SettingsPlans />
-              </OverlayScrollbarsWrapper>
+              </ScrollContainer>
             </TabsContent>
             <TabsContent :class="tabContentClass" value="security">
-              <OverlayScrollbarsWrapper>
+              <ScrollContainer>
                 <SettingsSecurity />
-              </OverlayScrollbarsWrapper>
+              </ScrollContainer>
             </TabsContent>
             <TabsContent :class="tabContentClass" value="logs">
-              <OverlayScrollbarsWrapper>
+              <ScrollContainer>
                 <SettingsLogs />
-              </OverlayScrollbarsWrapper>
+              </ScrollContainer>
             </TabsContent>
           </div>
         </SidebarProvider>

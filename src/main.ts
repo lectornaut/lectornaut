@@ -26,16 +26,12 @@ import {
   enableMermaid,
   preloadExtendedLanguageIcons,
 } from "markstream-vue"
-import { ClickScrollPlugin, OverlayScrollbars } from "overlayscrollbars"
-import "overlayscrollbars/overlayscrollbars.scriptingenabled.css"
 import { createPinia } from "pinia"
 import "unfonts.css"
 import "vue-sonner/style.css"
 import { VueFire, VueFireAuth } from "vuefire"
 import "xterminal/dist/xterminal.css"
 import "~console/theme-detect"
-
-OverlayScrollbars.plugin(ClickScrollPlugin)
 
 const head = createHead({
   init: [

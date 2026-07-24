@@ -247,7 +247,7 @@ const formatWhen = (ts: unknown): string =>
         </div>
       </SidebarHeader>
       <SidebarContent>
-        <OverlayScrollbarsWrapper>
+        <ScrollContainer>
           <div
             v-if="isEmpty"
             class="text-muted-foreground flex flex-col items-center gap-2 p-6 text-center text-xs"
@@ -337,13 +337,13 @@ const formatWhen = (ts: unknown): string =>
               </Collapsible>
             </SidebarGroup>
           </template>
-        </OverlayScrollbarsWrapper>
+        </ScrollContainer>
       </SidebarContent>
     </Sidebar>
   </SidebarSlot>
 
   <!-- Main: workspace-wide runs, filterable by Workflow + Date range -->
-  <div class="flex h-full min-h-0 flex-col">
+  <div class="container mx-auto flex h-full min-h-0 max-w-4xl flex-col">
     <DataTable
       ref="tableRef"
       :data="allRows"
@@ -364,7 +364,7 @@ const formatWhen = (ts: unknown): string =>
   <SidebarSlot side="right">
     <Sidebar collapsible="none" class="w-full">
       <SidebarContent>
-        <OverlayScrollbarsWrapper>
+        <ScrollContainer>
           <SidebarGroup v-if="selectedWorkflow" class="gap-3">
             <div class="flex items-center justify-between gap-2">
               <h3 class="truncate text-sm font-medium">
@@ -453,7 +453,7 @@ const formatWhen = (ts: unknown): string =>
           <div v-else class="text-muted-foreground p-4 text-sm">
             {{ t("pages.workflows.selectHint") }}
           </div>
-        </OverlayScrollbarsWrapper>
+        </ScrollContainer>
       </SidebarContent>
     </Sidebar>
   </SidebarSlot>

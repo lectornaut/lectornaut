@@ -21,7 +21,7 @@ import { tsToDate } from "@/utils/firebase/firebase-timestamps"
 import { formatTimeAgo } from "@vueuse/core"
 import { storeToRefs } from "pinia"
 
-type OverlayScrollbarsWrapperRef = ComponentPublicInstance<{
+type ScrollContainerRef = ComponentPublicInstance<{
   getScrollElement: () => HTMLElement | undefined
 }>
 
@@ -40,7 +40,7 @@ const teamId = computed<string | null>(() => props.teamId)
 const workspaceId = computed<string | null>(() => props.workspaceId)
 const documentId = computed<string | null>(() => props.documentId)
 
-const scrollableContainer = useTemplateRef<OverlayScrollbarsWrapperRef>(
+const scrollableContainer = useTemplateRef<ScrollContainerRef>(
   "scrollableContainer"
 )
 
@@ -240,7 +240,7 @@ useInfiniteScroll(
 
 <template>
   <div class="flex size-full min-h-0 grow flex-col gap-2">
-    <OverlayScrollbarsWrapper ref="scrollableContainer">
+    <ScrollContainer ref="scrollableContainer">
       <div class="px-2 pb-2">
         <div v-if="!canViewLogs" class="text-muted-foreground text-xs">
           You do not have permission to view activity history.
@@ -337,6 +337,6 @@ useInfiniteScroll(
           <LoadingState v-if="loading" />
         </template>
       </div>
-    </OverlayScrollbarsWrapper>
+    </ScrollContainer>
   </div>
 </template>

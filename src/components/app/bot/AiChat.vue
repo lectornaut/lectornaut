@@ -374,13 +374,16 @@ const renderedMessages = computed(() =>
        mount, follows the streamed tail only while the reader is pinned
        to the bottom (scrolling up opts out — no forced auto-follow),
        preserves the viewport on history prepends, and surfaces a
-       jump-to-latest button. This replaces the OverlayScrollbars
-       viewport for the chat surface only; if streaming ever feels
-       janky again, drop `auto-scroll` first. -->
+       jump-to-latest button. The chat surface keeps this engine instead
+       of the generic ScrollContainer because it must own the raw
+       viewport element; if streaming ever feels janky again, drop
+       `auto-scroll` first. -->
   <MessageScrollerProvider v-else :key="scrollerSessionKey" auto-scroll>
     <MessageScroller>
       <MessageScrollerViewport>
-        <MessageScrollerContent class="messages-list container mx-auto p-4">
+        <MessageScrollerContent
+          class="messages-list container mx-auto max-w-4xl p-2"
+        >
           <MessageScrollerItem
             v-for="{
               message,
@@ -395,10 +398,7 @@ const renderedMessages = computed(() =>
           >
             <ContextMenu>
               <ContextMenuTrigger class="group relative block">
-                <Message
-                  :align="isOwnMessage(message) ? 'end' : 'start'"
-                  class="px-2"
-                >
+                <Message :align="isOwnMessage(message) ? 'end' : 'start'">
                   <template
                     v-if="message.role === 'user' && !isOwnMessage(message)"
                   >

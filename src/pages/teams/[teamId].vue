@@ -126,7 +126,9 @@ watch(
   <!-- Team Profile -->
   <div v-else-if="team && isMember">
     <!-- Team Header -->
-    <div class="flex flex-col items-center justify-center p-2">
+    <div
+      class="container mx-auto flex max-w-4xl flex-col items-center justify-center p-2"
+    >
       <div
         class="aspect-video max-h-40 w-full rounded border bg-[repeating-linear-gradient(45deg,var(--color-muted)_0,var(--color-muted)_1px,transparent_0,transparent_50%)] bg-size-[8px_8px]"
       ></div>

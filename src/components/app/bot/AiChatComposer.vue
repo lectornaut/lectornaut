@@ -1015,7 +1015,7 @@ const onToolMenuCloseAutoFocus = (event: Event) => {
 </script>
 
 <template>
-  <div class="container mx-auto grid gap-2 p-2">
+  <div class="container mx-auto max-w-4xl p-2">
     <InputGroup>
       <InputGroupTextarea
         ref="textareaRef"
@@ -1303,7 +1303,7 @@ const onToolMenuCloseAutoFocus = (event: Event) => {
                 {{ t("ai.attachContextDescription") }}
               </SheetDescription>
             </SheetHeader>
-            <OverlayScrollbarsWrapper>
+            <ScrollContainer>
               <Tabs
                 v-if="currentTeamId && currentWorkspaceId"
                 class="gap-0"
@@ -1321,7 +1321,7 @@ const onToolMenuCloseAutoFocus = (event: Event) => {
                 <TabsContent value="code">
                   <Sidebar collapsible="none" class="w-full">
                     <SidebarContent>
-                      <OverlayScrollbarsWrapper>
+                      <ScrollContainer>
                         <FileTree
                           :team-id="currentTeamId"
                           :workspace-id="currentWorkspaceId"
@@ -1330,14 +1330,14 @@ const onToolMenuCloseAutoFocus = (event: Event) => {
                           :selection="codeAttachedIds"
                           @select="handleAttachNodeSelect('code', $event)"
                         />
-                      </OverlayScrollbarsWrapper>
+                      </ScrollContainer>
                     </SidebarContent>
                   </Sidebar>
                 </TabsContent>
                 <TabsContent value="write">
                   <Sidebar collapsible="none" class="w-full">
                     <SidebarContent>
-                      <OverlayScrollbarsWrapper>
+                      <ScrollContainer>
                         <FileTree
                           :team-id="currentTeamId"
                           :workspace-id="currentWorkspaceId"
@@ -1346,7 +1346,7 @@ const onToolMenuCloseAutoFocus = (event: Event) => {
                           :selection="writeAttachedIds"
                           @select="handleAttachNodeSelect('write', $event)"
                         />
-                      </OverlayScrollbarsWrapper>
+                      </ScrollContainer>
                     </SidebarContent>
                   </Sidebar>
                 </TabsContent>
@@ -1362,7 +1362,7 @@ const onToolMenuCloseAutoFocus = (event: Event) => {
                   })
                 }}
               </div>
-            </OverlayScrollbarsWrapper>
+            </ScrollContainer>
             <SheetFooter>
               <Button @click="attachSheetOpen = false">
                 {{ t("actions.done") }}

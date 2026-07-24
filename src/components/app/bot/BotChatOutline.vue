@@ -80,7 +80,7 @@ const jumpToMessage = (messageId: string) => {
            height is auto, so percentage/stretch sizing never reaches the
            scroll element and OS measures zero overflow (dead wheel). The
            outer max-h-80 only guards the frame before deferred init. -->
-      <OverlayScrollbarsWrapper>
+      <ScrollContainer>
         <Button
           v-for="message in userMessages"
           :key="message.id"
@@ -97,7 +97,7 @@ const jumpToMessage = (messageId: string) => {
             {{ outlineLabel(message.content) }}
           </span>
         </Button>
-      </OverlayScrollbarsWrapper>
+      </ScrollContainer>
     </HoverCardContent>
   </HoverCard>
 </template>

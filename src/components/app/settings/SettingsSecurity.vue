@@ -581,7 +581,7 @@ const handleDeleteSso = () => deleteSsoDialog.confirm(() => deleteSsoConfig())
                 {{ t("settings.security.sso.configurationDescription") }}
               </DialogDescription>
             </DialogHeader>
-            <OverlayScrollbarsWrapper class="-mx-6 w-[-webkit-fill-available]">
+            <ScrollContainer class="-mx-6 w-[-webkit-fill-available]">
               <FieldGroup class="p-6">
                 <FieldSet>
                   <!-- Shared SSO Settings -->
@@ -857,7 +857,7 @@ const handleDeleteSso = () => deleteSsoDialog.confirm(() => deleteSsoConfig())
                   </template>
                 </FieldSet>
               </FieldGroup>
-            </OverlayScrollbarsWrapper>
+            </ScrollContainer>
             <DialogFooter class="flex-row justify-between sm:justify-between">
               <Button
                 variant="outline"

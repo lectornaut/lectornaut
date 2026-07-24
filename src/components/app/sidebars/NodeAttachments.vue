@@ -500,7 +500,7 @@ watch(selectedCreateFiles, async (files) => {
         @imported="onDriveImported"
       />
     </ButtonGroup>
-    <OverlayScrollbarsWrapper>
+    <ScrollContainer>
       <div class="flex flex-col gap-2 px-2 pb-2">
         <div v-if="readOnlyMessage" class="text-muted-foreground text-xs">
           {{ readOnlyMessage }}
@@ -635,7 +635,7 @@ watch(selectedCreateFiles, async (files) => {
           </AttachmentActions>
         </Attachment>
       </div>
-    </OverlayScrollbarsWrapper>
+    </ScrollContainer>
   </div>
 
   <Dialog

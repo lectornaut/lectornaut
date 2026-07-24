@@ -134,8 +134,8 @@ const openNewAgentDialog = (): void => {
 </script>
 
 <template>
-  <OverlayScrollbarsWrapper>
-    <div class="mx-auto flex w-full max-w-3xl flex-col gap-8 p-6">
+  <ScrollContainer>
+    <div class="container mx-auto flex w-full max-w-4xl flex-col gap-8 p-6">
       <div class="flex flex-col gap-2">
         <h1 class="text-2xl font-bold tracking-tight">
           {{ t("pages.agents.title") }}
@@ -280,5 +280,5 @@ const openNewAgentDialog = (): void => {
         </template>
       </template>
     </div>
-  </OverlayScrollbarsWrapper>
+  </ScrollContainer>
 </template>

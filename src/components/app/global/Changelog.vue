@@ -26,7 +26,7 @@ emitter.on("Dialog.Changelog.Open", (id) => {
       <SheetHeader>
         <SheetTitle>{{ t("pages.changelog.title") }}</SheetTitle>
       </SheetHeader>
-      <OverlayScrollbarsWrapper>
+      <ScrollContainer>
         <div class="flex grow flex-col px-4">
           <Accordion
             collapsible
@@ -56,7 +56,7 @@ emitter.on("Dialog.Changelog.Open", (id) => {
             </AccordionItem>
           </Accordion>
         </div>
-      </OverlayScrollbarsWrapper>
+      </ScrollContainer>
       <SheetFooter>
         <Button variant="secondary" class="justify-start">
           <IconMessageCircle />

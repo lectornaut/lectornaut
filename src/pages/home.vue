@@ -536,7 +536,7 @@ const expandedCard = ref<number | null>(null)
         </SidebarMenu>
       </SidebarHeader>
       <SidebarContent>
-        <OverlayScrollbarsWrapper>
+        <ScrollContainer>
           <SidebarGroup class="group-data-[collapsible=icon]:hidden">
             <SidebarGroupLabel>{{
               t("pages.home.sidebar.favorites")
@@ -644,7 +644,7 @@ const expandedCard = ref<number | null>(null)
               </SidebarMenu>
             </SidebarGroupContent>
           </SidebarGroup>
-        </OverlayScrollbarsWrapper>
+        </ScrollContainer>
       </SidebarContent>
       <SidebarFooter>
         <SidebarMenu>
@@ -756,7 +756,7 @@ const expandedCard = ref<number | null>(null)
             <p >{{ group.description }}</p>
           </div> -->
           <div
-            class="grid grid-cols-1 gap-2 p-2 @xl:grid-cols-2 @4xl:grid-cols-3 @6xl:grid-cols-4"
+            class="container mx-auto grid max-w-4xl grid-cols-1 gap-2 p-2 @xl:grid-cols-2 @4xl:grid-cols-3 @6xl:grid-cols-4"
           >
             <Card
               v-for="card in group.cards"
@@ -896,7 +896,7 @@ const expandedCard = ref<number | null>(null)
   <SidebarSlot side="right">
     <Sidebar collapsible="none" class="w-full">
       <SidebarContent>
-        <OverlayScrollbarsWrapper>
+        <ScrollContainer>
           <SidebarGroup>
             <SidebarGroupLabel>{{
               t("pages.home.sidebar.tableOfContents")
@@ -921,7 +921,7 @@ const expandedCard = ref<number | null>(null)
               </SidebarMenu>
             </SidebarGroupContent>
           </SidebarGroup>
-        </OverlayScrollbarsWrapper>
+        </ScrollContainer>
       </SidebarContent>
     </Sidebar>
   </SidebarSlot>

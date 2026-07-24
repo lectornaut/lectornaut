@@ -263,7 +263,7 @@ const nodeStatusLabel = computed(() =>
         </p>
       </CardFooter>
     </Card>
-    <OverlayScrollbarsWrapper>
+    <ScrollContainer>
       <dl class="space-y-3 px-2 pb-2 [&_dd]:font-medium">
         <div class="flex items-start justify-between gap-2">
           <dt class="text-muted-foreground flex items-center gap-2">
@@ -369,6 +369,6 @@ const nodeStatusLabel = computed(() =>
           <dd class="text-right break-all">{{ node.id }}</dd>
         </div>
       </dl>
-    </OverlayScrollbarsWrapper>
+    </ScrollContainer>
   </div>
 </template>

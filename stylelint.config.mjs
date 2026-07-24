@@ -15,6 +15,7 @@ export default {
           "theme",
           "plugin",
           "custom-variant",
+          "utility",
           "view-transition",
         ],
       },

@@ -53,7 +53,7 @@ onMounted(async () => {
 </script>
 
 <template>
-  <OverlayScrollbarsWrapper class="bg-background">
+  <ScrollContainer class="bg-background">
     <div
       v-if="user || authenticateInProgress"
       class="grid size-full grow place-items-center"
@@ -87,5 +87,5 @@ onMounted(async () => {
         </div>
       </div>
     </div>
-  </OverlayScrollbarsWrapper>
+  </ScrollContainer>
 </template>

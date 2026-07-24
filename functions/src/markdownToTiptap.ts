@@ -15,12 +15,13 @@
  * `setContent`). `code` nodes are NOT converted (they store raw source).
  *
  * Scope: the common blocks an agent emits — headings, paragraphs, bullet /
- * ordered lists, fenced code blocks, blockquotes, horizontal rules, images —
- * plus inline bold / italic / code / links. Anything unrecognized degrades to a
- * plain paragraph rather than throwing, so a malformed snippet can never
- * brick the document. This is deliberately not a CommonMark-complete parser
- * (no nested lists, tables, or reference links); it covers what agents
- * actually produce and stays small enough to audit.
+ * ordered / task lists (nested via 2-space indentation, `- [x]` GFM boxes),
+ * fenced code blocks, blockquotes, horizontal rules, images — plus inline
+ * bold / italic / code / links. Anything unrecognized degrades to a plain
+ * paragraph rather than throwing, so a malformed snippet can never brick the
+ * document. This is deliberately not a CommonMark-complete parser (no tables
+ * or reference links); it covers what agents actually produce and stays small
+ * enough to audit.
  */
 
 // ─── Tiptap node/mark shapes (StarterKit) ────────────────────────────────────
@@ -117,14 +118,109 @@ const HEADING_RE = /^(#{1,6})\s+(.*)$/
 // a mid-paragraph image degrades to a link on its alt text (see parseInline).
 const IMAGE_RE = /^!\[([^\]]*)\]\(([^)\s]+)(?:\s+"[^"]*")?\)$/
 const HR_RE = /^(?:-{3,}|\*{3,}|_{3,})\s*$/
-const BULLET_RE = /^[-*+]\s+(.*)$/
-const ORDERED_RE = /^(\d+)\.\s+(.*)$/
+// One regex for every list line: leading indent, then a bullet or ordered
+// marker. A GFM task box (`[ ]` / `[x]`) is peeled off the text afterwards.
+const LIST_LINE_RE = /^(\s*)(?:([-*+])|(\d+)\.)\s+(.*)$/
+const TASK_BOX_RE = /^\[([ xX])\]\s*(.*)$/
 const BLOCKQUOTE_RE = /^>\s?(.*)$/
 const FENCE_RE = /^```(\w+)?\s*$/
 const FENCE_CLOSE_RE = /^```\s*$/
 
-function listItem(text: string): TiptapNode {
-  return { type: "listItem", content: [paragraph(text)] }
+type ListKind = "bullet" | "ordered" | "task"
+
+const LIST_TYPE: Record<ListKind, string> = {
+  bullet: "bulletList",
+  ordered: "orderedList",
+  task: "taskList",
+}
+
+function makeItem(kind: ListKind, checked: boolean, text: string): TiptapNode {
+  return kind === "task"
+    ? { type: "taskItem", attrs: { checked }, content: [paragraph(text)] }
+    : { type: "listItem", content: [paragraph(text)] }
+}
+
+/**
+ * Parse a run of consecutive list lines (until a blank or non-list line) into
+ * one or more list nodes, honoring indentation for nesting. Any consistent
+ * indent step works (our serializer emits 2 spaces; tabs count as 2). A
+ * same-level marker-kind switch (`-` → `- [x]` → `1.`) closes the open list
+ * and starts a sibling of the new kind, mirroring how markdown renders it.
+ */
+function parseListBlock(
+  lines: string[],
+  startIndex: number
+): { nodes: TiptapNode[]; next: number } {
+  const rootNodes: TiptapNode[] = []
+  interface OpenList {
+    list: TiptapNode
+    indent: number
+    kind: ListKind
+    container: TiptapNode[]
+  }
+  const stack: OpenList[] = []
+  let i = startIndex
+
+  while (i < lines.length) {
+    const match = lines[i].match(LIST_LINE_RE)
+    if (!match) break
+
+    const indent = match[1].replace(/\t/g, "  ").length
+    const ordered = match[3] !== undefined
+    const task = match[4].match(TASK_BOX_RE)
+    const kind: ListKind = task ? "task" : ordered ? "ordered" : "bullet"
+    const text = task ? task[2] : match[4]
+    const checked = task ? task[1].toLowerCase() === "x" : false
+
+    // Dedent: close lists deeper than this line.
+    while (stack.length && indent < stack[stack.length - 1].indent) {
+      stack.pop()
+    }
+
+    let top = stack[stack.length - 1]
+    if (!top || indent > top.indent) {
+      // First list, or a deeper level: nest inside the last item of the
+      // current list (after its paragraph), or at the root.
+      let container = rootNodes
+      if (top) {
+        const items = top.list.content ?? (top.list.content = [])
+        const lastItem = items[items.length - 1]
+        if (lastItem) {
+          container = lastItem.content ?? (lastItem.content = [])
+        }
+      }
+      top = { list: openList(kind, match[3]), indent, kind, container }
+      container.push(top.list)
+      stack.push(top)
+    } else if (top.kind !== kind) {
+      // Same level, different marker: sibling list in the same container.
+      stack.pop()
+      top = {
+        list: openList(kind, match[3]),
+        indent,
+        kind,
+        container: top.container,
+      }
+      top.container.push(top.list)
+      stack.push(top)
+    }
+
+    top.list.content?.push(makeItem(kind, checked, text))
+    i += 1
+  }
+
+  return { nodes: rootNodes, next: i }
+}
+
+function openList(
+  kind: ListKind,
+  orderedStart: string | undefined
+): TiptapNode {
+  const node: TiptapNode = { type: LIST_TYPE[kind], content: [] }
+  if (kind === "ordered") {
+    node.attrs = { start: Number.parseInt(orderedStart ?? "1", 10) || 1 }
+  }
+  return node
 }
 
 /**
@@ -210,35 +306,11 @@ export function markdownToTiptapDoc(markdown: string): TiptapNode {
       continue
     }
 
-    if (BULLET_RE.test(trimmed)) {
+    if (LIST_LINE_RE.test(line)) {
       flushParagraph()
-      const items: TiptapNode[] = []
-      while (i < lines.length) {
-        const m = lines[i].trim().match(BULLET_RE)
-        if (!m) break
-        items.push(listItem(m[1]))
-        i += 1
-      }
-      blocks.push({ type: "bulletList", content: items })
-      continue
-    }
-
-    if (ORDERED_RE.test(trimmed)) {
-      flushParagraph()
-      const items: TiptapNode[] = []
-      let start: number | null = null
-      while (i < lines.length) {
-        const m = lines[i].trim().match(ORDERED_RE)
-        if (!m) break
-        if (start === null) start = Number.parseInt(m[1], 10) || 1
-        items.push(listItem(m[2]))
-        i += 1
-      }
-      blocks.push({
-        type: "orderedList",
-        attrs: { start: start ?? 1 },
-        content: items,
-      })
+      const { nodes, next } = parseListBlock(lines, i)
+      blocks.push(...nodes)
+      i = next
       continue
     }
 
@@ -279,11 +351,11 @@ export function markdownToTiptapJson(markdown: string): string {
 // ─── Tiptap → Markdown (inverse) ─────────────────────────────────────────────
 //
 // Renders a stored doc back to markdown. Symmetric with the forward converter
-// (same StarterKit block/mark set), but it must also tolerate shapes the real
-// editor produces that the forward parser never emits — nested lists, hard
-// breaks, strikethrough, and any unknown node. Anything unrecognized degrades
-// to its text content rather than throwing, so reading can never fail on an
-// unexpected document.
+// (same StarterKit block/mark set plus task lists and nesting), but it must
+// also tolerate shapes the real editor produces that the forward parser never
+// emits — hard breaks, strikethrough, and any unknown node. Anything
+// unrecognized degrades to its text content rather than throwing, so reading
+// can never fail on an unexpected document.
 
 function serializeMarks(text: string, marks?: TiptapMark[]): string {
   if (!text) return ""
@@ -322,6 +394,12 @@ function serializeInline(nodes: TiptapNode[] | undefined): string {
       out += serializeMarks(node.text ?? "", node.marks)
     } else if (node.type === "hardBreak") {
       out += "\n"
+    } else if (node.type === "emoji") {
+      // Editor emoji nodes carry only a shortcode name; emit GitHub-style
+      // `:name:` (matching the extension's own renderMarkdown), which agents
+      // read and write back as literal text — stable across round trips.
+      const name = typeof node.attrs?.name === "string" ? node.attrs.name : ""
+      if (name) out += `:${name}:`
     } else if (Array.isArray(node.content)) {
       out += serializeInline(node.content)
     } else if (typeof node.text === "string") {
@@ -331,24 +409,36 @@ function serializeInline(nodes: TiptapNode[] | undefined): string {
   return out
 }
 
+const NESTED_LIST_KIND: Record<string, ListKind> = {
+  bulletList: "bullet",
+  orderedList: "ordered",
+  taskList: "task",
+}
+
 function serializeList(
   list: TiptapNode,
   depth: number,
-  ordered: boolean
+  kind: ListKind
 ): string {
   const items = Array.isArray(list.content) ? list.content : []
   const indent = "  ".repeat(depth)
-  const start = ordered ? Number(list.attrs?.start) || 1 : 1
+  const start = kind === "ordered" ? Number(list.attrs?.start) || 1 : 1
   const lines: string[] = []
   items.forEach((item, index) => {
-    const marker = ordered ? `${start + index}. ` : "- "
+    const marker =
+      kind === "ordered"
+        ? `${start + index}. `
+        : kind === "task"
+          ? item.attrs?.checked === true
+            ? "- [x] "
+            : "- [ ] "
+          : "- "
     const blocks = Array.isArray(item.content) ? item.content : []
     let first = true
     for (const block of blocks) {
-      if (block.type === "bulletList" || block.type === "orderedList") {
-        lines.push(
-          serializeList(block, depth + 1, block.type === "orderedList")
-        )
+      const nestedKind = NESTED_LIST_KIND[block.type ?? ""]
+      if (nestedKind) {
+        lines.push(serializeList(block, depth + 1, nestedKind))
         continue
       }
       const text = serializeBlock(block, depth)
@@ -394,10 +484,13 @@ function serializeBlock(node: TiptapNode, depth: number): string {
       return `![${alt}](${src})`
     }
     case "bulletList":
-      return serializeList(node, depth, false)
+      return serializeList(node, depth, "bullet")
     case "orderedList":
-      return serializeList(node, depth, true)
+      return serializeList(node, depth, "ordered")
+    case "taskList":
+      return serializeList(node, depth, "task")
     case "listItem":
+    case "taskItem":
       // Normally consumed by serializeList; reachable only for a stray item.
       return serializeChildren(node.content, depth)
     default:

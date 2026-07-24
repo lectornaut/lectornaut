@@ -265,7 +265,7 @@ const handleToggleEnabled = async (enabled: boolean): Promise<void> => {
 
           <!-- ── Overview — contributed tools + permissions ─────────── -->
           <TabsContent value="overview" class="min-h-0">
-            <OverlayScrollbarsWrapper class="h-full">
+            <ScrollContainer class="h-full">
               <div class="flex flex-col gap-4 py-1">
                 <div class="flex flex-col gap-1.5">
                   <span
@@ -312,12 +312,12 @@ const handleToggleEnabled = async (enabled: boolean): Promise<void> => {
                   </ul>
                 </div>
               </div>
-            </OverlayScrollbarsWrapper>
+            </ScrollContainer>
           </TabsContent>
 
           <!-- ── Accounts — every member binding (metadata only) ────── -->
           <TabsContent value="accounts" class="min-h-0">
-            <OverlayScrollbarsWrapper class="h-full">
+            <ScrollContainer class="h-full">
               <div class="flex flex-col gap-2 py-1">
                 <Empty
                   v-if="accountRows.length === 0"
@@ -372,12 +372,12 @@ const handleToggleEnabled = async (enabled: boolean): Promise<void> => {
                   </ItemActions>
                 </Item>
               </div>
-            </OverlayScrollbarsWrapper>
+            </ScrollContainer>
           </TabsContent>
 
           <!-- ── Settings (Owner/Admin) — provenance + kill switch ──── -->
           <TabsContent v-if="canManage" value="settings" class="min-h-0">
-            <OverlayScrollbarsWrapper class="h-full">
+            <ScrollContainer class="h-full">
               <FieldGroup class="gap-4 py-1">
                 <FieldSet v-if="activeRow.connection">
                   <Field orientation="horizontal">
@@ -443,7 +443,7 @@ const handleToggleEnabled = async (enabled: boolean): Promise<void> => {
                   </EmptyHeader>
                 </Empty>
               </FieldGroup>
-            </OverlayScrollbarsWrapper>
+            </ScrollContainer>
           </TabsContent>
         </Tabs>
 

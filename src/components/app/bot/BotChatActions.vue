@@ -192,7 +192,7 @@ const submitDelete = async () => {
 
 <template>
   <div class="flex size-full min-h-0 grow flex-col gap-2">
-    <OverlayScrollbarsWrapper>
+    <ScrollContainer>
       <SidebarGroup>
         <SidebarGroupLabel class="flex items-center gap-2">
           <Component :is="modeIcons[activeMode]" />
@@ -332,7 +332,7 @@ const submitDelete = async () => {
           </template>
         </SidebarGroupContent>
       </SidebarGroup>
-    </OverlayScrollbarsWrapper>
+    </ScrollContainer>
   </div>
 
   <!-- Confirm sharing -->

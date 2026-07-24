@@ -288,7 +288,7 @@ const onArchiveToggle = (session: IBotSession) => {
       </div>
     </SidebarHeader>
     <SidebarContent>
-      <OverlayScrollbarsWrapper>
+      <ScrollContainer>
         <div
           v-if="isEmpty"
           class="text-muted-foreground flex flex-col items-center gap-2 p-6 text-center text-xs"
@@ -631,7 +631,7 @@ const onArchiveToggle = (session: IBotSession) => {
             </Collapsible>
           </SidebarGroup>
         </template>
-      </OverlayScrollbarsWrapper>
+      </ScrollContainer>
     </SidebarContent>
   </Sidebar>
 

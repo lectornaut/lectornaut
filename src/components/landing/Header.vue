@@ -303,7 +303,7 @@ const { t } = useI18n()
                       </SheetDescription>
                     </SheetHeader>
                     <Separator />
-                    <OverlayScrollbarsWrapper>
+                    <ScrollContainer>
                       <div
                         class="flex grow flex-col overflow-auto overscroll-none scroll-smooth"
                       >
@@ -493,7 +493,7 @@ const { t } = useI18n()
                           </Item>
                         </Accordion>
                       </div>
-                    </OverlayScrollbarsWrapper>
+                    </ScrollContainer>
                     <Separator />
                     <SheetFooter>
                       <div class="flex items-center justify-between gap-2">

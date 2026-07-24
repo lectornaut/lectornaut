@@ -247,8 +247,8 @@ const emptyHint = computed(() =>
     </TooltipProvider>
     <!-- House floating-sheet treatment (Agents.vue / AiAsk.vue): inset rounded
          panel, `h-auto!` so inset-y-0 + margins define a definite height — the
-         files list scrolls via OverlayScrollbarsWrapper, whose inner viewport
-         resolves `height: 100%` against this flex column. -->
+         files list scrolls via ScrollContainer, whose viewport resolves
+         `height: 100%` against this flex column. -->
     <SheetContent
       class="m-2 mt-[calc(var(--spacing-titlebar-height,0px)+(--spacing(2)))] h-auto! gap-0 overflow-clip rounded border"
       :class="{ 'mt-12': isTauri && !isFullscreen }"
@@ -299,7 +299,7 @@ const emptyHint = computed(() =>
            wrapper as a direct flex child of SheetContent, gutters on the
            inner scroll content so the scrollbar and fade hints span the
            sheet's full width. -->
-      <OverlayScrollbarsWrapper>
+      <ScrollContainer>
         <div class="flex grow flex-col px-4 pb-4">
           <!-- Not connected: the trigger is never hidden or disabled for
                this — the sheet itself steers to Settings → Connections. -->
@@ -394,7 +394,7 @@ const emptyHint = computed(() =>
             </Button>
           </div>
         </div>
-      </OverlayScrollbarsWrapper>
+      </ScrollContainer>
 
       <!-- `data-dialog-action` gives the sheet macOS default-button semantics
            via the app-level useDialogActionHotkey (SheetContent renders as

@@ -62,7 +62,7 @@ onMounted(async () => {
 </script>
 
 <template>
-  <OverlayScrollbarsWrapper class="bg-background">
+  <ScrollContainer class="bg-background">
     <div class="grid size-full grow place-items-center">
       <div
         class="mx-auto flex w-full max-w-sm flex-col items-center justify-center gap-8 p-4"
@@ -114,5 +114,5 @@ onMounted(async () => {
         </template>
       </div>
     </div>
-  </OverlayScrollbarsWrapper>
+  </ScrollContainer>
 </template>

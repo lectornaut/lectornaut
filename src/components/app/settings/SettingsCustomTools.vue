@@ -49,7 +49,7 @@ const CONSTANT_VALUE_EXAMPLE = '{ "ok": true }'
  * Genkit tool. Mirrors `SettingsCustomAgents.vue`'s layout:
  *
  *   DialogHeader (title + optional lifecycle badge)
- *   → OverlayScrollbarsWrapper > FieldGroup (p-6)
+ *   → ScrollContainer > FieldGroup (p-6)
  *     ├ FieldSet ........... identity (name / displayName / description / avatarSeed)
  *     ├ FieldSeparator
  *     ├ FieldSet ........... input schema (field list)
@@ -567,7 +567,7 @@ const handleEditorSave = async (): Promise<void> => {
                   {{ t("settings.agents.customTools.ai.previewEmptyHint") }}
                 </p>
               </div>
-              <OverlayScrollbarsWrapper v-else class="min-h-0 grow">
+              <ScrollContainer v-else class="min-h-0 grow">
                 <div class="flex flex-col gap-4 p-4">
                   <!-- Identity (avatar + display name + wire name) -->
                   <div class="flex items-center gap-3">
@@ -710,16 +710,14 @@ const handleEditorSave = async (): Promise<void> => {
                     </div>
                   </div>
                 </div>
-              </OverlayScrollbarsWrapper>
+              </ScrollContainer>
             </div>
           </div>
         </TabsContent>
 
         <!-- ── Configure tab — full manual form (unchanged) ───────────── -->
         <TabsContent value="configure" class="min-h-0">
-          <OverlayScrollbarsWrapper
-            class="-mx-6 h-full w-[-webkit-fill-available]"
-          >
+          <ScrollContainer class="-mx-6 h-full w-[-webkit-fill-available]">
             <FieldGroup class="p-6">
               <!-- ── Identity ──────────────────────────────────────────────── -->
               <FieldSet>
@@ -1484,7 +1482,7 @@ const handleEditorSave = async (): Promise<void> => {
                 </template>
               </FieldSet>
             </FieldGroup>
-          </OverlayScrollbarsWrapper>
+          </ScrollContainer>
         </TabsContent>
       </Tabs>
 

@@ -1,6 +1,6 @@
 <template>
   <div class="flex grow flex-col">
-    <OverlayScrollbarsWrapper>
+    <ScrollContainer>
       <div
         class="pointer-events-none absolute top-0 left-0 z-0 size-full bg-black opacity-15 dark:bg-white"
         style="
@@ -21,6 +21,6 @@
       <QRCode />
       <CTA />
       <Footer />
-    </OverlayScrollbarsWrapper>
+    </ScrollContainer>
   </div>
 </template>

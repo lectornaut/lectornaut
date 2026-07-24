@@ -27,7 +27,7 @@ onMounted(() => {
 </script>
 
 <template>
-  <OverlayScrollbarsWrapper class="bg-background">
+  <ScrollContainer class="bg-background">
     <div class="grid size-full grow place-items-center">
       <Empty v-if="redirected">
         <EmptyHeader>
@@ -42,5 +42,5 @@ onMounted(() => {
       </Empty>
       <LoadingState v-else />
     </div>
-  </OverlayScrollbarsWrapper>
+  </ScrollContainer>
 </template>

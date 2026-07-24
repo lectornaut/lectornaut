@@ -3811,8 +3811,16 @@
         "highlightDescription": "Highlight selected text",
         "textColorTitle": "Text Color",
         "textColorDescription": "Apply a text color",
+        "alignLeftTitle": "Align Left",
+        "alignLeftDescription": "Align text to the left",
+        "alignCenterTitle": "Align Center",
+        "alignCenterDescription": "Center the text",
+        "alignRightTitle": "Align Right",
+        "alignRightDescription": "Align text to the right",
         "formattingGroup": "Formatting"
       },
+      "imageUploadFailed": "Couldn't upload image",
+      "emojiSuggestions": "Emojis",
       "imageDialog": {
         "title": "Insert Image",
         "description": "Insert an external image URL.",

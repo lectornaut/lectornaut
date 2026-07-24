@@ -1,7 +1,10 @@
 <script lang="ts" setup>
 import { type ColorOption } from "@/components/editors/text/components/TextEditorColorPicker.vue"
 import { CodeBlockShiki } from "@/components/editors/text/extensions/codeBlockShiki"
-import { EmojiReplacer } from "@/components/editors/text/extensions/emojiReplacer"
+import {
+  createEmojiSuggestion,
+  type EmojiPanelState,
+} from "@/components/editors/text/extensions/emojiSuggestion"
 import { RichImage } from "@/components/editors/text/extensions/richImage"
 import {
   createSlashCommandExtension,
@@ -10,6 +13,9 @@ import {
 } from "@/components/editors/text/extensions/slashCommand"
 import { useTiptapCollab } from "@/composables/useTiptapCollab"
 import {
+  IconAlignCenter,
+  IconAlignLeft,
+  IconAlignRight,
   IconBold,
   IconBraces,
   IconChevronDown,
@@ -42,18 +48,22 @@ import {
   type CollabEditorAdapter,
 } from "@/utils/collab/editorAdapter"
 import type { JSONContent, Editor as TiptapEditor } from "@tiptap/core"
+import { isChangeOrigin } from "@tiptap/extension-collaboration"
 import {
   Details,
   DetailsContent,
   DetailsSummary,
 } from "@tiptap/extension-details"
 import { DragHandle } from "@tiptap/extension-drag-handle-vue-3"
+import { Emoji, emojis } from "@tiptap/extension-emoji"
+import { FileHandler } from "@tiptap/extension-file-handler"
 import Highlight from "@tiptap/extension-highlight"
 import { TaskItem } from "@tiptap/extension-list/task-item"
 import { TaskList } from "@tiptap/extension-list/task-list"
 import { Mathematics, migrateMathStrings } from "@tiptap/extension-mathematics"
 import Subscript from "@tiptap/extension-subscript"
 import Superscript from "@tiptap/extension-superscript"
+import TextAlign from "@tiptap/extension-text-align"
 import {
   TableOfContents,
   getHierarchicalIndexes,
@@ -69,8 +79,10 @@ import { TextStyle } from "@tiptap/extension-text-style"
 import { Color } from "@tiptap/extension-text-style/color"
 import Typography from "@tiptap/extension-typography"
 import Underline from "@tiptap/extension-underline"
+import { UniqueID } from "@tiptap/extension-unique-id"
 import { CharacterCount } from "@tiptap/extensions/character-count"
 import { Placeholder } from "@tiptap/extensions/placeholder"
+import { Selection } from "@tiptap/extensions/selection"
 import StarterKit from "@tiptap/starter-kit"
 import { EditorContent, useEditor } from "@tiptap/vue-3"
 import { BubbleMenu } from "@tiptap/vue-3/menus"
@@ -91,6 +103,13 @@ const props = withDefaults(
      * `applyAgentEdit` stays a no-op (it receives the edit through the mesh).
      */
     applierStatus?: (() => boolean) | null
+    /**
+     * Uploads a dropped/pasted image and resolves to a permanent https URL.
+     * Provided by the host page (which knows the node context); when absent,
+     * drag-drop/paste image upload is disabled. Never inline base64 here —
+     * doc content lives in a Firestore document with a 1 MB cap.
+     */
+    uploadImage?: ((file: File) => Promise<string>) | null
   }>(),
   {
     modelValue: "",
@@ -98,6 +117,7 @@ const props = withDefaults(
     collaborationDoc: null,
     collaborationAwareness: null,
     applierStatus: null,
+    uploadImage: null,
   }
 )
 
@@ -327,6 +347,23 @@ const slashPanelPosition = computed(() =>
   getPanelPosition(slashPanelState.value?.clientRect ?? null)
 )
 
+const emojiPanelState = ref<EmojiPanelState | null>(null)
+const emojiPanelPosition = computed(() =>
+  getPanelPosition(emojiPanelState.value?.clientRect ?? null)
+)
+
+const selectEmojiSuggestion = (index: number) => {
+  emojiPanelState.value?.execute(index)
+}
+
+const hoverEmojiSuggestion = (index: number) => {
+  if (!emojiPanelState.value) {
+    return
+  }
+
+  emojiPanelState.value = { ...emojiPanelState.value, selectedIndex: index }
+}
+
 const tiptapCollab =
   props.collaborationDoc && props.collaborationAwareness
     ? useTiptapCollab(props.collaborationDoc, props.collaborationAwareness)
@@ -538,6 +575,36 @@ const createSlashCommands = (): SlashCommandItem[] => [
       activeEditor.chain().focus().setColor(DEFAULT_TEXT_COLOR).run()
     },
   },
+  {
+    id: "align-left",
+    title: t("components.textEditor.slash.alignLeftTitle"),
+    description: t("components.textEditor.slash.alignLeftDescription"),
+    group: t("components.textEditor.slash.formattingGroup"),
+    keywords: ["align", "left"],
+    run: (activeEditor) => {
+      activeEditor.chain().focus().setTextAlign("left").run()
+    },
+  },
+  {
+    id: "align-center",
+    title: t("components.textEditor.slash.alignCenterTitle"),
+    description: t("components.textEditor.slash.alignCenterDescription"),
+    group: t("components.textEditor.slash.formattingGroup"),
+    keywords: ["align", "center"],
+    run: (activeEditor) => {
+      activeEditor.chain().focus().setTextAlign("center").run()
+    },
+  },
+  {
+    id: "align-right",
+    title: t("components.textEditor.slash.alignRightTitle"),
+    description: t("components.textEditor.slash.alignRightDescription"),
+    group: t("components.textEditor.slash.formattingGroup"),
+    keywords: ["align", "right"],
+    run: (activeEditor) => {
+      activeEditor.chain().focus().setTextAlign("right").run()
+    },
+  },
 ]
 
 const slashCommandExtension = createSlashCommandExtension({
@@ -577,6 +644,7 @@ const extensions = [
     scrollParent: () => tableOfContentsScrollParent,
   }),
   CharacterCount,
+  Selection,
   TaskList,
   TaskItem.configure({
     nested: true,
@@ -591,6 +659,17 @@ const extensions = [
   TableCell,
   Subscript,
   Superscript,
+  TextAlign.configure({
+    types: ["heading", "paragraph"],
+  }),
+  // Stable block ids for future anchors/deep links. Skips Yjs-remote
+  // transactions per the official collab integration. Known ceiling: an agent
+  // rewrite drops the ids (the markdown converter strips attrs), so ids are
+  // stable only between agent edits.
+  UniqueID.configure({
+    types: ["heading", "paragraph"],
+    filterTransaction: (transaction) => !isChangeOrigin(transaction),
+  }),
   Details.configure({
     persist: true,
   }),
@@ -598,12 +677,77 @@ const extensions = [
   DetailsContent,
   Mathematics.configure({}),
   RichImage,
-  EmojiReplacer,
+  Emoji.configure({
+    emojis,
+    enableEmoticons: true,
+    suggestion: createEmojiSuggestion({
+      emojis,
+      onChange: (state) => {
+        emojiPanelState.value = state
+      },
+    }),
+  }),
   slashCommandExtension,
 ]
 
 if (tiptapCollab) {
   extensions.push(...(tiptapCollab.extensions as (typeof extensions)[number][]))
+}
+
+// SVG stays excluded: attachment uploads block executable formats.
+const IMAGE_UPLOAD_MIME_TYPES = [
+  "image/png",
+  "image/jpeg",
+  "image/gif",
+  "image/webp",
+]
+
+/**
+ * Upload every dropped/pasted image, then insert them as one content array
+ * (single undo step, preserved order). `pos === null` inserts at the caret
+ * (paste); a number inserts at the drop position.
+ */
+const insertUploadedImages = async (
+  currentEditor: TiptapEditor,
+  files: File[],
+  pos: number | null
+) => {
+  const upload = props.uploadImage
+  if (!upload) return
+
+  const imageNodes: JSONContent[] = []
+  for (const file of files) {
+    try {
+      imageNodes.push({ type: "image", attrs: { src: await upload(file) } })
+    } catch (error) {
+      showErrorToast(
+        t("components.textEditor.imageUploadFailed"),
+        (error as Error).message
+      )
+    }
+  }
+
+  if (!imageNodes.length || currentEditor.isDestroyed) return
+  const chain = currentEditor.chain().focus()
+  if (pos === null) {
+    chain.insertContent(imageNodes).run()
+  } else {
+    chain.insertContentAt(pos, imageNodes).run()
+  }
+}
+
+if (props.uploadImage) {
+  extensions.push(
+    FileHandler.configure({
+      allowedMimeTypes: IMAGE_UPLOAD_MIME_TYPES,
+      onDrop: (currentEditor, files, pos) => {
+        void insertUploadedImages(currentEditor, files, pos)
+      },
+      onPaste: (currentEditor, files) => {
+        void insertUploadedImages(currentEditor, files, null)
+      },
+    })
+  )
 }
 
 const clearPendingModelEmit = () => {
@@ -1119,6 +1263,30 @@ const scrollToTableOfContentsItem = (item: TableOfContentDataItem) => {
 
       <Separator orientation="vertical" />
 
+      <Toggle
+        variant="outline"
+        :pressed="editor?.isActive({ textAlign: 'left' })"
+        @click="editor?.chain().focus().setTextAlign('left').run()"
+      >
+        <IconAlignLeft />
+      </Toggle>
+      <Toggle
+        variant="outline"
+        :pressed="editor?.isActive({ textAlign: 'center' })"
+        @click="editor?.chain().focus().setTextAlign('center').run()"
+      >
+        <IconAlignCenter />
+      </Toggle>
+      <Toggle
+        variant="outline"
+        :pressed="editor?.isActive({ textAlign: 'right' })"
+        @click="editor?.chain().focus().setTextAlign('right').run()"
+      >
+        <IconAlignRight />
+      </Toggle>
+
+      <Separator orientation="vertical" />
+
       <TextEditorColorPicker
         :colors="TEXT_COLORS"
         :active-color="
@@ -1327,6 +1495,17 @@ const scrollToTableOfContentsItem = (item: TableOfContentDataItem) => {
     @hover="hoverSlashCommand"
   />
 
+  <TextEditorCommandPanel
+    :open="Boolean(emojiPanelState)"
+    :x="emojiPanelPosition.x"
+    :y="emojiPanelPosition.y"
+    :items="emojiPanelState?.items ?? []"
+    :selected-index="emojiPanelState?.selectedIndex ?? 0"
+    :label="t('components.textEditor.emojiSuggestions')"
+    @select="selectEmojiSuggestion"
+    @hover="hoverEmojiSuggestion"
+  />
+
   <TextEditorLinkDialog
     v-model:open="isLinkDialogOpen"
     :initial-href="linkDialogHref"
@@ -1341,7 +1520,11 @@ const scrollToTableOfContentsItem = (item: TableOfContentDataItem) => {
 </template>
 
 <style scoped>
-.tiptap {
+/* The editor DOM is created by ProseMirror at runtime, so it never carries
+   this component's scope attribute — and Vue 3.5 scopes every NESTED selector
+   too, which left this whole block dead. `:deep()` anchors on EditorContent's
+   root (which does get the attribute) and leaves everything inside unscoped. */
+:deep(.tiptap) {
   min-height: 100%;
   font-synthesis: style;
 
@@ -1373,9 +1556,10 @@ const scrollToTableOfContentsItem = (item: TableOfContentDataItem) => {
 
     > li {
       display: flex;
-      align-items: center;
+      align-items: flex-start;
       gap: 0.625rem;
       margin: 0.25rem 0;
+      padding: 0;
 
       > label {
         flex: 0 0 auto;
@@ -1385,62 +1569,70 @@ const scrollToTableOfContentsItem = (item: TableOfContentDataItem) => {
         position: relative;
         width: 1rem;
         height: 1rem;
-        margin-top: 0.15rem;
+        /* Optically centers the 1rem box on the first prose-sm text line
+           (24px line box) so wrapped items keep the box on line one. */
+        margin-top: 0.25rem;
         user-select: none;
         cursor: pointer;
 
         input[type="checkbox"] {
+          position: absolute;
+          inset: 0;
           width: 1rem;
           height: 1rem;
           margin: 0;
           opacity: 0;
-          position: absolute;
-          inset: 0;
           cursor: pointer;
           outline: none;
           z-index: 1;
         }
 
+        /* Mirrors ui/checkbox Checkbox.vue: size-4 rounded-[4px] border-input
+           shadow-xs dark:bg-input/30, checked -> primary with a size-3.5
+           lucide check, focus-visible -> 3px ring-ring/50. Only the shadow
+           transitions, like the component's `transition-shadow`. */
         > span {
           width: 1rem;
           height: 1rem;
           border: 1px solid var(--color-input);
           border-radius: 4px;
-          background-color: var(--color-background);
+          box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
           color: var(--color-primary-foreground);
-          box-shadow: inset 0 0 0 0 var(--color-primary);
-          transition:
-            background-color 0.15s ease,
-            border-color 0.15s ease,
-            box-shadow 0.15s ease,
-            color 0.15s ease;
+          transition: box-shadow 0.15s ease;
+
+          :where(.dark, [data-theme="dark"]) & {
+            background-color: color-mix(
+              in oklab,
+              var(--color-input) 30%,
+              transparent
+            );
+          }
 
           &::after {
             content: "";
             display: block;
-            width: 0.3rem;
-            height: 0.58rem;
-            border-right: 2px solid currentColor;
-            border-bottom: 2px solid currentColor;
-            transform: translate(0.28rem, 0.1rem) rotate(45deg) scale(0);
-            transform-origin: center;
-            transition: transform 0.12s ease-in-out;
+            width: 100%;
+            height: 100%;
+            background-color: currentColor;
+            mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M20 6 9 17l-5-5'/%3E%3C/svg%3E")
+              center / 0.875rem no-repeat;
+            transform: scale(0);
           }
         }
 
         input[type="checkbox"]:focus-visible + span {
           border-color: var(--color-ring);
           box-shadow: 0 0 0 3px
-            color-mix(in oklab, var(--color-ring) 35%, transparent);
+            color-mix(in oklab, var(--color-ring) 50%, transparent);
         }
 
         input[type="checkbox"]:checked + span {
           border-color: var(--color-primary);
           background-color: var(--color-primary);
-        }
 
-        input[type="checkbox"]:checked + span::after {
-          transform: translate(0.28rem, 0.1rem) rotate(45deg) scale(1);
+          &::after {
+            transform: scale(1);
+          }
         }
 
         input[type="checkbox"]:disabled + span {
@@ -1570,7 +1762,6 @@ const scrollToTableOfContentsItem = (item: TableOfContentDataItem) => {
 
   pre {
     background: color-mix(in oklab, var(--color-muted) 70%, transparent);
-    border: 1px solid var(--color-border);
     border-radius: 0.5rem;
     color: var(--color-foreground);
     font-family: var(--font-mono);
@@ -1596,6 +1787,12 @@ const scrollToTableOfContentsItem = (item: TableOfContentDataItem) => {
     border-radius: 0.5rem;
     margin: 1rem 0;
     max-width: 100%;
+  }
+
+  /* Selection extension decoration: keeps the selection visible while focus
+     is in the bubble menu or a dialog (native ::selection clears on blur). */
+  .selection {
+    background: color-mix(in oklab, var(--color-primary) 18%, transparent);
   }
 
   &[contenteditable="false"] {

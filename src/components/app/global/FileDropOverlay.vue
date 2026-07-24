@@ -1125,7 +1125,7 @@ const isFullscreen = useIsFullscreen()
                     {{ t("components.fileDropOverlay.saveSheet.description") }}
                   </SheetDescription>
                 </SheetHeader>
-                <OverlayScrollbarsWrapper>
+                <ScrollContainer>
                   <TeamSelector v-if="!currentTeamId" />
                   <WorkspaceSelector v-else-if="!currentWorkspaceId" />
                   <Tabs
@@ -1149,7 +1149,7 @@ const isFullscreen = useIsFullscreen()
                     <TabsContent value="code">
                       <Sidebar collapsible="none" class="w-full">
                         <SidebarContent>
-                          <OverlayScrollbarsWrapper>
+                          <ScrollContainer>
                             <FileTree
                               :scope="'code'"
                               :team-id="currentTeamId"
@@ -1158,14 +1158,14 @@ const isFullscreen = useIsFullscreen()
                               :selection="saveSheetTargetIds.code"
                               @select="handleSaveTargetSelect('code', $event)"
                             />
-                          </OverlayScrollbarsWrapper>
+                          </ScrollContainer>
                         </SidebarContent>
                       </Sidebar>
                     </TabsContent>
                     <TabsContent value="write">
                       <Sidebar collapsible="none" class="w-full">
                         <SidebarContent>
-                          <OverlayScrollbarsWrapper>
+                          <ScrollContainer>
                             <FileTree
                               :scope="'write'"
                               :team-id="currentTeamId"
@@ -1174,7 +1174,7 @@ const isFullscreen = useIsFullscreen()
                               :selection="saveSheetTargetIds.write"
                               @select="handleSaveTargetSelect('write', $event)"
                             />
-                          </OverlayScrollbarsWrapper>
+                          </ScrollContainer>
                         </SidebarContent>
                       </Sidebar>
                     </TabsContent>
@@ -1187,7 +1187,7 @@ const isFullscreen = useIsFullscreen()
                   >
                     {{ saveSheetStatusMessage }}
                   </div>
-                </OverlayScrollbarsWrapper>
+                </ScrollContainer>
                 <SheetFooter>
                   <ButtonGroup>
                     <ButtonGroup>
@@ -1222,7 +1222,7 @@ const isFullscreen = useIsFullscreen()
           </ButtonGroup>
         </ButtonGroup>
       </div>
-      <OverlayScrollbarsWrapper v-if="hasQueuedFiles" class="@container grow">
+      <ScrollContainer v-if="hasQueuedFiles" class="@container grow">
         <ItemGroup v-if="!isGridLayout" class="gap-2 p-2">
           <Item
             v-for="file in droppedFileItems"
@@ -1394,7 +1394,7 @@ const isFullscreen = useIsFullscreen()
             </ItemActions>
           </Item>
         </ItemGroup>
-      </OverlayScrollbarsWrapper>
+      </ScrollContainer>
       <Empty
         v-else
         class="flex grow border border-dashed"

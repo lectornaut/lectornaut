@@ -273,7 +273,7 @@ const isEditing = (shortcut: Shortcut): boolean =>
           </InputGroup>
         </SheetDescription>
       </SheetHeader>
-      <OverlayScrollbarsWrapper>
+      <ScrollContainer>
         <div class="flex grow flex-col gap-6 px-4">
           <div
             v-for="category in filteredShortcuts"
@@ -436,7 +436,7 @@ const isEditing = (shortcut: Shortcut): boolean =>
             </EmptyHeader>
           </Empty>
         </div>
-      </OverlayScrollbarsWrapper>
+      </ScrollContainer>
       <SheetFooter>
         <Button
           v-if="hasCustomShortcuts"

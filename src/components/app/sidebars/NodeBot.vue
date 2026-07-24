@@ -126,7 +126,7 @@ const onNewNodeChat = () => {
             </TooltipContent>
             <!-- `overflow-y-hidden` overrides DropdownMenuContent's -->
             <!-- default `overflow-y-auto` so the search header stays -->
-            <!-- pinned while OverlayScrollbarsWrapper handles the -->
+            <!-- pinned while ScrollContainer handles the -->
             <!-- list scroll. `@open-auto-focus.prevent` stops the -->
             <!-- menu from auto-focusing the first checkbox item, -->
             <!-- which would otherwise highlight a session under the -->
@@ -173,7 +173,7 @@ const onNewNodeChat = () => {
                   </InputGroupAddon>
                 </InputGroup>
               </div>
-              <OverlayScrollbarsWrapper>
+              <ScrollContainer>
                 <Empty v-if="nodeSessions.length === 0" class="p-6">
                   <EmptyHeader>
                     <EmptyMedia variant="icon">
@@ -222,7 +222,7 @@ const onNewNodeChat = () => {
                     </span>
                   </DropdownMenuCheckboxItem>
                 </div>
-              </OverlayScrollbarsWrapper>
+              </ScrollContainer>
             </DropdownMenuContent>
           </DropdownMenu>
         </Tooltip>

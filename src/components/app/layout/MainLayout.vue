@@ -508,9 +508,9 @@ const closeTab = (id: string) => {
                           <div
                             class="mx-2 mb-2 flex min-h-0 min-w-0 grow flex-col overflow-clip rounded border"
                           >
-                            <OverlayScrollbarsWrapper>
+                            <ScrollContainer>
                               <RouterView />
-                            </OverlayScrollbarsWrapper>
+                            </ScrollContainer>
                           </div>
                         </div>
                       </ResizablePanel>
@@ -717,7 +717,7 @@ const closeTab = (id: string) => {
                                   </ButtonGroup>
                                 </div>
                               </div>
-                              <OverlayScrollbarsWrapper>
+                              <ScrollContainer>
                                 <TabsContent
                                   v-for="tab in source"
                                   :key="tab.id"
@@ -749,7 +749,7 @@ const closeTab = (id: string) => {
                                     </Button>
                                   </EmptyContent>
                                 </Empty>
-                              </OverlayScrollbarsWrapper>
+                              </ScrollContainer>
                             </div>
                           </div>
                         </Tabs>

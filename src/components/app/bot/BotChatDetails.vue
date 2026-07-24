@@ -330,7 +330,7 @@ const detailRows = computed<DetailRow[]>(() => {
 
 <template>
   <div class="flex size-full min-h-0 grow flex-col gap-2">
-    <OverlayScrollbarsWrapper>
+    <ScrollContainer>
       <SidebarGroup>
         <SidebarGroupContent class="space-y-2">
           <Empty v-if="!sessionId" class="rounded-xl border border-dashed p-6">
@@ -524,6 +524,6 @@ const detailRows = computed<DetailRow[]>(() => {
           </ul>
         </SidebarGroupContent>
       </SidebarGroup>
-    </OverlayScrollbarsWrapper>
+    </ScrollContainer>
   </div>
 </template>

@@ -337,7 +337,7 @@ const handleDelete = async (attachment: IBotSessionAttachment) => {
         @imported="onDriveImported"
       />
     </ButtonGroup>
-    <OverlayScrollbarsWrapper>
+    <ScrollContainer>
       <div class="flex flex-col gap-2 px-2 pb-2">
         <!-- No session yet: buffered uploads ride along with the first message -->
         <template v-if="!sessionId">
@@ -546,7 +546,7 @@ const handleDelete = async (attachment: IBotSessionAttachment) => {
           </Attachment>
         </template>
       </div>
-    </OverlayScrollbarsWrapper>
+    </ScrollContainer>
     <Dialog
       :open="editDialogOpen"
       @update:open="($event) => !$event && closeEditDialog()"

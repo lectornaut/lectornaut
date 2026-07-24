@@ -146,7 +146,7 @@ const isEmpty = computed(
       </TooltipProvider>
     </div>
 
-    <OverlayScrollbarsWrapper class="min-h-0 grow">
+    <ScrollContainer class="min-h-0 grow">
       <div class="flex flex-col gap-2 px-2 pb-2">
         <!-- Error state — covers the rare callable failure (permission,
              network). The Refresh button above stays usable. -->
@@ -245,6 +245,6 @@ const isEmpty = computed(
           {{ t("inspector.related.truncated") }}
         </div>
       </div>
-    </OverlayScrollbarsWrapper>
+    </ScrollContainer>
   </div>
 </template>

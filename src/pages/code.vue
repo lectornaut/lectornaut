@@ -76,7 +76,7 @@ useHead(() => ({
   <SidebarSlot side="left">
     <Sidebar collapsible="none" class="w-full">
       <SidebarContent>
-        <OverlayScrollbarsWrapper>
+        <ScrollContainer>
           <FileTree
             v-if="teamId && workspaceId"
             :team-id="teamId"
@@ -93,25 +93,27 @@ useHead(() => ({
               </div>
             </SidebarGroupContent>
           </SidebarGroup>
-        </OverlayScrollbarsWrapper>
+        </ScrollContainer>
       </SidebarContent>
     </Sidebar>
   </SidebarSlot>
   <div class="flex grow flex-col overflow-auto overscroll-none scroll-smooth">
-    <OverlayScrollbarsWrapper v-if="teamId && workspaceId && selectedFile">
-      <CodeEditor
-        ref="editorRef"
-        v-model="editorContent"
-        :file-name="selectedNode?.name ?? ''"
-        :read-only="editorReadOnly"
-        :extensions="collabExtensions"
-        :placeholder="
-          selectedFile
-            ? t('pages.code.placeholderStart')
-            : t('pages.code.placeholderSelect')
-        "
-      />
-    </OverlayScrollbarsWrapper>
+    <ScrollContainer v-if="teamId && workspaceId && selectedFile">
+      <div class="container mx-auto flex max-w-4xl grow flex-col">
+        <CodeEditor
+          ref="editorRef"
+          v-model="editorContent"
+          :file-name="selectedNode?.name ?? ''"
+          :read-only="editorReadOnly"
+          :extensions="collabExtensions"
+          :placeholder="
+            selectedFile
+              ? t('pages.code.placeholderStart')
+              : t('pages.code.placeholderSelect')
+          "
+        />
+      </div>
+    </ScrollContainer>
     <Empty v-else>
       <EmptyHeader>
         <EmptyMedia variant="icon">
