@@ -300,7 +300,7 @@ export default defineConfig({
       process.env.TAURI_ENV_PLATFORM == "windows" ? "chrome131" : "safari18",
     // don't minify for debug builds
     minify:
-      process.env.NODE_ENV !== "production" || !!process.env.TAURI_ENV_DEBUG,
+      process.env.NODE_ENV === "production" && !process.env.TAURI_ENV_DEBUG,
     // produce sourcemaps for debug builds
     sourcemap:
       process.env.NODE_ENV !== "production" || !!process.env.TAURI_ENV_DEBUG,
