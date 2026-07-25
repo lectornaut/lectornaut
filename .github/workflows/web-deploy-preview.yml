@@ -2,8 +2,7 @@ name: Deploy Web Preview
 on:
   push:
     branches:
-      - "*"
-      - "!main"
+      - "**"
       - "!release"
   workflow_dispatch:
 concurrency:
@@ -60,10 +59,12 @@ jobs:
         env:
           SHA: ${{ github.sha }}
         run: echo "$SHA" > dist/build-version.txt
+      - name: Compute preview channel
+        run: echo "PREVIEW_CHANNEL=preview-${GITHUB_REF_NAME//\//-}" >> "$GITHUB_ENV"
       - name: Deploy to Firebase Hosting
         uses: FirebaseExtended/action-hosting-deploy@v0
         with:
           repoToken: "${{ secrets.GITHUB_TOKEN }}"
           firebaseServiceAccount: "${{ secrets.FIREBASE_SERVICE_ACCOUNT_LECTORNAUT }}"
-          channelId: preview-${{ github.ref_name }}
+          channelId: ${{ env.PREVIEW_CHANNEL }}
           projectId: lectornaut

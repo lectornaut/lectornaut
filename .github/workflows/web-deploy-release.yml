@@ -9,7 +9,7 @@ concurrency:
   cancel-in-progress: false
 jobs:
   deploy-release:
-    if: ${{ !contains(github.event.head_commit.message, 'skip web release') }}
+    if: ${{ github.ref == 'refs/heads/release' && !contains(github.event.head_commit.message, 'skip web release') }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
