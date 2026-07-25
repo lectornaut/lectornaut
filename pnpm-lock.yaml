@@ -59,8 +59,8 @@ importers:
         specifier: workspace:*
         version: link:shared
       "@lucide/vue":
-        specifier: ^1.25.0
-        version: 1.25.0(vue@3.5.40(typescript@6.0.3))
+        specifier: ^1.26.0
+        version: 1.26.0(vue@3.5.40(typescript@6.0.3))
       "@tailwindcss/vite":
         specifier: ^4.3.3
         version: 4.3.3(vite@8.1.5(@types/node@26.1.1)(esbuild@0.28.1)(jiti@2.7.0)(stylus@0.57.0)(terser@5.48.0)(yaml@2.9.0))
@@ -299,8 +299,8 @@ importers:
         specifier: ^0.2.117
         version: 0.2.117
       markstream-vue:
-        specifier: 1.0.7-beta.5
-        version: 1.0.7-beta.5(katex@0.18.1)(mermaid@11.16.0)(stream-diffs@0.0.2(@shikijs/themes@4.3.1)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)(vue@3.5.40(typescript@6.0.3)))(stream-markdown@0.0.16(react@19.2.7)(shiki@4.3.1)(vue@3.5.40(typescript@6.0.3)))(vue-i18n@11.4.7(vue@3.5.40(typescript@6.0.3)))(vue@3.5.40(typescript@6.0.3))
+        specifier: 1.0.7
+        version: 1.0.7(katex@0.18.1)(mermaid@11.16.0)(stream-diffs@0.0.2(@shikijs/themes@4.3.1)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)(vue@3.5.40(typescript@6.0.3)))(stream-markdown@0.0.16(react@19.2.7)(shiki@4.3.1)(vue@3.5.40(typescript@6.0.3)))(vue-i18n@11.4.7(vue@3.5.40(typescript@6.0.3)))(vue@3.5.40(typescript@6.0.3))
       mermaid:
         specifier: ^11.16.0
         version: 11.16.0
@@ -391,16 +391,16 @@ importers:
         version: 1.4.0
       "@eslint/js":
         specifier: ^10.0.1
-        version: 10.0.1(eslint@10.7.0(jiti@2.7.0))
+        version: 10.0.1(eslint@10.7.0(jiti@2.7.0)(supports-color@10.2.2))
       "@iconify/json":
         specifier: ^2.2.504
         version: 2.2.504
       "@intlify/eslint-plugin-vue-i18n":
         specifier: ^4.5.1
-        version: 4.5.1(eslint@10.7.0(jiti@2.7.0))(jsonc-eslint-parser@2.4.2)(vue-eslint-parser@10.4.1(eslint@10.7.0(jiti@2.7.0)))(yaml-eslint-parser@1.3.2)
+        version: 4.5.1(eslint@10.7.0(jiti@2.7.0)(supports-color@10.2.2))(jsonc-eslint-parser@2.4.2)(supports-color@10.2.2)(vue-eslint-parser@10.4.1(eslint@10.7.0(jiti@2.7.0)(supports-color@10.2.2))(supports-color@10.2.2))(yaml-eslint-parser@1.3.2)
       "@intlify/unplugin-vue-i18n":
         specifier: ^11.2.4
-        version: 11.2.4(@vue/compiler-dom@3.5.40)(eslint@10.7.0(jiti@2.7.0))(rollup@4.62.2)(typescript@6.0.3)(vite@8.1.5(@types/node@26.1.1)(esbuild@0.28.1)(jiti@2.7.0)(stylus@0.57.0)(terser@5.48.0)(yaml@2.9.0))(vue-i18n@11.4.7(vue@3.5.40(typescript@6.0.3)))(vue@3.5.40(typescript@6.0.3))
+        version: 11.2.4(@vue/compiler-dom@3.5.40)(eslint@10.7.0(jiti@2.7.0)(supports-color@10.2.2))(rollup@4.62.2)(supports-color@10.2.2)(typescript@6.0.3)(vite@8.1.5(@types/node@26.1.1)(esbuild@0.28.1)(jiti@2.7.0)(stylus@0.57.0)(terser@5.48.0)(yaml@2.9.0))(vue-i18n@11.4.7(vue@3.5.40(typescript@6.0.3)))(vue@3.5.40(typescript@6.0.3))
       "@tailwindcss/forms":
         specifier: ^0.5.11
         version: 0.5.11(tailwindcss@4.3.3)
@@ -427,7 +427,7 @@ importers:
         version: 1.15.9
       "@typescript-eslint/parser":
         specifier: ^8.65.0
-        version: 8.65.0(eslint@10.7.0(jiti@2.7.0))(typescript@6.0.3)
+        version: 8.65.0(eslint@10.7.0(jiti@2.7.0)(supports-color@10.2.2))(supports-color@10.2.2)(typescript@6.0.3)
       "@vite-pwa/assets-generator":
         specifier: ^1.0.2
         version: 1.0.2(@types/node@26.1.1)
@@ -442,16 +442,16 @@ importers:
         version: 8.6.0
       eslint:
         specifier: ^10.7.0
-        version: 10.7.0(jiti@2.7.0)
+        version: 10.7.0(jiti@2.7.0)(supports-color@10.2.2)
       eslint-config-prettier:
         specifier: ^10.1.8
-        version: 10.1.8(eslint@10.7.0(jiti@2.7.0))
+        version: 10.1.8(eslint@10.7.0(jiti@2.7.0)(supports-color@10.2.2))
       eslint-plugin-prettier:
         specifier: ^5.5.6
-        version: 5.5.6(eslint-config-prettier@10.1.8(eslint@10.7.0(jiti@2.7.0)))(eslint@10.7.0(jiti@2.7.0))(prettier@3.9.6)
+        version: 5.5.6(eslint-config-prettier@10.1.8(eslint@10.7.0(jiti@2.7.0)(supports-color@10.2.2)))(eslint@10.7.0(jiti@2.7.0)(supports-color@10.2.2))(prettier@3.9.6)
       eslint-plugin-vue:
         specifier: ^10.10.0
-        version: 10.10.0(@typescript-eslint/parser@8.65.0(eslint@10.7.0(jiti@2.7.0))(typescript@6.0.3))(eslint@10.7.0(jiti@2.7.0))(vue-eslint-parser@10.4.1(eslint@10.7.0(jiti@2.7.0)))
+        version: 10.10.0(@typescript-eslint/parser@8.65.0(eslint@10.7.0(jiti@2.7.0)(supports-color@10.2.2))(supports-color@10.2.2)(typescript@6.0.3))(eslint@10.7.0(jiti@2.7.0)(supports-color@10.2.2))(vue-eslint-parser@10.4.1(eslint@10.7.0(jiti@2.7.0)(supports-color@10.2.2))(supports-color@10.2.2))
       globals:
         specifier: ^17.7.0
         version: 17.7.0
@@ -459,8 +459,8 @@ importers:
         specifier: ^9.1.7
         version: 9.1.7
       lint-staged:
-        specifier: ^17.1.1
-        version: 17.1.1
+        specifier: ^17.2.0
+        version: 17.2.0
       prettier:
         specifier: ^3.9.6
         version: 3.9.6
@@ -472,16 +472,16 @@ importers:
         version: 0.8.1(prettier-plugin-organize-imports@4.3.0(prettier@3.9.6)(typescript@6.0.3)(vue-tsc@3.3.8(typescript@6.0.3)))(prettier@3.9.6)
       shadcn-vue:
         specifier: ^2.8.0
-        version: 2.8.0(@cfworker/json-schema@4.1.1)(babel-plugin-macros@3.1.0)(eslint@10.7.0(jiti@2.7.0))(vue@3.5.40(typescript@6.0.3))
+        version: 2.8.0(@cfworker/json-schema@4.1.1)(babel-plugin-macros@3.1.0)(eslint@10.7.0(jiti@2.7.0)(supports-color@10.2.2))(supports-color@10.2.2)(vue@3.5.40(typescript@6.0.3))
       sharp:
         specifier: ^0.35.3
         version: 0.35.3(@types/node@26.1.1)
       stylelint:
         specifier: ^17.14.1
-        version: 17.14.1(typescript@6.0.3)
+        version: 17.14.1(supports-color@10.2.2)(typescript@6.0.3)
       stylelint-config-standard:
         specifier: ^40.0.0
-        version: 40.0.0(stylelint@17.14.1(typescript@6.0.3))
+        version: 40.0.0(stylelint@17.14.1(supports-color@10.2.2)(typescript@6.0.3))
       svgo:
         specifier: ^4.0.2
         version: 4.0.2
@@ -496,7 +496,7 @@ importers:
         version: 6.0.3
       typescript-eslint:
         specifier: ^8.65.0
-        version: 8.65.0(eslint@10.7.0(jiti@2.7.0))(typescript@6.0.3)
+        version: 8.65.0(eslint@10.7.0(jiti@2.7.0)(supports-color@10.2.2))(supports-color@10.2.2)(typescript@6.0.3)
       unplugin-auto-import:
         specifier: ^21.0.0
         version: 21.0.0(@vueuse/core@14.3.0(vue@3.5.40(typescript@6.0.3)))
@@ -517,58 +517,58 @@ importers:
         version: 8.1.5(@types/node@26.1.1)(esbuild@0.28.1)(jiti@2.7.0)(stylus@0.57.0)(terser@5.48.0)(yaml@2.9.0)
       vite-plugin-checker:
         specifier: 0.14.5
-        version: 0.14.5(eslint@10.7.0(jiti@2.7.0))(meow@14.1.0)(optionator@0.9.4)(stylelint@17.14.1(typescript@6.0.3))(typescript@6.0.3)(vite@8.1.5(@types/node@26.1.1)(esbuild@0.28.1)(jiti@2.7.0)(stylus@0.57.0)(terser@5.48.0)(yaml@2.9.0))(vue-tsc@3.3.8(typescript@6.0.3))
+        version: 0.14.5(eslint@10.7.0(jiti@2.7.0)(supports-color@10.2.2))(meow@14.1.0)(optionator@0.9.4)(stylelint@17.14.1(supports-color@10.2.2)(typescript@6.0.3))(typescript@6.0.3)(vite@8.1.5(@types/node@26.1.1)(esbuild@0.28.1)(jiti@2.7.0)(stylus@0.57.0)(terser@5.48.0)(yaml@2.9.0))(vue-tsc@3.3.8(typescript@6.0.3))
       vite-plugin-image-optimizer:
         specifier: ^2.0.3
         version: 2.0.3(sharp@0.35.3(@types/node@26.1.1))(svgo@4.0.2)(vite@8.1.5(@types/node@26.1.1)(esbuild@0.28.1)(jiti@2.7.0)(stylus@0.57.0)(terser@5.48.0)(yaml@2.9.0))
       vite-plugin-pwa:
         specifier: ^1.3.0
-        version: 1.3.0(@vite-pwa/assets-generator@1.0.2(@types/node@26.1.1))(vite@8.1.5(@types/node@26.1.1)(esbuild@0.28.1)(jiti@2.7.0)(stylus@0.57.0)(terser@5.48.0)(yaml@2.9.0))(workbox-build@7.4.1(@types/babel__core@7.20.5))(workbox-window@7.4.1)
+        version: 1.3.0(@vite-pwa/assets-generator@1.0.2(@types/node@26.1.1))(supports-color@10.2.2)(vite@8.1.5(@types/node@26.1.1)(esbuild@0.28.1)(jiti@2.7.0)(stylus@0.57.0)(terser@5.48.0)(yaml@2.9.0))(workbox-build@7.4.1(@types/babel__core@7.20.5)(supports-color@10.2.2))(workbox-window@7.4.1)
       vite-plugin-sitemap:
         specifier: ^0.8.2
         version: 0.8.2
       vite-plugin-vue-layouts:
         specifier: ^0.11.0
-        version: 0.11.0(vite@8.1.5(@types/node@26.1.1)(esbuild@0.28.1)(jiti@2.7.0)(stylus@0.57.0)(terser@5.48.0)(yaml@2.9.0))(vue-router@5.2.0(@vue/compiler-sfc@3.5.40)(esbuild@0.28.1)(pinia@4.0.2(@vue/devtools-api@8.1.5)(typescript@6.0.3)(vue@3.5.40(typescript@6.0.3)))(rolldown@1.1.5)(rollup@4.62.2)(vite@8.1.5(@types/node@26.1.1)(esbuild@0.28.1)(jiti@2.7.0)(stylus@0.57.0)(terser@5.48.0)(yaml@2.9.0))(vue@3.5.40(typescript@6.0.3)))(vue@3.5.40(typescript@6.0.3))
+        version: 0.11.0(supports-color@10.2.2)(vite@8.1.5(@types/node@26.1.1)(esbuild@0.28.1)(jiti@2.7.0)(stylus@0.57.0)(terser@5.48.0)(yaml@2.9.0))(vue-router@5.2.0(@vue/compiler-sfc@3.5.40)(esbuild@0.28.1)(pinia@4.0.2(@vue/devtools-api@8.1.5)(typescript@6.0.3)(vue@3.5.40(typescript@6.0.3)))(rolldown@1.1.5)(rollup@4.62.2)(vite@8.1.5(@types/node@26.1.1)(esbuild@0.28.1)(jiti@2.7.0)(stylus@0.57.0)(terser@5.48.0)(yaml@2.9.0))(vue@3.5.40(typescript@6.0.3)))(vue@3.5.40(typescript@6.0.3))
       vitest:
         specifier: ^4.1.10
         version: 4.1.10(@opentelemetry/api@1.9.1)(@types/node@26.1.1)(vite@8.1.5(@types/node@26.1.1)(esbuild@0.28.1)(jiti@2.7.0)(stylus@0.57.0)(terser@5.48.0)(yaml@2.9.0))
       vue-eslint-parser:
         specifier: ^10.4.1
-        version: 10.4.1(eslint@10.7.0(jiti@2.7.0))
+        version: 10.4.1(eslint@10.7.0(jiti@2.7.0)(supports-color@10.2.2))(supports-color@10.2.2)
       vue-tsc:
         specifier: 3.3.8
         version: 3.3.8(typescript@6.0.3)
       workbox-build:
         specifier: ^7.4.1
-        version: 7.4.1(@types/babel__core@7.20.5)
+        version: 7.4.1(@types/babel__core@7.20.5)(supports-color@10.2.2)
 
   functions:
     dependencies:
       "@genkit-ai/anthropic":
         specifier: ^0.3.0
-        version: 0.3.0(genkit@1.40.1(@google-cloud/firestore@7.11.6)(firebase-admin@14.2.0)(firebase@12.16.0))(zod@4.4.3)
+        version: 0.3.0(genkit@1.40.1(@google-cloud/firestore@7.11.6)(firebase-admin@14.2.0(supports-color@10.2.2))(firebase@12.16.0))(zod@4.4.3)
       "@genkit-ai/compat-oai":
         specifier: 1.40.1
-        version: 1.40.1(genkit@1.40.1(@google-cloud/firestore@7.11.6)(firebase-admin@14.2.0)(firebase@12.16.0))(ws@8.21.1)(zod@3.25.76)
+        version: 1.40.1(genkit@1.40.1(@google-cloud/firestore@7.11.6)(firebase-admin@14.2.0(supports-color@10.2.2))(firebase@12.16.0))(ws@8.21.1)(zod@4.4.3)
       "@genkit-ai/firebase":
         specifier: 1.40.1
-        version: 1.40.1(@google-cloud/firestore@7.11.6)(firebase-admin@14.2.0)(firebase@12.16.0)(genkit@1.40.1(@google-cloud/firestore@7.11.6)(firebase-admin@14.2.0)(firebase@12.16.0))
+        version: 1.40.1(@google-cloud/firestore@7.11.6)(firebase-admin@14.2.0(supports-color@10.2.2))(firebase@12.16.0)(genkit@1.40.1(@google-cloud/firestore@7.11.6)(firebase-admin@14.2.0(supports-color@10.2.2))(firebase@12.16.0))
       "@genkit-ai/google-genai":
         specifier: 1.40.1
-        version: 1.40.1(genkit@1.40.1(@google-cloud/firestore@7.11.6)(firebase-admin@14.2.0)(firebase@12.16.0))
+        version: 1.40.1(genkit@1.40.1(@google-cloud/firestore@7.11.6)(firebase-admin@14.2.0(supports-color@10.2.2))(firebase@12.16.0))
       "@google-cloud/functions-framework":
         specifier: 5.0.5
         version: 5.0.5
       firebase-admin:
         specifier: ^14.2.0
-        version: 14.2.0
+        version: 14.2.0(supports-color@10.2.2)
       firebase-functions:
         specifier: 7.3.2-rc.0
-        version: 7.3.2-rc.0(firebase-admin@14.2.0)
+        version: 7.3.2-rc.0(firebase-admin@14.2.0(supports-color@10.2.2))(supports-color@10.2.2)
       genkit:
         specifier: 1.40.1
-        version: 1.40.1(@google-cloud/firestore@7.11.6)(firebase-admin@14.2.0)(firebase@12.16.0)
+        version: 1.40.1(@google-cloud/firestore@7.11.6)(firebase-admin@14.2.0(supports-color@10.2.2))(firebase@12.16.0)
       handlebars:
         specifier: ^4.7.9
         version: 4.7.9
@@ -611,10 +611,10 @@ importers:
         version: 5.5.6(eslint-config-prettier@10.1.8(eslint@10.7.0(jiti@2.7.0)))(eslint@10.7.0(jiti@2.7.0))(prettier@3.9.6)
       firebase-functions-test:
         specifier: ^3.5.0
-        version: 3.5.0(firebase-admin@14.2.0)(firebase-functions@7.3.2-rc.0(firebase-admin@14.2.0))(jest@30.4.2(@types/node@26.1.1)(babel-plugin-macros@3.1.0))
+        version: 3.5.0(firebase-admin@14.2.0(supports-color@10.2.2))(firebase-functions@7.3.2-rc.0(firebase-admin@14.2.0(supports-color@10.2.2))(supports-color@10.2.2))(jest@30.4.2(@types/node@26.1.1)(babel-plugin-macros@3.1.0))
       firebase-tools:
         specifier: ^15.24.0
-        version: 15.24.0(@cfworker/json-schema@4.1.1)(@types/node@26.1.1)
+        version: 15.24.0(@cfworker/json-schema@4.1.1)(@types/node@26.1.1)(supports-color@10.2.2)
       globals:
         specifier: ^17.7.0
         version: 17.7.0
@@ -4362,10 +4362,10 @@ packages:
         integrity: sha512-iTkYvoVcKt3WkeL7qUDyXHONZEwLio4wj8KTNi2dnjQEXBZKMV63BpQrPqfsM+OkvuRbiSTAcycYAsQzLhRNoQ==,
       }
 
-  "@lucide/vue@1.25.0":
+  "@lucide/vue@1.26.0":
     resolution:
       {
-        integrity: sha512-hkEetV+v48ScIn3uwqwWQ66sI8foeP2q6OMI09GzLFH4SfvBlfe3JHYlMBdBCqFC7WRlhFsndyDn/awRKRc2OQ==,
+        integrity: sha512-jz00zLm8+i7VzBuQTbmjChIvIKehaIK5YbOVC+bab7qTh4JTkCd0XJQ4l5TY57gT08fMPVlvUITROB/vm/xImA==,
       }
     peerDependencies:
       vue: ">=3.0.1"
@@ -14226,10 +14226,10 @@ packages:
         integrity: sha512-P8aEP5U/D1/IlTY2OeYsErdwh9bGuLE30NcXtKEjgdHcahveQoQwM2yZNsioQHsWFz0P7KKudisbrzCgR0sDHg==,
       }
 
-  lint-staged@17.1.1:
+  lint-staged@17.2.0:
     resolution:
       {
-        integrity: sha512-FnHWpSe5cPRtrDG+soOuNdBxb4XQb2gN5EqpEWKdweyqyOfpl4QSjbrz3ilcIf0WXmkiNQGZZRQ23R5YtB3TEw==,
+        integrity: sha512-FchGnFe4i4B1C/a35SPU9bNGPEHSC1+1iV0plLjzBmKVe9klZrlRfSgK6Cw4VeHyqOXbJUXP0vON61uRftNQ0A==,
       }
     engines: { node: ">=22.22.1" }
     hasBin: true
@@ -14572,10 +14572,10 @@ packages:
         integrity: sha512-7pxkHuvqTOu3iwVGmDPeYjQg+AIS9VQxzyLP9JCg9lBjgPAJXGEkChK6A2iFuj3tS0GV3HG2u5AMNhcQqwxpJw==,
       }
 
-  markdown-it-ts@1.0.4:
+  markdown-it-ts@1.0.5:
     resolution:
       {
-        integrity: sha512-FmCjj7D0C54EhWNn6WdSIBoyEbEoLeqE/Orgzik+CHSIz3aQJW3/U3uc8BEOMdGl/SE4O+s4BjwKhtO7LPOwWA==,
+        integrity: sha512-vD3lIbUDHE0eorCuPdku4ikNFcIJC1ZzyAQA0d/2zjMg+8etvfC10uV8GOlzQBHQc7/NUh7H0VtW72gLjXANCw==,
       }
     engines: { node: ">=18" }
 
@@ -14610,10 +14610,10 @@ packages:
         integrity: sha512-QXn+yERo1q+RD6YlGDW61zc/af65uhkQEH3K8YvEKkprHbgRJ/JIeBeEQjELCTyBnPoxqtKQ7I565rylY+PePg==,
       }
 
-  markstream-vue@1.0.7-beta.5:
+  markstream-vue@1.0.7:
     resolution:
       {
-        integrity: sha512-e45M9epYIW91ZxxtPIpDLdrTiayGNLGb9+jfMHzpYlpPWlsRDqMv2u1uplhBCKr84bLZuMlpqBr7kcYyJUsMwQ==,
+        integrity: sha512-88UVoAH34jh/BXGUVYtK8t+Tw9JETbHhRVF2DwBAIE8r8W6MO27xRADotHpz1Qn34Mas6XRW6NmqvzwwjtvciQ==,
       }
     peerDependencies:
       "@antv/infographic": ^0.2.3
@@ -14680,10 +14680,10 @@ packages:
         integrity: sha512-U9w+PzSZ00Z5m9rZ5ARVFL5xOfuCHdKYi/1RRwDCJsboFgJDNT3zT6PIPD7mZQYaQLhsZM3GfDRgSMRHhSmVng==,
       }
 
-  mdurl@2.0.0:
+  mdurl@2.1.0:
     resolution:
       {
-        integrity: sha512-Lf+9+2r+Tdp5wXDXC4PcIBjTDtq4UKjCPMQhKIuzpJNW0b96kVqSwW0bT7FhRSfmAiFYgP+SCRvdrDozfh0U5w==,
+        integrity: sha512-1+HBaOx0zi/dQWht8rNv9MYf9qqpqL/kxI0hXImU6Y547zM6Sni8BQibt7ifgMcYtQg41ao3Ivd6cnSM86inpg==,
       }
 
   media-typer@0.3.0:
@@ -20257,20 +20257,20 @@ snapshots:
 
   "@babel/compat-data@7.29.7": {}
 
-  "@babel/core@7.29.7":
+  "@babel/core@7.29.7(supports-color@10.2.2)":
     dependencies:
       "@babel/code-frame": 7.29.7
       "@babel/generator": 7.29.7
       "@babel/helper-compilation-targets": 7.29.7
-      "@babel/helper-module-transforms": 7.29.7(@babel/core@7.29.7)
+      "@babel/helper-module-transforms": 7.29.7(@babel/core@7.29.7(supports-color@10.2.2))
       "@babel/helpers": 7.29.7
       "@babel/parser": 7.29.7
       "@babel/template": 7.29.7
-      "@babel/traverse": 7.29.7
+      "@babel/traverse": 7.29.7(supports-color@10.2.2)
       "@babel/types": 7.29.7
       "@jridgewell/remapping": 2.3.5
       convert-source-map: 2.0.0
-      debug: 4.4.3
+      debug: 4.4.3(supports-color@10.2.2)
       gensync: 1.0.0-beta.2
       json5: 2.2.3
       semver: 6.3.1
@@ -20306,32 +20306,32 @@ snapshots:
       lru-cache: 5.1.1
       semver: 6.3.1
 
-  "@babel/helper-create-class-features-plugin@7.29.7(@babel/core@7.29.7)":
+  "@babel/helper-create-class-features-plugin@7.29.7(@babel/core@7.29.7(supports-color@10.2.2))":
     dependencies:
-      "@babel/core": 7.29.7
+      "@babel/core": 7.29.7(supports-color@10.2.2)
       "@babel/helper-annotate-as-pure": 7.29.7
       "@babel/helper-member-expression-to-functions": 7.29.7
       "@babel/helper-optimise-call-expression": 7.29.7
-      "@babel/helper-replace-supers": 7.29.7(@babel/core@7.29.7)
+      "@babel/helper-replace-supers": 7.29.7(@babel/core@7.29.7(supports-color@10.2.2))
       "@babel/helper-skip-transparent-expression-wrappers": 7.29.7
-      "@babel/traverse": 7.29.7
+      "@babel/traverse": 7.29.7(supports-color@10.2.2)
       semver: 6.3.1
     transitivePeerDependencies:
       - supports-color
 
-  "@babel/helper-create-regexp-features-plugin@7.29.7(@babel/core@7.29.7)":
+  "@babel/helper-create-regexp-features-plugin@7.29.7(@babel/core@7.29.7(supports-color@10.2.2))":
     dependencies:
-      "@babel/core": 7.29.7
+      "@babel/core": 7.29.7(supports-color@10.2.2)
       "@babel/helper-annotate-as-pure": 7.29.7
       regexpu-core: 6.4.0
       semver: 6.3.1
 
-  "@babel/helper-define-polyfill-provider@0.6.8(@babel/core@7.29.7)":
+  "@babel/helper-define-polyfill-provider@0.6.8(@babel/core@7.29.7(supports-color@10.2.2))(supports-color@10.2.2)":
     dependencies:
-      "@babel/core": 7.29.7
+      "@babel/core": 7.29.7(supports-color@10.2.2)
       "@babel/helper-compilation-targets": 7.29.7
       "@babel/helper-plugin-utils": 7.29.7
-      debug: 4.4.3
+      debug: 4.4.3(supports-color@10.2.2)
       lodash.debounce: 4.0.8
       resolve: 1.22.12
     transitivePeerDependencies:
@@ -20341,24 +20341,24 @@ snapshots:
 
   "@babel/helper-member-expression-to-functions@7.29.7":
     dependencies:
-      "@babel/traverse": 7.29.7
+      "@babel/traverse": 7.29.7(supports-color@10.2.2)
       "@babel/types": 7.29.7
     transitivePeerDependencies:
       - supports-color
 
   "@babel/helper-module-imports@7.29.7":
     dependencies:
-      "@babel/traverse": 7.29.7
+      "@babel/traverse": 7.29.7(supports-color@10.2.2)
       "@babel/types": 7.29.7
     transitivePeerDependencies:
       - supports-color
 
-  "@babel/helper-module-transforms@7.29.7(@babel/core@7.29.7)":
+  "@babel/helper-module-transforms@7.29.7(@babel/core@7.29.7(supports-color@10.2.2))":
     dependencies:
-      "@babel/core": 7.29.7
+      "@babel/core": 7.29.7(supports-color@10.2.2)
       "@babel/helper-module-imports": 7.29.7
       "@babel/helper-validator-identifier": 7.29.7
-      "@babel/traverse": 7.29.7
+      "@babel/traverse": 7.29.7(supports-color@10.2.2)
     transitivePeerDependencies:
       - supports-color
 
@@ -20368,27 +20368,27 @@ snapshots:
 
   "@babel/helper-plugin-utils@7.29.7": {}
 
-  "@babel/helper-remap-async-to-generator@7.29.7(@babel/core@7.29.7)":
+  "@babel/helper-remap-async-to-generator@7.29.7(@babel/core@7.29.7(supports-color@10.2.2))":
     dependencies:
-      "@babel/core": 7.29.7
+      "@babel/core": 7.29.7(supports-color@10.2.2)
       "@babel/helper-annotate-as-pure": 7.29.7
       "@babel/helper-wrap-function": 7.29.7
-      "@babel/traverse": 7.29.7
+      "@babel/traverse": 7.29.7(supports-color@10.2.2)
     transitivePeerDependencies:
       - supports-color
 
-  "@babel/helper-replace-supers@7.29.7(@babel/core@7.29.7)":
+  "@babel/helper-replace-supers@7.29.7(@babel/core@7.29.7(supports-color@10.2.2))":
     dependencies:
-      "@babel/core": 7.29.7
+      "@babel/core": 7.29.7(supports-color@10.2.2)
       "@babel/helper-member-expression-to-functions": 7.29.7
       "@babel/helper-optimise-call-expression": 7.29.7
-      "@babel/traverse": 7.29.7
+      "@babel/traverse": 7.29.7(supports-color@10.2.2)
     transitivePeerDependencies:
       - supports-color
 
   "@babel/helper-skip-transparent-expression-wrappers@7.29.7":
     dependencies:
-      "@babel/traverse": 7.29.7
+      "@babel/traverse": 7.29.7(supports-color@10.2.2)
       "@babel/types": 7.29.7
     transitivePeerDependencies:
       - supports-color
@@ -20406,7 +20406,7 @@ snapshots:
   "@babel/helper-wrap-function@7.29.7":
     dependencies:
       "@babel/template": 7.29.7
-      "@babel/traverse": 7.29.7
+      "@babel/traverse": 7.29.7(supports-color@10.2.2)
       "@babel/types": 7.29.7
     transitivePeerDependencies:
       - supports-color
@@ -20426,585 +20426,585 @@ snapshots:
     dependencies:
       "@babel/types": 8.0.4
 
-  "@babel/plugin-bugfix-firefox-class-in-computed-class-key@7.29.7(@babel/core@7.29.7)":
+  "@babel/plugin-bugfix-firefox-class-in-computed-class-key@7.29.7(@babel/core@7.29.7(supports-color@10.2.2))":
     dependencies:
-      "@babel/core": 7.29.7
+      "@babel/core": 7.29.7(supports-color@10.2.2)
       "@babel/helper-plugin-utils": 7.29.7
-      "@babel/traverse": 7.29.7
+      "@babel/traverse": 7.29.7(supports-color@10.2.2)
     transitivePeerDependencies:
       - supports-color
 
-  "@babel/plugin-bugfix-safari-class-field-initializer-scope@7.29.7(@babel/core@7.29.7)":
+  "@babel/plugin-bugfix-safari-class-field-initializer-scope@7.29.7(@babel/core@7.29.7(supports-color@10.2.2))":
     dependencies:
-      "@babel/core": 7.29.7
+      "@babel/core": 7.29.7(supports-color@10.2.2)
       "@babel/helper-plugin-utils": 7.29.7
 
-  "@babel/plugin-bugfix-safari-id-destructuring-collision-in-function-expression@7.29.7(@babel/core@7.29.7)":
+  "@babel/plugin-bugfix-safari-id-destructuring-collision-in-function-expression@7.29.7(@babel/core@7.29.7(supports-color@10.2.2))":
     dependencies:
-      "@babel/core": 7.29.7
+      "@babel/core": 7.29.7(supports-color@10.2.2)
       "@babel/helper-plugin-utils": 7.29.7
 
-  "@babel/plugin-bugfix-safari-rest-destructuring-rhs-array@7.29.7(@babel/core@7.29.7)":
+  "@babel/plugin-bugfix-safari-rest-destructuring-rhs-array@7.29.7(@babel/core@7.29.7(supports-color@10.2.2))":
     dependencies:
-      "@babel/core": 7.29.7
+      "@babel/core": 7.29.7(supports-color@10.2.2)
       "@babel/helper-plugin-utils": 7.29.7
       "@babel/helper-skip-transparent-expression-wrappers": 7.29.7
     transitivePeerDependencies:
       - supports-color
 
-  "@babel/plugin-bugfix-v8-spread-parameters-in-optional-chaining@7.29.7(@babel/core@7.29.7)":
+  "@babel/plugin-bugfix-v8-spread-parameters-in-optional-chaining@7.29.7(@babel/core@7.29.7(supports-color@10.2.2))":
     dependencies:
-      "@babel/core": 7.29.7
+      "@babel/core": 7.29.7(supports-color@10.2.2)
       "@babel/helper-plugin-utils": 7.29.7
       "@babel/helper-skip-transparent-expression-wrappers": 7.29.7
-      "@babel/plugin-transform-optional-chaining": 7.29.7(@babel/core@7.29.7)
+      "@babel/plugin-transform-optional-chaining": 7.29.7(@babel/core@7.29.7(supports-color@10.2.2))
     transitivePeerDependencies:
       - supports-color
 
-  "@babel/plugin-bugfix-v8-static-class-fields-redefine-readonly@7.29.7(@babel/core@7.29.7)":
+  "@babel/plugin-bugfix-v8-static-class-fields-redefine-readonly@7.29.7(@babel/core@7.29.7(supports-color@10.2.2))":
     dependencies:
-      "@babel/core": 7.29.7
+      "@babel/core": 7.29.7(supports-color@10.2.2)
       "@babel/helper-plugin-utils": 7.29.7
-      "@babel/traverse": 7.29.7
+      "@babel/traverse": 7.29.7(supports-color@10.2.2)
     transitivePeerDependencies:
       - supports-color
 
-  "@babel/plugin-proposal-private-property-in-object@7.21.0-placeholder-for-preset-env.2(@babel/core@7.29.7)":
+  "@babel/plugin-proposal-private-property-in-object@7.21.0-placeholder-for-preset-env.2(@babel/core@7.29.7(supports-color@10.2.2))":
     dependencies:
-      "@babel/core": 7.29.7
+      "@babel/core": 7.29.7(supports-color@10.2.2)
 
   "@babel/plugin-syntax-async-generators@7.8.4(@babel/core@7.29.7)":
     dependencies:
-      "@babel/core": 7.29.7
+      "@babel/core": 7.29.7(supports-color@10.2.2)
       "@babel/helper-plugin-utils": 7.29.7
 
   "@babel/plugin-syntax-bigint@7.8.3(@babel/core@7.29.7)":
     dependencies:
-      "@babel/core": 7.29.7
+      "@babel/core": 7.29.7(supports-color@10.2.2)
       "@babel/helper-plugin-utils": 7.29.7
 
   "@babel/plugin-syntax-class-properties@7.12.13(@babel/core@7.29.7)":
     dependencies:
-      "@babel/core": 7.29.7
+      "@babel/core": 7.29.7(supports-color@10.2.2)
       "@babel/helper-plugin-utils": 7.29.7
 
   "@babel/plugin-syntax-class-static-block@7.14.5(@babel/core@7.29.7)":
     dependencies:
-      "@babel/core": 7.29.7
+      "@babel/core": 7.29.7(supports-color@10.2.2)
       "@babel/helper-plugin-utils": 7.29.7
 
-  "@babel/plugin-syntax-import-assertions@7.29.7(@babel/core@7.29.7)":
+  "@babel/plugin-syntax-import-assertions@7.29.7(@babel/core@7.29.7(supports-color@10.2.2))":
     dependencies:
-      "@babel/core": 7.29.7
+      "@babel/core": 7.29.7(supports-color@10.2.2)
       "@babel/helper-plugin-utils": 7.29.7
 
   "@babel/plugin-syntax-import-attributes@7.29.7(@babel/core@7.29.7)":
     dependencies:
-      "@babel/core": 7.29.7
+      "@babel/core": 7.29.7(supports-color@10.2.2)
       "@babel/helper-plugin-utils": 7.29.7
 
   "@babel/plugin-syntax-import-meta@7.10.4(@babel/core@7.29.7)":
     dependencies:
-      "@babel/core": 7.29.7
+      "@babel/core": 7.29.7(supports-color@10.2.2)
       "@babel/helper-plugin-utils": 7.29.7
 
   "@babel/plugin-syntax-json-strings@7.8.3(@babel/core@7.29.7)":
     dependencies:
-      "@babel/core": 7.29.7
+      "@babel/core": 7.29.7(supports-color@10.2.2)
       "@babel/helper-plugin-utils": 7.29.7
 
   "@babel/plugin-syntax-jsx@7.29.7(@babel/core@7.29.7)":
     dependencies:
-      "@babel/core": 7.29.7
+      "@babel/core": 7.29.7(supports-color@10.2.2)
       "@babel/helper-plugin-utils": 7.29.7
 
   "@babel/plugin-syntax-logical-assignment-operators@7.10.4(@babel/core@7.29.7)":
     dependencies:
-      "@babel/core": 7.29.7
+      "@babel/core": 7.29.7(supports-color@10.2.2)
       "@babel/helper-plugin-utils": 7.29.7
 
   "@babel/plugin-syntax-nullish-coalescing-operator@7.8.3(@babel/core@7.29.7)":
     dependencies:
-      "@babel/core": 7.29.7
+      "@babel/core": 7.29.7(supports-color@10.2.2)
       "@babel/helper-plugin-utils": 7.29.7
 
   "@babel/plugin-syntax-numeric-separator@7.10.4(@babel/core@7.29.7)":
     dependencies:
-      "@babel/core": 7.29.7
+      "@babel/core": 7.29.7(supports-color@10.2.2)
       "@babel/helper-plugin-utils": 7.29.7
 
   "@babel/plugin-syntax-object-rest-spread@7.8.3(@babel/core@7.29.7)":
     dependencies:
-      "@babel/core": 7.29.7
+      "@babel/core": 7.29.7(supports-color@10.2.2)
       "@babel/helper-plugin-utils": 7.29.7
 
   "@babel/plugin-syntax-optional-catch-binding@7.8.3(@babel/core@7.29.7)":
     dependencies:
-      "@babel/core": 7.29.7
+      "@babel/core": 7.29.7(supports-color@10.2.2)
       "@babel/helper-plugin-utils": 7.29.7
 
   "@babel/plugin-syntax-optional-chaining@7.8.3(@babel/core@7.29.7)":
     dependencies:
-      "@babel/core": 7.29.7
+      "@babel/core": 7.29.7(supports-color@10.2.2)
       "@babel/helper-plugin-utils": 7.29.7
 
   "@babel/plugin-syntax-private-property-in-object@7.14.5(@babel/core@7.29.7)":
     dependencies:
-      "@babel/core": 7.29.7
+      "@babel/core": 7.29.7(supports-color@10.2.2)
       "@babel/helper-plugin-utils": 7.29.7
 
   "@babel/plugin-syntax-top-level-await@7.14.5(@babel/core@7.29.7)":
     dependencies:
-      "@babel/core": 7.29.7
+      "@babel/core": 7.29.7(supports-color@10.2.2)
       "@babel/helper-plugin-utils": 7.29.7
 
   "@babel/plugin-syntax-typescript@7.29.7(@babel/core@7.29.7)":
     dependencies:
-      "@babel/core": 7.29.7
+      "@babel/core": 7.29.7(supports-color@10.2.2)
       "@babel/helper-plugin-utils": 7.29.7
 
-  "@babel/plugin-syntax-unicode-sets-regex@7.18.6(@babel/core@7.29.7)":
+  "@babel/plugin-syntax-unicode-sets-regex@7.18.6(@babel/core@7.29.7(supports-color@10.2.2))":
     dependencies:
-      "@babel/core": 7.29.7
-      "@babel/helper-create-regexp-features-plugin": 7.29.7(@babel/core@7.29.7)
+      "@babel/core": 7.29.7(supports-color@10.2.2)
+      "@babel/helper-create-regexp-features-plugin": 7.29.7(@babel/core@7.29.7(supports-color@10.2.2))
       "@babel/helper-plugin-utils": 7.29.7
 
-  "@babel/plugin-transform-arrow-functions@7.29.7(@babel/core@7.29.7)":
+  "@babel/plugin-transform-arrow-functions@7.29.7(@babel/core@7.29.7(supports-color@10.2.2))":
     dependencies:
-      "@babel/core": 7.29.7
+      "@babel/core": 7.29.7(supports-color@10.2.2)
       "@babel/helper-plugin-utils": 7.29.7
 
-  "@babel/plugin-transform-async-generator-functions@7.29.7(@babel/core@7.29.7)":
+  "@babel/plugin-transform-async-generator-functions@7.29.7(@babel/core@7.29.7(supports-color@10.2.2))":
     dependencies:
-      "@babel/core": 7.29.7
+      "@babel/core": 7.29.7(supports-color@10.2.2)
       "@babel/helper-plugin-utils": 7.29.7
-      "@babel/helper-remap-async-to-generator": 7.29.7(@babel/core@7.29.7)
-      "@babel/traverse": 7.29.7
+      "@babel/helper-remap-async-to-generator": 7.29.7(@babel/core@7.29.7(supports-color@10.2.2))
+      "@babel/traverse": 7.29.7(supports-color@10.2.2)
     transitivePeerDependencies:
       - supports-color
 
-  "@babel/plugin-transform-async-to-generator@7.29.7(@babel/core@7.29.7)":
+  "@babel/plugin-transform-async-to-generator@7.29.7(@babel/core@7.29.7(supports-color@10.2.2))":
     dependencies:
-      "@babel/core": 7.29.7
+      "@babel/core": 7.29.7(supports-color@10.2.2)
       "@babel/helper-module-imports": 7.29.7
       "@babel/helper-plugin-utils": 7.29.7
-      "@babel/helper-remap-async-to-generator": 7.29.7(@babel/core@7.29.7)
+      "@babel/helper-remap-async-to-generator": 7.29.7(@babel/core@7.29.7(supports-color@10.2.2))
     transitivePeerDependencies:
       - supports-color
 
-  "@babel/plugin-transform-block-scoped-functions@7.29.7(@babel/core@7.29.7)":
+  "@babel/plugin-transform-block-scoped-functions@7.29.7(@babel/core@7.29.7(supports-color@10.2.2))":
     dependencies:
-      "@babel/core": 7.29.7
+      "@babel/core": 7.29.7(supports-color@10.2.2)
       "@babel/helper-plugin-utils": 7.29.7
 
-  "@babel/plugin-transform-block-scoping@7.29.7(@babel/core@7.29.7)":
+  "@babel/plugin-transform-block-scoping@7.29.7(@babel/core@7.29.7(supports-color@10.2.2))":
     dependencies:
-      "@babel/core": 7.29.7
+      "@babel/core": 7.29.7(supports-color@10.2.2)
       "@babel/helper-plugin-utils": 7.29.7
 
-  "@babel/plugin-transform-class-properties@7.29.7(@babel/core@7.29.7)":
+  "@babel/plugin-transform-class-properties@7.29.7(@babel/core@7.29.7(supports-color@10.2.2))":
     dependencies:
-      "@babel/core": 7.29.7
-      "@babel/helper-create-class-features-plugin": 7.29.7(@babel/core@7.29.7)
-      "@babel/helper-plugin-utils": 7.29.7
-    transitivePeerDependencies:
-      - supports-color
-
-  "@babel/plugin-transform-class-static-block@7.29.7(@babel/core@7.29.7)":
-    dependencies:
-      "@babel/core": 7.29.7
-      "@babel/helper-create-class-features-plugin": 7.29.7(@babel/core@7.29.7)
+      "@babel/core": 7.29.7(supports-color@10.2.2)
+      "@babel/helper-create-class-features-plugin": 7.29.7(@babel/core@7.29.7(supports-color@10.2.2))
       "@babel/helper-plugin-utils": 7.29.7
     transitivePeerDependencies:
       - supports-color
 
-  "@babel/plugin-transform-classes@7.29.7(@babel/core@7.29.7)":
+  "@babel/plugin-transform-class-static-block@7.29.7(@babel/core@7.29.7(supports-color@10.2.2))":
     dependencies:
-      "@babel/core": 7.29.7
+      "@babel/core": 7.29.7(supports-color@10.2.2)
+      "@babel/helper-create-class-features-plugin": 7.29.7(@babel/core@7.29.7(supports-color@10.2.2))
+      "@babel/helper-plugin-utils": 7.29.7
+    transitivePeerDependencies:
+      - supports-color
+
+  "@babel/plugin-transform-classes@7.29.7(@babel/core@7.29.7(supports-color@10.2.2))":
+    dependencies:
+      "@babel/core": 7.29.7(supports-color@10.2.2)
       "@babel/helper-annotate-as-pure": 7.29.7
       "@babel/helper-compilation-targets": 7.29.7
       "@babel/helper-globals": 7.29.7
       "@babel/helper-plugin-utils": 7.29.7
-      "@babel/helper-replace-supers": 7.29.7(@babel/core@7.29.7)
-      "@babel/traverse": 7.29.7
+      "@babel/helper-replace-supers": 7.29.7(@babel/core@7.29.7(supports-color@10.2.2))
+      "@babel/traverse": 7.29.7(supports-color@10.2.2)
     transitivePeerDependencies:
       - supports-color
 
-  "@babel/plugin-transform-computed-properties@7.29.7(@babel/core@7.29.7)":
+  "@babel/plugin-transform-computed-properties@7.29.7(@babel/core@7.29.7(supports-color@10.2.2))":
     dependencies:
-      "@babel/core": 7.29.7
+      "@babel/core": 7.29.7(supports-color@10.2.2)
       "@babel/helper-plugin-utils": 7.29.7
       "@babel/template": 7.29.7
 
-  "@babel/plugin-transform-destructuring@7.29.7(@babel/core@7.29.7)":
+  "@babel/plugin-transform-destructuring@7.29.7(@babel/core@7.29.7(supports-color@10.2.2))":
     dependencies:
-      "@babel/core": 7.29.7
+      "@babel/core": 7.29.7(supports-color@10.2.2)
       "@babel/helper-plugin-utils": 7.29.7
-      "@babel/traverse": 7.29.7
+      "@babel/traverse": 7.29.7(supports-color@10.2.2)
     transitivePeerDependencies:
       - supports-color
 
-  "@babel/plugin-transform-dotall-regex@7.29.7(@babel/core@7.29.7)":
+  "@babel/plugin-transform-dotall-regex@7.29.7(@babel/core@7.29.7(supports-color@10.2.2))":
     dependencies:
-      "@babel/core": 7.29.7
-      "@babel/helper-create-regexp-features-plugin": 7.29.7(@babel/core@7.29.7)
+      "@babel/core": 7.29.7(supports-color@10.2.2)
+      "@babel/helper-create-regexp-features-plugin": 7.29.7(@babel/core@7.29.7(supports-color@10.2.2))
       "@babel/helper-plugin-utils": 7.29.7
 
-  "@babel/plugin-transform-duplicate-keys@7.29.7(@babel/core@7.29.7)":
+  "@babel/plugin-transform-duplicate-keys@7.29.7(@babel/core@7.29.7(supports-color@10.2.2))":
     dependencies:
-      "@babel/core": 7.29.7
+      "@babel/core": 7.29.7(supports-color@10.2.2)
       "@babel/helper-plugin-utils": 7.29.7
 
-  "@babel/plugin-transform-duplicate-named-capturing-groups-regex@7.29.7(@babel/core@7.29.7)":
+  "@babel/plugin-transform-duplicate-named-capturing-groups-regex@7.29.7(@babel/core@7.29.7(supports-color@10.2.2))":
     dependencies:
-      "@babel/core": 7.29.7
-      "@babel/helper-create-regexp-features-plugin": 7.29.7(@babel/core@7.29.7)
+      "@babel/core": 7.29.7(supports-color@10.2.2)
+      "@babel/helper-create-regexp-features-plugin": 7.29.7(@babel/core@7.29.7(supports-color@10.2.2))
       "@babel/helper-plugin-utils": 7.29.7
 
-  "@babel/plugin-transform-dynamic-import@7.29.7(@babel/core@7.29.7)":
+  "@babel/plugin-transform-dynamic-import@7.29.7(@babel/core@7.29.7(supports-color@10.2.2))":
     dependencies:
-      "@babel/core": 7.29.7
+      "@babel/core": 7.29.7(supports-color@10.2.2)
       "@babel/helper-plugin-utils": 7.29.7
 
-  "@babel/plugin-transform-explicit-resource-management@7.29.7(@babel/core@7.29.7)":
+  "@babel/plugin-transform-explicit-resource-management@7.29.7(@babel/core@7.29.7(supports-color@10.2.2))":
     dependencies:
-      "@babel/core": 7.29.7
+      "@babel/core": 7.29.7(supports-color@10.2.2)
       "@babel/helper-plugin-utils": 7.29.7
-      "@babel/plugin-transform-destructuring": 7.29.7(@babel/core@7.29.7)
+      "@babel/plugin-transform-destructuring": 7.29.7(@babel/core@7.29.7(supports-color@10.2.2))
     transitivePeerDependencies:
       - supports-color
 
-  "@babel/plugin-transform-exponentiation-operator@7.29.7(@babel/core@7.29.7)":
+  "@babel/plugin-transform-exponentiation-operator@7.29.7(@babel/core@7.29.7(supports-color@10.2.2))":
     dependencies:
-      "@babel/core": 7.29.7
+      "@babel/core": 7.29.7(supports-color@10.2.2)
       "@babel/helper-plugin-utils": 7.29.7
 
-  "@babel/plugin-transform-export-namespace-from@7.29.7(@babel/core@7.29.7)":
+  "@babel/plugin-transform-export-namespace-from@7.29.7(@babel/core@7.29.7(supports-color@10.2.2))":
     dependencies:
-      "@babel/core": 7.29.7
+      "@babel/core": 7.29.7(supports-color@10.2.2)
       "@babel/helper-plugin-utils": 7.29.7
 
-  "@babel/plugin-transform-for-of@7.29.7(@babel/core@7.29.7)":
+  "@babel/plugin-transform-for-of@7.29.7(@babel/core@7.29.7(supports-color@10.2.2))":
     dependencies:
-      "@babel/core": 7.29.7
+      "@babel/core": 7.29.7(supports-color@10.2.2)
       "@babel/helper-plugin-utils": 7.29.7
       "@babel/helper-skip-transparent-expression-wrappers": 7.29.7
     transitivePeerDependencies:
       - supports-color
 
-  "@babel/plugin-transform-function-name@7.29.7(@babel/core@7.29.7)":
+  "@babel/plugin-transform-function-name@7.29.7(@babel/core@7.29.7(supports-color@10.2.2))":
     dependencies:
-      "@babel/core": 7.29.7
+      "@babel/core": 7.29.7(supports-color@10.2.2)
       "@babel/helper-compilation-targets": 7.29.7
       "@babel/helper-plugin-utils": 7.29.7
-      "@babel/traverse": 7.29.7
+      "@babel/traverse": 7.29.7(supports-color@10.2.2)
     transitivePeerDependencies:
       - supports-color
 
-  "@babel/plugin-transform-json-strings@7.29.7(@babel/core@7.29.7)":
+  "@babel/plugin-transform-json-strings@7.29.7(@babel/core@7.29.7(supports-color@10.2.2))":
     dependencies:
-      "@babel/core": 7.29.7
+      "@babel/core": 7.29.7(supports-color@10.2.2)
       "@babel/helper-plugin-utils": 7.29.7
 
-  "@babel/plugin-transform-literals@7.29.7(@babel/core@7.29.7)":
+  "@babel/plugin-transform-literals@7.29.7(@babel/core@7.29.7(supports-color@10.2.2))":
     dependencies:
-      "@babel/core": 7.29.7
+      "@babel/core": 7.29.7(supports-color@10.2.2)
       "@babel/helper-plugin-utils": 7.29.7
 
-  "@babel/plugin-transform-logical-assignment-operators@7.29.7(@babel/core@7.29.7)":
+  "@babel/plugin-transform-logical-assignment-operators@7.29.7(@babel/core@7.29.7(supports-color@10.2.2))":
     dependencies:
-      "@babel/core": 7.29.7
+      "@babel/core": 7.29.7(supports-color@10.2.2)
       "@babel/helper-plugin-utils": 7.29.7
 
-  "@babel/plugin-transform-member-expression-literals@7.29.7(@babel/core@7.29.7)":
+  "@babel/plugin-transform-member-expression-literals@7.29.7(@babel/core@7.29.7(supports-color@10.2.2))":
     dependencies:
-      "@babel/core": 7.29.7
+      "@babel/core": 7.29.7(supports-color@10.2.2)
       "@babel/helper-plugin-utils": 7.29.7
 
-  "@babel/plugin-transform-modules-amd@7.29.7(@babel/core@7.29.7)":
+  "@babel/plugin-transform-modules-amd@7.29.7(@babel/core@7.29.7(supports-color@10.2.2))":
     dependencies:
-      "@babel/core": 7.29.7
-      "@babel/helper-module-transforms": 7.29.7(@babel/core@7.29.7)
-      "@babel/helper-plugin-utils": 7.29.7
-    transitivePeerDependencies:
-      - supports-color
-
-  "@babel/plugin-transform-modules-commonjs@7.29.7(@babel/core@7.29.7)":
-    dependencies:
-      "@babel/core": 7.29.7
-      "@babel/helper-module-transforms": 7.29.7(@babel/core@7.29.7)
+      "@babel/core": 7.29.7(supports-color@10.2.2)
+      "@babel/helper-module-transforms": 7.29.7(@babel/core@7.29.7(supports-color@10.2.2))
       "@babel/helper-plugin-utils": 7.29.7
     transitivePeerDependencies:
       - supports-color
 
-  "@babel/plugin-transform-modules-systemjs@7.29.7(@babel/core@7.29.7)":
+  "@babel/plugin-transform-modules-commonjs@7.29.7(@babel/core@7.29.7(supports-color@10.2.2))":
     dependencies:
-      "@babel/core": 7.29.7
-      "@babel/helper-module-transforms": 7.29.7(@babel/core@7.29.7)
+      "@babel/core": 7.29.7(supports-color@10.2.2)
+      "@babel/helper-module-transforms": 7.29.7(@babel/core@7.29.7(supports-color@10.2.2))
+      "@babel/helper-plugin-utils": 7.29.7
+    transitivePeerDependencies:
+      - supports-color
+
+  "@babel/plugin-transform-modules-systemjs@7.29.7(@babel/core@7.29.7(supports-color@10.2.2))":
+    dependencies:
+      "@babel/core": 7.29.7(supports-color@10.2.2)
+      "@babel/helper-module-transforms": 7.29.7(@babel/core@7.29.7(supports-color@10.2.2))
       "@babel/helper-plugin-utils": 7.29.7
       "@babel/helper-validator-identifier": 7.29.7
-      "@babel/traverse": 7.29.7
+      "@babel/traverse": 7.29.7(supports-color@10.2.2)
     transitivePeerDependencies:
       - supports-color
 
-  "@babel/plugin-transform-modules-umd@7.29.7(@babel/core@7.29.7)":
+  "@babel/plugin-transform-modules-umd@7.29.7(@babel/core@7.29.7(supports-color@10.2.2))":
     dependencies:
-      "@babel/core": 7.29.7
-      "@babel/helper-module-transforms": 7.29.7(@babel/core@7.29.7)
+      "@babel/core": 7.29.7(supports-color@10.2.2)
+      "@babel/helper-module-transforms": 7.29.7(@babel/core@7.29.7(supports-color@10.2.2))
       "@babel/helper-plugin-utils": 7.29.7
     transitivePeerDependencies:
       - supports-color
 
-  "@babel/plugin-transform-named-capturing-groups-regex@7.29.7(@babel/core@7.29.7)":
+  "@babel/plugin-transform-named-capturing-groups-regex@7.29.7(@babel/core@7.29.7(supports-color@10.2.2))":
     dependencies:
-      "@babel/core": 7.29.7
-      "@babel/helper-create-regexp-features-plugin": 7.29.7(@babel/core@7.29.7)
+      "@babel/core": 7.29.7(supports-color@10.2.2)
+      "@babel/helper-create-regexp-features-plugin": 7.29.7(@babel/core@7.29.7(supports-color@10.2.2))
       "@babel/helper-plugin-utils": 7.29.7
 
-  "@babel/plugin-transform-new-target@7.29.7(@babel/core@7.29.7)":
+  "@babel/plugin-transform-new-target@7.29.7(@babel/core@7.29.7(supports-color@10.2.2))":
     dependencies:
-      "@babel/core": 7.29.7
+      "@babel/core": 7.29.7(supports-color@10.2.2)
       "@babel/helper-plugin-utils": 7.29.7
 
-  "@babel/plugin-transform-nullish-coalescing-operator@7.29.7(@babel/core@7.29.7)":
+  "@babel/plugin-transform-nullish-coalescing-operator@7.29.7(@babel/core@7.29.7(supports-color@10.2.2))":
     dependencies:
-      "@babel/core": 7.29.7
+      "@babel/core": 7.29.7(supports-color@10.2.2)
       "@babel/helper-plugin-utils": 7.29.7
 
-  "@babel/plugin-transform-numeric-separator@7.29.7(@babel/core@7.29.7)":
+  "@babel/plugin-transform-numeric-separator@7.29.7(@babel/core@7.29.7(supports-color@10.2.2))":
     dependencies:
-      "@babel/core": 7.29.7
+      "@babel/core": 7.29.7(supports-color@10.2.2)
       "@babel/helper-plugin-utils": 7.29.7
 
-  "@babel/plugin-transform-object-rest-spread@7.29.7(@babel/core@7.29.7)":
+  "@babel/plugin-transform-object-rest-spread@7.29.7(@babel/core@7.29.7(supports-color@10.2.2))":
     dependencies:
-      "@babel/core": 7.29.7
+      "@babel/core": 7.29.7(supports-color@10.2.2)
       "@babel/helper-compilation-targets": 7.29.7
       "@babel/helper-plugin-utils": 7.29.7
-      "@babel/plugin-transform-destructuring": 7.29.7(@babel/core@7.29.7)
-      "@babel/plugin-transform-parameters": 7.29.7(@babel/core@7.29.7)
-      "@babel/traverse": 7.29.7
+      "@babel/plugin-transform-destructuring": 7.29.7(@babel/core@7.29.7(supports-color@10.2.2))
+      "@babel/plugin-transform-parameters": 7.29.7(@babel/core@7.29.7(supports-color@10.2.2))
+      "@babel/traverse": 7.29.7(supports-color@10.2.2)
     transitivePeerDependencies:
       - supports-color
 
-  "@babel/plugin-transform-object-super@7.29.7(@babel/core@7.29.7)":
+  "@babel/plugin-transform-object-super@7.29.7(@babel/core@7.29.7(supports-color@10.2.2))":
     dependencies:
-      "@babel/core": 7.29.7
+      "@babel/core": 7.29.7(supports-color@10.2.2)
       "@babel/helper-plugin-utils": 7.29.7
-      "@babel/helper-replace-supers": 7.29.7(@babel/core@7.29.7)
+      "@babel/helper-replace-supers": 7.29.7(@babel/core@7.29.7(supports-color@10.2.2))
     transitivePeerDependencies:
       - supports-color
 
-  "@babel/plugin-transform-optional-catch-binding@7.29.7(@babel/core@7.29.7)":
+  "@babel/plugin-transform-optional-catch-binding@7.29.7(@babel/core@7.29.7(supports-color@10.2.2))":
     dependencies:
-      "@babel/core": 7.29.7
+      "@babel/core": 7.29.7(supports-color@10.2.2)
       "@babel/helper-plugin-utils": 7.29.7
 
-  "@babel/plugin-transform-optional-chaining@7.29.7(@babel/core@7.29.7)":
+  "@babel/plugin-transform-optional-chaining@7.29.7(@babel/core@7.29.7(supports-color@10.2.2))":
     dependencies:
-      "@babel/core": 7.29.7
+      "@babel/core": 7.29.7(supports-color@10.2.2)
       "@babel/helper-plugin-utils": 7.29.7
       "@babel/helper-skip-transparent-expression-wrappers": 7.29.7
     transitivePeerDependencies:
       - supports-color
 
-  "@babel/plugin-transform-parameters@7.29.7(@babel/core@7.29.7)":
+  "@babel/plugin-transform-parameters@7.29.7(@babel/core@7.29.7(supports-color@10.2.2))":
     dependencies:
-      "@babel/core": 7.29.7
+      "@babel/core": 7.29.7(supports-color@10.2.2)
       "@babel/helper-plugin-utils": 7.29.7
 
-  "@babel/plugin-transform-private-methods@7.29.7(@babel/core@7.29.7)":
+  "@babel/plugin-transform-private-methods@7.29.7(@babel/core@7.29.7(supports-color@10.2.2))":
     dependencies:
-      "@babel/core": 7.29.7
-      "@babel/helper-create-class-features-plugin": 7.29.7(@babel/core@7.29.7)
+      "@babel/core": 7.29.7(supports-color@10.2.2)
+      "@babel/helper-create-class-features-plugin": 7.29.7(@babel/core@7.29.7(supports-color@10.2.2))
       "@babel/helper-plugin-utils": 7.29.7
     transitivePeerDependencies:
       - supports-color
 
-  "@babel/plugin-transform-private-property-in-object@7.29.7(@babel/core@7.29.7)":
+  "@babel/plugin-transform-private-property-in-object@7.29.7(@babel/core@7.29.7(supports-color@10.2.2))":
     dependencies:
-      "@babel/core": 7.29.7
+      "@babel/core": 7.29.7(supports-color@10.2.2)
       "@babel/helper-annotate-as-pure": 7.29.7
-      "@babel/helper-create-class-features-plugin": 7.29.7(@babel/core@7.29.7)
+      "@babel/helper-create-class-features-plugin": 7.29.7(@babel/core@7.29.7(supports-color@10.2.2))
       "@babel/helper-plugin-utils": 7.29.7
     transitivePeerDependencies:
       - supports-color
 
-  "@babel/plugin-transform-property-literals@7.29.7(@babel/core@7.29.7)":
+  "@babel/plugin-transform-property-literals@7.29.7(@babel/core@7.29.7(supports-color@10.2.2))":
     dependencies:
-      "@babel/core": 7.29.7
+      "@babel/core": 7.29.7(supports-color@10.2.2)
       "@babel/helper-plugin-utils": 7.29.7
 
-  "@babel/plugin-transform-regenerator@7.29.7(@babel/core@7.29.7)":
+  "@babel/plugin-transform-regenerator@7.29.7(@babel/core@7.29.7(supports-color@10.2.2))":
     dependencies:
-      "@babel/core": 7.29.7
+      "@babel/core": 7.29.7(supports-color@10.2.2)
       "@babel/helper-plugin-utils": 7.29.7
 
-  "@babel/plugin-transform-regexp-modifiers@7.29.7(@babel/core@7.29.7)":
+  "@babel/plugin-transform-regexp-modifiers@7.29.7(@babel/core@7.29.7(supports-color@10.2.2))":
     dependencies:
-      "@babel/core": 7.29.7
-      "@babel/helper-create-regexp-features-plugin": 7.29.7(@babel/core@7.29.7)
+      "@babel/core": 7.29.7(supports-color@10.2.2)
+      "@babel/helper-create-regexp-features-plugin": 7.29.7(@babel/core@7.29.7(supports-color@10.2.2))
       "@babel/helper-plugin-utils": 7.29.7
 
-  "@babel/plugin-transform-reserved-words@7.29.7(@babel/core@7.29.7)":
+  "@babel/plugin-transform-reserved-words@7.29.7(@babel/core@7.29.7(supports-color@10.2.2))":
     dependencies:
-      "@babel/core": 7.29.7
+      "@babel/core": 7.29.7(supports-color@10.2.2)
       "@babel/helper-plugin-utils": 7.29.7
 
-  "@babel/plugin-transform-shorthand-properties@7.29.7(@babel/core@7.29.7)":
+  "@babel/plugin-transform-shorthand-properties@7.29.7(@babel/core@7.29.7(supports-color@10.2.2))":
     dependencies:
-      "@babel/core": 7.29.7
+      "@babel/core": 7.29.7(supports-color@10.2.2)
       "@babel/helper-plugin-utils": 7.29.7
 
-  "@babel/plugin-transform-spread@7.29.7(@babel/core@7.29.7)":
+  "@babel/plugin-transform-spread@7.29.7(@babel/core@7.29.7(supports-color@10.2.2))":
     dependencies:
-      "@babel/core": 7.29.7
+      "@babel/core": 7.29.7(supports-color@10.2.2)
       "@babel/helper-plugin-utils": 7.29.7
       "@babel/helper-skip-transparent-expression-wrappers": 7.29.7
     transitivePeerDependencies:
       - supports-color
 
-  "@babel/plugin-transform-sticky-regex@7.29.7(@babel/core@7.29.7)":
+  "@babel/plugin-transform-sticky-regex@7.29.7(@babel/core@7.29.7(supports-color@10.2.2))":
     dependencies:
-      "@babel/core": 7.29.7
+      "@babel/core": 7.29.7(supports-color@10.2.2)
       "@babel/helper-plugin-utils": 7.29.7
 
-  "@babel/plugin-transform-template-literals@7.29.7(@babel/core@7.29.7)":
+  "@babel/plugin-transform-template-literals@7.29.7(@babel/core@7.29.7(supports-color@10.2.2))":
     dependencies:
-      "@babel/core": 7.29.7
+      "@babel/core": 7.29.7(supports-color@10.2.2)
       "@babel/helper-plugin-utils": 7.29.7
 
-  "@babel/plugin-transform-typeof-symbol@7.29.7(@babel/core@7.29.7)":
+  "@babel/plugin-transform-typeof-symbol@7.29.7(@babel/core@7.29.7(supports-color@10.2.2))":
     dependencies:
-      "@babel/core": 7.29.7
+      "@babel/core": 7.29.7(supports-color@10.2.2)
       "@babel/helper-plugin-utils": 7.29.7
 
-  "@babel/plugin-transform-typescript@7.29.7(@babel/core@7.29.7)":
+  "@babel/plugin-transform-typescript@7.29.7(@babel/core@7.29.7(supports-color@10.2.2))":
     dependencies:
-      "@babel/core": 7.29.7
+      "@babel/core": 7.29.7(supports-color@10.2.2)
       "@babel/helper-annotate-as-pure": 7.29.7
-      "@babel/helper-create-class-features-plugin": 7.29.7(@babel/core@7.29.7)
+      "@babel/helper-create-class-features-plugin": 7.29.7(@babel/core@7.29.7(supports-color@10.2.2))
       "@babel/helper-plugin-utils": 7.29.7
       "@babel/helper-skip-transparent-expression-wrappers": 7.29.7
       "@babel/plugin-syntax-typescript": 7.29.7(@babel/core@7.29.7)
     transitivePeerDependencies:
       - supports-color
 
-  "@babel/plugin-transform-unicode-escapes@7.29.7(@babel/core@7.29.7)":
+  "@babel/plugin-transform-unicode-escapes@7.29.7(@babel/core@7.29.7(supports-color@10.2.2))":
     dependencies:
-      "@babel/core": 7.29.7
+      "@babel/core": 7.29.7(supports-color@10.2.2)
       "@babel/helper-plugin-utils": 7.29.7
 
-  "@babel/plugin-transform-unicode-property-regex@7.29.7(@babel/core@7.29.7)":
+  "@babel/plugin-transform-unicode-property-regex@7.29.7(@babel/core@7.29.7(supports-color@10.2.2))":
     dependencies:
-      "@babel/core": 7.29.7
-      "@babel/helper-create-regexp-features-plugin": 7.29.7(@babel/core@7.29.7)
+      "@babel/core": 7.29.7(supports-color@10.2.2)
+      "@babel/helper-create-regexp-features-plugin": 7.29.7(@babel/core@7.29.7(supports-color@10.2.2))
       "@babel/helper-plugin-utils": 7.29.7
 
-  "@babel/plugin-transform-unicode-regex@7.29.7(@babel/core@7.29.7)":
+  "@babel/plugin-transform-unicode-regex@7.29.7(@babel/core@7.29.7(supports-color@10.2.2))":
     dependencies:
-      "@babel/core": 7.29.7
-      "@babel/helper-create-regexp-features-plugin": 7.29.7(@babel/core@7.29.7)
+      "@babel/core": 7.29.7(supports-color@10.2.2)
+      "@babel/helper-create-regexp-features-plugin": 7.29.7(@babel/core@7.29.7(supports-color@10.2.2))
       "@babel/helper-plugin-utils": 7.29.7
 
-  "@babel/plugin-transform-unicode-sets-regex@7.29.7(@babel/core@7.29.7)":
+  "@babel/plugin-transform-unicode-sets-regex@7.29.7(@babel/core@7.29.7(supports-color@10.2.2))":
     dependencies:
-      "@babel/core": 7.29.7
-      "@babel/helper-create-regexp-features-plugin": 7.29.7(@babel/core@7.29.7)
+      "@babel/core": 7.29.7(supports-color@10.2.2)
+      "@babel/helper-create-regexp-features-plugin": 7.29.7(@babel/core@7.29.7(supports-color@10.2.2))
       "@babel/helper-plugin-utils": 7.29.7
 
-  "@babel/preset-env@7.29.7(@babel/core@7.29.7)":
+  "@babel/preset-env@7.29.7(@babel/core@7.29.7(supports-color@10.2.2))(supports-color@10.2.2)":
     dependencies:
       "@babel/compat-data": 7.29.7
-      "@babel/core": 7.29.7
+      "@babel/core": 7.29.7(supports-color@10.2.2)
       "@babel/helper-compilation-targets": 7.29.7
       "@babel/helper-plugin-utils": 7.29.7
       "@babel/helper-validator-option": 7.29.7
-      "@babel/plugin-bugfix-firefox-class-in-computed-class-key": 7.29.7(@babel/core@7.29.7)
-      "@babel/plugin-bugfix-safari-class-field-initializer-scope": 7.29.7(@babel/core@7.29.7)
-      "@babel/plugin-bugfix-safari-id-destructuring-collision-in-function-expression": 7.29.7(@babel/core@7.29.7)
-      "@babel/plugin-bugfix-safari-rest-destructuring-rhs-array": 7.29.7(@babel/core@7.29.7)
-      "@babel/plugin-bugfix-v8-spread-parameters-in-optional-chaining": 7.29.7(@babel/core@7.29.7)
-      "@babel/plugin-bugfix-v8-static-class-fields-redefine-readonly": 7.29.7(@babel/core@7.29.7)
-      "@babel/plugin-proposal-private-property-in-object": 7.21.0-placeholder-for-preset-env.2(@babel/core@7.29.7)
-      "@babel/plugin-syntax-import-assertions": 7.29.7(@babel/core@7.29.7)
+      "@babel/plugin-bugfix-firefox-class-in-computed-class-key": 7.29.7(@babel/core@7.29.7(supports-color@10.2.2))
+      "@babel/plugin-bugfix-safari-class-field-initializer-scope": 7.29.7(@babel/core@7.29.7(supports-color@10.2.2))
+      "@babel/plugin-bugfix-safari-id-destructuring-collision-in-function-expression": 7.29.7(@babel/core@7.29.7(supports-color@10.2.2))
+      "@babel/plugin-bugfix-safari-rest-destructuring-rhs-array": 7.29.7(@babel/core@7.29.7(supports-color@10.2.2))
+      "@babel/plugin-bugfix-v8-spread-parameters-in-optional-chaining": 7.29.7(@babel/core@7.29.7(supports-color@10.2.2))
+      "@babel/plugin-bugfix-v8-static-class-fields-redefine-readonly": 7.29.7(@babel/core@7.29.7(supports-color@10.2.2))
+      "@babel/plugin-proposal-private-property-in-object": 7.21.0-placeholder-for-preset-env.2(@babel/core@7.29.7(supports-color@10.2.2))
+      "@babel/plugin-syntax-import-assertions": 7.29.7(@babel/core@7.29.7(supports-color@10.2.2))
       "@babel/plugin-syntax-import-attributes": 7.29.7(@babel/core@7.29.7)
-      "@babel/plugin-syntax-unicode-sets-regex": 7.18.6(@babel/core@7.29.7)
-      "@babel/plugin-transform-arrow-functions": 7.29.7(@babel/core@7.29.7)
-      "@babel/plugin-transform-async-generator-functions": 7.29.7(@babel/core@7.29.7)
-      "@babel/plugin-transform-async-to-generator": 7.29.7(@babel/core@7.29.7)
-      "@babel/plugin-transform-block-scoped-functions": 7.29.7(@babel/core@7.29.7)
-      "@babel/plugin-transform-block-scoping": 7.29.7(@babel/core@7.29.7)
-      "@babel/plugin-transform-class-properties": 7.29.7(@babel/core@7.29.7)
-      "@babel/plugin-transform-class-static-block": 7.29.7(@babel/core@7.29.7)
-      "@babel/plugin-transform-classes": 7.29.7(@babel/core@7.29.7)
-      "@babel/plugin-transform-computed-properties": 7.29.7(@babel/core@7.29.7)
-      "@babel/plugin-transform-destructuring": 7.29.7(@babel/core@7.29.7)
-      "@babel/plugin-transform-dotall-regex": 7.29.7(@babel/core@7.29.7)
-      "@babel/plugin-transform-duplicate-keys": 7.29.7(@babel/core@7.29.7)
-      "@babel/plugin-transform-duplicate-named-capturing-groups-regex": 7.29.7(@babel/core@7.29.7)
-      "@babel/plugin-transform-dynamic-import": 7.29.7(@babel/core@7.29.7)
-      "@babel/plugin-transform-explicit-resource-management": 7.29.7(@babel/core@7.29.7)
-      "@babel/plugin-transform-exponentiation-operator": 7.29.7(@babel/core@7.29.7)
-      "@babel/plugin-transform-export-namespace-from": 7.29.7(@babel/core@7.29.7)
-      "@babel/plugin-transform-for-of": 7.29.7(@babel/core@7.29.7)
-      "@babel/plugin-transform-function-name": 7.29.7(@babel/core@7.29.7)
-      "@babel/plugin-transform-json-strings": 7.29.7(@babel/core@7.29.7)
-      "@babel/plugin-transform-literals": 7.29.7(@babel/core@7.29.7)
-      "@babel/plugin-transform-logical-assignment-operators": 7.29.7(@babel/core@7.29.7)
-      "@babel/plugin-transform-member-expression-literals": 7.29.7(@babel/core@7.29.7)
-      "@babel/plugin-transform-modules-amd": 7.29.7(@babel/core@7.29.7)
-      "@babel/plugin-transform-modules-commonjs": 7.29.7(@babel/core@7.29.7)
-      "@babel/plugin-transform-modules-systemjs": 7.29.7(@babel/core@7.29.7)
-      "@babel/plugin-transform-modules-umd": 7.29.7(@babel/core@7.29.7)
-      "@babel/plugin-transform-named-capturing-groups-regex": 7.29.7(@babel/core@7.29.7)
-      "@babel/plugin-transform-new-target": 7.29.7(@babel/core@7.29.7)
-      "@babel/plugin-transform-nullish-coalescing-operator": 7.29.7(@babel/core@7.29.7)
-      "@babel/plugin-transform-numeric-separator": 7.29.7(@babel/core@7.29.7)
-      "@babel/plugin-transform-object-rest-spread": 7.29.7(@babel/core@7.29.7)
-      "@babel/plugin-transform-object-super": 7.29.7(@babel/core@7.29.7)
-      "@babel/plugin-transform-optional-catch-binding": 7.29.7(@babel/core@7.29.7)
-      "@babel/plugin-transform-optional-chaining": 7.29.7(@babel/core@7.29.7)
-      "@babel/plugin-transform-parameters": 7.29.7(@babel/core@7.29.7)
-      "@babel/plugin-transform-private-methods": 7.29.7(@babel/core@7.29.7)
-      "@babel/plugin-transform-private-property-in-object": 7.29.7(@babel/core@7.29.7)
-      "@babel/plugin-transform-property-literals": 7.29.7(@babel/core@7.29.7)
-      "@babel/plugin-transform-regenerator": 7.29.7(@babel/core@7.29.7)
-      "@babel/plugin-transform-regexp-modifiers": 7.29.7(@babel/core@7.29.7)
-      "@babel/plugin-transform-reserved-words": 7.29.7(@babel/core@7.29.7)
-      "@babel/plugin-transform-shorthand-properties": 7.29.7(@babel/core@7.29.7)
-      "@babel/plugin-transform-spread": 7.29.7(@babel/core@7.29.7)
-      "@babel/plugin-transform-sticky-regex": 7.29.7(@babel/core@7.29.7)
-      "@babel/plugin-transform-template-literals": 7.29.7(@babel/core@7.29.7)
-      "@babel/plugin-transform-typeof-symbol": 7.29.7(@babel/core@7.29.7)
-      "@babel/plugin-transform-unicode-escapes": 7.29.7(@babel/core@7.29.7)
-      "@babel/plugin-transform-unicode-property-regex": 7.29.7(@babel/core@7.29.7)
-      "@babel/plugin-transform-unicode-regex": 7.29.7(@babel/core@7.29.7)
-      "@babel/plugin-transform-unicode-sets-regex": 7.29.7(@babel/core@7.29.7)
-      "@babel/preset-modules": 0.1.6-no-external-plugins(@babel/core@7.29.7)
-      babel-plugin-polyfill-corejs2: 0.4.17(@babel/core@7.29.7)
-      babel-plugin-polyfill-corejs3: 0.14.2(@babel/core@7.29.7)
-      babel-plugin-polyfill-regenerator: 0.6.8(@babel/core@7.29.7)
+      "@babel/plugin-syntax-unicode-sets-regex": 7.18.6(@babel/core@7.29.7(supports-color@10.2.2))
+      "@babel/plugin-transform-arrow-functions": 7.29.7(@babel/core@7.29.7(supports-color@10.2.2))
+      "@babel/plugin-transform-async-generator-functions": 7.29.7(@babel/core@7.29.7(supports-color@10.2.2))
+      "@babel/plugin-transform-async-to-generator": 7.29.7(@babel/core@7.29.7(supports-color@10.2.2))
+      "@babel/plugin-transform-block-scoped-functions": 7.29.7(@babel/core@7.29.7(supports-color@10.2.2))
+      "@babel/plugin-transform-block-scoping": 7.29.7(@babel/core@7.29.7(supports-color@10.2.2))
+      "@babel/plugin-transform-class-properties": 7.29.7(@babel/core@7.29.7(supports-color@10.2.2))
+      "@babel/plugin-transform-class-static-block": 7.29.7(@babel/core@7.29.7(supports-color@10.2.2))
+      "@babel/plugin-transform-classes": 7.29.7(@babel/core@7.29.7(supports-color@10.2.2))
+      "@babel/plugin-transform-computed-properties": 7.29.7(@babel/core@7.29.7(supports-color@10.2.2))
+      "@babel/plugin-transform-destructuring": 7.29.7(@babel/core@7.29.7(supports-color@10.2.2))
+      "@babel/plugin-transform-dotall-regex": 7.29.7(@babel/core@7.29.7(supports-color@10.2.2))
+      "@babel/plugin-transform-duplicate-keys": 7.29.7(@babel/core@7.29.7(supports-color@10.2.2))
+      "@babel/plugin-transform-duplicate-named-capturing-groups-regex": 7.29.7(@babel/core@7.29.7(supports-color@10.2.2))
+      "@babel/plugin-transform-dynamic-import": 7.29.7(@babel/core@7.29.7(supports-color@10.2.2))
+      "@babel/plugin-transform-explicit-resource-management": 7.29.7(@babel/core@7.29.7(supports-color@10.2.2))
+      "@babel/plugin-transform-exponentiation-operator": 7.29.7(@babel/core@7.29.7(supports-color@10.2.2))
+      "@babel/plugin-transform-export-namespace-from": 7.29.7(@babel/core@7.29.7(supports-color@10.2.2))
+      "@babel/plugin-transform-for-of": 7.29.7(@babel/core@7.29.7(supports-color@10.2.2))
+      "@babel/plugin-transform-function-name": 7.29.7(@babel/core@7.29.7(supports-color@10.2.2))
+      "@babel/plugin-transform-json-strings": 7.29.7(@babel/core@7.29.7(supports-color@10.2.2))
+      "@babel/plugin-transform-literals": 7.29.7(@babel/core@7.29.7(supports-color@10.2.2))
+      "@babel/plugin-transform-logical-assignment-operators": 7.29.7(@babel/core@7.29.7(supports-color@10.2.2))
+      "@babel/plugin-transform-member-expression-literals": 7.29.7(@babel/core@7.29.7(supports-color@10.2.2))
+      "@babel/plugin-transform-modules-amd": 7.29.7(@babel/core@7.29.7(supports-color@10.2.2))
+      "@babel/plugin-transform-modules-commonjs": 7.29.7(@babel/core@7.29.7(supports-color@10.2.2))
+      "@babel/plugin-transform-modules-systemjs": 7.29.7(@babel/core@7.29.7(supports-color@10.2.2))
+      "@babel/plugin-transform-modules-umd": 7.29.7(@babel/core@7.29.7(supports-color@10.2.2))
+      "@babel/plugin-transform-named-capturing-groups-regex": 7.29.7(@babel/core@7.29.7(supports-color@10.2.2))
+      "@babel/plugin-transform-new-target": 7.29.7(@babel/core@7.29.7(supports-color@10.2.2))
+      "@babel/plugin-transform-nullish-coalescing-operator": 7.29.7(@babel/core@7.29.7(supports-color@10.2.2))
+      "@babel/plugin-transform-numeric-separator": 7.29.7(@babel/core@7.29.7(supports-color@10.2.2))
+      "@babel/plugin-transform-object-rest-spread": 7.29.7(@babel/core@7.29.7(supports-color@10.2.2))
+      "@babel/plugin-transform-object-super": 7.29.7(@babel/core@7.29.7(supports-color@10.2.2))
+      "@babel/plugin-transform-optional-catch-binding": 7.29.7(@babel/core@7.29.7(supports-color@10.2.2))
+      "@babel/plugin-transform-optional-chaining": 7.29.7(@babel/core@7.29.7(supports-color@10.2.2))
+      "@babel/plugin-transform-parameters": 7.29.7(@babel/core@7.29.7(supports-color@10.2.2))
+      "@babel/plugin-transform-private-methods": 7.29.7(@babel/core@7.29.7(supports-color@10.2.2))
+      "@babel/plugin-transform-private-property-in-object": 7.29.7(@babel/core@7.29.7(supports-color@10.2.2))
+      "@babel/plugin-transform-property-literals": 7.29.7(@babel/core@7.29.7(supports-color@10.2.2))
+      "@babel/plugin-transform-regenerator": 7.29.7(@babel/core@7.29.7(supports-color@10.2.2))
+      "@babel/plugin-transform-regexp-modifiers": 7.29.7(@babel/core@7.29.7(supports-color@10.2.2))
+      "@babel/plugin-transform-reserved-words": 7.29.7(@babel/core@7.29.7(supports-color@10.2.2))
+      "@babel/plugin-transform-shorthand-properties": 7.29.7(@babel/core@7.29.7(supports-color@10.2.2))
+      "@babel/plugin-transform-spread": 7.29.7(@babel/core@7.29.7(supports-color@10.2.2))
+      "@babel/plugin-transform-sticky-regex": 7.29.7(@babel/core@7.29.7(supports-color@10.2.2))
+      "@babel/plugin-transform-template-literals": 7.29.7(@babel/core@7.29.7(supports-color@10.2.2))
+      "@babel/plugin-transform-typeof-symbol": 7.29.7(@babel/core@7.29.7(supports-color@10.2.2))
+      "@babel/plugin-transform-unicode-escapes": 7.29.7(@babel/core@7.29.7(supports-color@10.2.2))
+      "@babel/plugin-transform-unicode-property-regex": 7.29.7(@babel/core@7.29.7(supports-color@10.2.2))
+      "@babel/plugin-transform-unicode-regex": 7.29.7(@babel/core@7.29.7(supports-color@10.2.2))
+      "@babel/plugin-transform-unicode-sets-regex": 7.29.7(@babel/core@7.29.7(supports-color@10.2.2))
+      "@babel/preset-modules": 0.1.6-no-external-plugins(@babel/core@7.29.7(supports-color@10.2.2))
+      babel-plugin-polyfill-corejs2: 0.4.17(@babel/core@7.29.7(supports-color@10.2.2))(supports-color@10.2.2)
+      babel-plugin-polyfill-corejs3: 0.14.2(@babel/core@7.29.7(supports-color@10.2.2))
+      babel-plugin-polyfill-regenerator: 0.6.8(@babel/core@7.29.7(supports-color@10.2.2))
       core-js-compat: 3.49.0
       semver: 6.3.1
     transitivePeerDependencies:
       - supports-color
 
-  "@babel/preset-modules@0.1.6-no-external-plugins(@babel/core@7.29.7)":
+  "@babel/preset-modules@0.1.6-no-external-plugins(@babel/core@7.29.7(supports-color@10.2.2))":
     dependencies:
-      "@babel/core": 7.29.7
+      "@babel/core": 7.29.7(supports-color@10.2.2)
       "@babel/helper-plugin-utils": 7.29.7
       "@babel/types": 7.29.7
       esutils: 2.0.3
 
-  "@babel/preset-typescript@7.29.7(@babel/core@7.29.7)":
+  "@babel/preset-typescript@7.29.7(@babel/core@7.29.7(supports-color@10.2.2))":
     dependencies:
-      "@babel/core": 7.29.7
+      "@babel/core": 7.29.7(supports-color@10.2.2)
       "@babel/helper-plugin-utils": 7.29.7
       "@babel/helper-validator-option": 7.29.7
       "@babel/plugin-syntax-jsx": 7.29.7(@babel/core@7.29.7)
-      "@babel/plugin-transform-modules-commonjs": 7.29.7(@babel/core@7.29.7)
-      "@babel/plugin-transform-typescript": 7.29.7(@babel/core@7.29.7)
+      "@babel/plugin-transform-modules-commonjs": 7.29.7(@babel/core@7.29.7(supports-color@10.2.2))
+      "@babel/plugin-transform-typescript": 7.29.7(@babel/core@7.29.7(supports-color@10.2.2))
     transitivePeerDependencies:
       - supports-color
 
@@ -21016,7 +21016,7 @@ snapshots:
       "@babel/parser": 7.29.7
       "@babel/types": 7.29.7
 
-  "@babel/traverse@7.29.7":
+  "@babel/traverse@7.29.7(supports-color@10.2.2)":
     dependencies:
       "@babel/code-frame": 7.29.7
       "@babel/generator": 7.29.7
@@ -21024,7 +21024,7 @@ snapshots:
       "@babel/parser": 7.29.7
       "@babel/template": 7.29.7
       "@babel/types": 7.29.7
-      debug: 4.4.3
+      debug: 4.4.3(supports-color@10.2.2)
     transitivePeerDependencies:
       - supports-color
 
@@ -21490,6 +21490,11 @@ snapshots:
   "@esbuild/win32-x64@0.28.1":
     optional: true
 
+  "@eslint-community/eslint-utils@4.9.1(eslint@10.7.0(jiti@2.7.0)(supports-color@10.2.2))":
+    dependencies:
+      eslint: 10.7.0(jiti@2.7.0)(supports-color@10.2.2)
+      eslint-visitor-keys: 3.4.3
+
   "@eslint-community/eslint-utils@4.9.1(eslint@10.7.0(jiti@2.7.0))":
     dependencies:
       eslint: 10.7.0(jiti@2.7.0)
@@ -21497,10 +21502,10 @@ snapshots:
 
   "@eslint-community/regexpp@4.12.2": {}
 
-  "@eslint/config-array@0.23.5":
+  "@eslint/config-array@0.23.5(supports-color@10.2.2)":
     dependencies:
       "@eslint/object-schema": 3.0.5
-      debug: 4.4.3
+      debug: 4.4.3(supports-color@10.2.2)
       minimatch: 10.2.5
     transitivePeerDependencies:
       - supports-color
@@ -21524,10 +21529,10 @@ snapshots:
       "@eslint/css-tree": 4.0.4
       "@eslint/plugin-kit": 0.7.2
 
-  "@eslint/eslintrc@3.3.5":
+  "@eslint/eslintrc@3.3.5(supports-color@10.2.2)":
     dependencies:
       ajv: 6.15.0
-      debug: 4.4.3
+      debug: 4.4.3(supports-color@10.2.2)
       espree: 10.4.0
       globals: 14.0.0
       ignore: 5.3.2
@@ -21537,6 +21542,10 @@ snapshots:
       strip-json-comments: 3.1.1
     transitivePeerDependencies:
       - supports-color
+
+  "@eslint/js@10.0.1(eslint@10.7.0(jiti@2.7.0)(supports-color@10.2.2))":
+    optionalDependencies:
+      eslint: 10.7.0(jiti@2.7.0)(supports-color@10.2.2)
 
   "@eslint/js@10.0.1(eslint@10.7.0(jiti@2.7.0))":
     optionalDependencies:
@@ -21898,9 +21907,9 @@ snapshots:
 
   "@fontsource-variable/geist@5.3.0": {}
 
-  "@genkit-ai/ai@1.40.1(@google-cloud/firestore@7.11.6)(firebase-admin@14.2.0)(firebase@12.16.0)(genkit@1.40.1(@google-cloud/firestore@7.11.6)(firebase-admin@14.2.0)(firebase@12.16.0))":
+  "@genkit-ai/ai@1.40.1(@google-cloud/firestore@7.11.6)(firebase-admin@14.2.0(supports-color@10.2.2))(firebase@12.16.0)(genkit@1.40.1(@google-cloud/firestore@7.11.6)(firebase-admin@14.2.0(supports-color@10.2.2))(firebase@12.16.0))":
     dependencies:
-      "@genkit-ai/core": 1.40.1(@google-cloud/firestore@7.11.6)(firebase-admin@14.2.0)(firebase@12.16.0)(genkit@1.40.1(@google-cloud/firestore@7.11.6)(firebase-admin@14.2.0)(firebase@12.16.0))
+      "@genkit-ai/core": 1.40.1(@google-cloud/firestore@7.11.6)(firebase-admin@14.2.0(supports-color@10.2.2))(firebase@12.16.0)(genkit@1.40.1(@google-cloud/firestore@7.11.6)(firebase-admin@14.2.0(supports-color@10.2.2))(firebase@12.16.0))
       "@opentelemetry/api": 1.9.1
       "@types/node": 20.19.43
       colorette: 2.0.20
@@ -21921,23 +21930,23 @@ snapshots:
       - supports-color
       - utf-8-validate
 
-  "@genkit-ai/anthropic@0.3.0(genkit@1.40.1(@google-cloud/firestore@7.11.6)(firebase-admin@14.2.0)(firebase@12.16.0))(zod@4.4.3)":
+  "@genkit-ai/anthropic@0.3.0(genkit@1.40.1(@google-cloud/firestore@7.11.6)(firebase-admin@14.2.0(supports-color@10.2.2))(firebase@12.16.0))(zod@4.4.3)":
     dependencies:
       "@anthropic-ai/sdk": 0.97.1(zod@4.4.3)
-      genkit: 1.40.1(@google-cloud/firestore@7.11.6)(firebase-admin@14.2.0)(firebase@12.16.0)
+      genkit: 1.40.1(@google-cloud/firestore@7.11.6)(firebase-admin@14.2.0(supports-color@10.2.2))(firebase@12.16.0)
     transitivePeerDependencies:
       - zod
 
-  "@genkit-ai/compat-oai@1.40.1(genkit@1.40.1(@google-cloud/firestore@7.11.6)(firebase-admin@14.2.0)(firebase@12.16.0))(ws@8.21.1)(zod@3.25.76)":
+  "@genkit-ai/compat-oai@1.40.1(genkit@1.40.1(@google-cloud/firestore@7.11.6)(firebase-admin@14.2.0(supports-color@10.2.2))(firebase@12.16.0))(ws@8.21.1)(zod@4.4.3)":
     dependencies:
-      genkit: 1.40.1(@google-cloud/firestore@7.11.6)(firebase-admin@14.2.0)(firebase@12.16.0)
-      openai: 4.104.0(ws@8.21.1)(zod@3.25.76)
+      genkit: 1.40.1(@google-cloud/firestore@7.11.6)(firebase-admin@14.2.0(supports-color@10.2.2))(firebase@12.16.0)
+      openai: 4.104.0(ws@8.21.1)(zod@4.4.3)
     transitivePeerDependencies:
       - encoding
       - ws
       - zod
 
-  "@genkit-ai/core@1.40.1(@google-cloud/firestore@7.11.6)(firebase-admin@14.2.0)(firebase@12.16.0)(genkit@1.40.1(@google-cloud/firestore@7.11.6)(firebase-admin@14.2.0)(firebase@12.16.0))":
+  "@genkit-ai/core@1.40.1(@google-cloud/firestore@7.11.6)(firebase-admin@14.2.0(supports-color@10.2.2))(firebase@12.16.0)(genkit@1.40.1(@google-cloud/firestore@7.11.6)(firebase-admin@14.2.0(supports-color@10.2.2))(firebase@12.16.0))":
     dependencies:
       "@opentelemetry/api": 1.9.1
       "@opentelemetry/api-logs": 0.52.1
@@ -21953,7 +21962,7 @@ snapshots:
       async-mutex: 0.5.0
       cors: 2.8.6
       dotprompt: 1.1.2
-      express: 4.22.2
+      express: 4.22.2(supports-color@10.2.2)
       get-port: 5.1.1
       json-schema: 0.4.0
       ws: 8.21.1
@@ -21961,7 +21970,7 @@ snapshots:
       zod-to-json-schema: 3.25.2(zod@3.25.76)
     optionalDependencies:
       "@cfworker/json-schema": 4.1.1
-      "@genkit-ai/firebase": 1.40.0(@google-cloud/firestore@7.11.6)(firebase-admin@14.2.0)(firebase@12.16.0)(genkit@1.40.1(@google-cloud/firestore@7.11.6)(firebase-admin@14.2.0)(firebase@12.16.0))
+      "@genkit-ai/firebase": 1.40.0(@google-cloud/firestore@7.11.6)(firebase-admin@14.2.0(supports-color@10.2.2))(firebase@12.16.0)(genkit@1.40.1(@google-cloud/firestore@7.11.6)(firebase-admin@14.2.0(supports-color@10.2.2))(firebase@12.16.0))
     transitivePeerDependencies:
       - "@google-cloud/firestore"
       - bufferutil
@@ -21972,12 +21981,12 @@ snapshots:
       - supports-color
       - utf-8-validate
 
-  "@genkit-ai/firebase@1.40.0(@google-cloud/firestore@7.11.6)(firebase-admin@14.2.0)(firebase@12.16.0)(genkit@1.40.1(@google-cloud/firestore@7.11.6)(firebase-admin@14.2.0)(firebase@12.16.0))":
+  "@genkit-ai/firebase@1.40.0(@google-cloud/firestore@7.11.6)(firebase-admin@14.2.0(supports-color@10.2.2))(firebase@12.16.0)(genkit@1.40.1(@google-cloud/firestore@7.11.6)(firebase-admin@14.2.0(supports-color@10.2.2))(firebase@12.16.0))":
     dependencies:
-      "@genkit-ai/google-cloud": 1.40.0(genkit@1.40.1(@google-cloud/firestore@7.11.6)(firebase-admin@14.2.0)(firebase@12.16.0))
+      "@genkit-ai/google-cloud": 1.40.0(genkit@1.40.1(@google-cloud/firestore@7.11.6)(firebase-admin@14.2.0(supports-color@10.2.2))(firebase@12.16.0))
       "@google-cloud/firestore": 7.11.6
-      firebase-admin: 14.2.0
-      genkit: 1.40.1(@google-cloud/firestore@7.11.6)(firebase-admin@14.2.0)(firebase@12.16.0)
+      firebase-admin: 14.2.0(supports-color@10.2.2)
+      genkit: 1.40.1(@google-cloud/firestore@7.11.6)(firebase-admin@14.2.0(supports-color@10.2.2))(firebase@12.16.0)
     optionalDependencies:
       firebase: 12.16.0
     transitivePeerDependencies:
@@ -21985,19 +21994,19 @@ snapshots:
       - supports-color
     optional: true
 
-  "@genkit-ai/firebase@1.40.1(@google-cloud/firestore@7.11.6)(firebase-admin@14.2.0)(firebase@12.16.0)(genkit@1.40.1(@google-cloud/firestore@7.11.6)(firebase-admin@14.2.0)(firebase@12.16.0))":
+  "@genkit-ai/firebase@1.40.1(@google-cloud/firestore@7.11.6)(firebase-admin@14.2.0(supports-color@10.2.2))(firebase@12.16.0)(genkit@1.40.1(@google-cloud/firestore@7.11.6)(firebase-admin@14.2.0(supports-color@10.2.2))(firebase@12.16.0))":
     dependencies:
-      "@genkit-ai/google-cloud": 1.40.1(genkit@1.40.1(@google-cloud/firestore@7.11.6)(firebase-admin@14.2.0)(firebase@12.16.0))
+      "@genkit-ai/google-cloud": 1.40.1(genkit@1.40.1(@google-cloud/firestore@7.11.6)(firebase-admin@14.2.0(supports-color@10.2.2))(firebase@12.16.0))
       "@google-cloud/firestore": 7.11.6
-      firebase-admin: 14.2.0
-      genkit: 1.40.1(@google-cloud/firestore@7.11.6)(firebase-admin@14.2.0)(firebase@12.16.0)
+      firebase-admin: 14.2.0(supports-color@10.2.2)
+      genkit: 1.40.1(@google-cloud/firestore@7.11.6)(firebase-admin@14.2.0(supports-color@10.2.2))(firebase@12.16.0)
     optionalDependencies:
       firebase: 12.16.0
     transitivePeerDependencies:
       - encoding
       - supports-color
 
-  "@genkit-ai/google-cloud@1.40.0(genkit@1.40.1(@google-cloud/firestore@7.11.6)(firebase-admin@14.2.0)(firebase@12.16.0))":
+  "@genkit-ai/google-cloud@1.40.0(genkit@1.40.1(@google-cloud/firestore@7.11.6)(firebase-admin@14.2.0(supports-color@10.2.2))(firebase@12.16.0))":
     dependencies:
       "@google-cloud/firestore": 7.11.6
       "@google-cloud/logging-winston": 6.0.2(winston@3.19.0)
@@ -22015,7 +22024,7 @@ snapshots:
       "@opentelemetry/sdk-metrics": 1.25.1(@opentelemetry/api@1.9.1)
       "@opentelemetry/sdk-node": 0.52.1(@opentelemetry/api@1.9.1)
       "@opentelemetry/sdk-trace-base": 1.25.1(@opentelemetry/api@1.9.1)
-      genkit: 1.40.1(@google-cloud/firestore@7.11.6)(firebase-admin@14.2.0)(firebase@12.16.0)
+      genkit: 1.40.1(@google-cloud/firestore@7.11.6)(firebase-admin@14.2.0(supports-color@10.2.2))(firebase@12.16.0)
       google-auth-library: 9.15.1
       node-fetch: 3.3.2
       winston: 3.19.0
@@ -22024,7 +22033,7 @@ snapshots:
       - supports-color
     optional: true
 
-  "@genkit-ai/google-cloud@1.40.1(genkit@1.40.1(@google-cloud/firestore@7.11.6)(firebase-admin@14.2.0)(firebase@12.16.0))":
+  "@genkit-ai/google-cloud@1.40.1(genkit@1.40.1(@google-cloud/firestore@7.11.6)(firebase-admin@14.2.0(supports-color@10.2.2))(firebase@12.16.0))":
     dependencies:
       "@google-cloud/firestore": 7.11.6
       "@google-cloud/logging-winston": 6.0.2(winston@3.19.0)
@@ -22042,7 +22051,7 @@ snapshots:
       "@opentelemetry/sdk-metrics": 1.25.1(@opentelemetry/api@1.9.1)
       "@opentelemetry/sdk-node": 0.52.1(@opentelemetry/api@1.9.1)
       "@opentelemetry/sdk-trace-base": 1.25.1(@opentelemetry/api@1.9.1)
-      genkit: 1.40.1(@google-cloud/firestore@7.11.6)(firebase-admin@14.2.0)(firebase@12.16.0)
+      genkit: 1.40.1(@google-cloud/firestore@7.11.6)(firebase-admin@14.2.0(supports-color@10.2.2))(firebase@12.16.0)
       google-auth-library: 9.15.1
       node-fetch: 3.3.2
       winston: 3.19.0
@@ -22050,9 +22059,9 @@ snapshots:
       - encoding
       - supports-color
 
-  "@genkit-ai/google-genai@1.40.1(genkit@1.40.1(@google-cloud/firestore@7.11.6)(firebase-admin@14.2.0)(firebase@12.16.0))":
+  "@genkit-ai/google-genai@1.40.1(genkit@1.40.1(@google-cloud/firestore@7.11.6)(firebase-admin@14.2.0(supports-color@10.2.2))(firebase@12.16.0))":
     dependencies:
-      genkit: 1.40.1(@google-cloud/firestore@7.11.6)(firebase-admin@14.2.0)(firebase@12.16.0)
+      genkit: 1.40.1(@google-cloud/firestore@7.11.6)(firebase-admin@14.2.0(supports-color@10.2.2))(firebase@12.16.0)
       google-auth-library: 9.15.1
       jsonpath-plus: 10.4.0
     transitivePeerDependencies:
@@ -22671,14 +22680,14 @@ snapshots:
       "@intlify/core-base": 11.4.7
       "@intlify/shared": 11.4.7
 
-  "@intlify/eslint-plugin-vue-i18n@4.5.1(eslint@10.7.0(jiti@2.7.0))(jsonc-eslint-parser@2.4.2)(vue-eslint-parser@10.4.1(eslint@10.7.0(jiti@2.7.0)))(yaml-eslint-parser@1.3.2)":
+  "@intlify/eslint-plugin-vue-i18n@4.5.1(eslint@10.7.0(jiti@2.7.0)(supports-color@10.2.2))(jsonc-eslint-parser@2.4.2)(supports-color@10.2.2)(vue-eslint-parser@10.4.1(eslint@10.7.0(jiti@2.7.0)(supports-color@10.2.2))(supports-color@10.2.2))(yaml-eslint-parser@1.3.2)":
     dependencies:
-      "@eslint/eslintrc": 3.3.5
+      "@eslint/eslintrc": 3.3.5(supports-color@10.2.2)
       "@intlify/core-base": 11.4.6
       "@intlify/message-compiler": 11.4.6
-      debug: 4.4.3
-      eslint: 10.7.0(jiti@2.7.0)
-      eslint-compat-utils: 0.6.5(eslint@10.7.0(jiti@2.7.0))
+      debug: 4.4.3(supports-color@10.2.2)
+      eslint: 10.7.0(jiti@2.7.0)(supports-color@10.2.2)
+      eslint-compat-utils: 0.6.5(eslint@10.7.0(jiti@2.7.0)(supports-color@10.2.2))
       glob: 10.5.0
       globals: 17.7.0
       ignore: 7.0.6
@@ -22690,7 +22699,7 @@ snapshots:
       parse5: 7.3.0
       semver: 7.8.5
       synckit: 0.11.13
-      vue-eslint-parser: 10.4.1(eslint@10.7.0(jiti@2.7.0))
+      vue-eslint-parser: 10.4.1(eslint@10.7.0(jiti@2.7.0)(supports-color@10.2.2))(supports-color@10.2.2)
       yaml-eslint-parser: 1.3.2
     transitivePeerDependencies:
       - supports-color
@@ -22709,16 +22718,16 @@ snapshots:
 
   "@intlify/shared@11.4.7": {}
 
-  "@intlify/unplugin-vue-i18n@11.2.4(@vue/compiler-dom@3.5.40)(eslint@10.7.0(jiti@2.7.0))(rollup@4.62.2)(typescript@6.0.3)(vite@8.1.5(@types/node@26.1.1)(esbuild@0.28.1)(jiti@2.7.0)(stylus@0.57.0)(terser@5.48.0)(yaml@2.9.0))(vue-i18n@11.4.7(vue@3.5.40(typescript@6.0.3)))(vue@3.5.40(typescript@6.0.3))":
+  "@intlify/unplugin-vue-i18n@11.2.4(@vue/compiler-dom@3.5.40)(eslint@10.7.0(jiti@2.7.0)(supports-color@10.2.2))(rollup@4.62.2)(supports-color@10.2.2)(typescript@6.0.3)(vite@8.1.5(@types/node@26.1.1)(esbuild@0.28.1)(jiti@2.7.0)(stylus@0.57.0)(terser@5.48.0)(yaml@2.9.0))(vue-i18n@11.4.7(vue@3.5.40(typescript@6.0.3)))(vue@3.5.40(typescript@6.0.3))":
     dependencies:
-      "@eslint-community/eslint-utils": 4.9.1(eslint@10.7.0(jiti@2.7.0))
+      "@eslint-community/eslint-utils": 4.9.1(eslint@10.7.0(jiti@2.7.0)(supports-color@10.2.2))
       "@intlify/bundle-utils": 11.2.4(vue-i18n@11.4.7(vue@3.5.40(typescript@6.0.3)))
       "@intlify/shared": 11.4.6
       "@intlify/vue-i18n-extensions": 8.0.0(@intlify/shared@11.4.6)(@vue/compiler-dom@3.5.40)(vue-i18n@11.4.7(vue@3.5.40(typescript@6.0.3)))(vue@3.5.40(typescript@6.0.3))
       "@rollup/pluginutils": 5.4.0(rollup@4.62.2)
       "@typescript-eslint/scope-manager": 8.64.0
-      "@typescript-eslint/typescript-estree": 8.64.0(typescript@6.0.3)
-      debug: 4.4.3
+      "@typescript-eslint/typescript-estree": 8.64.0(supports-color@10.2.2)(typescript@6.0.3)
+      debug: 4.4.3(supports-color@10.2.2)
       fast-glob: 3.3.3
       pathe: 2.0.3
       picocolors: 1.1.1
@@ -22919,7 +22928,7 @@ snapshots:
 
   "@jest/transform@30.4.1":
     dependencies:
-      "@babel/core": 7.29.7
+      "@babel/core": 7.29.7(supports-color@10.2.2)
       "@jest/types": 30.4.1
       "@jridgewell/trace-mapping": 0.3.31
       babel-plugin-istanbul: 7.0.1
@@ -23035,7 +23044,7 @@ snapshots:
       "@lezer/common": 1.5.2
       "@lezer/highlight": 1.2.3
 
-  "@lucide/vue@1.25.0(vue@3.5.40(typescript@6.0.3))":
+  "@lucide/vue@1.26.0(vue@3.5.40(typescript@6.0.3))":
     dependencies:
       vue: 3.5.40(typescript@6.0.3)
 
@@ -24041,9 +24050,9 @@ snapshots:
 
   "@rolldown/pluginutils@1.0.1": {}
 
-  "@rollup/plugin-babel@6.1.0(@babel/core@7.29.7)(@types/babel__core@7.20.5)(rollup@4.62.2)":
+  "@rollup/plugin-babel@6.1.0(@babel/core@7.29.7(supports-color@10.2.2))(@types/babel__core@7.20.5)(rollup@4.62.2)":
     dependencies:
-      "@babel/core": 7.29.7
+      "@babel/core": 7.29.7(supports-color@10.2.2)
       "@babel/helper-module-imports": 7.29.7
       "@rollup/pluginutils": 5.4.0(rollup@4.62.2)
     optionalDependencies:
@@ -25217,6 +25226,22 @@ snapshots:
     dependencies:
       "@types/yargs-parser": 21.0.3
 
+  "@typescript-eslint/eslint-plugin@8.65.0(@typescript-eslint/parser@8.65.0(eslint@10.7.0(jiti@2.7.0)(supports-color@10.2.2))(supports-color@10.2.2)(typescript@6.0.3))(eslint@10.7.0(jiti@2.7.0)(supports-color@10.2.2))(supports-color@10.2.2)(typescript@6.0.3)":
+    dependencies:
+      "@eslint-community/regexpp": 4.12.2
+      "@typescript-eslint/parser": 8.65.0(eslint@10.7.0(jiti@2.7.0)(supports-color@10.2.2))(supports-color@10.2.2)(typescript@6.0.3)
+      "@typescript-eslint/scope-manager": 8.65.0
+      "@typescript-eslint/type-utils": 8.65.0(eslint@10.7.0(jiti@2.7.0)(supports-color@10.2.2))(supports-color@10.2.2)(typescript@6.0.3)
+      "@typescript-eslint/utils": 8.65.0(eslint@10.7.0(jiti@2.7.0)(supports-color@10.2.2))(typescript@6.0.3)
+      "@typescript-eslint/visitor-keys": 8.65.0
+      eslint: 10.7.0(jiti@2.7.0)(supports-color@10.2.2)
+      ignore: 7.0.6
+      natural-compare: 1.4.0
+      ts-api-utils: 2.5.0(typescript@6.0.3)
+      typescript: 6.0.3
+    transitivePeerDependencies:
+      - supports-color
+
   "@typescript-eslint/eslint-plugin@8.65.0(@typescript-eslint/parser@8.65.0(eslint@10.7.0(jiti@2.7.0))(typescript@6.0.3))(eslint@10.7.0(jiti@2.7.0))(typescript@6.0.3)":
     dependencies:
       "@eslint-community/regexpp": 4.12.2
@@ -25233,32 +25258,44 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
+  "@typescript-eslint/parser@8.65.0(eslint@10.7.0(jiti@2.7.0)(supports-color@10.2.2))(supports-color@10.2.2)(typescript@6.0.3)":
+    dependencies:
+      "@typescript-eslint/scope-manager": 8.65.0
+      "@typescript-eslint/types": 8.65.0
+      "@typescript-eslint/typescript-estree": 8.65.0(supports-color@10.2.2)(typescript@6.0.3)
+      "@typescript-eslint/visitor-keys": 8.65.0
+      debug: 4.4.3(supports-color@10.2.2)
+      eslint: 10.7.0(jiti@2.7.0)(supports-color@10.2.2)
+      typescript: 6.0.3
+    transitivePeerDependencies:
+      - supports-color
+
   "@typescript-eslint/parser@8.65.0(eslint@10.7.0(jiti@2.7.0))(typescript@6.0.3)":
     dependencies:
       "@typescript-eslint/scope-manager": 8.65.0
       "@typescript-eslint/types": 8.65.0
-      "@typescript-eslint/typescript-estree": 8.65.0(typescript@6.0.3)
+      "@typescript-eslint/typescript-estree": 8.65.0(supports-color@10.2.2)(typescript@6.0.3)
       "@typescript-eslint/visitor-keys": 8.65.0
-      debug: 4.4.3
+      debug: 4.4.3(supports-color@10.2.2)
       eslint: 10.7.0(jiti@2.7.0)
       typescript: 6.0.3
     transitivePeerDependencies:
       - supports-color
 
-  "@typescript-eslint/project-service@8.64.0(typescript@6.0.3)":
+  "@typescript-eslint/project-service@8.64.0(supports-color@10.2.2)(typescript@6.0.3)":
     dependencies:
       "@typescript-eslint/tsconfig-utils": 8.64.0(typescript@6.0.3)
       "@typescript-eslint/types": 8.64.0
-      debug: 4.4.3
+      debug: 4.4.3(supports-color@10.2.2)
       typescript: 6.0.3
     transitivePeerDependencies:
       - supports-color
 
-  "@typescript-eslint/project-service@8.65.0(typescript@6.0.3)":
+  "@typescript-eslint/project-service@8.65.0(supports-color@10.2.2)(typescript@6.0.3)":
     dependencies:
       "@typescript-eslint/tsconfig-utils": 8.65.0(typescript@6.0.3)
       "@typescript-eslint/types": 8.65.0
-      debug: 4.4.3
+      debug: 4.4.3(supports-color@10.2.2)
       typescript: 6.0.3
     transitivePeerDependencies:
       - supports-color
@@ -25281,12 +25318,24 @@ snapshots:
     dependencies:
       typescript: 6.0.3
 
+  "@typescript-eslint/type-utils@8.65.0(eslint@10.7.0(jiti@2.7.0)(supports-color@10.2.2))(supports-color@10.2.2)(typescript@6.0.3)":
+    dependencies:
+      "@typescript-eslint/types": 8.65.0
+      "@typescript-eslint/typescript-estree": 8.65.0(supports-color@10.2.2)(typescript@6.0.3)
+      "@typescript-eslint/utils": 8.65.0(eslint@10.7.0(jiti@2.7.0)(supports-color@10.2.2))(typescript@6.0.3)
+      debug: 4.4.3(supports-color@10.2.2)
+      eslint: 10.7.0(jiti@2.7.0)(supports-color@10.2.2)
+      ts-api-utils: 2.5.0(typescript@6.0.3)
+      typescript: 6.0.3
+    transitivePeerDependencies:
+      - supports-color
+
   "@typescript-eslint/type-utils@8.65.0(eslint@10.7.0(jiti@2.7.0))(typescript@6.0.3)":
     dependencies:
       "@typescript-eslint/types": 8.65.0
-      "@typescript-eslint/typescript-estree": 8.65.0(typescript@6.0.3)
+      "@typescript-eslint/typescript-estree": 8.65.0(supports-color@10.2.2)(typescript@6.0.3)
       "@typescript-eslint/utils": 8.65.0(eslint@10.7.0(jiti@2.7.0))(typescript@6.0.3)
-      debug: 4.4.3
+      debug: 4.4.3(supports-color@10.2.2)
       eslint: 10.7.0(jiti@2.7.0)
       ts-api-utils: 2.5.0(typescript@6.0.3)
       typescript: 6.0.3
@@ -25297,13 +25346,13 @@ snapshots:
 
   "@typescript-eslint/types@8.65.0": {}
 
-  "@typescript-eslint/typescript-estree@8.64.0(typescript@6.0.3)":
+  "@typescript-eslint/typescript-estree@8.64.0(supports-color@10.2.2)(typescript@6.0.3)":
     dependencies:
-      "@typescript-eslint/project-service": 8.64.0(typescript@6.0.3)
+      "@typescript-eslint/project-service": 8.64.0(supports-color@10.2.2)(typescript@6.0.3)
       "@typescript-eslint/tsconfig-utils": 8.64.0(typescript@6.0.3)
       "@typescript-eslint/types": 8.64.0
       "@typescript-eslint/visitor-keys": 8.64.0
-      debug: 4.4.3
+      debug: 4.4.3(supports-color@10.2.2)
       minimatch: 10.2.5
       semver: 7.8.5
       tinyglobby: 0.2.17
@@ -25312,17 +25361,28 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  "@typescript-eslint/typescript-estree@8.65.0(typescript@6.0.3)":
+  "@typescript-eslint/typescript-estree@8.65.0(supports-color@10.2.2)(typescript@6.0.3)":
     dependencies:
-      "@typescript-eslint/project-service": 8.65.0(typescript@6.0.3)
+      "@typescript-eslint/project-service": 8.65.0(supports-color@10.2.2)(typescript@6.0.3)
       "@typescript-eslint/tsconfig-utils": 8.65.0(typescript@6.0.3)
       "@typescript-eslint/types": 8.65.0
       "@typescript-eslint/visitor-keys": 8.65.0
-      debug: 4.4.3
+      debug: 4.4.3(supports-color@10.2.2)
       minimatch: 10.2.5
       semver: 7.8.5
       tinyglobby: 0.2.17
       ts-api-utils: 2.5.0(typescript@6.0.3)
+      typescript: 6.0.3
+    transitivePeerDependencies:
+      - supports-color
+
+  "@typescript-eslint/utils@8.65.0(eslint@10.7.0(jiti@2.7.0)(supports-color@10.2.2))(typescript@6.0.3)":
+    dependencies:
+      "@eslint-community/eslint-utils": 4.9.1(eslint@10.7.0(jiti@2.7.0)(supports-color@10.2.2))
+      "@typescript-eslint/scope-manager": 8.65.0
+      "@typescript-eslint/types": 8.65.0
+      "@typescript-eslint/typescript-estree": 8.65.0(supports-color@10.2.2)(typescript@6.0.3)
+      eslint: 10.7.0(jiti@2.7.0)(supports-color@10.2.2)
       typescript: 6.0.3
     transitivePeerDependencies:
       - supports-color
@@ -25332,7 +25392,7 @@ snapshots:
       "@eslint-community/eslint-utils": 4.9.1(eslint@10.7.0(jiti@2.7.0))
       "@typescript-eslint/scope-manager": 8.65.0
       "@typescript-eslint/types": 8.65.0
-      "@typescript-eslint/typescript-estree": 8.65.0(typescript@6.0.3)
+      "@typescript-eslint/typescript-estree": 8.65.0(supports-color@10.2.2)(typescript@6.0.3)
       eslint: 10.7.0(jiti@2.7.0)
       typescript: 6.0.3
     transitivePeerDependencies:
@@ -25487,8 +25547,8 @@ snapshots:
 
   "@unovue/detypes@0.8.5":
     dependencies:
-      "@babel/core": 7.29.7
-      "@babel/preset-typescript": 7.29.7(@babel/core@7.29.7)
+      "@babel/core": 7.29.7(supports-color@10.2.2)
+      "@babel/preset-typescript": 7.29.7(@babel/core@7.29.7(supports-color@10.2.2))
       "@vue/compiler-dom": 3.5.40
       "@vue/compiler-sfc": 3.5.40
       "@vuedx/template-ast-types": 0.7.1
@@ -25912,7 +25972,7 @@ snapshots:
 
   agent-base@6.0.2:
     dependencies:
-      debug: 4.4.3
+      debug: 4.4.3(supports-color@10.2.2)
     transitivePeerDependencies:
       - supports-color
 
@@ -26100,7 +26160,7 @@ snapshots:
 
   babel-jest@30.4.1(@babel/core@7.29.7):
     dependencies:
-      "@babel/core": 7.29.7
+      "@babel/core": 7.29.7(supports-color@10.2.2)
       "@jest/transform": 30.4.1
       "@types/babel__core": 7.20.5
       babel-plugin-istanbul: 7.0.1
@@ -26131,33 +26191,33 @@ snapshots:
       cosmiconfig: 7.1.0
       resolve: 1.22.12
 
-  babel-plugin-polyfill-corejs2@0.4.17(@babel/core@7.29.7):
+  babel-plugin-polyfill-corejs2@0.4.17(@babel/core@7.29.7(supports-color@10.2.2))(supports-color@10.2.2):
     dependencies:
       "@babel/compat-data": 7.29.7
-      "@babel/core": 7.29.7
-      "@babel/helper-define-polyfill-provider": 0.6.8(@babel/core@7.29.7)
+      "@babel/core": 7.29.7(supports-color@10.2.2)
+      "@babel/helper-define-polyfill-provider": 0.6.8(@babel/core@7.29.7(supports-color@10.2.2))(supports-color@10.2.2)
       semver: 6.3.1
     transitivePeerDependencies:
       - supports-color
 
-  babel-plugin-polyfill-corejs3@0.14.2(@babel/core@7.29.7):
+  babel-plugin-polyfill-corejs3@0.14.2(@babel/core@7.29.7(supports-color@10.2.2)):
     dependencies:
-      "@babel/core": 7.29.7
-      "@babel/helper-define-polyfill-provider": 0.6.8(@babel/core@7.29.7)
+      "@babel/core": 7.29.7(supports-color@10.2.2)
+      "@babel/helper-define-polyfill-provider": 0.6.8(@babel/core@7.29.7(supports-color@10.2.2))(supports-color@10.2.2)
       core-js-compat: 3.49.0
     transitivePeerDependencies:
       - supports-color
 
-  babel-plugin-polyfill-regenerator@0.6.8(@babel/core@7.29.7):
+  babel-plugin-polyfill-regenerator@0.6.8(@babel/core@7.29.7(supports-color@10.2.2)):
     dependencies:
-      "@babel/core": 7.29.7
-      "@babel/helper-define-polyfill-provider": 0.6.8(@babel/core@7.29.7)
+      "@babel/core": 7.29.7(supports-color@10.2.2)
+      "@babel/helper-define-polyfill-provider": 0.6.8(@babel/core@7.29.7(supports-color@10.2.2))(supports-color@10.2.2)
     transitivePeerDependencies:
       - supports-color
 
   babel-preset-current-node-syntax@1.2.0(@babel/core@7.29.7):
     dependencies:
-      "@babel/core": 7.29.7
+      "@babel/core": 7.29.7(supports-color@10.2.2)
       "@babel/plugin-syntax-async-generators": 7.8.4(@babel/core@7.29.7)
       "@babel/plugin-syntax-bigint": 7.8.3(@babel/core@7.29.7)
       "@babel/plugin-syntax-class-properties": 7.12.13(@babel/core@7.29.7)
@@ -26176,7 +26236,7 @@ snapshots:
 
   babel-preset-jest@30.4.0(@babel/core@7.29.7):
     dependencies:
-      "@babel/core": 7.29.7
+      "@babel/core": 7.29.7(supports-color@10.2.2)
       babel-plugin-jest-hoist: 30.4.0
       babel-preset-current-node-syntax: 1.2.0(@babel/core@7.29.7)
 
@@ -26245,7 +26305,7 @@ snapshots:
     dependencies:
       bytes: 3.1.2
       content-type: 1.0.5
-      debug: 2.6.9
+      debug: 2.6.9(supports-color@10.2.2)
       depd: 2.0.0
       destroy: 1.2.0
       http-errors: 2.0.1
@@ -26262,7 +26322,7 @@ snapshots:
     dependencies:
       bytes: 3.1.2
       content-type: 2.0.0
-      debug: 4.4.3
+      debug: 4.4.3(supports-color@10.2.2)
       http-errors: 2.0.1
       iconv-lite: 0.7.3
       on-finished: 2.4.1
@@ -26644,11 +26704,11 @@ snapshots:
     dependencies:
       mime-db: 1.54.0
 
-  compression@1.8.1:
+  compression@1.8.1(supports-color@10.2.2):
     dependencies:
       bytes: 3.1.2
       compressible: 2.0.18
-      debug: 2.6.9
+      debug: 2.6.9(supports-color@10.2.2)
       negotiator: 0.6.4
       on-headers: 1.1.0
       safe-buffer: 5.2.1
@@ -26676,10 +26736,10 @@ snapshots:
       write-file-atomic: 3.0.3
       xdg-basedir: 4.0.0
 
-  connect@3.7.0:
+  connect@3.7.0(supports-color@10.2.2):
     dependencies:
-      debug: 2.6.9
-      finalhandler: 1.1.2
+      debug: 2.6.9(supports-color@10.2.2)
+      finalhandler: 1.1.2(supports-color@10.2.2)
       parseurl: 1.3.3
       utils-merge: 1.0.1
     transitivePeerDependencies:
@@ -27094,17 +27154,23 @@ snapshots:
 
   dayjs@1.11.21: {}
 
-  debug@2.6.9:
+  debug@2.6.9(supports-color@10.2.2):
     dependencies:
       ms: 2.0.0
+    optionalDependencies:
+      supports-color: 10.2.2
 
-  debug@4.3.1:
+  debug@4.3.1(supports-color@10.2.2):
     dependencies:
       ms: 2.1.2
+    optionalDependencies:
+      supports-color: 10.2.2
 
-  debug@4.4.3:
+  debug@4.4.3(supports-color@10.2.2):
     dependencies:
       ms: 2.1.3
+    optionalDependencies:
+      supports-color: 10.2.2
 
   decamelize@1.2.0: {}
 
@@ -27550,14 +27616,27 @@ snapshots:
     optionalDependencies:
       source-map: 0.6.1
 
-  eslint-compat-utils@0.6.5(eslint@10.7.0(jiti@2.7.0)):
+  eslint-compat-utils@0.6.5(eslint@10.7.0(jiti@2.7.0)(supports-color@10.2.2)):
     dependencies:
-      eslint: 10.7.0(jiti@2.7.0)
+      eslint: 10.7.0(jiti@2.7.0)(supports-color@10.2.2)
       semver: 7.8.5
+
+  eslint-config-prettier@10.1.8(eslint@10.7.0(jiti@2.7.0)(supports-color@10.2.2)):
+    dependencies:
+      eslint: 10.7.0(jiti@2.7.0)(supports-color@10.2.2)
 
   eslint-config-prettier@10.1.8(eslint@10.7.0(jiti@2.7.0)):
     dependencies:
       eslint: 10.7.0(jiti@2.7.0)
+
+  eslint-plugin-prettier@5.5.6(eslint-config-prettier@10.1.8(eslint@10.7.0(jiti@2.7.0)(supports-color@10.2.2)))(eslint@10.7.0(jiti@2.7.0)(supports-color@10.2.2))(prettier@3.9.6):
+    dependencies:
+      eslint: 10.7.0(jiti@2.7.0)(supports-color@10.2.2)
+      prettier: 3.9.6
+      prettier-linter-helpers: 1.0.1
+      synckit: 0.11.13
+    optionalDependencies:
+      eslint-config-prettier: 10.1.8(eslint@10.7.0(jiti@2.7.0)(supports-color@10.2.2))
 
   eslint-plugin-prettier@5.5.6(eslint-config-prettier@10.1.8(eslint@10.7.0(jiti@2.7.0)))(eslint@10.7.0(jiti@2.7.0))(prettier@3.9.6):
     dependencies:
@@ -27568,18 +27647,18 @@ snapshots:
     optionalDependencies:
       eslint-config-prettier: 10.1.8(eslint@10.7.0(jiti@2.7.0))
 
-  eslint-plugin-vue@10.10.0(@typescript-eslint/parser@8.65.0(eslint@10.7.0(jiti@2.7.0))(typescript@6.0.3))(eslint@10.7.0(jiti@2.7.0))(vue-eslint-parser@10.4.1(eslint@10.7.0(jiti@2.7.0))):
+  eslint-plugin-vue@10.10.0(@typescript-eslint/parser@8.65.0(eslint@10.7.0(jiti@2.7.0)(supports-color@10.2.2))(supports-color@10.2.2)(typescript@6.0.3))(eslint@10.7.0(jiti@2.7.0)(supports-color@10.2.2))(vue-eslint-parser@10.4.1(eslint@10.7.0(jiti@2.7.0)(supports-color@10.2.2))(supports-color@10.2.2)):
     dependencies:
-      "@eslint-community/eslint-utils": 4.9.1(eslint@10.7.0(jiti@2.7.0))
-      eslint: 10.7.0(jiti@2.7.0)
+      "@eslint-community/eslint-utils": 4.9.1(eslint@10.7.0(jiti@2.7.0)(supports-color@10.2.2))
+      eslint: 10.7.0(jiti@2.7.0)(supports-color@10.2.2)
       natural-compare: 1.4.0
       nth-check: 2.1.1
       postcss-selector-parser: 7.1.4
       semver: 7.8.5
-      vue-eslint-parser: 10.4.1(eslint@10.7.0(jiti@2.7.0))
+      vue-eslint-parser: 10.4.1(eslint@10.7.0(jiti@2.7.0)(supports-color@10.2.2))(supports-color@10.2.2)
       xml-name-validator: 5.0.0
     optionalDependencies:
-      "@typescript-eslint/parser": 8.65.0(eslint@10.7.0(jiti@2.7.0))(typescript@6.0.3)
+      "@typescript-eslint/parser": 8.65.0(eslint@10.7.0(jiti@2.7.0)(supports-color@10.2.2))(supports-color@10.2.2)(typescript@6.0.3)
 
   eslint-scope@9.1.2:
     dependencies:
@@ -27598,7 +27677,7 @@ snapshots:
     dependencies:
       "@eslint-community/eslint-utils": 4.9.1(eslint@10.7.0(jiti@2.7.0))
       "@eslint-community/regexpp": 4.12.2
-      "@eslint/config-array": 0.23.5
+      "@eslint/config-array": 0.23.5(supports-color@10.2.2)
       "@eslint/config-helpers": 0.6.0
       "@eslint/core": 1.2.1
       "@eslint/plugin-kit": 0.7.2
@@ -27608,7 +27687,44 @@ snapshots:
       "@types/estree": 1.0.9
       ajv: 6.15.0
       cross-spawn: 7.0.6
-      debug: 4.4.3
+      debug: 4.4.3(supports-color@10.2.2)
+      escape-string-regexp: 4.0.0
+      eslint-scope: 9.1.2
+      eslint-visitor-keys: 5.0.1
+      espree: 11.2.0
+      esquery: 1.7.0
+      esutils: 2.0.3
+      fast-deep-equal: 3.1.3
+      file-entry-cache: 8.0.0
+      find-up: 5.0.0
+      glob-parent: 6.0.2
+      ignore: 5.3.2
+      imurmurhash: 0.1.4
+      is-glob: 4.0.3
+      json-stable-stringify-without-jsonify: 1.0.1
+      minimatch: 10.2.5
+      natural-compare: 1.4.0
+      optionator: 0.9.4
+    optionalDependencies:
+      jiti: 2.7.0
+    transitivePeerDependencies:
+      - supports-color
+
+  eslint@10.7.0(jiti@2.7.0)(supports-color@10.2.2):
+    dependencies:
+      "@eslint-community/eslint-utils": 4.9.1(eslint@10.7.0(jiti@2.7.0)(supports-color@10.2.2))
+      "@eslint-community/regexpp": 4.12.2
+      "@eslint/config-array": 0.23.5(supports-color@10.2.2)
+      "@eslint/config-helpers": 0.6.0
+      "@eslint/core": 1.2.1
+      "@eslint/plugin-kit": 0.7.2
+      "@humanfs/node": 0.16.8
+      "@humanwhocodes/module-importer": 1.0.1
+      "@humanwhocodes/retry": 0.4.3
+      "@types/estree": 1.0.9
+      ajv: 6.15.0
+      cross-spawn: 7.0.6
+      debug: 4.4.3(supports-color@10.2.2)
       escape-string-regexp: 4.0.0
       eslint-scope: 9.1.2
       eslint-visitor-keys: 5.0.1
@@ -27755,7 +27871,7 @@ snapshots:
       express: 5.2.1
       ip-address: 10.2.0
 
-  express@4.22.2:
+  express@4.22.2(supports-color@10.2.2):
     dependencies:
       accepts: 1.3.8
       array-flatten: 1.1.1
@@ -27764,12 +27880,12 @@ snapshots:
       content-type: 1.0.5
       cookie: 0.7.2
       cookie-signature: 1.0.7
-      debug: 2.6.9
+      debug: 2.6.9(supports-color@10.2.2)
       depd: 2.0.0
       encodeurl: 2.0.0
       escape-html: 1.0.3
       etag: 1.8.1
-      finalhandler: 1.3.2
+      finalhandler: 1.3.2(supports-color@10.2.2)
       fresh: 0.5.2
       http-errors: 2.0.1
       merge-descriptors: 1.0.3
@@ -27781,7 +27897,7 @@ snapshots:
       qs: 6.15.3
       range-parser: 1.2.1
       safe-buffer: 5.2.1
-      send: 0.19.2
+      send: 0.19.2(supports-color@10.2.2)
       serve-static: 1.16.3
       setprototypeof: 1.2.0
       statuses: 2.0.2
@@ -27799,7 +27915,7 @@ snapshots:
       content-type: 1.0.5
       cookie: 0.7.2
       cookie-signature: 1.2.2
-      debug: 4.4.3
+      debug: 4.4.3(supports-color@10.2.2)
       depd: 2.0.0
       encodeurl: 2.0.0
       escape-html: 1.0.3
@@ -27907,9 +28023,9 @@ snapshots:
     dependencies:
       to-regex-range: 5.0.1
 
-  finalhandler@1.1.2:
+  finalhandler@1.1.2(supports-color@10.2.2):
     dependencies:
-      debug: 2.6.9
+      debug: 2.6.9(supports-color@10.2.2)
       encodeurl: 1.0.2
       escape-html: 1.0.3
       on-finished: 2.3.0
@@ -27919,9 +28035,9 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  finalhandler@1.3.2:
+  finalhandler@1.3.2(supports-color@10.2.2):
     dependencies:
-      debug: 2.6.9
+      debug: 2.6.9(supports-color@10.2.2)
       encodeurl: 2.0.0
       escape-html: 1.0.3
       on-finished: 2.4.1
@@ -27933,7 +28049,7 @@ snapshots:
 
   finalhandler@2.1.1:
     dependencies:
-      debug: 4.4.3
+      debug: 4.4.3(supports-color@10.2.2)
       encodeurl: 2.0.0
       escape-html: 1.0.3
       on-finished: 2.4.1
@@ -27956,7 +28072,7 @@ snapshots:
       locate-path: 6.0.0
       path-exists: 4.0.0
 
-  firebase-admin@14.2.0:
+  firebase-admin@14.2.0(supports-color@10.2.2):
     dependencies:
       "@fastify/busboy": 3.2.0
       "@firebase/database-compat": 2.1.4
@@ -27964,7 +28080,7 @@ snapshots:
       fast-deep-equal: 3.1.3
       google-auth-library: 10.9.0
       jsonwebtoken: 9.0.3
-      jwks-rsa: 4.1.0
+      jwks-rsa: 4.1.0(supports-color@10.2.2)
     optionalDependencies:
       "@google-cloud/firestore": 8.7.0
       "@google-cloud/storage": 7.21.0
@@ -27972,27 +28088,27 @@ snapshots:
       - encoding
       - supports-color
 
-  firebase-functions-test@3.5.0(firebase-admin@14.2.0)(firebase-functions@7.3.2-rc.0(firebase-admin@14.2.0))(jest@30.4.2(@types/node@26.1.1)(babel-plugin-macros@3.1.0)):
+  firebase-functions-test@3.5.0(firebase-admin@14.2.0(supports-color@10.2.2))(firebase-functions@7.3.2-rc.0(firebase-admin@14.2.0(supports-color@10.2.2))(supports-color@10.2.2))(jest@30.4.2(@types/node@26.1.1)(babel-plugin-macros@3.1.0)):
     dependencies:
       "@types/lodash": 4.17.24
-      firebase-admin: 14.2.0
-      firebase-functions: 7.3.2-rc.0(firebase-admin@14.2.0)
+      firebase-admin: 14.2.0(supports-color@10.2.2)
+      firebase-functions: 7.3.2-rc.0(firebase-admin@14.2.0(supports-color@10.2.2))(supports-color@10.2.2)
       jest: 30.4.2(@types/node@26.1.1)(babel-plugin-macros@3.1.0)
       lodash: 4.18.1
       ts-deepmerge: 2.0.7
 
-  firebase-functions@7.3.2-rc.0(firebase-admin@14.2.0):
+  firebase-functions@7.3.2-rc.0(firebase-admin@14.2.0(supports-color@10.2.2))(supports-color@10.2.2):
     dependencies:
       "@types/cors": 2.8.19
       "@types/express": 4.17.25
       cors: 2.8.6
-      express: 4.22.2
-      firebase-admin: 14.2.0
+      express: 4.22.2(supports-color@10.2.2)
+      firebase-admin: 14.2.0(supports-color@10.2.2)
       protobufjs: 7.6.5
     transitivePeerDependencies:
       - supports-color
 
-  firebase-tools@15.24.0(@cfworker/json-schema@4.1.1)(@types/node@26.1.1):
+  firebase-tools@15.24.0(@cfworker/json-schema@4.1.1)(@types/node@26.1.1)(supports-color@10.2.2):
     dependencies:
       "@apphosting/common": 0.0.8
       "@electric-sql/pglite": 0.3.16
@@ -28019,7 +28135,7 @@ snapshots:
       csv-parse: 5.6.0
       exegesis: 4.3.0
       exegesis-express: 4.0.0
-      express: 4.22.2
+      express: 4.22.2(supports-color@10.2.2)
       form-data: 4.0.6
       fs-extra: 10.1.0
       fuzzy: 0.1.3
@@ -28036,28 +28152,28 @@ snapshots:
       marked-terminal: 7.3.0(marked@13.0.3)
       mime: 2.6.0
       minimatch: 3.1.5
-      morgan: 1.11.0
+      morgan: 1.11.0(supports-color@10.2.2)
       node-fetch: 2.7.0
       open: 6.4.0
       ora: 5.4.1
       pg: 8.22.0
       pg-gateway: 0.3.0-beta.4
       pglite-2: "@electric-sql/pglite@0.2.17"
-      portfinder: 1.0.38
+      portfinder: 1.0.38(supports-color@10.2.2)
       progress: 2.0.3
-      proxy-agent: 6.5.0
+      proxy-agent: 6.5.0(supports-color@10.2.2)
       retry: 0.13.1
       semver: 7.8.5
       sql-formatter: 15.8.2
       stream-chain: 2.2.5
       stream-json: 1.9.1
-      superstatic: 10.0.0
+      superstatic: 10.0.0(supports-color@10.2.2)
       tar: 7.5.20
-      tcp-port-used: 1.0.3
+      tcp-port-used: 1.0.3(supports-color@10.2.2)
       tmp: 0.2.7
       triple-beam: 1.4.1
       undici: 6.27.0
-      universal-analytics: 0.5.4
+      universal-analytics: 0.5.4(supports-color@10.2.2)
       update-notifier-cjs: 5.1.7
       winston: 3.19.0
       winston-transport: 4.9.0
@@ -28302,10 +28418,10 @@ snapshots:
 
   generator-function@2.0.1: {}
 
-  genkit@1.40.1(@google-cloud/firestore@7.11.6)(firebase-admin@14.2.0)(firebase@12.16.0):
+  genkit@1.40.1(@google-cloud/firestore@7.11.6)(firebase-admin@14.2.0(supports-color@10.2.2))(firebase@12.16.0):
     dependencies:
-      "@genkit-ai/ai": 1.40.1(@google-cloud/firestore@7.11.6)(firebase-admin@14.2.0)(firebase@12.16.0)(genkit@1.40.1(@google-cloud/firestore@7.11.6)(firebase-admin@14.2.0)(firebase@12.16.0))
-      "@genkit-ai/core": 1.40.1(@google-cloud/firestore@7.11.6)(firebase-admin@14.2.0)(firebase@12.16.0)(genkit@1.40.1(@google-cloud/firestore@7.11.6)(firebase-admin@14.2.0)(firebase@12.16.0))
+      "@genkit-ai/ai": 1.40.1(@google-cloud/firestore@7.11.6)(firebase-admin@14.2.0(supports-color@10.2.2))(firebase@12.16.0)(genkit@1.40.1(@google-cloud/firestore@7.11.6)(firebase-admin@14.2.0(supports-color@10.2.2))(firebase@12.16.0))
+      "@genkit-ai/core": 1.40.1(@google-cloud/firestore@7.11.6)(firebase-admin@14.2.0(supports-color@10.2.2))(firebase@12.16.0)(genkit@1.40.1(@google-cloud/firestore@7.11.6)(firebase-admin@14.2.0(supports-color@10.2.2))(firebase@12.16.0))
       uuid: 10.0.0
     transitivePeerDependencies:
       - "@google-cloud/firestore"
@@ -28366,11 +28482,11 @@ snapshots:
     dependencies:
       resolve-pkg-maps: 1.0.0
 
-  get-uri@6.0.5:
+  get-uri@6.0.5(supports-color@10.2.2):
     dependencies:
       basic-ftp: 5.3.1
       data-uri-to-buffer: 6.0.2
-      debug: 4.4.3
+      debug: 4.4.3(supports-color@10.2.2)
     transitivePeerDependencies:
       - supports-color
 
@@ -28742,28 +28858,28 @@ snapshots:
     dependencies:
       "@tootallnate/once": 2.0.1
       agent-base: 6.0.2
-      debug: 4.4.3
+      debug: 4.4.3(supports-color@10.2.2)
     transitivePeerDependencies:
       - supports-color
 
   http-proxy-agent@7.0.2:
     dependencies:
       agent-base: 7.1.4
-      debug: 4.4.3
+      debug: 4.4.3(supports-color@10.2.2)
     transitivePeerDependencies:
       - supports-color
 
   https-proxy-agent@5.0.1:
     dependencies:
       agent-base: 6.0.2
-      debug: 4.4.3
+      debug: 4.4.3(supports-color@10.2.2)
     transitivePeerDependencies:
       - supports-color
 
   https-proxy-agent@7.0.6:
     dependencies:
       agent-base: 7.1.4
-      debug: 4.4.3
+      debug: 4.4.3(supports-color@10.2.2)
     transitivePeerDependencies:
       - supports-color
 
@@ -29098,7 +29214,7 @@ snapshots:
 
   istanbul-lib-instrument@6.0.3:
     dependencies:
-      "@babel/core": 7.29.7
+      "@babel/core": 7.29.7(supports-color@10.2.2)
       "@babel/parser": 7.29.7
       "@istanbuljs/schema": 0.1.6
       istanbul-lib-coverage: 3.2.2
@@ -29115,7 +29231,7 @@ snapshots:
   istanbul-lib-source-maps@5.0.6:
     dependencies:
       "@jridgewell/trace-mapping": 0.3.31
-      debug: 4.4.3
+      debug: 4.4.3(supports-color@10.2.2)
       istanbul-lib-coverage: 3.2.2
     transitivePeerDependencies:
       - supports-color
@@ -29194,7 +29310,7 @@ snapshots:
 
   jest-config@30.4.2(@types/node@26.1.1)(babel-plugin-macros@3.1.0):
     dependencies:
-      "@babel/core": 7.29.7
+      "@babel/core": 7.29.7(supports-color@10.2.2)
       "@jest/get-type": 30.1.0
       "@jest/pattern": 30.4.0
       "@jest/test-sequencer": 30.4.1
@@ -29378,7 +29494,7 @@ snapshots:
 
   jest-snapshot@30.4.1:
     dependencies:
-      "@babel/core": 7.29.7
+      "@babel/core": 7.29.7(supports-color@10.2.2)
       "@babel/generator": 7.29.7
       "@babel/plugin-syntax-jsx": 7.29.7(@babel/core@7.29.7)
       "@babel/plugin-syntax-typescript": 7.29.7(@babel/core@7.29.7)
@@ -29571,10 +29687,10 @@ snapshots:
       ecdsa-sig-formatter: 1.0.11
       safe-buffer: 5.2.1
 
-  jwks-rsa@4.1.0:
+  jwks-rsa@4.1.0(supports-color@10.2.2):
     dependencies:
       "@types/jsonwebtoken": 9.0.10
-      debug: 4.4.3
+      debug: 4.4.3(supports-color@10.2.2)
       jose: 6.2.4
       limiter: 1.1.5
       lru-cache: 11.5.2
@@ -29712,7 +29828,7 @@ snapshots:
 
   linkifyjs@4.3.3: {}
 
-  lint-staged@17.1.1:
+  lint-staged@17.2.0:
     dependencies:
       picomatch: 4.0.5
       string-argv: 0.3.2
@@ -29920,13 +30036,13 @@ snapshots:
 
   markdown-it-task-checkbox@1.0.6: {}
 
-  markdown-it-ts@1.0.4:
+  markdown-it-ts@1.0.5:
     dependencies:
       "@types/linkify-it": 5.0.0
       "@types/mdurl": 2.0.0
       entities: 4.5.0
       linkify-it: 5.0.2
-      mdurl: 2.0.0
+      mdurl: 2.1.0
       punycode.js: 2.3.1
       uc.micro: 2.1.0
 
@@ -29947,7 +30063,7 @@ snapshots:
 
   markstream-core@1.0.3: {}
 
-  markstream-vue@1.0.7-beta.5(katex@0.18.1)(mermaid@11.16.0)(stream-diffs@0.0.2(@shikijs/themes@4.3.1)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)(vue@3.5.40(typescript@6.0.3)))(stream-markdown@0.0.16(react@19.2.7)(shiki@4.3.1)(vue@3.5.40(typescript@6.0.3)))(vue-i18n@11.4.7(vue@3.5.40(typescript@6.0.3)))(vue@3.5.40(typescript@6.0.3)):
+  markstream-vue@1.0.7(katex@0.18.1)(mermaid@11.16.0)(stream-diffs@0.0.2(@shikijs/themes@4.3.1)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)(vue@3.5.40(typescript@6.0.3)))(stream-markdown@0.0.16(react@19.2.7)(shiki@4.3.1)(vue@3.5.40(typescript@6.0.3)))(vue-i18n@11.4.7(vue@3.5.40(typescript@6.0.3)))(vue@3.5.40(typescript@6.0.3)):
     dependencies:
       "@chenglou/pretext": 0.0.8
       "@floating-ui/dom": 1.8.0
@@ -29983,7 +30099,7 @@ snapshots:
 
   mdn-data@2.28.1: {}
 
-  mdurl@2.0.0: {}
+  mdurl@2.1.0: {}
 
   media-typer@0.3.0: {}
 
@@ -30576,10 +30692,10 @@ snapshots:
 
   moo@0.5.3: {}
 
-  morgan@1.11.0:
+  morgan@1.11.0(supports-color@10.2.2):
     dependencies:
       basic-auth: 2.0.1
-      debug: 2.6.9
+      debug: 2.6.9(supports-color@10.2.2)
       depd: 2.0.0
       on-finished: 2.4.1
       on-headers: 1.1.0
@@ -30815,7 +30931,7 @@ snapshots:
     dependencies:
       is-wsl: 1.1.0
 
-  openai@4.104.0(ws@8.21.1)(zod@3.25.76):
+  openai@4.104.0(ws@8.21.1)(zod@4.4.3):
     dependencies:
       "@types/node": 18.19.130
       "@types/node-fetch": 2.6.13
@@ -30826,7 +30942,7 @@ snapshots:
       node-fetch: 2.7.0
     optionalDependencies:
       ws: 8.21.1
-      zod: 3.25.76
+      zod: 4.4.3
     transitivePeerDependencies:
       - encoding
 
@@ -30968,12 +31084,12 @@ snapshots:
 
   p-try@2.2.0: {}
 
-  pac-proxy-agent@7.2.0:
+  pac-proxy-agent@7.2.0(supports-color@10.2.2):
     dependencies:
       "@tootallnate/quickjs-emscripten": 0.23.0
       agent-base: 7.1.4
-      debug: 4.4.3
-      get-uri: 6.0.5
+      debug: 4.4.3(supports-color@10.2.2)
+      get-uri: 6.0.5(supports-color@10.2.2)
       http-proxy-agent: 7.0.2
       https-proxy-agent: 7.0.6
       pac-resolver: 7.0.1
@@ -31167,10 +31283,10 @@ snapshots:
       style-value-types: 5.1.2
       tslib: 2.4.0
 
-  portfinder@1.0.38:
+  portfinder@1.0.38(supports-color@10.2.2):
     dependencies:
       async: 3.2.6
-      debug: 4.4.3
+      debug: 4.4.3(supports-color@10.2.2)
     transitivePeerDependencies:
       - supports-color
 
@@ -31343,9 +31459,9 @@ snapshots:
       cssesc: 3.0.0
       util-deprecate: 1.0.2
 
-  postcss-styl@0.12.3:
+  postcss-styl@0.12.3(supports-color@10.2.2):
     dependencies:
-      debug: 4.4.3
+      debug: 4.4.3(supports-color@10.2.2)
       fast-diff: 1.3.0
       lodash.sortedlastindex: 4.1.0
       postcss: 8.5.19
@@ -31568,14 +31684,14 @@ snapshots:
       forwarded: 0.2.0
       ipaddr.js: 1.9.1
 
-  proxy-agent@6.5.0:
+  proxy-agent@6.5.0(supports-color@10.2.2):
     dependencies:
       agent-base: 7.1.4
-      debug: 4.4.3
+      debug: 4.4.3(supports-color@10.2.2)
       http-proxy-agent: 7.0.2
       https-proxy-agent: 7.0.6
       lru-cache: 7.18.3
-      pac-proxy-agent: 7.2.0
+      pac-proxy-agent: 7.2.0(supports-color@10.2.2)
       proxy-from-env: 1.1.0
       socks-proxy-agent: 8.0.5
     transitivePeerDependencies:
@@ -31833,7 +31949,7 @@ snapshots:
 
   require-in-the-middle@7.5.2:
     dependencies:
-      debug: 4.4.3
+      debug: 4.4.3(supports-color@10.2.2)
       module-details-from-path: 1.0.4
       resolve: 1.22.12
     transitivePeerDependencies:
@@ -31976,7 +32092,7 @@ snapshots:
 
   router@2.2.0:
     dependencies:
-      debug: 4.4.3
+      debug: 4.4.3(supports-color@10.2.2)
       depd: 2.0.0
       is-promise: 4.0.0
       parseurl: 1.3.3
@@ -32035,9 +32151,9 @@ snapshots:
 
   semver@7.8.5: {}
 
-  send@0.19.2:
+  send@0.19.2(supports-color@10.2.2):
     dependencies:
-      debug: 2.6.9
+      debug: 2.6.9(supports-color@10.2.2)
       depd: 2.0.0
       destroy: 1.2.0
       encodeurl: 2.0.0
@@ -32055,7 +32171,7 @@ snapshots:
 
   send@1.2.1:
     dependencies:
-      debug: 4.4.3
+      debug: 4.4.3(supports-color@10.2.2)
       encodeurl: 2.0.0
       escape-html: 1.0.3
       etag: 1.8.1
@@ -32076,7 +32192,7 @@ snapshots:
       encodeurl: 2.0.0
       escape-html: 1.0.3
       parseurl: 1.3.3
-      send: 0.19.2
+      send: 0.19.2(supports-color@10.2.2)
     transitivePeerDependencies:
       - supports-color
 
@@ -32115,7 +32231,7 @@ snapshots:
 
   setprototypeof@1.2.0: {}
 
-  shadcn-vue@2.8.0(@cfworker/json-schema@4.1.1)(babel-plugin-macros@3.1.0)(eslint@10.7.0(jiti@2.7.0))(vue@3.5.40(typescript@6.0.3)):
+  shadcn-vue@2.8.0(@cfworker/json-schema@4.1.1)(babel-plugin-macros@3.1.0)(eslint@10.7.0(jiti@2.7.0)(supports-color@10.2.2))(supports-color@10.2.2)(vue@3.5.40(typescript@6.0.3)):
     dependencies:
       "@dotenvx/dotenvx": 2.7.3
       "@modelcontextprotocol/sdk": 1.29.0(@cfworker/json-schema@4.1.1)(zod@3.25.76)
@@ -32149,7 +32265,7 @@ snapshots:
       ts-morph: 28.0.0
       undici: 8.7.0
       validate-npm-package-name: 8.0.0
-      vue-metamorph: 3.3.4(eslint@10.7.0(jiti@2.7.0))
+      vue-metamorph: 3.3.4(eslint@10.7.0(jiti@2.7.0)(supports-color@10.2.2))(supports-color@10.2.2)
       zod: 3.25.76
       zod-to-json-schema: 3.25.2(zod@3.25.76)
     transitivePeerDependencies:
@@ -32319,7 +32435,7 @@ snapshots:
   socks-proxy-agent@8.0.5:
     dependencies:
       agent-base: 7.1.4
-      debug: 4.4.3
+      debug: 4.4.3(supports-color@10.2.2)
       socks: 2.8.9
     transitivePeerDependencies:
       - supports-color
@@ -32442,7 +32558,7 @@ snapshots:
       markdown-it-sub: 2.0.0
       markdown-it-sup: 2.0.0
       markdown-it-task-checkbox: 1.0.6
-      markdown-it-ts: 1.0.4
+      markdown-it-ts: 1.0.5
 
   stream-markdown@0.0.16(react@19.2.7)(shiki@4.3.1)(vue@3.5.40(typescript@6.0.3)):
     dependencies:
@@ -32608,16 +32724,16 @@ snapshots:
       postcss: 8.5.19
       postcss-selector-parser: 7.1.4
 
-  stylelint-config-recommended@18.0.0(stylelint@17.14.1(typescript@6.0.3)):
+  stylelint-config-recommended@18.0.0(stylelint@17.14.1(supports-color@10.2.2)(typescript@6.0.3)):
     dependencies:
-      stylelint: 17.14.1(typescript@6.0.3)
+      stylelint: 17.14.1(supports-color@10.2.2)(typescript@6.0.3)
 
-  stylelint-config-standard@40.0.0(stylelint@17.14.1(typescript@6.0.3)):
+  stylelint-config-standard@40.0.0(stylelint@17.14.1(supports-color@10.2.2)(typescript@6.0.3)):
     dependencies:
-      stylelint: 17.14.1(typescript@6.0.3)
-      stylelint-config-recommended: 18.0.0(stylelint@17.14.1(typescript@6.0.3))
+      stylelint: 17.14.1(supports-color@10.2.2)(typescript@6.0.3)
+      stylelint-config-recommended: 18.0.0(stylelint@17.14.1(supports-color@10.2.2)(typescript@6.0.3))
 
-  stylelint@17.14.1(typescript@6.0.3):
+  stylelint@17.14.1(supports-color@10.2.2)(typescript@6.0.3):
     dependencies:
       "@csstools/css-calc": 3.2.1(@csstools/css-parser-algorithms@4.0.0(@csstools/css-tokenizer@4.0.0))(@csstools/css-tokenizer@4.0.0)
       "@csstools/css-parser-algorithms": 4.0.0(@csstools/css-tokenizer@4.0.0)
@@ -32630,7 +32746,7 @@ snapshots:
       cosmiconfig: 9.0.2(typescript@6.0.3)
       css-functions-list: 3.3.3
       css-tree: 3.2.1
-      debug: 4.4.3
+      debug: 4.4.3(supports-color@10.2.2)
       fast-glob: 3.3.3
       fastest-levenshtein: 1.0.16
       file-entry-cache: 11.1.5
@@ -32665,7 +32781,7 @@ snapshots:
   stylus@0.57.0:
     dependencies:
       css: 3.0.0
-      debug: 4.4.3
+      debug: 4.4.3(supports-color@10.2.2)
       glob: 7.2.3
       safer-buffer: 2.1.2
       sax: 1.2.4
@@ -32687,12 +32803,12 @@ snapshots:
     dependencies:
       copy-anything: 4.0.5
 
-  superstatic@10.0.0:
+  superstatic@10.0.0(supports-color@10.2.2):
     dependencies:
       basic-auth-connect: 1.1.0
       commander: 10.0.1
-      compression: 1.8.1
-      connect: 3.7.0
+      compression: 1.8.1(supports-color@10.2.2)
+      connect: 3.7.0(supports-color@10.2.2)
       destroy: 1.2.0
       glob-slasher: 1.0.1
       is-url: 1.2.4
@@ -32700,7 +32816,7 @@ snapshots:
       lodash: 4.18.1
       mime-types: 2.1.35
       minimatch: 6.2.3
-      morgan: 1.11.0
+      morgan: 1.11.0(supports-color@10.2.2)
       on-finished: 2.4.1
       on-headers: 1.1.0
       path-to-regexp: 1.9.0
@@ -32781,9 +32897,9 @@ snapshots:
       minizlib: 3.1.0
       yallist: 5.0.0
 
-  tcp-port-used@1.0.3:
+  tcp-port-used@1.0.3(supports-color@10.2.2):
     dependencies:
-      debug: 4.3.1
+      debug: 4.3.1(supports-color@10.2.2)
       is2: 2.0.1
     transitivePeerDependencies:
       - supports-color
@@ -32995,11 +33111,22 @@ snapshots:
     dependencies:
       is-typedarray: 1.0.0
 
+  typescript-eslint@8.65.0(eslint@10.7.0(jiti@2.7.0)(supports-color@10.2.2))(supports-color@10.2.2)(typescript@6.0.3):
+    dependencies:
+      "@typescript-eslint/eslint-plugin": 8.65.0(@typescript-eslint/parser@8.65.0(eslint@10.7.0(jiti@2.7.0)(supports-color@10.2.2))(supports-color@10.2.2)(typescript@6.0.3))(eslint@10.7.0(jiti@2.7.0)(supports-color@10.2.2))(supports-color@10.2.2)(typescript@6.0.3)
+      "@typescript-eslint/parser": 8.65.0(eslint@10.7.0(jiti@2.7.0)(supports-color@10.2.2))(supports-color@10.2.2)(typescript@6.0.3)
+      "@typescript-eslint/typescript-estree": 8.65.0(supports-color@10.2.2)(typescript@6.0.3)
+      "@typescript-eslint/utils": 8.65.0(eslint@10.7.0(jiti@2.7.0)(supports-color@10.2.2))(typescript@6.0.3)
+      eslint: 10.7.0(jiti@2.7.0)(supports-color@10.2.2)
+      typescript: 6.0.3
+    transitivePeerDependencies:
+      - supports-color
+
   typescript-eslint@8.65.0(eslint@10.7.0(jiti@2.7.0))(typescript@6.0.3):
     dependencies:
       "@typescript-eslint/eslint-plugin": 8.65.0(@typescript-eslint/parser@8.65.0(eslint@10.7.0(jiti@2.7.0))(typescript@6.0.3))(eslint@10.7.0(jiti@2.7.0))(typescript@6.0.3)
       "@typescript-eslint/parser": 8.65.0(eslint@10.7.0(jiti@2.7.0))(typescript@6.0.3)
-      "@typescript-eslint/typescript-estree": 8.65.0(typescript@6.0.3)
+      "@typescript-eslint/typescript-estree": 8.65.0(supports-color@10.2.2)(typescript@6.0.3)
       "@typescript-eslint/utils": 8.65.0(eslint@10.7.0(jiti@2.7.0))(typescript@6.0.3)
       eslint: 10.7.0(jiti@2.7.0)
       typescript: 6.0.3
@@ -33136,9 +33263,9 @@ snapshots:
       unist-util-is: 6.0.1
       unist-util-visit-parents: 6.0.2
 
-  universal-analytics@0.5.4:
+  universal-analytics@0.5.4(supports-color@10.2.2):
     dependencies:
-      debug: 4.4.3
+      debug: 4.4.3(supports-color@10.2.2)
       uuid: 14.0.1
     transitivePeerDependencies:
       - supports-color
@@ -33398,7 +33525,7 @@ snapshots:
       "@types/unist": 3.0.3
       vfile-message: 4.0.3
 
-  vite-plugin-checker@0.14.5(eslint@10.7.0(jiti@2.7.0))(meow@14.1.0)(optionator@0.9.4)(stylelint@17.14.1(typescript@6.0.3))(typescript@6.0.3)(vite@8.1.5(@types/node@26.1.1)(esbuild@0.28.1)(jiti@2.7.0)(stylus@0.57.0)(terser@5.48.0)(yaml@2.9.0))(vue-tsc@3.3.8(typescript@6.0.3)):
+  vite-plugin-checker@0.14.5(eslint@10.7.0(jiti@2.7.0)(supports-color@10.2.2))(meow@14.1.0)(optionator@0.9.4)(stylelint@17.14.1(supports-color@10.2.2)(typescript@6.0.3))(typescript@6.0.3)(vite@8.1.5(@types/node@26.1.1)(esbuild@0.28.1)(jiti@2.7.0)(stylus@0.57.0)(terser@5.48.0)(yaml@2.9.0))(vue-tsc@3.3.8(typescript@6.0.3)):
     dependencies:
       "@babel/code-frame": 7.29.7
       chokidar: 5.0.0
@@ -33409,10 +33536,10 @@ snapshots:
       tiny-invariant: 1.3.3
       vite: 8.1.5(@types/node@26.1.1)(esbuild@0.28.1)(jiti@2.7.0)(stylus@0.57.0)(terser@5.48.0)(yaml@2.9.0)
     optionalDependencies:
-      eslint: 10.7.0(jiti@2.7.0)
+      eslint: 10.7.0(jiti@2.7.0)(supports-color@10.2.2)
       meow: 14.1.0
       optionator: 0.9.4
-      stylelint: 17.14.1(typescript@6.0.3)
+      stylelint: 17.14.1(supports-color@10.2.2)(typescript@6.0.3)
       typescript: 6.0.3
       vue-tsc: 3.3.8(typescript@6.0.3)
 
@@ -33425,13 +33552,13 @@ snapshots:
       sharp: 0.35.3(@types/node@26.1.1)
       svgo: 4.0.2
 
-  vite-plugin-pwa@1.3.0(@vite-pwa/assets-generator@1.0.2(@types/node@26.1.1))(vite@8.1.5(@types/node@26.1.1)(esbuild@0.28.1)(jiti@2.7.0)(stylus@0.57.0)(terser@5.48.0)(yaml@2.9.0))(workbox-build@7.4.1(@types/babel__core@7.20.5))(workbox-window@7.4.1):
+  vite-plugin-pwa@1.3.0(@vite-pwa/assets-generator@1.0.2(@types/node@26.1.1))(supports-color@10.2.2)(vite@8.1.5(@types/node@26.1.1)(esbuild@0.28.1)(jiti@2.7.0)(stylus@0.57.0)(terser@5.48.0)(yaml@2.9.0))(workbox-build@7.4.1(@types/babel__core@7.20.5)(supports-color@10.2.2))(workbox-window@7.4.1):
     dependencies:
-      debug: 4.4.3
+      debug: 4.4.3(supports-color@10.2.2)
       pretty-bytes: 6.1.1
       tinyglobby: 0.2.17
       vite: 8.1.5(@types/node@26.1.1)(esbuild@0.28.1)(jiti@2.7.0)(stylus@0.57.0)(terser@5.48.0)(yaml@2.9.0)
-      workbox-build: 7.4.1(@types/babel__core@7.20.5)
+      workbox-build: 7.4.1(@types/babel__core@7.20.5)(supports-color@10.2.2)
       workbox-window: 7.4.1
     optionalDependencies:
       "@vite-pwa/assets-generator": 1.0.2(@types/node@26.1.1)
@@ -33440,9 +33567,9 @@ snapshots:
 
   vite-plugin-sitemap@0.8.2: {}
 
-  vite-plugin-vue-layouts@0.11.0(vite@8.1.5(@types/node@26.1.1)(esbuild@0.28.1)(jiti@2.7.0)(stylus@0.57.0)(terser@5.48.0)(yaml@2.9.0))(vue-router@5.2.0(@vue/compiler-sfc@3.5.40)(esbuild@0.28.1)(pinia@4.0.2(@vue/devtools-api@8.1.5)(typescript@6.0.3)(vue@3.5.40(typescript@6.0.3)))(rolldown@1.1.5)(rollup@4.62.2)(vite@8.1.5(@types/node@26.1.1)(esbuild@0.28.1)(jiti@2.7.0)(stylus@0.57.0)(terser@5.48.0)(yaml@2.9.0))(vue@3.5.40(typescript@6.0.3)))(vue@3.5.40(typescript@6.0.3)):
+  vite-plugin-vue-layouts@0.11.0(supports-color@10.2.2)(vite@8.1.5(@types/node@26.1.1)(esbuild@0.28.1)(jiti@2.7.0)(stylus@0.57.0)(terser@5.48.0)(yaml@2.9.0))(vue-router@5.2.0(@vue/compiler-sfc@3.5.40)(esbuild@0.28.1)(pinia@4.0.2(@vue/devtools-api@8.1.5)(typescript@6.0.3)(vue@3.5.40(typescript@6.0.3)))(rolldown@1.1.5)(rollup@4.62.2)(vite@8.1.5(@types/node@26.1.1)(esbuild@0.28.1)(jiti@2.7.0)(stylus@0.57.0)(terser@5.48.0)(yaml@2.9.0))(vue@3.5.40(typescript@6.0.3)))(vue@3.5.40(typescript@6.0.3)):
     dependencies:
-      debug: 4.4.3
+      debug: 4.4.3(supports-color@10.2.2)
       fast-glob: 3.3.3
       vite: 8.1.5(@types/node@26.1.1)(esbuild@0.28.1)(jiti@2.7.0)(stylus@0.57.0)(terser@5.48.0)(yaml@2.9.0)
       vue: 3.5.40(typescript@6.0.3)
@@ -33508,10 +33635,10 @@ snapshots:
     dependencies:
       vue: 3.5.40(typescript@6.0.3)
 
-  vue-eslint-parser@10.4.1(eslint@10.7.0(jiti@2.7.0)):
+  vue-eslint-parser@10.4.1(eslint@10.7.0(jiti@2.7.0)(supports-color@10.2.2))(supports-color@10.2.2):
     dependencies:
-      debug: 4.4.3
-      eslint: 10.7.0(jiti@2.7.0)
+      debug: 4.4.3(supports-color@10.2.2)
+      eslint: 10.7.0(jiti@2.7.0)(supports-color@10.2.2)
       eslint-scope: 9.1.2
       eslint-visitor-keys: 5.0.1
       espree: 11.2.0
@@ -33537,7 +33664,7 @@ snapshots:
       - "@vue/composition-api"
       - typescript
 
-  vue-metamorph@3.3.4(eslint@10.7.0(jiti@2.7.0)):
+  vue-metamorph@3.3.4(eslint@10.7.0(jiti@2.7.0)(supports-color@10.2.2))(supports-color@10.2.2):
     dependencies:
       "@babel/parser": 8.0.0-alpha.12
       ast-types-x: 1.18.0
@@ -33555,10 +33682,10 @@ snapshots:
       postcss-less: 6.0.0(postcss@8.5.19)
       postcss-sass: 0.5.0
       postcss-scss: 4.0.9(postcss@8.5.19)
-      postcss-styl: 0.12.3
+      postcss-styl: 0.12.3(supports-color@10.2.2)
       recast-x: 1.0.5
       table: 6.9.0
-      vue-eslint-parser: 10.4.1(eslint@10.7.0(jiti@2.7.0))
+      vue-eslint-parser: 10.4.1(eslint@10.7.0(jiti@2.7.0)(supports-color@10.2.2))(supports-color@10.2.2)
     transitivePeerDependencies:
       - eslint
       - supports-color
@@ -33781,13 +33908,13 @@ snapshots:
     dependencies:
       workbox-core: 7.4.1
 
-  workbox-build@7.4.1(@types/babel__core@7.20.5):
+  workbox-build@7.4.1(@types/babel__core@7.20.5)(supports-color@10.2.2):
     dependencies:
       "@apideck/better-ajv-errors": 0.3.7(ajv@8.20.0)
-      "@babel/core": 7.29.7
-      "@babel/preset-env": 7.29.7(@babel/core@7.29.7)
+      "@babel/core": 7.29.7(supports-color@10.2.2)
+      "@babel/preset-env": 7.29.7(@babel/core@7.29.7(supports-color@10.2.2))(supports-color@10.2.2)
       "@babel/runtime": 7.29.7
-      "@rollup/plugin-babel": 6.1.0(@babel/core@7.29.7)(@types/babel__core@7.20.5)(rollup@4.62.2)
+      "@rollup/plugin-babel": 6.1.0(@babel/core@7.29.7(supports-color@10.2.2))(@types/babel__core@7.20.5)(rollup@4.62.2)
       "@rollup/plugin-node-resolve": 16.0.3(rollup@4.62.2)
       "@rollup/plugin-replace": 6.0.3(rollup@4.62.2)
       "@rollup/plugin-terser": 1.0.0(rollup@4.62.2)

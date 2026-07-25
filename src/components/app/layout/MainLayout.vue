@@ -506,7 +506,7 @@ const closeTab = (id: string) => {
                           <SubNavigation />
                           <!-- Scrollable content area -->
                           <div
-                            class="mx-2 mb-2 flex min-h-0 min-w-0 grow flex-col overflow-clip rounded border"
+                            class="flex min-h-0 min-w-0 grow flex-col overflow-clip"
                           >
                             <ScrollContainer>
                               <RouterView />
@@ -958,7 +958,7 @@ const closeTab = (id: string) => {
                       </div>
                       <div
                         v-if="!isPoppedOutMinimized"
-                        class="bg-background growborder mx-2 mb-2 p-2"
+                        class="bg-background m-2 grow rounded border p-2"
                       >
                         <div
                           class="size-fullbg-[repeating-linear-gradient(45deg,var(--color-muted)_0,var(--color-muted)_1px,transparent_0,transparent_50%)] bg-size-[8px_8px] p-2"

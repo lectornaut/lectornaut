@@ -58,7 +58,7 @@ const tooltipLabel = computed(() => {
   <div
     :class="
       cn(
-        'border-border/50 bg-background grid min-w-32 items-start gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs shadow-xl',
+        'bg-popover text-popover-foreground ring-foreground/5 dark:ring-foreground/10 grid min-w-32 items-start gap-1.5 rounded-xl px-2.5 py-1.5 text-xs shadow-lg ring-1',
         props.class
       )
     "
@@ -78,7 +78,7 @@ const tooltipLabel = computed(() => {
             )
           "
         >
-          <Component :is="itemConfig.icon" v-if="itemConfig?.icon" />
+          <component :is="itemConfig.icon" v-if="itemConfig?.icon" />
           <template v-else-if="!hideIndicator">
             <div
               :class="

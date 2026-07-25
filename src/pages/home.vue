@@ -756,7 +756,7 @@ const expandedCard = ref<number | null>(null)
             <p >{{ group.description }}</p>
           </div> -->
           <div
-            class="container mx-auto grid max-w-4xl grid-cols-1 gap-2 p-2 @xl:grid-cols-2 @4xl:grid-cols-3 @6xl:grid-cols-4"
+            class="container mx-auto grid max-w-4xl grid-cols-1 gap-2 p-2 @xl:grid-cols-2"
           >
             <Card
               v-for="card in group.cards"
