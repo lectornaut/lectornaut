@@ -63,6 +63,8 @@ jobs:
           sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
       - name: Build Tauri app
         uses: tauri-apps/tauri-action@v1
+        with:
+          args: ${{ matrix.args }}
         env:
           NODE_ENV: preview
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
