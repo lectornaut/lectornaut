@@ -1,7 +1,7 @@
 <script lang="ts" setup>
 import { useCollabPage } from "@/composables/useCollabPage"
 import { createWorkspaceNodeAttachmentFromFile } from "@/composables/useNodeAttachments"
-import { IconFileText } from "@/data/icons"
+import { IconCloudAlert, IconCloudCheck, IconFileText } from "@/data/icons"
 import { useNodeBreadcrumb } from "@/helpers/breadcrumber"
 import { getStorageFileRef } from "@/utils/firebase/firebase-helpers"
 import { getDownloadURL } from "firebase/storage"

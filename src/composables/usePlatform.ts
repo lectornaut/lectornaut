@@ -1,4 +1,5 @@
 import type { UnlistenFn } from "@tauri-apps/api/event"
+import { Image } from "@tauri-apps/api/image"
 import {
   getCurrentWindow,
   type Window as TauriWindow,
@@ -128,6 +129,37 @@ export async function toggleFullscreen(): Promise<void> {
 }
 
 /**
+ * Draw a taskbar overlay badge (red disc, white count) for Windows, where
+ * `setBadgeCount` is a no-op. Rendered at 32px so DWM downscaling to the
+ * 16px overlay slot stays crisp on hidpi taskbars.
+ */
+async function renderBadgeOverlay(count: number): Promise<Image | undefined> {
+  const size = 32
+  const canvas = document.createElement("canvas")
+  canvas.width = size
+  canvas.height = size
+  const ctx = canvas.getContext("2d")
+  if (!ctx) return undefined
+
+  ctx.fillStyle = "#e81123" // Windows notification-badge red
+  ctx.beginPath()
+  ctx.arc(size / 2, size / 2, size / 2, 0, Math.PI * 2)
+  ctx.fill()
+
+  const label = count > 9 ? "9+" : String(count)
+  ctx.fillStyle = "#ffffff"
+  ctx.font = `600 ${label.length > 1 ? 16 : 20}px system-ui, sans-serif`
+  ctx.textAlign = "center"
+  ctx.textBaseline = "middle"
+  // +1: optical vertical centering — digits sit high of the metric middle
+  // at this size, and the badge is far too small to eyeball in situ.
+  ctx.fillText(label, size / 2, size / 2 + 1)
+
+  const rgba = ctx.getImageData(0, 0, size, size).data
+  return Image.new(new Uint8Array(rgba.buffer), size, size)
+}
+
+/**
  * Update the app badge count on the app icon.
  * Uses Tauri's window API in desktop, or the Badging API in PWA/browser.
  * Passing 0 or null clears the badge.
@@ -139,6 +171,15 @@ export async function setBadgeCount(count: number | null): Promise<void> {
     if (isTauri.value) {
       const win = getCurrentTauriWindow()
       if (!win) return
+
+      // Windows has no numeric taskbar badge — paint the count onto an
+      // overlay icon instead. Passing undefined clears it.
+      if (platform.value === "windows") {
+        await win.setOverlayIcon(
+          hasCount ? await renderBadgeOverlay(count) : undefined
+        )
+        return
+      }
 
       await win.setBadgeCount(hasCount ? count : undefined)
     } else if (navigator.setAppBadge) {

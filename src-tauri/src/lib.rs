@@ -143,6 +143,23 @@ fn create_app_menu<R: tauri::Runtime>(handle: &tauri::AppHandle<R>) -> tauri::Re
 pub fn run() {
     let ctx = tauri::generate_context!();
     let builder = tauri::Builder::default()
+        // Registered first so every later plugin's log output is captured.
+        // Webview console output is forwarded here too (src/modules/log.ts),
+        // so release builds leave a support trail in the platform log dir.
+        .plugin(
+            tauri_plugin_log::Builder::new()
+                .level(log::LevelFilter::Info)
+                .targets([
+                    tauri_plugin_log::Target::new(tauri_plugin_log::TargetKind::Stdout),
+                    tauri_plugin_log::Target::new(tauri_plugin_log::TargetKind::LogDir {
+                        file_name: Some("lectornaut".into()),
+                    }),
+                ])
+                .max_file_size(5 * 1024 * 1024)
+                .timezone_strategy(tauri_plugin_log::TimezoneStrategy::UseLocal)
+                .build(),
+        )
+        .plugin(tauri_plugin_clipboard_manager::init())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_process::init())
@@ -165,7 +182,7 @@ pub fn run() {
             None,
         ))
         .plugin(tauri_plugin_single_instance::init(|app, argv, cwd| {
-            println!("{}, {argv:?}, {cwd}", app.package_info().name);
+            log::info!("second instance launched: {argv:?} in {cwd}");
             app.emit("single-instance", Payload { args: argv, cwd })
                 .unwrap();
         }))
@@ -230,7 +247,7 @@ pub fn run() {
                         app.emit("tray-action", "show").unwrap();
                     }
                     _ => {
-                        println!("menu item {:?} not handled", event.id);
+                        log::debug!("tray menu item {:?} forwarded to webview", event.id);
                         app.emit("tray-action", event.id.as_ref()).unwrap();
                     }
                 })

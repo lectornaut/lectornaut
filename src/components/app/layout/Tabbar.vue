@@ -1,5 +1,6 @@
 <script lang="ts" setup>
 import { useSidebar } from "@/components/ui/sidebar"
+import { useCopy } from "@/composables/useCopy"
 import { isTauri, useIsFullscreen } from "@/composables/usePlatform"
 import { useShortcutKeys } from "@/composables/useShortcutKeys"
 import { useTabRouterSync } from "@/composables/useTabRouterSync"
@@ -106,7 +107,7 @@ watch(isMobile, (val) => {
 const renamingTabId = ref<string | null>(null)
 const renamingName = ref("")
 const copiedTabId = ref<string | null>(null)
-const { copy, copied } = useClipboard({ legacy: true })
+const { copy, copied } = useCopy()
 
 // ----------------------------------------------------------------------------
 // Drag-and-drop reordering (boundary math lives in useTabs; pinned tabs stay

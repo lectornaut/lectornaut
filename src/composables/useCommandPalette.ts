@@ -19,6 +19,7 @@
  */
 
 import { useCanViewTeamSettings } from "@/composables/useCanViewTeamSettings"
+import { useCopy } from "@/composables/useCopy"
 import { useCreateActions } from "@/composables/useCreateActions"
 import { isTauri } from "@/composables/usePlatform"
 import { useTeamActions } from "@/composables/useTeamActions"
@@ -48,7 +49,6 @@ import { isDefaultRoute } from "@/helpers/utilities"
 import { emitter } from "@/modules/mitt"
 import { useShortcutsStore } from "@/stores/shortcutsStore"
 import { useTabsStore } from "@/stores/tabsStore"
-import { useClipboard } from "@vueuse/core"
 import { storeToRefs } from "pinia"
 import { computed, type Component, type ComputedRef } from "vue"
 import { useRoute, useRouter } from "vue-router"
@@ -221,7 +221,7 @@ export function useCommandPalette(): { groups: ComputedRef<PaletteGroup[]> } {
   // mounts inside MainLayout.
   // ==========================================================================
 
-  const { copy } = useClipboard({ legacy: true })
+  const { copy } = useCopy()
 
   const copyCurrentUrl = async () => {
     const url =

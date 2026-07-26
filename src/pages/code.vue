@@ -4,7 +4,7 @@ import {
   type CodeMirrorCollabResult,
 } from "@/composables/useCodeMirrorCollab"
 import { useCollabPage } from "@/composables/useCollabPage"
-import { IconFileText } from "@/data/icons"
+import { IconCloudAlert, IconCloudCheck, IconFileText } from "@/data/icons"
 import { useNodeBreadcrumb } from "@/helpers/breadcrumber"
 import type { Extension } from "@codemirror/state"
 

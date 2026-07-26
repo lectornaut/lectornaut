@@ -1,6 +1,7 @@
 <script lang="ts" setup>
 import { type ColorOption } from "@/components/editors/text/components/TextEditorColorPicker.vue"
 import { CodeBlockShiki } from "@/components/editors/text/extensions/codeBlockShiki"
+import { healEmojiShortcodes } from "@/components/editors/text/extensions/emojiHealing"
 import {
   createEmojiSuggestion,
   type EmojiPanelState,
@@ -11,8 +12,10 @@ import {
   type SlashCommandItem,
   type SlashCommandPanelState,
 } from "@/components/editors/text/extensions/slashCommand"
+import { copyText } from "@/composables/useCopy"
 import { useTiptapCollab } from "@/composables/useTiptapCollab"
 import {
+  IconALargeSmall,
   IconAlignCenter,
   IconAlignLeft,
   IconAlignRight,
@@ -29,9 +32,11 @@ import {
   IconInfo,
   IconItalic,
   IconLink,
+  IconLink2,
   IconList,
   IconListChecks,
   IconListOrdered,
+  IconPaintBucket,
   IconPalette,
   IconQuote,
   IconRefreshCw,
@@ -42,13 +47,14 @@ import {
   IconUnlink,
 } from "@/data/icons"
 import { accents } from "@/helpers/defaults"
-import { showErrorToast } from "@/helpers/toast"
+import { showErrorToast, showSuccessToast } from "@/helpers/toast"
 import {
   createTiptapEditorAdapter,
   type CollabEditorAdapter,
 } from "@/utils/collab/editorAdapter"
 import type { JSONContent, Editor as TiptapEditor } from "@tiptap/core"
 import { isChangeOrigin } from "@tiptap/extension-collaboration"
+import type { Node as ProseMirrorNode } from "@tiptap/pm/model"
 import {
   Details,
   DetailsContent,
@@ -76,9 +82,12 @@ import { TableHeader } from "@tiptap/extension-table/header"
 import { TableRow } from "@tiptap/extension-table/row"
 import { Table } from "@tiptap/extension-table/table"
 import { TextStyle } from "@tiptap/extension-text-style"
+import { BackgroundColor } from "@tiptap/extension-text-style/background-color"
 import { Color } from "@tiptap/extension-text-style/color"
+import { FontFamily } from "@tiptap/extension-text-style/font-family"
+import { FontSize } from "@tiptap/extension-text-style/font-size"
+import { LineHeight } from "@tiptap/extension-text-style/line-height"
 import Typography from "@tiptap/extension-typography"
-import Underline from "@tiptap/extension-underline"
 import { UniqueID } from "@tiptap/extension-unique-id"
 import { CharacterCount } from "@tiptap/extensions/character-count"
 import { Placeholder } from "@tiptap/extensions/placeholder"
@@ -162,6 +171,29 @@ const DEFAULT_TEXT_COLOR =
 const DEFAULT_HIGHLIGHT_COLOR =
   HIGHLIGHT_COLORS.find((color) => color.id === "yellow")?.value ??
   HIGHLIGHT_COLORS[0]!.value
+
+const FONT_SIZES = ["12px", "14px", "16px", "18px", "24px", "32px"]
+
+// Values are the app's own font tokens, so families follow the brand.
+const FONT_FAMILIES = [
+  {
+    id: "sans",
+    labelKey: "components.textEditor.fontSans",
+    value: "var(--font-sans)",
+  },
+  {
+    id: "serif",
+    labelKey: "components.textEditor.fontSerif",
+    value: "var(--font-serif)",
+  },
+  {
+    id: "mono",
+    labelKey: "components.textEditor.fontMono",
+    value: "var(--font-mono)",
+  },
+]
+
+const LINE_HEIGHTS = ["1", "1.25", "1.5", "2"]
 
 const TABLE_PICKER_MAX_ROWS = 8
 const TABLE_PICKER_MAX_COLS = 8
@@ -317,6 +349,7 @@ const isImageDialogOpen = ref(false)
 const slashPanelState = ref<SlashCommandPanelState | null>(null)
 const isTablePickerOpen = ref(false)
 const dragHandleNodePos = ref<number | null>(null)
+const dragHandleBlockId = ref<string | null>(null)
 const tablePickerSelection = ref<{ rows: number; cols: number }>({
   rows: 0,
   cols: 0,
@@ -628,9 +661,12 @@ const extensions = [
     undoRedo: props.collaborationDoc ? false : {},
   }),
   Highlight.configure({ multicolor: true }),
-  Underline,
   TextStyle,
   Color,
+  BackgroundColor,
+  FontFamily,
+  FontSize,
+  LineHeight,
   Typography,
   Placeholder.configure({
     includeChildren: true,
@@ -870,6 +906,7 @@ const editor = useEditor({
   extensions,
   onCreate: ({ editor: currentEditor }) => {
     migrateMathStrings(currentEditor)
+    healEmojiShortcodes(currentEditor)
 
     if (
       props.collaborationDoc &&
@@ -887,10 +924,20 @@ const editor = useEditor({
         )
       }
       migrateMathStrings(currentEditor)
+      healEmojiShortcodes(currentEditor)
     }
 
     syncTableOfContentsScrollParent(currentEditor)
     syncModelFromEditor(currentEditor, { immediate: true })
+
+    if (!scrollToHashBlock(currentEditor)) {
+      const retryHashScroll = () => {
+        if (scrollToHashBlock(currentEditor)) {
+          currentEditor.off("update", retryHashScroll)
+        }
+      }
+      currentEditor.on("update", retryHashScroll)
+    }
     // Report the canonical serialization of the loaded doc as the sync
     // baseline. `syncModelFromEditor` has just set `currentSerializedModelValue`
     // to exactly this value and emitted it via `update:modelValue`, so the
@@ -910,7 +957,10 @@ const editor = useEditor({
           isApplier: () => props.applierStatus?.() ?? false,
           schema: currentEditor.schema,
           parseContent: parseModelValue,
-          afterApply: () => migrateMathStrings(currentEditor),
+          afterApply: () => {
+            migrateMathStrings(currentEditor)
+            healEmojiShortcodes(currentEditor)
+          },
         })
       )
     }
@@ -1066,8 +1116,16 @@ const applyImageAttrs = (attrs: Record<string, unknown>) => {
   editor.value?.chain().focus().updateAttributes("image", attrs).run()
 }
 
-const handleDragHandleNodeChange = ({ pos }: { pos: number }) => {
+const handleDragHandleNodeChange = ({
+  node,
+  pos,
+}: {
+  node: ProseMirrorNode | null
+  pos: number
+}) => {
   dragHandleNodePos.value = pos >= 0 ? pos : null
+  const blockId = node?.attrs?.id
+  dragHandleBlockId.value = typeof blockId === "string" ? blockId : null
 }
 
 const selectNodeFromDragHandle = () => {
@@ -1079,6 +1137,46 @@ const selectNodeFromDragHandle = () => {
   }
 
   currentEditor.chain().focus().setNodeSelection(pos).run()
+}
+
+/** Copies a deep link to the hovered block (`<current url>#<UniqueID id>`). */
+const copyBlockLink = async () => {
+  const blockId = dragHandleBlockId.value
+  if (!blockId) {
+    return
+  }
+
+  const url = new URL(window.location.href)
+  url.hash = blockId
+  try {
+    await copyText(url.toString())
+    showSuccessToast(t("components.textEditor.blockLinkCopied"))
+  } catch {
+    showErrorToast(t("components.textEditor.blockLinkCopyFailed"))
+  }
+}
+
+/**
+ * Deep-link landing: scroll to the block whose UniqueID matches the URL hash.
+ * Collab docs hydrate asynchronously, so retry on updates until the target
+ * exists, then stop for the rest of the session (the hash is an open-time
+ * instruction, not live state).
+ */
+const scrollToHashBlock = (currentEditor: TiptapEditor): boolean => {
+  const hash = window.location.hash.slice(1)
+  if (!hash.length) {
+    return true
+  }
+
+  const target = currentEditor.view.dom.querySelector(
+    `[data-id="${CSS.escape(hash)}"]`
+  )
+  if (!target) {
+    return false
+  }
+
+  target.scrollIntoView({ behavior: "auto", block: "start" })
+  return true
 }
 
 const getTableOfContentsItemIndent = (level: number) =>
@@ -1317,6 +1415,94 @@ const scrollToTableOfContentsItem = (item: TableOfContentDataItem) => {
         </template>
       </TextEditorColorPicker>
 
+      <TextEditorColorPicker
+        :colors="HIGHLIGHT_COLORS"
+        :active-color="
+          (editor?.getAttributes('textStyle').backgroundColor as
+            string | undefined) ?? null
+        "
+        :title="t('components.textEditor.backgroundColorTitle')"
+        @select="editor?.chain().focus().setBackgroundColor($event).run()"
+        @clear="editor?.chain().focus().unsetBackgroundColor().run()"
+      >
+        <template #trigger>
+          <IconPaintBucket />
+        </template>
+      </TextEditorColorPicker>
+
+      <DropdownMenu>
+        <DropdownMenuTrigger as-child>
+          <Button variant="outline" size="icon">
+            <IconALargeSmall />
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent>
+          <DropdownMenuSub>
+            <DropdownMenuSubTrigger>
+              {{ t("components.textEditor.fontSize") }}
+            </DropdownMenuSubTrigger>
+            <DropdownMenuSubContent>
+              <DropdownMenuItem
+                @click="editor?.chain().focus().unsetFontSize().run()"
+              >
+                {{ t("components.textEditor.fontDefault") }}
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                v-for="size in FONT_SIZES"
+                :key="size"
+                @click="editor?.chain().focus().setFontSize(size).run()"
+              >
+                {{ size }}
+              </DropdownMenuItem>
+            </DropdownMenuSubContent>
+          </DropdownMenuSub>
+          <DropdownMenuSub>
+            <DropdownMenuSubTrigger>
+              {{ t("components.textEditor.fontFamily") }}
+            </DropdownMenuSubTrigger>
+            <DropdownMenuSubContent>
+              <DropdownMenuItem
+                @click="editor?.chain().focus().unsetFontFamily().run()"
+              >
+                {{ t("components.textEditor.fontDefault") }}
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                v-for="family in FONT_FAMILIES"
+                :key="family.id"
+                :style="{ fontFamily: family.value }"
+                @click="
+                  editor?.chain().focus().setFontFamily(family.value).run()
+                "
+              >
+                {{ t(family.labelKey) }}
+              </DropdownMenuItem>
+            </DropdownMenuSubContent>
+          </DropdownMenuSub>
+          <DropdownMenuSub>
+            <DropdownMenuSubTrigger>
+              {{ t("components.textEditor.lineHeight") }}
+            </DropdownMenuSubTrigger>
+            <DropdownMenuSubContent>
+              <DropdownMenuItem
+                @click="editor?.chain().focus().unsetLineHeight().run()"
+              >
+                {{ t("components.textEditor.fontDefault") }}
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                v-for="height in LINE_HEIGHTS"
+                :key="height"
+                @click="editor?.chain().focus().setLineHeight(height).run()"
+              >
+                {{ height }}
+              </DropdownMenuItem>
+            </DropdownMenuSubContent>
+          </DropdownMenuSub>
+        </DropdownMenuContent>
+      </DropdownMenu>
+
       <Button variant="outline" size="icon" @click="openLinkDialog">
         <IconLink />
       </Button>
@@ -1474,14 +1660,25 @@ const scrollToTableOfContentsItem = (item: TableOfContentDataItem) => {
     :editor="editor"
     :on-node-change="handleDragHandleNodeChange"
   >
-    <Button
-      variant="outline"
-      size="icon"
-      class="mr-2 size-6"
-      @click.stop="selectNodeFromDragHandle"
-    >
-      <IconGripVertical />
-    </Button>
+    <div class="mr-2 flex items-center gap-1">
+      <Button
+        v-if="dragHandleBlockId"
+        variant="outline"
+        size="icon"
+        class="size-6"
+        @click.stop="copyBlockLink"
+      >
+        <IconLink2 />
+      </Button>
+      <Button
+        variant="outline"
+        size="icon"
+        class="size-6"
+        @click.stop="selectNodeFromDragHandle"
+      >
+        <IconGripVertical />
+      </Button>
+    </div>
   </DragHandle>
 
   <TextEditorCommandPanel
@@ -1515,6 +1712,7 @@ const scrollToTableOfContentsItem = (item: TableOfContentDataItem) => {
 
   <TextEditorImageDialog
     v-model:open="isImageDialogOpen"
+    :upload-image="uploadImage"
     @insert="insertImageFromDialog"
   />
 </template>
@@ -1770,6 +1968,13 @@ const scrollToTableOfContentsItem = (item: TableOfContentDataItem) => {
     padding: 0.75rem 0.9rem;
   }
 
+  /* The code-block NodeView wrapper draws the border and radius; keep the
+     pre inside it flat so the surface reads as one box. */
+  .code-block > pre {
+    border-radius: 0;
+    margin: 0;
+  }
+
   code {
     background: color-mix(in oklab, var(--color-muted) 70%, transparent);
     border-radius: 0.25rem;
@@ -1793,6 +1998,11 @@ const scrollToTableOfContentsItem = (item: TableOfContentDataItem) => {
      is in the bubble menu or a dialog (native ::selection clears on blur). */
   .selection {
     background: color-mix(in oklab, var(--color-primary) 18%, transparent);
+  }
+
+  /* Deep-link landing offset for UniqueID hash targets. */
+  [data-id] {
+    scroll-margin-top: 1.5rem;
   }
 
   &[contenteditable="false"] {

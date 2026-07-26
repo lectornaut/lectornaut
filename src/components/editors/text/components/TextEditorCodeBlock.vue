@@ -6,6 +6,7 @@ import {
   PLAINTEXT_LANGUAGE,
 } from "@/components/editors/text/shiki"
 import { CODE_FONT_WEIGHT, useCodeFontSize } from "@/composables/useCodeFont"
+import { useCopy } from "@/composables/useCopy"
 import { IconCheck, IconChevronsUpDown, IconCopy } from "@/data/icons"
 import { NodeViewContent, NodeViewWrapper, nodeViewProps } from "@tiptap/vue-3"
 
@@ -39,16 +40,15 @@ const selectLanguage = (id: string | null) => {
   isPickerOpen.value = false
 }
 
-// `copied` flips true on a successful write and self-resets after VueUse's
-// default window (~1.5s), which alone drives the copy⇄check icon swap below —
-// no manual timer. `legacy: true` adds an execCommand fallback for non-secure
-// contexts, matching how the rest of the app calls this composable.
-const { copy, copied } = useClipboard({ legacy: true })
+// `copied` flips true on a successful write and self-resets after ~1.5s,
+// which alone drives the copy⇄check icon swap below — no manual timer.
+// `useCopy` is the app-wide clipboard seam (VueUse on web, the native
+// clipboard plugin under Tauri).
+const { copy, copied } = useCopy()
 
 // A ProseMirror node's `textContent` is the concatenated text of its
 // descendants with no markup — for a code block that's exactly the source, and
-// it reflects the latest edits at click time. Same access the Shiki
-// highlighter extension uses to tokenize the block.
+// it reflects the latest edits at click time.
 const copyCode = () => copy(props.node.textContent)
 
 const codeFontSize = useCodeFontSize()

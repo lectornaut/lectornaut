@@ -188,6 +188,7 @@ import IconMoon from "~icons/lucide/moon"
 import IconMoreHorizontal from "~icons/lucide/more-horizontal"
 import IconMoreVertical from "~icons/lucide/more-vertical"
 import IconPointerClick from "~icons/lucide/mouse-pointer-click"
+import IconPaintBucket from "~icons/lucide/paint-bucket"
 import IconPalette from "~icons/lucide/palette"
 import IconPanelBottom from "~icons/lucide/panel-bottom"
 import IconPanelBottomClose from "~icons/lucide/panel-bottom-close"
@@ -503,6 +504,7 @@ export {
   IconMoon,
   IconMoreHorizontal,
   IconMoreVertical,
+  IconPaintBucket,
   IconPalette,
   IconPanelBottom,
   IconPanelBottomClose,

@@ -3,6 +3,7 @@ import {
   getPublicAgentProfile,
   type GetPublicAgentProfileResponse,
 } from "@/composables/useFunctions"
+import { useCopy } from "@/composables/useCopy"
 import { useTeamActions } from "@/composables/useTeamActions"
 import { BUILT_IN_AGENTS_BY_ID, isBuiltInAgentId } from "@/data/builtInAgents"
 import {
@@ -280,7 +281,7 @@ const createdAtLabel = useDateFormat(
 )
 
 const source = computed(() => window.location.href)
-const { copy, copied } = useClipboard({ source, legacy: true })
+const { copy, copied } = useCopy({ source })
 
 useHead(() => ({
   title: profile.value?.name || t("pages.agents.profile.title"),

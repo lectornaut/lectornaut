@@ -4,6 +4,7 @@ import {
   type BotChatMessage,
   type BotChatSegment,
 } from "@/composables/useBotChat"
+import { useCopy } from "@/composables/useCopy"
 import { useReadAloud } from "@/composables/useReadAloud"
 import {
   IconAi,
@@ -138,11 +139,9 @@ const senderKey = (message: BotChatMessage): string =>
 // view of the bubble: copying or quoting it gives the user the words,
 // not the JSON the model emitted to fetch a file. Tool segments stay
 // where they belong — inline cards in the bubble.
-const { copy: copyToClipboard, copied: justCopied } = useClipboard({
-  legacy: true,
-})
+const { copy: copyToClipboard, copied: justCopied } = useCopy()
 
-// `useClipboard` exposes one shared `copied` flag that self-resets after a
+// `useCopy` exposes one shared `copied` flag that self-resets after a
 // short window (~1.5s). The hover bar's copy button swaps to a check while
 // it's set — but that flag is component-wide, so on its own it would also
 // flash a check on whichever *other* bubble you hover during the window.
