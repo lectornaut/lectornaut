@@ -319,7 +319,6 @@ const handleDelete = async (attachment: IBotSessionAttachment) => {
     <ButtonGroup class="mx-2 w-auto">
       <Button
         variant="outline"
-        size="sm"
         class="grow justify-start"
         :disabled="(!canEdit && !canBufferPending) || uploadInProgress"
         @click="triggerUpload"
@@ -461,7 +460,7 @@ const handleDelete = async (attachment: IBotSessionAttachment) => {
               <IconAlertTriangle />
               <span>{{ error }}</span>
             </div>
-            <Button variant="secondary" size="sm" @click="refresh">
+            <Button variant="secondary" @click="refresh">
               <IconRefreshCcw />
               Retry
             </Button>

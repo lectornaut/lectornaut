@@ -463,7 +463,6 @@ const renderedMessages = computed(() =>
                           <Attachment
                             v-for="(name, index) in attachments"
                             :key="`${index}:${name}`"
-                            size="sm"
                           >
                             <AttachmentMedia>
                               <Component

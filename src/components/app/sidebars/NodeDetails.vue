@@ -162,7 +162,7 @@ const nodeStatusLabel = computed(() =>
 
 <template>
   <div class="flex size-full min-h-0 grow flex-col gap-2">
-    <Card size="sm" class="mx-2 shadow-none">
+    <Card class="mx-2 shadow-none">
       <CardHeader>
         <CardTitle class="flex items-center gap-2">
           <IconSparkles class="text-muted-foreground" />
@@ -171,7 +171,6 @@ const nodeStatusLabel = computed(() =>
         <CardAction>
           <Button
             v-if="!summary && !isSummarizing"
-            size="sm"
             variant="secondary"
             :disabled="node.isArchived"
             @click="handleGenerateSummary"
@@ -180,7 +179,6 @@ const nodeStatusLabel = computed(() =>
           </Button>
           <Button
             v-else-if="summary && !isSummarizing"
-            size="sm"
             variant="ghost"
             @click="handleGenerateSummary"
           >

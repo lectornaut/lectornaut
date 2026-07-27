@@ -670,8 +670,8 @@ const expandedCard = ref<number | null>(null)
               <TooltipTrigger as-child>
                 <PopoverTrigger as-child>
                   <Button
-                    variant="ghost"
-                    size="icon-sm"
+                    variant="outline"
+                    size="icon"
                     class="data-[state=open]:bg-accent"
                   >
                     <IconCalendar />
@@ -730,11 +730,19 @@ const expandedCard = ref<number | null>(null)
             </Tooltip>
           </TooltipProvider>
         </Popover>
-        <TabsList>
-          <TabsTrigger value="overview">
+        <TabsList
+          class="no-scrollbar bg-input/50 scroll-fade-x h-9! shrink-0 justify-start overflow-clip overflow-x-auto p-0"
+        >
+          <TabsTrigger
+            value="overview"
+            class="data-[state=active]:border-border! data-[state=active]:bg-background h-9"
+          >
             {{ t("pages.home.tabs.overview") }}
           </TabsTrigger>
-          <TabsTrigger value="usage">
+          <TabsTrigger
+            value="usage"
+            class="data-[state=active]:border-border! data-[state=active]:bg-background h-9"
+          >
             {{ t("pages.home.tabs.usage") }}
           </TabsTrigger>
         </TabsList>
@@ -778,7 +786,7 @@ const expandedCard = ref<number | null>(null)
                         <TooltipTrigger as-child>
                           <Button
                             variant="outline"
-                            size="icon-sm"
+                            size="icon"
                             @click="
                               expandedCard =
                                 expandedCard === card.id ? null : card.id
@@ -807,7 +815,7 @@ const expandedCard = ref<number | null>(null)
                             <DropdownMenuTrigger as-child>
                               <Button
                                 variant="outline"
-                                size="icon-sm"
+                                size="icon"
                                 class="data-[state=open]:bg-accent"
                               >
                                 <IconMoreHorizontal />

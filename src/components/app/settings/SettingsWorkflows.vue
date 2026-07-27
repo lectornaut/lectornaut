@@ -456,7 +456,6 @@ const rowDescription = (wf: IWorkflow): string =>
           </FieldContent>
           <Button
             variant="outline"
-            size="sm"
             :disabled="!canCreateCustom"
             @click="openCreate"
           >
@@ -503,7 +502,7 @@ const rowDescription = (wf: IWorkflow): string =>
             v-model:open="activeSectionOpen"
           >
             <CollapsibleTrigger as-child>
-              <Button variant="ghost" size="sm" class="w-full justify-between">
+              <Button variant="ghost" class="w-full justify-between">
                 <span class="flex items-center gap-2">
                   {{
                     t("settings.workflows.activeCount", {
@@ -548,7 +547,7 @@ const rowDescription = (wf: IWorkflow): string =>
             v-model:open="disabledSectionOpen"
           >
             <CollapsibleTrigger as-child>
-              <Button variant="ghost" size="sm" class="w-full justify-between">
+              <Button variant="ghost" class="w-full justify-between">
                 <span class="flex items-center gap-2">
                   {{
                     t("settings.workflows.disabledCount", {
@@ -593,7 +592,7 @@ const rowDescription = (wf: IWorkflow): string =>
             v-model:open="archivedSectionOpen"
           >
             <CollapsibleTrigger as-child>
-              <Button variant="ghost" size="sm" class="w-full justify-between">
+              <Button variant="ghost" class="w-full justify-between">
                 <span class="flex items-center gap-2">
                   {{
                     t("settings.workflows.archivedCount", {

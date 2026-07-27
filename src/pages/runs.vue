@@ -153,7 +153,7 @@ const stats = computed(() => {
       </SidebarContent>
       <Separator />
       <SidebarFooter>
-        <Button v-if="hasFilters" variant="ghost" size="sm" @click="clearAll">
+        <Button v-if="hasFilters" variant="ghost" @click="clearAll">
           {{ t("pages.runs.clearAll") }}
         </Button>
       </SidebarFooter>

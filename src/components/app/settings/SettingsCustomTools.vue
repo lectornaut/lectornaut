@@ -520,7 +520,6 @@ const handleEditorSave = async (): Promise<void> => {
                   </InputGroupText>
                   <InputGroupButton
                     variant="default"
-                    size="sm"
                     class="ml-auto"
                     :disabled="!canGenerate"
                     @click="handleGenerate"
@@ -885,7 +884,7 @@ const handleEditorSave = async (): Promise<void> => {
                     </div>
                     <Button
                       variant="ghost"
-                      size="icon-sm"
+                      size="icon"
                       class="col-span-1 justify-self-end"
                       :disabled="!canManage"
                       @click="removeField('inputSchema', index)"
@@ -907,7 +906,6 @@ const handleEditorSave = async (): Promise<void> => {
 
                 <Button
                   variant="outline"
-                  size="sm"
                   :disabled="
                     !canManage ||
                     draft.inputSchema.fields.length >= bounds.fieldsMax
@@ -980,7 +978,7 @@ const handleEditorSave = async (): Promise<void> => {
                     </div>
                     <Button
                       variant="ghost"
-                      size="icon-sm"
+                      size="icon"
                       class="col-span-1 justify-self-end"
                       :disabled="!canManage"
                       @click="removeField('outputSchema', index)"
@@ -1002,7 +1000,6 @@ const handleEditorSave = async (): Promise<void> => {
 
                 <Button
                   variant="outline"
-                  size="sm"
                   :disabled="
                     !canManage ||
                     draft.outputSchema.fields.length >= bounds.fieldsMax
@@ -1171,7 +1168,7 @@ const handleEditorSave = async (): Promise<void> => {
                       />
                       <Button
                         variant="ghost"
-                        size="icon-sm"
+                        size="icon"
                         class="col-span-1 justify-self-end"
                         :disabled="!canManage"
                         @click="removeHttpHeader(index)"
@@ -1181,7 +1178,6 @@ const handleEditorSave = async (): Promise<void> => {
                     </div>
                     <Button
                       variant="outline"
-                      size="sm"
                       :disabled="!canManage"
                       @click="addHttpHeader"
                     >

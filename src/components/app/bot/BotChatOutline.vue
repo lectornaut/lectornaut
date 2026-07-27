@@ -85,7 +85,6 @@ const jumpToMessage = (messageId: string) => {
           v-for="message in userMessages"
           :key="message.id"
           type="button"
-          size="sm"
           :variant="currentAnchorId === message.id ? 'secondary' : 'ghost'"
           :aria-current="
             currentAnchorId === message.id ? 'location' : undefined

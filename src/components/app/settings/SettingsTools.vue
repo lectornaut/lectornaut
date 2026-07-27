@@ -509,7 +509,6 @@ const handleRemoveTool = async (tool: ITeamCustomTool): Promise<void> => {
                 <span class="inline-block">
                   <Button
                     variant="outline"
-                    size="sm"
                     :disabled="!canManageTools || !customToolsEnabled"
                     @click="openNewToolDialog"
                   >
@@ -561,11 +560,7 @@ const handleRemoveTool = async (tool: ITeamCustomTool): Promise<void> => {
               v-model:open="customToolsActiveOpen"
             >
               <CollapsibleTrigger as-child>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  class="w-full justify-between"
-                >
+                <Button variant="ghost" class="w-full justify-between">
                   <span class="flex items-center gap-2">
                     {{
                       t("settings.agents.customTools.activeSection", {
@@ -605,11 +600,7 @@ const handleRemoveTool = async (tool: ITeamCustomTool): Promise<void> => {
               v-model:open="customToolsDisabledOpen"
             >
               <CollapsibleTrigger as-child>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  class="w-full justify-between"
-                >
+                <Button variant="ghost" class="w-full justify-between">
                   <span class="flex items-center gap-2">
                     {{
                       t("settings.agents.customTools.disabledSection", {
@@ -649,11 +640,7 @@ const handleRemoveTool = async (tool: ITeamCustomTool): Promise<void> => {
               v-model:open="customToolsArchivedOpen"
             >
               <CollapsibleTrigger as-child>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  class="w-full justify-between"
-                >
+                <Button variant="ghost" class="w-full justify-between">
                   <span class="flex items-center gap-2">
                     {{
                       t("settings.agents.customTools.archivedSection", {

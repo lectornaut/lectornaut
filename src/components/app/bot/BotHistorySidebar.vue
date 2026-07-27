@@ -302,7 +302,7 @@ const onArchiveToggle = (session: IBotSession) => {
         >
           <IconHistory />
           <p>{{ $t("ai.filterNoResults") }}</p>
-          <Button variant="ghost" size="sm" @click="filter.reset()">
+          <Button variant="ghost" @click="filter.reset()">
             {{ $t("ai.filterReset") }}
           </Button>
         </div>

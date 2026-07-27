@@ -235,17 +235,17 @@ const handleToggleEnabled = async (enabled: boolean): Promise<void> => {
 
         <Tabs v-model="activeTab" class="min-h-0">
           <TabsList
-            class="no-scrollbar bg-input/50 shrink-0 justify-start overflow-x-auto border"
+            class="no-scrollbar bg-input/50 scroll-fade-x h-9! shrink-0 justify-start overflow-clip overflow-x-auto p-0"
           >
             <TabsTrigger
               value="overview"
-              class="data-[state=active]:border-border! data-[state=active]:bg-background"
+              class="data-[state=active]:border-border! data-[state=active]:bg-background h-9"
             >
               {{ t("settings.connections.info.tabOverview") }}
             </TabsTrigger>
             <TabsTrigger
               value="accounts"
-              class="data-[state=active]:border-border! data-[state=active]:bg-background"
+              class="data-[state=active]:border-border! data-[state=active]:bg-background h-9"
             >
               {{
                 t("settings.connections.info.tabAccounts", {
@@ -257,7 +257,7 @@ const handleToggleEnabled = async (enabled: boolean): Promise<void> => {
             <TabsTrigger
               v-if="canManage"
               value="settings"
-              class="data-[state=active]:border-border! data-[state=active]:bg-background"
+              class="data-[state=active]:border-border! data-[state=active]:bg-background h-9"
             >
               {{ t("settings.connections.info.tabSettings") }}
             </TabsTrigger>
@@ -334,7 +334,6 @@ const handleToggleEnabled = async (enabled: boolean): Promise<void> => {
                   v-for="row in accountRows"
                   :key="row.binding.id"
                   variant="outline"
-                  size="sm"
                 >
                   <ItemMedia>
                     <AppAvatar :src="row.photoURL" :name="row.name" />

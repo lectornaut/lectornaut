@@ -448,23 +448,23 @@ const openInfoDialog = (provider: ConnectionProvider): void => {
         <Tabs default-value="discover" orientation="horizontal">
           <div class="flex items-center justify-between gap-2">
             <TabsList
-              class="no-scrollbar bg-input/50 grid shrink-0 grid-cols-3 justify-start overflow-x-auto rounded! border"
+              class="no-scrollbar bg-input/50 scroll-fade-x grid h-9! shrink-0 grid-cols-3 justify-start overflow-clip overflow-x-auto p-0"
             >
               <TabsTrigger
                 value="discover"
-                class="data-[state=active]:border-border! data-[state=active]:bg-background"
+                class="data-[state=active]:border-border! data-[state=active]:bg-background h-9"
               >
                 {{ t("settings.connections.tabDiscover") }}
               </TabsTrigger>
               <TabsTrigger
                 value="installed"
-                class="data-[state=active]:border-border! data-[state=active]:bg-background"
+                class="data-[state=active]:border-border! data-[state=active]:bg-background h-9"
               >
                 {{ t("settings.connections.tabInstalled") }}
               </TabsTrigger>
               <TabsTrigger
                 value="manage"
-                class="data-[state=active]:border-border! data-[state=active]:bg-background"
+                class="data-[state=active]:border-border! data-[state=active]:bg-background h-9"
               >
                 {{ t("settings.connections.tabManage") }}
               </TabsTrigger>
@@ -632,7 +632,7 @@ const openInfoDialog = (provider: ConnectionProvider): void => {
                           <TooltipTrigger as-child>
                             <Button
                               :variant="row.installed ? 'secondary' : 'default'"
-                              size="icon-sm"
+                              size="icon"
                               @click="openInfoDialog(row.app.provider)"
                             >
                               <IconInfo />
@@ -646,7 +646,6 @@ const openInfoDialog = (provider: ConnectionProvider): void => {
                           <TooltipTrigger as-child>
                             <Button
                               :variant="row.installed ? 'secondary' : 'default'"
-                              size="sm"
                               :disabled="
                                 !canManage ||
                                 isPendingId(appActionId(row.app.provider))
@@ -742,7 +741,6 @@ const openInfoDialog = (provider: ConnectionProvider): void => {
                         <Button
                           v-if="showConnectAction(row)"
                           :variant="row.myBinding ? 'outline' : 'default'"
-                          size="sm"
                           :disabled="isBindingPending(row.app.provider)"
                           @click="handleConnect(row.app.provider)"
                         >
@@ -760,7 +758,6 @@ const openInfoDialog = (provider: ConnectionProvider): void => {
                         <Button
                           v-if="showDisconnectAction(row)"
                           variant="outline"
-                          size="sm"
                           :disabled="isBindingPending(row.app.provider)"
                           @click="disconnectDialog.open(row.app)"
                         >
@@ -784,7 +781,7 @@ const openInfoDialog = (provider: ConnectionProvider): void => {
                                 :variant="row.myBinding ? 'outline' : 'default'"
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                size="icon-sm"
+                                size="icon"
                               >
                                 <IconExternalLink />
                               </Button>

@@ -606,7 +606,7 @@ const closeTab = (id: string) => {
                                 >
                                   <TabsList
                                     v-if="source.length > 0"
-                                    class="flex h-8! min-w-0 items-stretch gap-2 bg-transparent p-0"
+                                    class="flex min-w-0 items-stretch gap-2 bg-transparent p-0"
                                   >
                                     <TabsTrigger
                                       v-for="tab in source"
@@ -655,7 +655,7 @@ const closeTab = (id: string) => {
                                         <TooltipTrigger as-child>
                                           <Button
                                             variant="ghost"
-                                            size="icon-sm"
+                                            size="icon"
                                             @click="newTab()"
                                           >
                                             <IconPlus />
@@ -677,7 +677,7 @@ const closeTab = (id: string) => {
                                         <TooltipTrigger as-child>
                                           <Button
                                             variant="secondary"
-                                            size="icon-sm"
+                                            size="icon"
                                             @click="
                                               topPanel?.isCollapsed
                                                 ? topPanel?.expand()
@@ -703,7 +703,7 @@ const closeTab = (id: string) => {
                                         <TooltipTrigger as-child>
                                           <Button
                                             variant="secondary"
-                                            size="icon-sm"
+                                            size="icon"
                                             @click="bottomPanel?.collapse()"
                                           >
                                             <IconX />

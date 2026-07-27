@@ -99,7 +99,6 @@ const onNewNodeChat = () => {
     <ButtonGroup class="mx-2 w-auto">
       <Button
         variant="outline"
-        size="sm"
         class="grow justify-start"
         :title="t('ai.newChatHint')"
         @click="onNewNodeChat"
@@ -114,7 +113,7 @@ const onNewNodeChat = () => {
               <DropdownMenuTrigger as-child>
                 <Button
                   variant="outline"
-                  size="icon-sm"
+                  size="icon"
                   :title="t('ai.botHistoryHint')"
                 >
                   <IconHistory />
@@ -188,7 +187,7 @@ const onNewNodeChat = () => {
                     </EmptyTitle>
                   </EmptyHeader>
                   <EmptyContent v-if="filter.isActive.value">
-                    <Button variant="ghost" size="sm" @click="filter.reset()">
+                    <Button variant="ghost" @click="filter.reset()">
                       {{ t("ai.filterReset") }}
                     </Button>
                   </EmptyContent>

@@ -1320,7 +1320,7 @@ const showChevron = computed(
       <!-- ============================================================== -->
       <!-- Live interrupt: question + choices form (chat is paused here). -->
       <!-- ============================================================== -->
-      <Card v-if="isLiveInterrupt && askQuestionInput" size="sm">
+      <Card v-if="isLiveInterrupt && askQuestionInput">
         <CardHeader>
           <CardTitle>{{ askQuestionInput.question }}</CardTitle>
         </CardHeader>
@@ -1360,7 +1360,7 @@ const showChevron = computed(
       <!-- Cancel. Approval is stamped server-side onto the tool restart; -->
       <!-- nothing is written until the member clicks Approve.           -->
       <!-- ============================================================== -->
-      <Card v-else-if="isLiveInterrupt && calendarWriteDraft" size="sm">
+      <Card v-else-if="isLiveInterrupt && calendarWriteDraft">
         <CardHeader>
           <CardTitle>
             {{
@@ -1412,7 +1412,6 @@ const showChevron = computed(
         </CardContent>
         <CardFooter class="gap-2">
           <Button
-            size="sm"
             :disabled="submittingDecision !== null"
             @click="submitDecision(true)"
           >
@@ -1421,7 +1420,6 @@ const showChevron = computed(
           </Button>
           <Button
             variant="outline"
-            size="sm"
             :disabled="submittingDecision !== null"
             @click="submitDecision(false)"
           >
@@ -1435,7 +1433,7 @@ const showChevron = computed(
       <!-- Live Drive-write confirmation: the file draft + Approve /     -->
       <!-- Cancel. Same contract as the calendar card above.             -->
       <!-- ============================================================== -->
-      <Card v-else-if="isLiveInterrupt && driveWriteDraft" size="sm">
+      <Card v-else-if="isLiveInterrupt && driveWriteDraft">
         <CardHeader>
           <CardTitle>
             {{
@@ -1495,7 +1493,6 @@ const showChevron = computed(
         </CardContent>
         <CardFooter class="gap-2">
           <Button
-            size="sm"
             :disabled="submittingDecision !== null"
             @click="submitDecision(true)"
           >
@@ -1504,7 +1501,6 @@ const showChevron = computed(
           </Button>
           <Button
             variant="outline"
-            size="sm"
             :disabled="submittingDecision !== null"
             @click="submitDecision(false)"
           >
@@ -1515,7 +1511,7 @@ const showChevron = computed(
       </Card>
 
       <!-- GitHub-write confirm: same contract as the drive card. -->
-      <Card v-else-if="isLiveInterrupt && gitHubWriteDraft" size="sm">
+      <Card v-else-if="isLiveInterrupt && gitHubWriteDraft">
         <CardHeader>
           <CardTitle>{{ t(gitHubWriteTitleKey) }}</CardTitle>
           <CardDescription>
@@ -1555,7 +1551,6 @@ const showChevron = computed(
         </CardContent>
         <CardFooter class="gap-2">
           <Button
-            size="sm"
             :disabled="submittingDecision !== null"
             @click="submitDecision(true)"
           >
@@ -1564,7 +1559,6 @@ const showChevron = computed(
           </Button>
           <Button
             variant="outline"
-            size="sm"
             :disabled="submittingDecision !== null"
             @click="submitDecision(false)"
           >
@@ -1575,7 +1569,7 @@ const showChevron = computed(
       </Card>
 
       <!-- Gmail-send confirm: same contract as the drive card. -->
-      <Card v-else-if="isLiveInterrupt && gmailSendDraft" size="sm">
+      <Card v-else-if="isLiveInterrupt && gmailSendDraft">
         <CardHeader>
           <CardTitle>
             {{
@@ -1622,7 +1616,6 @@ const showChevron = computed(
         </CardContent>
         <CardFooter class="gap-2">
           <Button
-            size="sm"
             :disabled="submittingDecision !== null"
             @click="submitDecision(true)"
           >
@@ -1631,7 +1624,6 @@ const showChevron = computed(
           </Button>
           <Button
             variant="outline"
-            size="sm"
             :disabled="submittingDecision !== null"
             @click="submitDecision(false)"
           >
@@ -1658,7 +1650,7 @@ const showChevron = computed(
       <!-- choice form (resuming a superseded interrupt would fail), just -->
       <!-- the question and a note that it went unanswered. -->
       <!-- ============================================================== -->
-      <Card v-else-if="isAbandonedInterrupt && questionText" size="sm">
+      <Card v-else-if="isAbandonedInterrupt && questionText">
         <CardHeader>
           <CardTitle>{{ questionText }}</CardTitle>
         </CardHeader>
@@ -1670,7 +1662,7 @@ const showChevron = computed(
 
       <!-- Abandoned calendar-write confirmation: the user moved on without -->
       <!-- deciding, so nothing was written. Read-only historical card. -->
-      <Card v-else-if="isAbandonedInterrupt && calendarWriteDraft" size="sm">
+      <Card v-else-if="isAbandonedInterrupt && calendarWriteDraft">
         <CardHeader>
           <CardTitle>
             {{
@@ -1693,7 +1685,7 @@ const showChevron = computed(
 
       <!-- Abandoned Drive-write confirmation: the user moved on without -->
       <!-- deciding, so nothing was written. Read-only historical card. -->
-      <Card v-else-if="isAbandonedInterrupt && driveWriteDraft" size="sm">
+      <Card v-else-if="isAbandonedInterrupt && driveWriteDraft">
         <CardHeader>
           <CardTitle>
             {{
@@ -1714,7 +1706,7 @@ const showChevron = computed(
         </CardContent>
       </Card>
 
-      <Card v-else-if="isAbandonedInterrupt && gitHubWriteDraft" size="sm">
+      <Card v-else-if="isAbandonedInterrupt && gitHubWriteDraft">
         <CardHeader>
           <CardTitle>{{ t(gitHubWriteTitleKey) }}</CardTitle>
           <CardDescription v-if="gitHubWriteDraft.repo">
@@ -1730,7 +1722,7 @@ const showChevron = computed(
         </CardContent>
       </Card>
 
-      <Card v-else-if="isAbandonedInterrupt && gmailSendDraft" size="sm">
+      <Card v-else-if="isAbandonedInterrupt && gmailSendDraft">
         <CardHeader>
           <CardTitle>
             {{
@@ -1756,10 +1748,7 @@ const showChevron = computed(
       <!-- completed result, so it shares the done-state Card anatomy -->
       <!-- rather than staying a transient-state Item. -->
       <!-- ============================================================== -->
-      <Card
-        v-else-if="isResolvedInterrupt && questionText && interruptAnswer"
-        size="sm"
-      >
+      <Card v-else-if="isResolvedInterrupt && questionText && interruptAnswer">
         <CardHeader>
           <CardTitle>{{ questionText }}</CardTitle>
         </CardHeader>
@@ -1775,7 +1764,7 @@ const showChevron = computed(
       <!-- toolResult). Owns the declined case too — a deliberate Cancel -->
       <!-- is `ok: false` but not an error. -->
       <!-- ============================================================== -->
-      <Card v-else-if="isCalendarWrite && calendarWriteResult" size="sm">
+      <Card v-else-if="isCalendarWrite && calendarWriteResult">
         <CardHeader v-if="calendarWriteDraft?.summary">
           <CardTitle>{{ calendarWriteDraft.summary }}</CardTitle>
         </CardHeader>
@@ -1817,7 +1806,7 @@ const showChevron = computed(
       </Card>
 
       <!-- Drive-write outcome: same contract as the calendar outcome card. -->
-      <Card v-else-if="isDriveWrite && driveWriteResult" size="sm">
+      <Card v-else-if="isDriveWrite && driveWriteResult">
         <CardHeader v-if="driveWriteDraft?.name">
           <CardTitle>{{ driveWriteDraft.name }}</CardTitle>
         </CardHeader>
@@ -1859,7 +1848,7 @@ const showChevron = computed(
       </Card>
 
       <!-- GitHub-write outcome: same contract as the calendar/drive cards. -->
-      <Card v-else-if="isGitHubWrite && gitHubWriteResult" size="sm">
+      <Card v-else-if="isGitHubWrite && gitHubWriteResult">
         <CardHeader v-if="gitHubWriteDraft?.repo">
           <CardTitle>
             {{ gitHubWriteDraft.repo
@@ -1906,7 +1895,7 @@ const showChevron = computed(
       </Card>
 
       <!-- Gmail-send outcome: same contract as the calendar/drive cards. -->
-      <Card v-else-if="isGmailWrite && gmailSendResult" size="sm">
+      <Card v-else-if="isGmailWrite && gmailSendResult">
         <CardHeader v-if="gmailSendDraft && gmailSendDraft.to.length > 0">
           <CardTitle>{{ gmailSendDraft.to.join(", ") }}</CardTitle>
         </CardHeader>
@@ -1953,7 +1942,7 @@ const showChevron = computed(
       <!-- arrives — only the inner content swaps. The trigger's -->
       <!-- spinner carries the progress signal at the row level. -->
       <!-- ============================================================== -->
-      <Card v-else-if="isRunning" size="sm">
+      <Card v-else-if="isRunning">
         <CardContent class="flex items-center gap-2">
           <Spinner />
           <span class="text-muted-foreground">
@@ -1965,10 +1954,7 @@ const showChevron = computed(
       <!-- ============================================================== -->
       <!-- rollDice: dice icon + big number. No input, so no header. -->
       <!-- ============================================================== -->
-      <Card
-        v-else-if="tool.name === 'rollDice' && diceOutput !== null"
-        size="sm"
-      >
+      <Card v-else-if="tool.name === 'rollDice' && diceOutput !== null">
         <CardContent class="flex items-center gap-2">
           <IconDices class="text-muted-foreground size-8" />
           <div class="flex flex-col">
@@ -1986,10 +1972,7 @@ const showChevron = computed(
       <!-- searchWorkspaceNodes: query (header) + result count, then the -->
       <!-- per-result rows in the body (or an empty state). -->
       <!-- ============================================================== -->
-      <Card
-        v-else-if="tool.name === 'searchWorkspaceNodes' && searchOutput"
-        size="sm"
-      >
+      <Card v-else-if="tool.name === 'searchWorkspaceNodes' && searchOutput">
         <CardHeader v-if="searchInput">
           <CardTitle>"{{ searchInput.query }}"</CardTitle>
           <CardDescription>
@@ -2050,7 +2033,6 @@ const showChevron = computed(
           summarizeOutput &&
           summarizeOutput.error
         "
-        size="sm"
       >
         <CardHeader>
           <CardTitle>{{ t("ai.toolCall.summarize.errorTitle") }}</CardTitle>
@@ -2061,10 +2043,7 @@ const showChevron = computed(
         </CardContent>
       </Card>
 
-      <Card
-        v-else-if="tool.name === 'summarizeNode' && summarizeOutput"
-        size="sm"
-      >
+      <Card v-else-if="tool.name === 'summarizeNode' && summarizeOutput">
         <CardContent class="flex flex-col gap-2">
           <p class="text-foreground">
             {{ summarizeOutput.summary }}
@@ -2121,7 +2100,6 @@ const showChevron = computed(
         v-else-if="
           tool.name === 'compareNodes' && compareOutput && compareOutput.error
         "
-        size="sm"
       >
         <CardHeader>
           <CardTitle>{{ t("ai.toolCall.compare.errorTitle") }}</CardTitle>
@@ -2132,7 +2110,7 @@ const showChevron = computed(
         </CardContent>
       </Card>
 
-      <Card v-else-if="tool.name === 'compareNodes' && compareOutput" size="sm">
+      <Card v-else-if="tool.name === 'compareNodes' && compareOutput">
         <CardHeader v-if="compareInput?.focus">
           <CardTitle>{{ compareInput.focus }}</CardTitle>
         </CardHeader>
@@ -2226,10 +2204,7 @@ const showChevron = computed(
       <!-- findRelatedNodes: header with result count, then per-node rows. -->
       <!-- Same row layout as searchWorkspaceNodes for visual consistency. -->
       <!-- ============================================================== -->
-      <Card
-        v-else-if="tool.name === 'findRelatedNodes' && relatedOutput"
-        size="sm"
-      >
+      <Card v-else-if="tool.name === 'findRelatedNodes' && relatedOutput">
         <CardHeader v-if="relatedInput">
           <CardDescription>
             {{
@@ -2284,10 +2259,7 @@ const showChevron = computed(
       <!-- browseInternet: query header + grounded answer (markdown) + -->
       <!-- the source links the answer was grounded on. -->
       <!-- ============================================================== -->
-      <Card
-        v-else-if="tool.name === 'browseInternet' && browseInternetOutput"
-        size="sm"
-      >
+      <Card v-else-if="tool.name === 'browseInternet' && browseInternetOutput">
         <CardHeader v-if="browseInternetInput">
           <CardTitle>{{ browseInternetInput }}</CardTitle>
         </CardHeader>
@@ -2327,7 +2299,7 @@ const showChevron = computed(
       <!-- present, else a JSON dump, so the message column at least -->
       <!-- carries something meaningful. -->
       <!-- ============================================================== -->
-      <Card v-else-if="!hasCustomDoneRenderer" size="sm">
+      <Card v-else-if="!hasCustomDoneRenderer">
         <CardContent class="flex flex-col gap-2">
           <div v-if="inputMarkdown" class="flex flex-col gap-2">
             <span class="text-muted-foreground text-xs font-medium uppercase">

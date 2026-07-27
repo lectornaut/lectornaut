@@ -535,7 +535,6 @@ const handleSave = async (): Promise<void> => {
                   </InputGroupText>
                   <InputGroupButton
                     variant="default"
-                    size="sm"
                     class="ml-auto"
                     :disabled="!canGenerate"
                     @click="handleGenerate"
@@ -1114,11 +1113,7 @@ const handleSave = async (): Promise<void> => {
                   class="flex items-center justify-between rounded border px-2 py-1 text-sm"
                 >
                   <span class="truncate">{{ n.scope }} / {{ n.nodeId }}</span>
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    @click="removeContextNode(i)"
-                  >
+                  <Button variant="ghost" @click="removeContextNode(i)">
                     {{ t("settings.workflows.remove") }}
                   </Button>
                 </div>
@@ -1142,7 +1137,7 @@ const handleSave = async (): Promise<void> => {
                     class="grow"
                     @keydown.enter.prevent="addContextNode"
                   />
-                  <Button size="sm" variant="outline" @click="addContextNode">
+                  <Button variant="outline" @click="addContextNode">
                     {{ t("settings.workflows.add") }}
                   </Button>
                 </div>

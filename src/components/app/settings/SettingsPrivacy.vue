@@ -1,7 +1,7 @@
 <script lang="ts" setup>
 import { useBotChat } from "@/composables/useBotChat"
 import { useMemories } from "@/composables/useMemories"
-import { IconArchive, IconSparkles, IconTrash2 } from "@/data/icons"
+import { IconArchive, IconTrash2 } from "@/data/icons"
 import { computed, ref } from "vue"
 import { toast } from "vue-sonner"
 
@@ -264,7 +264,7 @@ const submitDeleteMemories = async () => {
             :disabled="isMutatingMemories || totalMemoryCount === 0"
             @click="deleteMemoriesDialogOpen = true"
           >
-            <IconSparkles />
+            <IconTrash2 />
             {{ t("settings.privacy.deleteMemories.action") }}
           </Button>
         </Field>

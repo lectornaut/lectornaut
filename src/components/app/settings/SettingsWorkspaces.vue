@@ -131,7 +131,11 @@ const formatCreatedAt = (value: IWorkspace["createdAt"] | null | undefined) => {
 <template>
   <div v-if="canViewTeamSettings" class="p-6">
     <FieldGroup>
-      <FieldSet>
+      <!-- min-w-0 (here and on the table's FieldContent) beats the fieldset
+         UA `min-inline-size: min-content` floor so the Table shrinks with
+         the dialog and scrolls inside its own overflow-x-auto container
+         (same recipe as SettingsConnections' Manage tab). -->
+      <FieldSet class="min-w-0">
         <Field orientation="horizontal">
           <FieldContent>
             <FieldLabel>{{ t("settings.workspacesList.label") }}</FieldLabel>
@@ -159,7 +163,7 @@ const formatCreatedAt = (value: IWorkspace["createdAt"] | null | undefined) => {
           </TooltipProvider>
         </Field>
         <Field orientation="horizontal">
-          <FieldContent>
+          <FieldContent class="min-w-0">
             <LoadingState v-if="isLoading" />
             <div v-else class="overflow-clip rounded border">
               <Table>
@@ -218,7 +222,10 @@ const formatCreatedAt = (value: IWorkspace["createdAt"] | null | undefined) => {
                     v-for="workspace in sortedWorkspaces"
                     :key="workspace.id"
                   >
-                    <TableCell>
+                    <!-- whitespace-normal resets TableCell's default nowrap so
+                       the Item's line-clamp can wrap-and-ellipsize instead of
+                       one long line setting the table's min-content width. -->
+                    <TableCell class="whitespace-normal">
                       <Item class="group p-0" size="xs">
                         <ItemMedia class="group relative">
                           <TooltipProvider>
@@ -297,8 +304,13 @@ const formatCreatedAt = (value: IWorkspace["createdAt"] | null | undefined) => {
                         </ItemContent>
                       </Item>
                     </TableCell>
-                    <TableCell class="truncate">
-                      {{ workspace.description || "No description" }}
+                    <TableCell class="whitespace-normal">
+                      <span class="line-clamp-2">
+                        {{
+                          workspace.description ||
+                          t("settings.workspacesList.noDescription")
+                        }}
+                      </span>
                     </TableCell>
                     <TableCell>
                       {{ formatCreatedAt(workspace.createdAt) }}

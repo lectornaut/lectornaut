@@ -446,7 +446,6 @@ const handleRemoveAgent = async (agent: ITeamAgent): Promise<void> => {
                 <span class="inline-block">
                   <Button
                     variant="outline"
-                    size="sm"
                     :disabled="!canManage || !customAgentsEnabled"
                     @click="openNewAgentDialog"
                   >
@@ -503,11 +502,7 @@ const handleRemoveAgent = async (agent: ITeamAgent): Promise<void> => {
               v-model:open="activeSectionOpen"
             >
               <CollapsibleTrigger as-child>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  class="w-full justify-between"
-                >
+                <Button variant="ghost" class="w-full justify-between">
                   <span class="flex items-center gap-2">
                     {{
                       t("settings.agents.custom.activeSection", {
@@ -547,11 +542,7 @@ const handleRemoveAgent = async (agent: ITeamAgent): Promise<void> => {
               v-model:open="disabledSectionOpen"
             >
               <CollapsibleTrigger as-child>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  class="w-full justify-between"
-                >
+                <Button variant="ghost" class="w-full justify-between">
                   <span class="flex items-center gap-2">
                     {{
                       t("settings.agents.custom.disabledSection", {
@@ -591,11 +582,7 @@ const handleRemoveAgent = async (agent: ITeamAgent): Promise<void> => {
               v-model:open="archivedSectionOpen"
             >
               <CollapsibleTrigger as-child>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  class="w-full justify-between"
-                >
+                <Button variant="ghost" class="w-full justify-between">
                   <span class="flex items-center gap-2">
                     {{
                       t("settings.agents.custom.archivedSection", {

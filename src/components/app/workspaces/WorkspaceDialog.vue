@@ -709,7 +709,6 @@ const handleSubmit = async () => {
                   <Item
                     v-for="member in humanMembers"
                     :key="member.userId"
-                    size="sm"
                     class="p-0"
                   >
                     <ItemMedia>
@@ -848,12 +847,7 @@ const handleSubmit = async () => {
                   </EmptyHeader>
                 </Empty>
                 <ItemGroup v-else>
-                  <Item
-                    v-for="group in teamGroups"
-                    :key="group.id"
-                    size="sm"
-                    class="p-0"
-                  >
+                  <Item v-for="group in teamGroups" :key="group.id" class="p-0">
                     <ItemMedia>
                       <AppAvatar :src="group.photoURL" :name="group.name" />
                     </ItemMedia>

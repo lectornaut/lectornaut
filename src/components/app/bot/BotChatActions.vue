@@ -294,7 +294,6 @@ const submitDelete = async () => {
           <template v-else>
             <Button
               variant="secondary"
-              size="sm"
               class="justify-start"
               :disabled="!canManage || isMutating"
               @click="openRename"
@@ -304,7 +303,6 @@ const submitDelete = async () => {
             </Button>
             <Button
               variant="secondary"
-              size="sm"
               class="justify-start"
               :disabled="!canManage || isMutating"
               @click="onArchiveToggle"
@@ -318,7 +316,6 @@ const submitDelete = async () => {
             </Button>
             <Button
               variant="destructive"
-              size="sm"
               class="justify-start text-current"
               :disabled="!canManage || isMutating"
               @click="openDelete"

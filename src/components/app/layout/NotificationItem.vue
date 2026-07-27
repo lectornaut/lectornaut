@@ -94,7 +94,7 @@ const handleClick = () => {
                     <TooltipTrigger as-child>
                       <Button
                         variant="outline"
-                        size="icon-sm"
+                        size="icon"
                         @click.prevent.stop="
                           notification.read
                             ? emit('mark-unread', notification.id)
@@ -117,7 +117,7 @@ const handleClick = () => {
                     <TooltipTrigger as-child>
                       <Button
                         variant="outline"
-                        size="icon-sm"
+                        size="icon"
                         @click.prevent.stop="
                           emit('mark-inbox', notification.id)
                         "
@@ -135,7 +135,7 @@ const handleClick = () => {
                     <TooltipTrigger as-child>
                       <Button
                         variant="outline"
-                        size="icon-sm"
+                        size="icon"
                         @click.prevent.stop="
                           emit('mark-saved', notification.id)
                         "
@@ -151,7 +151,7 @@ const handleClick = () => {
                     <TooltipTrigger as-child>
                       <Button
                         variant="outline"
-                        size="icon-sm"
+                        size="icon"
                         @click.prevent.stop="emit('mark-done', notification.id)"
                       >
                         <IconCheck />

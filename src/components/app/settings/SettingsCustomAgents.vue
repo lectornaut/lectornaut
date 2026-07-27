@@ -628,7 +628,6 @@ const handleEditorSave = async (): Promise<void> => {
                   </InputGroupText>
                   <InputGroupButton
                     variant="default"
-                    size="sm"
                     class="ml-auto"
                     :disabled="!canGenerate"
                     @click="handleGenerate"

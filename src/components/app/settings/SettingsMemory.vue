@@ -619,7 +619,6 @@ const submitBulkDelete = async () => {
             </FieldContent>
             <div class="flex items-center gap-2">
               <Button
-                size="sm"
                 :disabled="!memoryEnabled || isMutating"
                 @click="openCreate"
               >

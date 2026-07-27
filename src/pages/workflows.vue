@@ -261,7 +261,7 @@ const formatWhen = (ts: unknown): string =>
           >
             <IconWorkflow />
             <p>{{ t("pages.workflows.filterNoResults") }}</p>
-            <Button variant="ghost" size="sm" @click="filter.reset()">
+            <Button variant="ghost" @click="filter.reset()">
               {{ t("ai.filterReset") }}
             </Button>
           </div>
@@ -381,7 +381,6 @@ const formatWhen = (ts: unknown): string =>
 
             <div class="flex flex-wrap gap-2">
               <Button
-                size="sm"
                 variant="outline"
                 :disabled="!canManage"
                 @click="runNow(selectedWorkflow.id)"
@@ -389,7 +388,6 @@ const formatWhen = (ts: unknown): string =>
                 {{ t("settings.workflows.runNow") }}
               </Button>
               <Button
-                size="sm"
                 variant="outline"
                 :disabled="!canManage"
                 @click="openEdit(selectedWorkflow)"

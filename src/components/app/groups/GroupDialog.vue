@@ -304,7 +304,6 @@ const handleSubmit = async () => {
             <Item
               v-for="member in filteredMembers"
               :key="member.userId"
-              size="sm"
               class="p-0"
             >
               <ItemMedia>

@@ -79,7 +79,7 @@ const popOut = () => {
     <TooltipProvider v-if="isTauri">
       <Tooltip>
         <TooltipTrigger as-child>
-          <Button variant="ghost" size="icon-sm" @click="popOut">
+          <Button variant="outline" size="icon" @click="popOut">
             <IconPictureInPicture />
           </Button>
         </TooltipTrigger>

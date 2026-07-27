@@ -257,7 +257,7 @@ useInfiniteScroll(
             <IconAlertTriangle />
             <span>{{ error }}</span>
           </div>
-          <Button variant="secondary" size="sm" @click="refreshLogs">
+          <Button variant="secondary" @click="refreshLogs">
             <IconRefreshCcw />
             {{ t("actions.retry") }}
           </Button>

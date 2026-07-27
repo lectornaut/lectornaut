@@ -482,7 +482,6 @@ watch(selectedCreateFiles, async (files) => {
     <ButtonGroup class="mx-2 w-auto">
       <Button
         variant="outline"
-        size="sm"
         class="grow justify-start"
         :disabled="isReadOnly || uploadInProgress"
         @click="triggerFilePicker"
@@ -553,7 +552,7 @@ watch(selectedCreateFiles, async (files) => {
             <span>{{ error }}</span>
           </div>
 
-          <Button variant="secondary" size="sm" @click="refreshAttachments">
+          <Button variant="secondary" @click="refreshAttachments">
             <IconRefreshCcw />
             {{ t("components.nodeAttachments.retry") }}
           </Button>
@@ -676,12 +675,7 @@ watch(selectedCreateFiles, async (files) => {
             @change="handleReplacementSelected"
           />
 
-          <Attachment
-            v-if="replacementFile"
-            state="idle"
-            size="sm"
-            class="w-full"
-          >
+          <Attachment v-if="replacementFile" state="idle" class="w-full">
             <AttachmentContent>
               <AttachmentTitle>{{ replacementFile.name }}</AttachmentTitle>
               <AttachmentDescription>

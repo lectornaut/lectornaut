@@ -133,7 +133,7 @@ const isEmpty = computed(
           <TooltipTrigger as-child>
             <Button
               variant="ghost"
-              size="icon-sm"
+              size="icon"
               :disabled="loading"
               @click="load"
             >
@@ -156,12 +156,7 @@ const isEmpty = computed(
             <span>{{ error }}</span>
           </div>
 
-          <Button
-            variant="secondary"
-            size="sm"
-            :disabled="loading"
-            @click="load"
-          >
+          <Button variant="secondary" :disabled="loading" @click="load">
             <IconRefreshCcw />
             {{ t("actions.retry") }}
           </Button>

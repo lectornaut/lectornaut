@@ -55,7 +55,7 @@ const reasoning = computed(() => props.node?.content ?? "")
       </Item>
     </CollapsibleTrigger>
     <CollapsibleContent class="select-auto">
-      <Card size="sm">
+      <Card>
         <CardContent>
           <AppMarkdown surface="chat" :content="reasoning" />
         </CardContent>

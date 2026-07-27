@@ -1043,7 +1043,6 @@ const isFullscreen = useIsFullscreen()
               <TooltipTrigger as-child>
                 <ToggleGroupItem
                   value="list"
-                  size="sm"
                   variant="outline"
                   :class="[
                     'aspect-square rounded-l-md!',
@@ -1063,7 +1062,6 @@ const isFullscreen = useIsFullscreen()
               <TooltipTrigger as-child>
                 <ToggleGroupItem
                   value="grid"
-                  size="sm"
                   variant="outline"
                   :class="[
                     'aspect-square rounded-r-md!',
@@ -1088,7 +1086,7 @@ const isFullscreen = useIsFullscreen()
                 <TooltipTrigger as-child>
                   <Button
                     variant="outline"
-                    size="icon-sm"
+                    size="icon"
                     :disabled="isMoving"
                     @click="selectFiles()"
                   >
@@ -1108,7 +1106,6 @@ const isFullscreen = useIsFullscreen()
             >
               <Button
                 :disabled="!hasQueuedFiles || isMoving"
-                size="sm"
                 @click="openSaveSheet"
               >
                 {{ t("components.fileDropOverlay.buttons.save") }}
@@ -1262,7 +1259,7 @@ const isFullscreen = useIsFullscreen()
                     <TooltipTrigger as-child>
                       <Button
                         variant="outline"
-                        size="icon-sm"
+                        size="icon"
                         :disabled="
                           file.source === 'tauri' ? !isTauri : !file.openTarget
                         "
@@ -1279,7 +1276,7 @@ const isFullscreen = useIsFullscreen()
                     <TooltipTrigger as-child>
                       <Button
                         variant="outline"
-                        size="icon-sm"
+                        size="icon"
                         :disabled="!isTauri || file.source !== 'tauri'"
                         @click="revealFile(file)"
                       >
@@ -1292,7 +1289,7 @@ const isFullscreen = useIsFullscreen()
                     <TooltipTrigger as-child>
                       <Button
                         variant="outline"
-                        size="icon-sm"
+                        size="icon"
                         :disabled="isMoving"
                         @click="removeQueuedFile(file.id)"
                       >
@@ -1349,7 +1346,7 @@ const isFullscreen = useIsFullscreen()
                     <TooltipTrigger as-child>
                       <Button
                         variant="outline"
-                        size="icon-sm"
+                        size="icon"
                         :disabled="
                           file.source === 'tauri' ? !isTauri : !file.openTarget
                         "
@@ -1366,7 +1363,7 @@ const isFullscreen = useIsFullscreen()
                     <TooltipTrigger as-child>
                       <Button
                         variant="outline"
-                        size="icon-sm"
+                        size="icon"
                         @click="revealFile(file)"
                       >
                         <IconSquareArrowOutUpRight />
@@ -1378,7 +1375,7 @@ const isFullscreen = useIsFullscreen()
                     <TooltipTrigger as-child>
                       <Button
                         variant="outline"
-                        size="icon-sm"
+                        size="icon"
                         :disabled="isMoving"
                         @click="removeQueuedFile(file.id)"
                       >
@@ -1420,7 +1417,7 @@ const isFullscreen = useIsFullscreen()
               <DropdownMenu>
                 <TooltipTrigger as-child>
                   <DropdownMenuTrigger as-child>
-                    <Button variant="secondary" size="icon-sm">
+                    <Button variant="secondary" size="icon">
                       <IconMoreHorizontal />
                     </Button>
                   </DropdownMenuTrigger>
@@ -1444,7 +1441,7 @@ const isFullscreen = useIsFullscreen()
             <ButtonGroupSeparator />
             <Tooltip>
               <TooltipTrigger as-child>
-                <Button variant="secondary" size="icon-sm">
+                <Button variant="secondary" size="icon">
                   <IconSettings />
                 </Button>
               </TooltipTrigger>

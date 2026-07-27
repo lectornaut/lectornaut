@@ -1282,7 +1282,6 @@ const handleSubmit = async () => {
                 <Item
                   v-for="member in activeMembers"
                   :key="member.id"
-                  size="sm"
                   class="p-0"
                 >
                   <ItemMedia>
@@ -1541,7 +1540,6 @@ const handleSubmit = async () => {
                 <Item
                   v-for="(member, index) in stagedInvites"
                   :key="`staged-${index}`"
-                  size="sm"
                   class="p-0"
                 >
                   <ItemMedia>
@@ -1613,7 +1611,6 @@ const handleSubmit = async () => {
                   <Item
                     v-for="invite in visibleTeamInvitations"
                     :key="invite.id"
-                    size="sm"
                     class="p-0"
                   >
                     <ItemMedia>
@@ -1727,7 +1724,6 @@ const handleSubmit = async () => {
                   <Item
                     v-for="agent in agentMembers"
                     :key="agent.agentId"
-                    size="sm"
                     class="p-0"
                   >
                     <ItemMedia>

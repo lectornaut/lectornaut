@@ -336,7 +336,11 @@ const getButtonLabel = (planId: BillingPlanKey) => {
   <div v-if="canViewTeamSettings" class="flex grow flex-col justify-between">
     <div class="p-6">
       <FieldGroup>
-        <FieldSet>
+        <!-- min-w-0 (here and on the CollapsibleContent below) beats the
+           fieldset UA `min-inline-size: min-content` floor so the compare
+           Table shrinks with the dialog and scrolls inside its own
+           overflow-x-auto container (see SettingsConnections' Manage tab). -->
+        <FieldSet class="min-w-0">
           <Field orientation="vertical">
             <FieldContent>
               <FieldLabel for="subscription-plan">
@@ -434,7 +438,7 @@ const getButtonLabel = (planId: BillingPlanKey) => {
                     </Badge>
                   </div>
                 </CollapsibleTrigger>
-                <CollapsibleContent>
+                <CollapsibleContent class="min-w-0">
                   <div class="overflow-clip rounded border">
                     <Table class="bg-secondary overflow-clip">
                       <TableHeader class="bg-secondary">

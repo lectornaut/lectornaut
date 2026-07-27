@@ -237,7 +237,7 @@ const emptyHint = computed(() =>
       <Tooltip>
         <TooltipTrigger as-child>
           <SheetTrigger as-child>
-            <Button variant="outline" size="icon-sm" :aria-label="triggerLabel">
+            <Button variant="outline" size="icon" :aria-label="triggerLabel">
               <IconLogosGoogleDrive />
             </Button>
           </SheetTrigger>
@@ -281,7 +281,7 @@ const emptyHint = computed(() =>
             <IconFolder />
             <span class="truncate">{{ folder.name }}</span>
           </Badge>
-          <Button variant="ghost" size="icon-sm" @click="exitFolder">
+          <Button variant="ghost" size="icon" @click="exitFolder">
             <IconX />
             <span class="sr-only">All files</span>
           </Button>
@@ -313,11 +313,7 @@ const emptyHint = computed(() =>
               </EmptyDescription>
             </EmptyHeader>
             <EmptyContent>
-              <Button
-                variant="secondary"
-                size="sm"
-                @click="openConnectionsSettings"
-              >
+              <Button variant="secondary" @click="openConnectionsSettings">
                 Open settings
               </Button>
             </EmptyContent>
@@ -330,9 +326,7 @@ const emptyHint = computed(() =>
             class="text-muted-foreground space-y-2 rounded-xl border border-dashed p-4 text-sm"
           >
             <p>{{ listError }}</p>
-            <Button variant="secondary" size="sm" @click="load()">
-              Try again
-            </Button>
+            <Button variant="secondary" @click="load()"> Try again </Button>
           </div>
 
           <Empty v-else-if="files.length === 0" class="border-dashed p-6">
@@ -353,7 +347,6 @@ const emptyHint = computed(() =>
             <Attachment
               v-for="file in files"
               :key="file.id"
-              size="sm"
               :class="['w-full', isPicked(file) && 'border-primary']"
               :state="importingId === file.id ? 'processing' : 'done'"
             >
@@ -385,7 +378,6 @@ const emptyHint = computed(() =>
             <Button
               v-if="nextPageToken"
               variant="ghost"
-              size="sm"
               :disabled="loadingMore"
               @click="load(true)"
             >
