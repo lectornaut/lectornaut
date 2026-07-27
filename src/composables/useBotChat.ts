@@ -70,6 +70,7 @@ import {
   useCollectionQuery,
   useDocumentQuery,
 } from "@/utils/firebase/firebase-query"
+import { until } from "@vueuse/core"
 import { storeToRefs } from "pinia"
 import { computed, ref, watch, type InjectionKey, type Ref } from "vue"
 import { toast } from "vue-sonner"
@@ -363,7 +364,23 @@ export const BotChatContextKey: InjectionKey<BotChatContext> =
 
 const ADMIN_ROLES = new Set(["owner", "admin"])
 
-export function useBotChat(): BotChatContext {
+export interface BotChatOptions {
+  /**
+   * Keep the chat bound across global team/workspace selection changes.
+   *
+   * Detached surfaces (the `/ask` pop-out window) pin their context at
+   * open time: the selection refs they read are backed by SHARED
+   * persistence (Firestore prefs docs + IndexedDB auth + localStorage
+   * hydration caches), so another window rebooting can make them
+   * flicker through null and back. For in-app surfaces a selection
+   * change means "this chat's scope is gone — reset"; for a pop-out it
+   * is cross-window noise that must not wipe the live chat (agent
+   * pick, messages, attachments).
+   */
+  pinnedContext?: boolean
+}
+
+export function useBotChat(options?: BotChatOptions): BotChatContext {
   const authStore = useAuthStore()
   const { currentUser, currentTeamId, currentWorkspaceId } =
     storeToRefs(authStore)
@@ -806,6 +823,13 @@ export function useBotChat(): BotChatContext {
   // never goes null on a visibility flip. Initial loads (`null → session`)
   // don't match the `prev && !next` gate either.
   watch(activeSession, (next, prev) => {
+    // Scope mid-flicker: team/workspace can pass through null when
+    // another window reboots shared persistence (main-window refresh
+    // vs. a pinned /ask pop-out). That re-keys the source lists to
+    // empty without meaning "access revoked" — skip, and let the
+    // lists repopulate when the scope settles. Real revocations
+    // happen under a stable scope and still reset below.
+    if (!currentTeamId.value || !currentWorkspaceId.value) return
     if (sessionId.value && prev && !next) {
       startNewSession()
     }
@@ -841,13 +865,20 @@ export function useBotChat(): BotChatContext {
   // Also handles cross-tab/device updates: another tab changes the
   // agent → doc updates → this tab's badge follows.
   watch(
-    () => activeSessionQuery.data.value?.activeAgentId ?? null,
-    (next) => {
+    () => activeSessionQuery.data.value,
+    (doc) => {
       // Only sync while a session is bound — otherwise this would
       // clobber the new-chat default-null state with an unrelated
       // session's persisted agent during the brief window between
       // `selectSession` clearing and the next snapshot landing.
       if (!sessionId.value) return
+      // No snapshot is NOT "no agent": the doc subscription re-keys
+      // through undefined while the scope flickers (another window
+      // rebooting shared persistence) or before the first snapshot
+      // lands. Only a real doc may drive the sync — its `activeAgentId`
+      // being absent/null is then a genuine "default persona" fact.
+      if (!doc) return
+      const next = doc.activeAgentId ?? null
       if (next === activeAgentId.value) return
       activeAgentId.value = next
     }
@@ -1048,9 +1079,28 @@ export function useBotChat(): BotChatContext {
 
   // Genkit session IDs are scoped server-side to (teamId, workspaceId).
   // Switching either invalidates the local session — start fresh.
-  watch([currentTeamId, currentWorkspaceId], () => {
-    startNewSession()
-  })
+  // Only an ESTABLISHED id changing counts as a switch. Cold-boot
+  // hydration (null → first value, possibly one field per tick) is not
+  // one: state is still pristine, and standalone surfaces like the
+  // /ask pop-out eagerly `selectAgent()` before auth resolves —
+  // resetting on hydration ticks would clobber that pre-selection
+  // back to the default persona.
+  //
+  // Pinned contexts (see `BotChatOptions.pinnedContext`) skip the reset
+  // entirely: a detached window's selection refs can flicker when the
+  // MAIN window reboots (shared persistence), and no selection change
+  // should tear down a pop-out's live chat.
+  if (!options?.pinnedContext) {
+    watch(
+      [currentTeamId, currentWorkspaceId],
+      ([teamId, workspaceId], [previousTeamId, previousWorkspaceId]) => {
+        const teamSwitched = !!previousTeamId && teamId !== previousTeamId
+        const workspaceSwitched =
+          !!previousWorkspaceId && workspaceId !== previousWorkspaceId
+        if (teamSwitched || workspaceSwitched) startNewSession()
+      }
+    )
+  }
 
   // Apply the out-of-band effects a streamed chunk implied (see
   // `applyStreamChunk` in `@/helpers/botChatStream`) to our reactive refs.
@@ -1343,6 +1393,19 @@ export function useBotChat(): BotChatContext {
     if (!id) return
     if (sessionId.value === id && messages.value.length > 0) return
 
+    // Cold boots call this before the auth store has resolved team and
+    // workspace — pop-out windows resuming a handed-over session and
+    // `/bot/:id` deep links both fire it straight from setup. Wait for
+    // the ids to land instead of failing, so callers don't each need a
+    // readiness gate. On timeout (signed in with no team selected —
+    // session lists can't render rows without one, so this is not a
+    // reachable click path) fall through to the existing toast.
+    if (!currentTeamId.value || !currentWorkspaceId.value) {
+      await until(() =>
+        Boolean(currentTeamId.value && currentWorkspaceId.value)
+      ).toBe(true, { timeout: 15_000 })
+    }
+
     const teamId = currentTeamId.value
     const workspaceId = currentWorkspaceId.value
     if (!teamId || !workspaceId) {
@@ -1404,7 +1467,12 @@ export function useBotChat(): BotChatContext {
       // computed `activeAgent` returns null in that case so the badge
       // silently reverts to default. The server keeps the doc field
       // unchanged so restoring the agent re-binds this session.
-      activeAgentId.value = matched?.activeAgentId ?? null
+      // `matched` missing = cold-load race (the sessions list hasn't
+      // landed in this fresh window yet), NOT "session has no agent" —
+      // keep the current selection (e.g. /ask's eager URL pick) and let
+      // the doc-level resync watcher settle the canonical value once
+      // the snapshot arrives.
+      if (matched) activeAgentId.value = matched.activeAgentId ?? null
       pendingPinnedNode.value = null
       // A reply staged against the previous chat doesn't belong here.
       replyContext.value = null

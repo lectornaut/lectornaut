@@ -1,19 +1,23 @@
 <script lang="ts" setup>
+import type AgentChatShell from "@/components/app/bot/AgentChatShell.vue"
 import { isTauri, useIsFullscreen } from "@/composables/usePlatform"
 import { isBuiltInAgentId } from "@/data/builtInAgents"
 import {
   IconBadgeCheck,
   IconCirclePlus,
+  IconPictureInPicture,
   IconSparkle,
   IconSparkles,
+  IconX,
 } from "@/data/icons"
+import { openAiAskPopoutWindow } from "@/modules/aiAskPopout"
 import { emitter } from "@/modules/mitt"
 import { useMembershipStore } from "@/stores/membershipStore"
 import { useTeamAgentsStore } from "@/stores/teamAgentsStore"
 import { useUiPreferencesStore } from "@/stores/uiPreferencesStore"
 import { isAgentMembership } from "@/types/membership"
 import { storeToRefs } from "pinia"
-import { computed } from "vue"
+import { computed, ref } from "vue"
 
 const { t } = useI18n()
 const isFullscreen = useIsFullscreen()
@@ -87,6 +91,28 @@ const agentKindLabel = (agentId: string) =>
 const openNewAgentDialog = (): void => {
   emitter.emit("Dialog.CustomAgents.Open", "new")
 }
+
+// Sheets are controlled through a single id so popping a chat out can
+// close its sheet programmatically. Modal sheets only ever show one at
+// a time, so one id (and one shell ref below) is enough state.
+const openSheetId = ref<string | null>(null)
+
+// The open sheet's `AgentChatShell` instance — exposes the live session
+// id (see `defineExpose` there). Nulled by Vue when the sheet unmounts.
+const openShell = ref<InstanceType<typeof AgentChatShell> | null>(null)
+const setShellRef = (el: unknown) => {
+  openShell.value = el as InstanceType<typeof AgentChatShell> | null
+}
+
+// Hand the sheet's chat off to a detached window: resume the session if
+// one was started, else open a fresh chat with this agent pre-selected.
+// One-way handoff (same as AiAsk's pop-out) — the sheet closes and its
+// context unmounts, so the window is the only live surface.
+const popOutAgent = (agent: { id: string; name: string }): void => {
+  const sessionId = openShell.value?.sessionId ?? null
+  openSheetId.value = null
+  openAiAskPopoutWindow({ sessionId, agentId: agent.id, title: agent.name })
+}
 </script>
 
 <template>
@@ -137,7 +163,12 @@ const openNewAgentDialog = (): void => {
       seeded from `avatarSeed || name` so it stays deterministic as
       long as the admin doesn't relabel the agent.
     -->
-    <Sheet v-for="agent in visibleAgents" :key="agent.id">
+    <Sheet
+      v-for="agent in visibleAgents"
+      :key="agent.id"
+      :open="openSheetId === agent.id"
+      @update:open="(open) => (openSheetId = open ? agent.id : null)"
+    >
       <SheetTrigger as-child>
         <SidebarMenuItem>
           <SidebarMenuButton :tooltip="agent.name">
@@ -188,21 +219,47 @@ const openNewAgentDialog = (): void => {
         class="m-2 mt-[calc(var(--spacing-titlebar-height,0px)+(--spacing(2)))] h-auto! gap-0 overflow-clip rounded border"
         side="left"
         :class="{ 'mt-12': isTauri && !isFullscreen }"
+        :show-close-button="false"
       >
         <SheetHeader>
-          <SheetTitle class="flex items-center gap-2">
-            <AppAvatar
-              variant="beam"
-              :name="avatarSeed(agent)"
-              class="size-5"
-            />
-            {{ agent.name }}
-          </SheetTitle>
+          <div class="flex items-center justify-between gap-2">
+            <SheetTitle class="flex items-center gap-2">
+              <AppAvatar
+                variant="beam"
+                :name="avatarSeed(agent)"
+                class="size-5"
+              />
+              {{ agent.name }}
+            </SheetTitle>
+            <div class="flex items-center gap-1">
+              <TooltipProvider v-if="isTauri">
+                <Tooltip>
+                  <TooltipTrigger as-child>
+                    <Button
+                      variant="ghost"
+                      size="icon-sm"
+                      @click="popOutAgent(agent)"
+                    >
+                      <IconPictureInPicture />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    {{ t("ai.openInNewWindow") }}
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+              <SheetClose as-child>
+                <Button variant="ghost" size="icon-sm">
+                  <IconX />
+                </Button>
+              </SheetClose>
+            </div>
+          </div>
           <SheetDescription v-if="agent.description">
             {{ agent.description }}
           </SheetDescription>
         </SheetHeader>
-        <AgentChatShell :agent="agent" />
+        <AgentChatShell :ref="setShellRef" :agent="agent" />
       </SheetContent>
     </Sheet>
   </SidebarMenu>

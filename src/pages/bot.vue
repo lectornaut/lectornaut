@@ -1,5 +1,8 @@
 <script lang="ts" setup>
 import { BotChatContextKey, useBotChat } from "@/composables/useBotChat"
+import { isTauri } from "@/composables/usePlatform"
+import { IconPictureInPicture } from "@/data/icons"
+import { openAiAskPopoutWindow } from "@/modules/aiAskPopout"
 import { useRoute, useRouter } from "vue-router"
 
 definePage({
@@ -18,6 +21,8 @@ useHead({
   title: "Bot",
 })
 
+const { t } = useI18n()
+
 const botChat = useBotChat()
 provide(BotChatContextKey, botChat)
 
@@ -29,9 +34,9 @@ const routeSessionId = computed(() => {
   return typeof id === "string" && id ? id : null
 })
 
-// URL → state: load whatever session the URL points at. `selectSession`
-// bails silently if team/workspace haven't resolved yet, so it's safe to
-// fire on an unresolved cold start — the watcher re-fires once they land.
+// URL → state: load whatever session the URL points at. Safe to fire on
+// an unresolved cold start (deep links, app restore): `selectSession`
+// itself waits for team/workspace to resolve before loading.
 watch(
   routeSessionId,
   (id) => {
@@ -55,9 +60,33 @@ watch(botChat.sessionId, (id) => {
     void router.push("/bot")
   }
 })
+
+// Pop the page's chat out into a detached window. With a session active
+// (`/bot/:id`) it opens that session there; on a fresh `/bot` it opens a
+// new-chat window. The page deliberately stays put (no reset to `/bot`)
+// — both surfaces show the same session, kept in sync by the doc-level
+// subscription watchers in `useBotChat`.
+const popOut = () => {
+  openAiAskPopoutWindow({
+    sessionId: botChat.sessionId.value,
+    title: t("pages.start.askAi"),
+  })
+}
 </script>
 
 <template>
+  <Teleport defer to="#cta-dock">
+    <TooltipProvider v-if="isTauri">
+      <Tooltip>
+        <TooltipTrigger as-child>
+          <Button variant="ghost" size="icon-sm" @click="popOut">
+            <IconPictureInPicture />
+          </Button>
+        </TooltipTrigger>
+        <TooltipContent>{{ t("ai.openInNewWindow") }}</TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
+  </Teleport>
   <SidebarSlot side="left">
     <BotHistorySidebar />
   </SidebarSlot>

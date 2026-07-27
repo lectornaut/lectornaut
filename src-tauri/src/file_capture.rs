@@ -12,9 +12,9 @@ use tauri::{
 use tauri_plugin_opener::OpenerExt;
 use tauri_plugin_positioner::{Position as PositionerPosition, WindowExt};
 
-pub const FILE_CAPTURE_WINDOW_LABEL: &str = "file-capture";
+pub const FILE_CAPTURE_WINDOW_LABEL: &str = "file";
 
-const FILE_CAPTURE_WINDOW_ROUTE: &str = "file-capture";
+const FILE_CAPTURE_WINDOW_ROUTE: &str = "file";
 const FILE_CAPTURE_WINDOW_WIDTH: f64 = 320.0;
 const FILE_CAPTURE_WINDOW_HEIGHT: f64 = 320.0;
 const FILE_CAPTURE_DROP_SETTLE_DELAY: Duration = Duration::from_millis(350);

@@ -60,8 +60,8 @@ importers:
         specifier: workspace:*
         version: link:shared
       '@lucide/vue':
-        specifier: ^1.26.0
-        version: 1.26.0(vue@3.5.40(typescript@6.0.3))
+        specifier: ^1.27.0
+        version: 1.27.0(vue@3.5.40(typescript@6.0.3))
       '@tailwindcss/vite':
         specifier: ^4.3.3
         version: 4.3.3(vite@8.1.5(@types/node@26.1.1)(esbuild@0.28.1)(jiti@2.7.0)(stylus@0.57.0(supports-color@10.2.2))(terser@5.48.0)(yaml@2.9.0))
@@ -2964,8 +2964,8 @@ packages:
   '@lezer/markdown@1.7.2':
     resolution: {integrity: sha512-iTkYvoVcKt3WkeL7qUDyXHONZEwLio4wj8KTNi2dnjQEXBZKMV63BpQrPqfsM+OkvuRbiSTAcycYAsQzLhRNoQ==}
 
-  '@lucide/vue@1.26.0':
-    resolution: {integrity: sha512-jz00zLm8+i7VzBuQTbmjChIvIKehaIK5YbOVC+bab7qTh4JTkCd0XJQ4l5TY57gT08fMPVlvUITROB/vm/xImA==}
+  '@lucide/vue@1.27.0':
+    resolution: {integrity: sha512-LKDEZJ0Uo9UaT4vxBMYVwXeK/0dGcWCTdav1AK/aGD/jYsDPtiVvOgfM7jPlx9BVeyGZ1Uf0aQhHA++rmbe7rw==}
     peerDependencies:
       vue: '>=3.0.1'
 
@@ -15051,7 +15051,7 @@ snapshots:
       '@lezer/common': 1.5.2
       '@lezer/highlight': 1.2.3
 
-  '@lucide/vue@1.26.0(vue@3.5.40(typescript@6.0.3))':
+  '@lucide/vue@1.27.0(vue@3.5.40(typescript@6.0.3))':
     dependencies:
       vue: 3.5.40(typescript@6.0.3)
 

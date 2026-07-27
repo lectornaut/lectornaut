@@ -1,7 +1,7 @@
 import mime from "mime"
 import type { ShallowRef } from "vue"
 
-export const FILE_CAPTURE_WINDOW_LABEL = "file-capture"
+export const FILE_CAPTURE_WINDOW_LABEL = "file"
 
 export const normalizeDroppedPaths = (paths: string[]): string[] => {
   const seen = new Set<string>()

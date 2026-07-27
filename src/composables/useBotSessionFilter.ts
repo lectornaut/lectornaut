@@ -12,6 +12,8 @@
  *                      `pinnedNodeKey` set (i.e. node-bound chats)
  *   - `modes`          set — empty = all; otherwise match `lastMode`
  *   - `visibilities`   set — empty = all; otherwise match `visibility`
+ *   - `agents`         set — empty = all; otherwise match `activeAgentId`
+ *                      (absent/null buckets under `DEFAULT_AGENT_ID`)
  *
  * View options (don't hide rows, just reshape the list):
  *   - `groupBy`        none (single bucket) | date (today / yesterday /
@@ -27,6 +29,7 @@
  * session list source.
  */
 import type { BotChatMode } from "@/composables/useFunctions"
+import { DEFAULT_AGENT_ID } from "@/data/builtInAgents"
 import { useAuthStore } from "@/stores/authStore"
 import type { IBotSession, IBotSessionVisibility } from "@/types/domain"
 import { Timestamp } from "firebase/firestore"
@@ -57,6 +60,12 @@ export interface BotSessionFilterState {
   modes: Set<BotChatMode>
   /** Empty set = match all visibilities. */
   visibilities: Set<IBotSessionVisibility>
+  /**
+   * Empty set = match all agents. Ids are agent ids as stored on the
+   * session's `activeAgentId`; the team's default persona (stored as
+   * null/absent) is represented by `DEFAULT_AGENT_ID`.
+   */
+  agents: Set<string>
   groupBy: BotSessionGroupBy
   sortBy: BotSessionSortBy
 }
@@ -94,6 +103,7 @@ const defaultState = (): BotSessionFilterState => ({
   onlyNodeAttached: false,
   modes: new Set(),
   visibilities: new Set(),
+  agents: new Set(),
   // Defaults mirror the historical behavior — date buckets sorted by
   // most-recent activity — so the upgrade is invisible to users who
   // never open the filter menu.
@@ -117,7 +127,8 @@ export function useBotSessionFilter() {
       state.onlyShared ||
       state.onlyNodeAttached ||
       state.modes.size > 0 ||
-      state.visibilities.size > 0
+      state.visibilities.size > 0 ||
+      state.agents.size > 0
   )
 
   /**
@@ -150,6 +161,14 @@ export function useBotSessionFilter() {
 
     if (state.visibilities.size > 0) {
       if (!state.visibilities.has(session.visibility)) return false
+    }
+
+    if (state.agents.size > 0) {
+      // Sessions on the default persona store null/absent; headless
+      // workflow-created sessions may carry the explicit `_default`
+      // sentinel. Coalescing folds both into the same bucket.
+      if (!state.agents.has(session.activeAgentId ?? DEFAULT_AGENT_ID))
+        return false
     }
 
     const q = state.search.trim().toLowerCase()
@@ -269,6 +288,7 @@ export function useBotSessionFilter() {
     state.onlyNodeAttached = false
     state.modes.clear()
     state.visibilities.clear()
+    state.agents.clear()
     state.groupBy = "date"
     state.sortBy = "recency"
   }
@@ -282,6 +302,11 @@ export function useBotSessionFilter() {
     if (state.visibilities.has(visibility))
       state.visibilities.delete(visibility)
     else state.visibilities.add(visibility)
+  }
+
+  const toggleAgent = (agentId: string) => {
+    if (state.agents.has(agentId)) state.agents.delete(agentId)
+    else state.agents.add(agentId)
   }
 
   // Setters keep the mutation inside this closure so consumers (which
@@ -313,6 +338,7 @@ export function useBotSessionFilter() {
     reset,
     toggleMode,
     toggleVisibility,
+    toggleAgent,
     setSearch,
     setOnlyShared,
     setOnlyNodeAttached,

@@ -74,6 +74,13 @@ declare module 'vue-router/auto-routes' {
       { id: ParamValue<false> },
       | never
     >,
+    '/ask': RouteRecordInfo<
+      '/ask',
+      '/ask',
+      Record<never, never>,
+      Record<never, never>,
+      | never
+    >,
     '/bot': RouteRecordInfo<
       '/bot',
       '/bot/:id?',
@@ -138,9 +145,9 @@ declare module 'vue-router/auto-routes' {
       Record<never, never>,
       | never
     >,
-    '/file-capture': RouteRecordInfo<
-      '/file-capture',
-      '/file-capture',
+    '/file': RouteRecordInfo<
+      '/file',
+      '/file',
       Record<never, never>,
       Record<never, never>,
       | never
@@ -292,6 +299,14 @@ declare module 'vue-router/auto-routes' {
       pathParamNames:
         | 'id'
     }
+    'src/pages/ask.vue': {
+      routes:
+        | '/ask'
+      views:
+        | never
+      pathParamNames:
+        | never
+    }
     'src/pages/bot.vue': {
       routes:
         | '/bot'
@@ -366,9 +381,9 @@ declare module 'vue-router/auto-routes' {
       pathParamNames:
         | never
     }
-    'src/pages/file-capture.vue': {
+    'src/pages/file.vue': {
       routes:
-        | '/file-capture'
+        | '/file'
       views:
         | never
       pathParamNames:

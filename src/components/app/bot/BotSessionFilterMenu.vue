@@ -8,8 +8,11 @@ import {
   type BotSessionSortBy,
   useBotSessionFilter,
 } from "@/composables/useBotSessionFilter"
+import { DEFAULT_AGENT_ID } from "@/data/builtInAgents"
 import { IconListFilter } from "@/data/icons"
+import { useTeamAgentsStore } from "@/stores/teamAgentsStore"
 import type { IBotSessionVisibility } from "@/types/domain"
+import { storeToRefs } from "pinia"
 
 const props = defineProps<{
   filter: ReturnType<typeof useBotSessionFilter>
@@ -28,6 +31,11 @@ const props = defineProps<{
 }>()
 
 const { t } = useI18n()
+
+// Same roster the composer's persona picker shows (enabled built-ins
+// first, then enabled non-archived customs), plus a "Default" row for
+// sessions running the team's default persona (`activeAgentId` null).
+const { pickerAgents } = storeToRefs(useTeamAgentsStore())
 
 const modeLabel = (m: (typeof BOT_CHAT_MODE_VALUES)[number]): string => {
   if (m === "auto") return t("ai.auto")
@@ -151,6 +159,30 @@ const keepMenuOpen = (event: Event) => {
                 @select="keepMenuOpen"
               >
                 {{ visibilityLabel(v) }}
+              </DropdownMenuCheckboxItem>
+            </DropdownMenuSubContent>
+          </DropdownMenuSub>
+
+          <DropdownMenuSub>
+            <DropdownMenuSubTrigger>
+              {{ t("ai.agents.label") }}
+            </DropdownMenuSubTrigger>
+            <DropdownMenuSubContent>
+              <DropdownMenuCheckboxItem
+                :model-value="filter.state.agents.has(DEFAULT_AGENT_ID)"
+                @update:model-value="filter.toggleAgent(DEFAULT_AGENT_ID)"
+                @select="keepMenuOpen"
+              >
+                {{ t("ai.agents.default") }}
+              </DropdownMenuCheckboxItem>
+              <DropdownMenuCheckboxItem
+                v-for="agent in pickerAgents"
+                :key="agent.id"
+                :model-value="filter.state.agents.has(agent.id)"
+                @update:model-value="filter.toggleAgent(agent.id)"
+                @select="keepMenuOpen"
+              >
+                {{ agent.name }}
               </DropdownMenuCheckboxItem>
             </DropdownMenuSubContent>
           </DropdownMenuSub>

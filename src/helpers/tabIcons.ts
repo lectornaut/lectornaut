@@ -71,7 +71,7 @@ export const tabIconRules: readonly TabIconRule[] = [
   exactPathRule("exit", "/exit", IconLogOut),
   exactPathRule("pricing", "/pricing", IconCreditCard),
   exactPathRule("changelog", "/changelog", IconLogs),
-  exactPathRule("file-capture", "/file-capture", IconCamera),
+  exactPathRule("file", "/file", IconCamera),
   exactPathRule("invitations", "/invitations", IconMail),
   ...primaryRouteRules,
 ] as const

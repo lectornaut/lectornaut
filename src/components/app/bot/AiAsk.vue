@@ -1,8 +1,15 @@
 <script lang="ts" setup>
 import { BotChatContextKey, useBotChat } from "@/composables/useBotChat"
 import { isTauri, useIsFullscreen } from "@/composables/usePlatform"
-import { IconAi, IconHistory, IconPin, IconPinOff } from "@/data/icons"
+import {
+  IconAi,
+  IconHistory,
+  IconPictureInPicture,
+  IconPin,
+  IconPinOff,
+} from "@/data/icons"
 import { getPlatformSpecialKey } from "@/helpers/shortcuts"
+import { openAiAskPopoutWindow } from "@/modules/aiAskPopout"
 import { emitter } from "@/modules/mitt"
 import { useRouter } from "vue-router"
 
@@ -36,6 +43,18 @@ const router = useRouter()
 const openHistory = () => {
   openAiAsk.value = false
   void router.push("/bot")
+}
+
+// Pop the current chat out into a detached PiP-style window. The sheet
+// closes; the window resumes the session (or starts fresh if nothing was
+// sent yet). Repeatable — each click spawns another window. One-way:
+// closing a pop-out just closes it, nothing comes back to the sheet.
+const popOut = () => {
+  openAiAsk.value = false
+  openAiAskPopoutWindow({
+    sessionId: aiAskBotChat.sessionId.value,
+    title: t("pages.start.askAi"),
+  })
 }
 </script>
 
@@ -81,9 +100,19 @@ const openHistory = () => {
           <SheetHeader>
             <div class="flex items-center justify-between gap-2">
               <SheetTitle>{{ t("pages.start.askAi") }}</SheetTitle>
-              <Button variant="ghost" size="icon-sm" @click="openHistory">
-                <IconHistory />
-              </Button>
+              <div class="flex items-center gap-1">
+                <Button
+                  v-if="isTauri"
+                  variant="ghost"
+                  size="icon-sm"
+                  @click="popOut"
+                >
+                  <IconPictureInPicture />
+                </Button>
+                <Button variant="ghost" size="icon-sm" @click="openHistory">
+                  <IconHistory />
+                </Button>
+              </div>
             </div>
           </SheetHeader>
           <AiChatShell />

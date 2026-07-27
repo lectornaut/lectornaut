@@ -166,7 +166,11 @@ pub fn run() {
         .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(
             tauri_plugin_window_state::Builder::new()
-                .with_filter(|label| label != file_capture::FILE_CAPTURE_WINDOW_LABEL)
+                .with_filter(|label| {
+                    // Ephemeral windows: uuid-labelled ask pop-outs would
+                    // accumulate dead entries in the window-state file.
+                    label != file_capture::FILE_CAPTURE_WINDOW_LABEL && !label.starts_with("ask-")
+                })
                 .build(),
         )
         .plugin(tauri_plugin_positioner::init())

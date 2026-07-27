@@ -46,6 +46,10 @@ const applyAgent = (): void => {
 }
 onMounted(applyAgent)
 watch(() => props.agent.id, applyAgent)
+
+// Read by `Agents.vue` when popping the sheet's chat out into a
+// detached window — the live session id is what the window resumes.
+defineExpose({ sessionId: botChat.sessionId })
 </script>
 
 <template>
