@@ -18,7 +18,8 @@
 // identical.
 import { normalizeComparable } from "@lectornaut/shared/domain"
 import type { DocumentSnapshot, Transaction } from "firebase-admin/firestore"
-import { FieldValue } from "firebase-admin/firestore"
+import { FieldValue, Timestamp } from "firebase-admin/firestore"
+import { z } from "zod"
 import type { AuthDecision } from "./permissions.js"
 import type {
   NotificationStatus,
@@ -56,6 +57,14 @@ export interface SyncSettlementVerdict {
   status: "ack" | "reject"
   code: string | null
   message: string | null
+  /**
+   * The target document's post-settlement `updatedAt` (epoch ms) when the
+   * settlement stamped one (an ack on a server-managed-field path), else
+   * null. Carried in BOTH the op-doc ack details and the callable's direct
+   * response so the client can refresh an OCC base version without waiting
+   * for the target snapshot to round-trip.
+   */
+  updatedAtMillis: number | null
 }
 
 /**
@@ -65,11 +74,12 @@ export interface SyncSettlementVerdict {
  * `contentAuthorization` is present when the target is workspace CONTENT
  * (snapshots): membership existence alone is not enough — the settlement must
  * also pass the canonical `MANAGE_WORKSPACE_CONTENT` decision (role gate +
- * workspace exclusion + elevate-only per-workspace/group overrides), mirroring
- * the direct-write rules (`canCreateSnapshot`/`canUpdateSnapshot` →
- * `canManageWorkspaceContentIn`). `null` for the own-doc team targets (tabs,
- * membership preferences), where any member — including guests — may write
- * their own documents.
+ * workspace exclusion + elevate-only per-workspace/group overrides) from
+ * `shared/permissions.ts`. The settlement is the ONLY snapshot write path —
+ * the rules' direct create/update clauses (`canCreateSnapshot`/
+ * `canUpdateSnapshot`) were removed, so this decision is authoritative, not a
+ * mirror. `null` for the own-doc team targets (tabs, membership preferences),
+ * where any member — including guests — may write their own documents.
  */
 export interface SyncOperationRoute {
   membershipTeamId: string | null
@@ -191,6 +201,138 @@ export const parseOperation = (
     baseVersion,
     status,
   }
+}
+
+export type CarriedOperationValidation =
+  | { ok: true; operation: SyncOperation }
+  | {
+      ok: false
+      code: "invalid-argument" | "permission-denied"
+      message: string
+    }
+
+/**
+ * Gate a callable-carried op payload (create-if-absent) the way the security
+ * rules gate a direct op-doc create (`isValidSyncOperationCreate`): the doc
+ * path derives EXCLUSIVELY from the authenticated uid + operationId, so a
+ * payload naming another user or operation must be refused outright — there
+ * is no doc to settle a reject onto, so the caller surfaces this as a
+ * callable error, never a verdict. Structural parsing is shared with the
+ * settlement's authoritative re-read (`parseOperation`); on top of it this
+ * enforces the create-only constraints: status must be `"pending"` and
+ * `clientId` must be a non-empty string (rules parity — the ack listener is
+ * clientId-scoped, so a doc created without one would strand its verdict).
+ */
+export const validateCarriedOperation = (
+  payload: Record<string, unknown>,
+  authUid: string,
+  operationId: string
+): CarriedOperationValidation => {
+  try {
+    const operation = parseOperation(payload, authUid, operationId)
+    if (operation.status !== "pending") {
+      return {
+        ok: false,
+        code: "invalid-argument",
+        message: "Carried operation must be pending",
+      }
+    }
+    if (typeof payload.clientId !== "string" || !payload.clientId.trim()) {
+      return {
+        ok: false,
+        code: "invalid-argument",
+        message: "clientId must be a non-empty string",
+      }
+    }
+    return { ok: true, operation }
+  } catch (error) {
+    if (error instanceof SyncRejectError) {
+      return {
+        ok: false,
+        code:
+          error.code === "permission-denied"
+            ? "permission-denied"
+            : "invalid-argument",
+        message: error.message,
+      }
+    }
+    throw error
+  }
+}
+
+/**
+ * Wire shape of a payload-carried operation: the remote op-doc fields the
+ * client would otherwise write via `setDoc` — minus `createdAt` (the server
+ * stamps it) and `ack` (only a settler writes it). Structural gate only; the
+ * binding constraints (id/uid/status parity with
+ * `isValidSyncOperationCreate` in firestore.rules) are enforced by
+ * `validateCarriedOperation` in the handler. Old already-deployed clients
+ * simply omit `operation`; old servers strip the unknown key (Zod strip
+ * mode) and keep answering not-found, which new clients downgrade to the
+ * setDoc path.
+ */
+const carriedOperationInput = z.object({
+  id: z.string().min(1),
+  userId: z.string().min(1),
+  clientId: z.string().min(1),
+  source: z.string().min(1),
+  targetPath: z.string().min(1),
+  type: z.enum(["set", "update", "delete"]),
+  data: z.record(z.string(), z.unknown()).nullable(),
+  merge: z.boolean(),
+  baseVersion: z
+    .object({
+      field: z.string().min(1),
+      value: z.union([z.number(), z.string(), z.null()]),
+    })
+    .nullable(),
+  status: z.literal("pending"),
+  attempts: z.number().int().min(0),
+  createdAtClient: z.number(),
+  updatedAtClient: z.number(),
+  sentAtClient: z.number().nullable(),
+})
+
+/**
+ * `applySyncOperation`'s input schema. `operation` (payload carry) MUST stay
+ * optional: old already-deployed clients send `{ operationId }` alone, and a
+ * required key would break every one of them mid-flight.
+ */
+export const applySyncOperationInput = z.object({
+  operationId: z.string().min(1),
+  operation: carriedOperationInput.optional(),
+})
+
+/**
+ * Where the settlement transaction sources the authoritative operation data
+ * from, given the transactional re-read of the op doc and the callable's
+ * (already validated) carried payload:
+ *
+ *  - doc exists            → settle the EXISTING doc (any carry is ignored
+ *    beyond its prefetch-hint role — the doc is authoritative)
+ *  - doc absent, carry     → create the op doc FROM the carried payload,
+ *    settled in the same transaction (`createFromCarried`)
+ *  - doc absent, no carry  → `null`: the pre-carry not-found contract old
+ *    clients rely on (the callable answers not-found; the client falls back
+ *    to the setDoc path)
+ */
+export interface SettlementSource {
+  data: FirebaseFirestore.DocumentData
+  createFromCarried: boolean
+}
+
+export const resolveSettlementSource = (
+  operationExists: boolean,
+  operationData: FirebaseFirestore.DocumentData | undefined,
+  carriedOperation: FirebaseFirestore.DocumentData | undefined
+): SettlementSource | null => {
+  if (operationExists) {
+    return { data: operationData ?? {}, createFromCarried: false }
+  }
+  if (carriedOperation) {
+    return { data: carriedOperation, createFromCarried: true }
+  }
+  return null
 }
 
 export const splitPath = (path: string): string[] =>
@@ -655,24 +797,49 @@ const isSnapshotPath = (path: string[]): boolean =>
  * `payload.teamId` (the `snapshots/{contentId}` path carries no team), so
  * without this check a member of ANY team could overwrite another team's
  * snapshot by naming its contentId while claiming a team they do belong to.
- * Mirrors the direct-write rules (`canUpdateSnapshot`), which freeze both
- * fields once the document exists — content can never move teams or
- * workspaces, so a mismatch is always hostile or corrupt, never stale.
+ * Freezes both fields once the document exists (the guarantee the retired
+ * direct-write rule `canUpdateSnapshot` used to give) — content can never
+ * move teams or workspaces, so a mismatch is always hostile or corrupt,
+ * never stale.
  *
- * For creates the claimed-team membership check remains the only binding
- * (rules parity: `canCreateSnapshot` authorizes against the claimed pair;
- * the payload carries no node-scope segment to verify the content against,
- * and unborn contentIds are unguessable Firestore auto-ids).
+ * For creates the collaboration room is the authoritative binding: it is
+ * created only after the collab callable verifies the underlying content node,
+ * and it carries the content, team, and workspace ids together. Without that
+ * check, a member of one team who learns another team's content id could create
+ * a poisoned first snapshot under their own team and prevent the real team from
+ * ever reading it. Existing snapshots need no extra room read because their
+ * immutable binding above already provides that protection.
  */
 export const validateSnapshotBinding = (
   targetSnap: DocumentSnapshot,
-  operation: SyncOperation
+  operation: SyncOperation,
+  roomSnap?: DocumentSnapshot
 ) => {
   const path = splitPath(operation.targetPath)
   if (!isSnapshotPath(path)) return
-  if (!targetSnap.exists) return
 
   const payload = operation.data ?? {}
+  if (!targetSnap.exists) {
+    const room = roomSnap?.data() ?? {}
+    if (!roomSnap?.exists) {
+      reject(
+        "failed-precondition",
+        "Collaboration room is not initialized for this snapshot"
+      )
+    }
+    if (
+      room.contentId !== payload.contentId ||
+      room.teamId !== payload.teamId ||
+      room.workspaceId !== payload.workspaceId
+    ) {
+      reject(
+        "permission-denied",
+        "Snapshot metadata does not match the collaboration room"
+      )
+    }
+    return
+  }
+
   if (targetSnap.get("teamId") !== payload.teamId) {
     reject(
       "permission-denied",
@@ -713,12 +880,41 @@ export const assertContentManagementAllowed = (
   )
 }
 
+export interface ServerManagedFieldsResult {
+  payload: Record<string, unknown>
+  /** Epoch ms of the `updatedAt` stamped onto the payload, when one was. */
+  updatedAtMillis: number | null
+}
+
+/**
+ * Monotonic settlement stamp for server-managed `updatedAt` fields.
+ * `Timestamp.now()` is INSTANCE wall clock: with cross-instance skew a later
+ * settlement could otherwise stamp an EARLIER millis than the previous one,
+ * and every consumer that max()-picks OCC tokens from acks (the client's
+ * `selectFreshestUpdatedAtMillis`) would wedge on the skewed-high cached
+ * value. Advance at least 1ms past the target's previous `updatedAt` — the
+ * settlement transaction already holds the target snapshot, so this costs no
+ * extra read. A non-numeric previous value (absent doc, corrupt field) falls
+ * back to `now` unchanged.
+ */
+export const monotonicUpdatedAtStamp = (
+  now: Timestamp,
+  previousUpdatedAt: unknown
+): Timestamp => {
+  const previousMillis = normalizeComparable(previousUpdatedAt)
+  if (typeof previousMillis !== "number" || now.toMillis() > previousMillis) {
+    return now
+  }
+  return Timestamp.fromMillis(previousMillis + 1)
+}
+
 export const withServerManagedFields = (
   payload: Record<string, unknown>,
   targetSnap: DocumentSnapshot,
   path: string[],
-  userId: string
-): Record<string, unknown> => {
+  userId: string,
+  stampedAt: Timestamp
+): ServerManagedFieldsResult => {
   const shouldStampUpdatedAt =
     isUserRootPathForUser(path, userId) ||
     isUserPreferencesPathForUser(path, userId) ||
@@ -726,12 +922,16 @@ export const withServerManagedFields = (
     isSnapshotPath(path)
 
   if (!shouldStampUpdatedAt) {
-    return payload
+    return { payload, updatedAtMillis: null }
   }
 
+  const stamp = monotonicUpdatedAtStamp(
+    stampedAt,
+    targetSnap.exists ? targetSnap.get("updatedAt") : undefined
+  )
   const nextPayload: Record<string, unknown> = {
     ...payload,
-    updatedAt: FieldValue.serverTimestamp(),
+    updatedAt: stamp,
   }
 
   if (
@@ -739,7 +939,7 @@ export const withServerManagedFields = (
     !targetSnap.exists &&
     !("createdAt" in nextPayload)
   ) {
-    nextPayload.createdAt = FieldValue.serverTimestamp()
+    nextPayload.createdAt = stamp
     nextPayload.username = null
     nextPayload.isPublic = false
   }
@@ -748,9 +948,19 @@ export const withServerManagedFields = (
     nextPayload.updatedBy = userId
   }
 
-  return nextPayload
+  return { payload: nextPayload, updatedAtMillis: stamp.toMillis() }
 }
 
+/**
+ * Apply the operation's write to the target document. Returns the epoch ms
+ * of the `updatedAt` stamped onto the target (for the ack verdict), or null
+ * when the settlement stamped none (deletes, non-managed paths).
+ *
+ * The stamp is a CONCRETE `Timestamp.now()` computed in the transaction, not
+ * the `serverTimestamp()` sentinel: OCC (`validateBaseVersion`) compares
+ * strict millis equality, so a concrete value is semantically identical —
+ * and only a concrete value can ride the verdict back to the client.
+ */
 export const applyMutation = (
   transaction: Transaction,
   targetRef: FirebaseFirestore.DocumentReference,
@@ -758,28 +968,35 @@ export const applyMutation = (
   targetSnap: DocumentSnapshot,
   path: string[],
   userId: string
-) => {
+): number | null => {
   if (operation.type === "delete") {
     transaction.delete(targetRef)
-    return
+    return null
   }
 
-  const payload = withServerManagedFields(
+  if (operation.type === "update") {
+    if (!targetSnap.exists) {
+      reject("not-found", "Cannot update a document that does not exist")
+    }
+    if (Object.keys(operation.data ?? {}).length === 0) {
+      reject("invalid-argument", "Update payload cannot be empty")
+    }
+  }
+
+  const { payload, updatedAtMillis } = withServerManagedFields(
     operation.data ?? {},
     targetSnap,
     path,
-    userId
+    userId,
+    Timestamp.now()
   )
   if (operation.type === "set") {
     transaction.set(targetRef, payload, { merge: operation.merge })
-    return
-  }
-
-  if (Object.keys(payload).length === 0) {
-    reject("invalid-argument", "Update payload cannot be empty")
+    return updatedAtMillis
   }
 
   transaction.update(targetRef, payload)
+  return updatedAtMillis
 }
 
 export const toRejectDetails = (
@@ -813,6 +1030,173 @@ export const toRejectDetails = (
 }
 
 /**
+ * Only `SyncRejectError` — the deliberate app-level rejection thrown by the
+ * validators above — may settle as a durable reject verdict. Everything else
+ * (numeric gRPC codes, string-coded transients, unknown errors) must stay
+ * retryable: the client treats ANY reject as terminal and rolls back its
+ * optimistic state, so settling a transient blip as a reject converts an
+ * in-flight write a retry would have applied into a user-visible rollback.
+ */
+export const isTerminalSyncRejection = (
+  error: unknown
+): error is SyncRejectError => error instanceof SyncRejectError
+
+// Retryable codes Firestore surfaces on infrastructure trouble. `GoogleError`
+// carries these NUMERICALLY (DEADLINE_EXCEEDED=4, RESOURCE_EXHAUSTED=8,
+// ABORTED=10, UNAVAILABLE=14); wrapped errors may already carry the canonical
+// string form.
+const TRANSIENT_ERROR_CODES = new Set<unknown>([
+  4,
+  8,
+  10,
+  14,
+  "deadline-exceeded",
+  "resource-exhausted",
+  "aborted",
+  "unavailable",
+])
+
+/**
+ * Known-transient infrastructure failure. The callable surfaces these as
+ * `"unavailable"` so the client's retry ladder re-invokes it.
+ */
+export const isTransientSyncError = (error: unknown): boolean =>
+  typeof error === "object" &&
+  error !== null &&
+  "code" in error &&
+  TRANSIENT_ERROR_CODES.has((error as { code?: unknown }).code)
+
+/**
+ * How long past the create event's timestamp the trigger keeps rethrowing
+ * retryable settlement failures. Beyond this, `retry: true` would otherwise
+ * redeliver a deterministically-failing op for Eventarc's full 7-day window.
+ */
+export const SYNC_TRIGGER_RETRY_GIVE_UP_MS = 10 * 60 * 1000
+
+/**
+ * Decide how the create trigger disposes of a settlement failure: the reject
+ * details to settle durably, or `null` to rethrow so `retry: true` redelivers
+ * the event. Terminal rejections settle immediately; retryable failures
+ * rethrow until the event outlives the give-up horizon. A non-finite age
+ * (an unparseable event timestamp) keeps retrying rather than converting
+ * into a reject.
+ */
+export const triggerFailureRejectDetails = (
+  error: unknown,
+  eventAgeMs: number
+): { code: string; message: string } | null => {
+  if (isTerminalSyncRejection(error)) return toRejectDetails(error)
+  if (eventAgeMs >= SYNC_TRIGGER_RETRY_GIVE_UP_MS) {
+    const underlying = toRejectDetails(error)
+    return {
+      code: underlying.code,
+      message: `Sync settlement retry horizon exhausted: ${underlying.message}`,
+    }
+  }
+  return null
+}
+
+/**
+ * Which entry point produced a settlement outcome, for the structured
+ * outcome log: the Firestore create trigger, the callable settling an
+ * existing op doc, or the callable's payload-carried create-and-settle.
+ */
+export type SettlementLogSource = "trigger" | "callable" | "callable-carried"
+
+/**
+ * Coarse target classification for the outcome log. Deliberately a KIND, not
+ * the raw path: the log must stay free of user data beyond ids, and the
+ * per-route buckets are what operators aggregate on anyway.
+ */
+export type SettlementRouteKind =
+  | "user-profile"
+  | "user-layout"
+  | "user-settings"
+  | "user-notifications"
+  | "tabs-layout"
+  | "membership-settings"
+  | "snapshot"
+  | "unknown"
+
+/**
+ * Classify a target path into its settlement route bucket. Mirrors the
+ * routing in `routeSyncOperation` (same path shapes) but never throws — an
+ * unroutable/absent path logs as `"unknown"` instead of failing the log line.
+ */
+export const settlementRouteKind = (
+  targetPath: string | null | undefined
+): SettlementRouteKind => {
+  if (!targetPath) return "unknown"
+  const path = splitPath(targetPath)
+
+  if (path[0] === "users") {
+    if (path.length === 2) return "user-profile"
+    if (path.length === 4 && path[2] === "layout") return "user-layout"
+    if (path.length === 4 && path[2] === "settings") return "user-settings"
+    if (path.length === 4 && path[2] === "notifications") {
+      return "user-notifications"
+    }
+    return "unknown"
+  }
+
+  if (path[0] === "snapshots" && path.length === 2) return "snapshot"
+
+  if (path[0] === "teams" && path[2] === "memberships") {
+    if (path.length === 8 && path[6] === "layout" && path[7] === "tabs") {
+      return "tabs-layout"
+    }
+    if (
+      path.length === 6 &&
+      path[4] === "settings" &&
+      path[5] === "preferences"
+    ) {
+      return "membership-settings"
+    }
+  }
+
+  return "unknown"
+}
+
+/**
+ * The ONE structured log line per settlement outcome (`sync.ts` emits it at
+ * info for acks, warn for rejects). Ids and kinds only — never payloads or
+ * raw paths. `occConflict` marks the OCC loss (`validateBaseVersion`'s
+ * `failed-precondition` reject); `horizonExhausted` marks the trigger giving
+ * up on a retryable failure past `SYNC_TRIGGER_RETRY_GIVE_UP_MS` and settling
+ * it as a reject.
+ */
+export interface SettlementOutcomeLog {
+  operationId: string
+  routeKind: SettlementRouteKind
+  source: SettlementLogSource
+  verdict: "ack" | "reject"
+  code: string | null
+  occConflict: boolean
+  horizonExhausted: boolean
+  durationMs: number
+}
+
+export const buildSettlementOutcomeLog = (params: {
+  operationId: string
+  targetPath: string | null
+  source: SettlementLogSource
+  verdict: SyncSettlementVerdict
+  horizonExhausted: boolean
+  durationMs: number
+}): SettlementOutcomeLog => ({
+  operationId: params.operationId,
+  routeKind: settlementRouteKind(params.targetPath),
+  source: params.source,
+  verdict: params.verdict.status,
+  code: params.verdict.code,
+  occConflict:
+    params.verdict.status === "reject" &&
+    params.verdict.code === "failed-precondition",
+  horizonExhausted: params.horizonExhausted,
+  durationMs: Math.max(0, params.durationMs),
+})
+
+/**
  * Map a settled operation document's data to a verdict. Returns null when the
  * document is still pending (or carries an unknown status) — i.e. there is no
  * settlement to report yet.
@@ -825,10 +1209,91 @@ export const verdictFromOperationData = (
   const ack = (data?.ack ?? null) as {
     code?: unknown
     message?: unknown
+    updatedAtMillis?: unknown
   } | null
   return {
     status,
     code: typeof ack?.code === "string" ? ack.code : null,
     message: typeof ack?.message === "string" ? ack.message : null,
+    updatedAtMillis:
+      typeof ack?.updatedAtMillis === "number" ? ack.updatedAtMillis : null,
   }
+}
+
+/**
+ * Server retention for SETTLED operation documents: 2 hours — double the
+ * client's 1-hour local outbox retention, so every verdict a live client
+ * could still care about is retrievable (retries re-invoke the callable,
+ * which returns the stored verdict for a settled doc). Enforced by the
+ * native Firestore TTL policy on `syncOperations.expireAt` (stamped by
+ * `buildSettlementVerdictFields` below), NOT by the scheduled sweep — the
+ * settled sweep is retired; `cleanupSyncOperations` keeps only the 7-day
+ * orphaned-pending sweep.
+ */
+export const SYNC_TTL_MS = 2 * 60 * 60 * 1000 // 2 hours
+
+/**
+ * The ONE field set every settlement writer puts on the operation document —
+ * `settleSyncOperation`'s transactional write and the standalone
+ * `settleRejectVerdict` both build from here so the settled-doc shape cannot
+ * drift between paths.
+ *
+ * Settled docs keep only what the client's `applyRemoteSettlement` actually
+ * reads — `status` + `ack` (and the identity fields already on the doc:
+ * `userId`/`targetPath`/`source` fallbacks, `clientId` for the ack-listener
+ * scope). The mutation payload (`data`, up to ~1MB of snapshot base64) and
+ * `baseVersion` are dead weight once a verdict exists, yet they would stream
+ * back through the ack listener on every settlement AND on every
+ * stale-resume-token re-attach for the whole retention window — so the
+ * settlement STRIPS them:
+ *
+ *  - `"merge"` (existing doc): expressed as `FieldValue.delete()` sentinels
+ *    merged over the doc. Rules only constrain CLIENT writes, so the
+ *    server-side delete is always permitted; deleting an absent field is a
+ *    no-op, so old op docs settle identically.
+ *  - `"create"` (born-settled carry): the sentinels are INVALID inside
+ *    `create()`, so the fields are omitted here and the carried payload is
+ *    pre-stripped via `stripSettledPayloadFields` instead.
+ *
+ * `expireAt` (the settlement instant + `SYNC_TTL_MS`) is the native-TTL
+ * anchor; a concrete `Timestamp` like `ack.atMs`, not the server sentinel,
+ * so the verdict can compute it without a post-commit read.
+ */
+export const buildSettlementVerdictFields = (
+  verdict: SyncSettlementVerdict,
+  atMs: number,
+  mode: "merge" | "create"
+): Record<string, unknown> => {
+  const fields: Record<string, unknown> = {
+    status: verdict.status,
+    ack: {
+      code: verdict.code,
+      message: verdict.message,
+      atMs,
+      updatedAtMillis: verdict.updatedAtMillis,
+    },
+    processedAt: FieldValue.serverTimestamp(),
+    expireAt: Timestamp.fromMillis(atMs + SYNC_TTL_MS),
+  }
+  if (mode === "merge") {
+    fields.data = FieldValue.delete()
+    fields.baseVersion = FieldValue.delete()
+  }
+  return fields
+}
+
+/**
+ * Drop the mutation payload from a carried op payload before the
+ * create-from-carried settlement writes it: the doc is born settled, and
+ * nothing ever reads a settled operation's `data`/`baseVersion` again (see
+ * `buildSettlementVerdictFields`). Non-mutating — the caller may still hold
+ * the payload for the verdict path.
+ */
+export const stripSettledPayloadFields = (
+  operation: FirebaseFirestore.DocumentData
+): FirebaseFirestore.DocumentData => {
+  const stripped = { ...operation }
+  delete stripped.data
+  delete stripped.baseVersion
+  return stripped
 }

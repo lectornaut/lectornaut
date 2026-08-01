@@ -1,5 +1,10 @@
 <script setup lang="ts">
-import { IconCloudAlert, IconCloudCheck, IconCloudSync } from "@/data/icons"
+import {
+  IconCloudAlert,
+  IconCloudCheck,
+  IconCloudSync,
+  IconRefreshCcw,
+} from "@/data/icons"
 import { useCloudSyncQueueState } from "@/utils/firebase/firebase-optimistic"
 import { useSyncEngineState } from "@/utils/firebase/firebase-sync-engine"
 
@@ -8,10 +13,12 @@ const isOnline = useOnline()
 const {
   activeCount,
   hasError,
+  hasRetry,
   isSyncing,
   lastErrorAt,
   lastErrorMessage,
   lastSuccessAt,
+  retryLastError,
 } = useCloudSyncQueueState()
 const { pendingCount } = useSyncEngineState()
 
@@ -148,7 +155,7 @@ const errorMessage = computed(
                 lastSuccessAt ||
                 (syncState === 'error' && lastErrorAt)
               "
-              class="bg-muted space-y-2 rounded-md p-2"
+              class="space-y-2 px-3 pb-1"
             >
               <div
                 v-if="syncCount > 0"
@@ -157,7 +164,9 @@ const errorMessage = computed(
                 <span class="text-muted-foreground">{{
                   t("layouts.app.status.hovercard.pendingChanges")
                 }}</span>
-                <span class="font-medium tabular-nums">{{ syncCount }}</span>
+                <Badge variant="secondary" class="tabular-nums">
+                  {{ syncCount }}
+                </Badge>
               </div>
 
               <div
@@ -167,12 +176,14 @@ const errorMessage = computed(
                 <span class="text-muted-foreground">{{
                   t("layouts.app.status.hovercard.lastSynced")
                 }}</span>
-                <time
+                <Badge
+                  as="time"
+                  variant="secondary"
                   :title="lastSuccessDate"
                   :datetime="new Date(lastSuccessAt).toISOString()"
                 >
                   {{ lastSuccessTimeAgo }}
-                </time>
+                </Badge>
               </div>
 
               <div
@@ -182,24 +193,41 @@ const errorMessage = computed(
                 <span class="text-muted-foreground">{{
                   t("layouts.app.status.hovercard.lastError")
                 }}</span>
-                <time
+                <Badge
+                  as="time"
+                  variant="destructive"
                   :title="lastErrorDate"
                   :datetime="new Date(lastErrorAt).toISOString()"
                 >
                   {{ lastErrorTimeAgo }}
-                </time>
+                </Badge>
               </div>
             </div>
 
-            <div v-if="syncState === 'error'" class="bg-muted rounded-md p-2">
-              <p class="text-xs font-medium">
+            <div
+              v-if="syncState === 'error'"
+              class="bg-destructive/10 rounded-md px-3 py-2"
+            >
+              <p class="text-destructive text-xs font-medium">
                 {{ t("layouts.app.status.hovercard.errorDetails") }}
               </p>
               <p
+                :title="errorMessage"
                 class="text-muted-foreground line-clamp-3 text-xs leading-relaxed"
               >
                 {{ errorMessage }}
               </p>
+
+              <Button
+                v-if="hasRetry"
+                variant="secondary"
+                size="xs"
+                class="mt-2"
+                @click="retryLastError"
+              >
+                <IconRefreshCcw />
+                {{ t("actions.retry") }}
+              </Button>
             </div>
           </HoverCardContent>
         </TooltipTrigger>

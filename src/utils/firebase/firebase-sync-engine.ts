@@ -12,17 +12,31 @@ import {
   FirestoreErrorCodes,
   getFirestoreErrorMessage,
   hasFirebaseErrorCode,
-  isRetryableFirebaseError,
 } from "@/utils/firebase/firebase-errors"
 import { getBackoffDelay } from "@/utils/firebase/firebase-optimistic"
 import {
   compareByCreatedOrder,
+  computeAckHorizonMillis,
+  computeFastRetryDelay,
+  hasConflictingNestedMergeKey,
+  isDefinitiveNotFound,
+  isFullAttemptSend,
+  isOldServerPayloadCarryNotFound,
+  isUnsettledOperation,
+  isVerdictEquivalentSubmissionCode,
   mergeOutboxSnapshots,
   OUTBOX_RETRY_BASE_DELAY_MS,
   outboxSnapshotsEqual,
+  planDispatch,
+  planOutboxPersist,
+  planQuarantineRequeue,
   pruneExpiredOperations,
-  selectReadyOperations,
-  shouldDeadLetter,
+  resumeParkedOperations,
+  shouldPark,
+  stripSettledOperationPayload,
+  toPersistedOperations,
+  toQuarantinedOutboxEntries,
+  type QuarantinedOutboxEntry,
 } from "@/utils/firebase/firebase-sync-queue"
 import { onIdTokenChanged } from "firebase/auth"
 import type { DocumentReference } from "firebase/firestore"
@@ -34,6 +48,7 @@ import {
   query,
   serverTimestamp,
   setDoc,
+  Timestamp,
   where,
   type DocumentData,
   type FieldValue,
@@ -55,9 +70,11 @@ const OUTBOX_MAX_PENDING_PER_USER = 2_000
 // per-operation retry policy, which lives in `firebase-sync-queue.ts`
 // (`OUTBOX_RETRY_BASE_DELAY_MS` / `OUTBOX_MAX_ATTEMPTS`).
 const ACK_LISTENER_RETRY_DELAY_MS = 1_000
-// Concurrent sends per loop pass. Distinct-path heads are independent
-// (per-path FIFO is enforced at selection time), so a small fan-out drains
-// bursts in one round trip of wall-clock instead of N.
+// Cap on TOTAL in-flight sends (per-op tracking, not a per-pass batch).
+// Distinct-path heads are independent (per-path FIFO is enforced at selection
+// time), and dispatch is per-op: a new distinct-path enqueue goes out
+// immediately while capacity remains, so one slow send (a ~1MB snapshot
+// create) never holds every other path's dispatch hostage.
 const MAX_PARALLEL_SENDS = 4
 // Canonical wait kept as a safety net for stragglers — but never blocks the
 // caller promise. See `settleAckAfterCanonical` for the non-blocking semantics.
@@ -70,6 +87,10 @@ const SYNC_BATCH_WINDOW_MS = 25
 // serialize + write avoids hammering the main thread during bursts of
 // optimistic updates.
 const OUTBOX_PERSIST_DEBOUNCE_MS = 16
+// Slow periodic resume for parked ops — the safety net when no online /
+// visibility edge ever fires (lie-fi never emits 'online'). The interval
+// only runs while parked ops exist.
+const PARKED_RESUME_INTERVAL_MS = 60_000
 
 /**
  * Re-export so existing call sites that import these types from this file
@@ -77,6 +98,8 @@ const OUTBOX_PERSIST_DEBOUNCE_MS = 16
  * validation schema in `@/schemas/sync`.
  */
 export type { SyncMutatePayload, SyncOutboxOperation }
+/** Row shape returned by {@link listQuarantinedOutboxEntries}. */
+export type { QuarantinedOutboxEntry }
 
 interface RemoteSyncOperationDocument {
   id: string
@@ -98,8 +121,29 @@ interface RemoteSyncOperationDocument {
     code: string | null
     message: string | null
     atMs: number | null
+    /**
+     * Written by new-server settlements: the target document's
+     * post-settlement `updatedAt` (epoch ms) when the settlement stamped
+     * one. Optional so docs settled by an old deploy still parse.
+     */
+    updatedAtMillis?: number | null
   } | null
 }
+
+/**
+ * Payload-carry wire shape: the remote op-doc fields the client would
+ * otherwise write via `setDoc`, minus the fields the server owns
+ * (`createdAt` is stamped server-side; `ack` is only ever written by a
+ * settler). Carried on FIRST sends only (`remoteCreated` false) so the
+ * server can create-if-absent and settle in one transaction; retries of a
+ * created doc must invoke without it, keeping the P0 terminal not-found
+ * disposition intact (a swept doc must never be re-created from a stale
+ * payload).
+ */
+type CarriedSyncOperationPayload = Omit<
+  RemoteSyncOperationDocument,
+  "createdAt" | "ack" | "status"
+> & { status: "pending" }
 
 interface SyncEngineState {
   activeUserId: ComputedRef<string | null>
@@ -110,11 +154,13 @@ interface SyncEngineState {
 }
 
 /**
- * Where a settlement (or terminal failure) was first observed:
+ * Where a settlement was first observed:
  *  - `listener`   — the clientId-scoped ack `onSnapshot`
  *  - `callable`   — the `applySyncOperation` direct-settlement response
  *  - `inspect`    — the post-send-failure remote-document inspection
- *  - `deadLetter` — the local retry budget ran out
+ *  - `deadLetter` — retired: exhausted ops now park (waiter pending, no
+ *    rollback) instead of terminally failing; the key stays for the metrics
+ *    shape
  * Diagnostic: a healthy deploy settles mostly via `callable`; a fleet stuck
  * on `listener` means the callable path is failing (soft) somewhere.
  */
@@ -148,8 +194,25 @@ export interface SyncCanonicalEvent {
   at: number
 }
 
+/**
+ * What an awaited mutation resolves WITH once the server acks. Additive
+ * widening of the former `Promise<void>` contract — callers that ignore the
+ * value keep working unchanged.
+ *
+ * `updatedAtMillis` is the target document's post-settlement `updatedAt`
+ * (epoch ms), present when the server settlement stamped one (server-managed
+ * `updatedAt` paths). Consumers can refresh an OCC base version from it
+ * (`buildUpdatedAtBaseVersion`-compatible millis) without waiting for the
+ * target snapshot to round-trip. Absent on verdicts from pre-carry server
+ * deploys and on paths whose settlement stamps no `updatedAt`.
+ */
+export interface SyncMutateResult {
+  status: "ack"
+  updatedAtMillis?: number
+}
+
 type OperationWaiter = {
-  resolve: () => void
+  resolve: (result: SyncMutateResult) => void
   reject: (error: Error) => void
 }
 
@@ -232,15 +295,17 @@ const readOutbox = (): SyncOutboxOperation[] => {
 
 let pendingPersistTimer: ReturnType<typeof setTimeout> | null = null
 let pendingPersistSnapshot: SyncOutboxOperation[] | null = null
-
-/**
- * Read the outbox a peer tab may have written to the shared localStorage key.
- * Backs the read-modify-write persist and the cross-tab storage listener.
- */
-const readStoredOutbox = (): SyncOutboxOperation[] => {
-  if (!hasWindow()) return []
-  return parseOutbox(window.localStorage.getItem(OUTBOX_STORAGE_KEY)).valid
-}
+// Single-tab persist fast path, SELF-VERIFYING: the exact string this tab
+// last wrote to the shared outbox key. `flushOutboxPersist` skips the
+// stored-copy read-modify-write (a JSON.parse + per-entry Zod safeParse on
+// every flush) only when the stored value still equals this string — one
+// getItem + string equality. A 'storage'-event dirty flag is NOT a safe
+// gate on its own: the event is async (a peer write can land between its
+// last delivery and our debounced flush) and is never delivered to — nor
+// replayed for — bfcache'd documents, and a wrongly skipped merge blindly
+// overwrites a peer tab's unsent parked ops. Starts null so the first flush
+// always merges.
+let lastWrittenOutboxRaw: string | null = null
 
 const flushOutboxPersist = () => {
   if (pendingPersistTimer) {
@@ -255,15 +320,26 @@ const flushOutboxPersist = () => {
   pendingPersistSnapshot = null
   try {
     // Read-modify-write: the outbox key is shared across tabs, so union our
-    // snapshot with whatever a peer has written since we last read. A blind
+    // snapshot with whatever a peer has written since our last write. A blind
     // overwrite would drop a concurrent tab's pending ops and lose them on
-    // reload.
-    const merged = mergeOutboxSnapshots(
+    // reload. Skipped only when the stored copy is verifiably untouched —
+    // byte-identical to what this tab last wrote (`lastWrittenOutboxRaw`);
+    // a single-tab session then pays only the stringify after its first
+    // flush, and correctness never depends on storage-event delivery.
+    const storedRaw = window.localStorage.getItem(OUTBOX_STORAGE_KEY)
+    const merged = planOutboxPersist(
       snapshot,
-      readStoredOutbox(),
+      storedRaw,
+      lastWrittenOutboxRaw,
+      (raw) => parseOutbox(raw).valid,
       Date.now()
     )
-    window.localStorage.setItem(OUTBOX_STORAGE_KEY, JSON.stringify(merged))
+    // Demote "parked" to "pending" at the storage boundary — the key is
+    // shared with older app versions whose stricter status enum would
+    // quarantine-and-drop a parked entry (see `toPersistedOperations`).
+    const nextRaw = JSON.stringify(toPersistedOperations(merged))
+    window.localStorage.setItem(OUTBOX_STORAGE_KEY, nextRaw)
+    lastWrittenOutboxRaw = nextRaw
   } catch (error) {
     console.warn("[syncEngine] Failed to persist outbox", error)
   }
@@ -274,10 +350,25 @@ const flushOutboxPersist = () => {
  * keypresses, batch operations) all share a single serialize + write pass.
  * A `beforeunload`/`pagehide` listener ensures the last write is flushed
  * synchronously even if the user navigates away mid-batch.
+ *
+ * While the document is HIDDEN the debounce is skipped and the write lands
+ * synchronously: a hidden document may never see another timer tick
+ * (bfcache, discard, close), so enqueues made from later-registered
+ * pagehide/visibility handlers — the tabsStore pointer tail flush, the
+ * collab snapshot flush — would otherwise die with the armed timer and
+ * reach neither localStorage nor the server. Batching buys nothing while
+ * nothing is visible anyway.
  */
 const persistOutbox = (operations: SyncOutboxOperation[]) => {
   if (!hasWindow()) return
   pendingPersistSnapshot = operations
+  if (
+    typeof document !== "undefined" &&
+    document.visibilityState === "hidden"
+  ) {
+    flushOutboxPersist()
+    return
+  }
   if (pendingPersistTimer) return
   pendingPersistTimer = setTimeout(
     flushOutboxPersist,
@@ -516,7 +607,11 @@ const waitForCanonicalDocumentState = async (
 const waiters: WaiterMap = new Map()
 const outbox = ref<SyncOutboxOperation[]>(readOutbox())
 const isRunning = ref(false)
-const isSyncing = ref(false)
+// Per-op in-flight tracking — the replacement for the retired whole-loop
+// `isSyncing` barrier. The Set feeds `planDispatch` (capacity + no-resend
+// guard); the ref mirrors its size for the reactive `isProcessing` seam.
+const inFlightSendIds = new Set<string>()
+const inFlightSendCount = ref(0)
 const isOnline = ref(typeof navigator === "undefined" ? true : navigator.onLine)
 const activeUserId = ref<string | null>(auth.currentUser?.uid ?? null)
 const clientId = getOrCreateClientId()
@@ -548,6 +643,12 @@ let syncTimer: ReturnType<typeof setTimeout> | null = null
 // and is reset on the first healthy snapshot.
 let ackRetryTimer: ReturnType<typeof setTimeout> | null = null
 let ackRetryAttempts = 0
+// Downgrade latch for the ack query's `createdAt` horizon: the bounded query
+// needs a composite index (clientId ASC, createdAt ASC) on `syncOperations`.
+// Against a backend without it, `onSnapshot` errors with failed-precondition
+// on every attach — flip to the legacy unbounded query instead of wedging the
+// ack listener in a retry loop that can never succeed.
+let ackHorizonUnsupported = false
 let storageSyncCleanup: (() => void) | null = null
 // Per-user leader election (Web Locks). Only the leader tab for the active
 // user sends; other tabs enqueue + persist and the leader adopts those ops.
@@ -558,10 +659,11 @@ let releaseLeaderLock: (() => void) | null = null
 const pendingCount = computed(() => {
   const userId = activeUserId.value
   if (!userId) return 0
+  // Parked ops count as pending: they are unsynced local changes, so hiding
+  // them would report "synced" while writes are still owed a verdict.
   return outbox.value.filter(
     (operation) =>
-      operation.userId === userId &&
-      (operation.status === "pending" || operation.status === "sent")
+      operation.userId === userId && isUnsettledOperation(operation)
   ).length
 })
 const averageAckLatencyMs = computed(() => {
@@ -611,8 +713,7 @@ const getPendingCountForUser = (userId: string): number => {
   if (userId === activeUserId.value) return pendingCount.value
   return outbox.value.filter(
     (operation) =>
-      operation.userId === userId &&
-      (operation.status === "pending" || operation.status === "sent")
+      operation.userId === userId && isUnsettledOperation(operation)
   ).length
 }
 
@@ -632,10 +733,28 @@ const canCoalesceOperation = (
   if (existing.userId !== incoming.userId) return false
   if (existing.status !== "pending") return false
   if (existing.attempts > 0) return false
+  // A resumed parked op is pending with attempts 0 but its remote doc already
+  // exists — retries settle via the callable, which reads the REMOTE payload,
+  // so data coalesced in locally would never reach the server.
+  if (existing.remoteCreated) return false
   if (existing.type !== incoming.type) return false
   if (existing.type === "delete") return false
   if (existing.targetPath !== incoming.targetPath) return false
   if ((existing.merge ?? false) !== (incoming.merge ?? false)) return false
+  // Coalescing folds payloads with a shallow spread, but the server applies a
+  // merge:true set as a DEEP merge — for a shared top-level key carrying a
+  // nested map the spread is not equivalent to the two writes in sequence
+  // (coalescing {prefs:{a:1}} then {prefs:{b:2}} would destroy `a`). Decline
+  // and enqueue separately: exact server semantics preserved. Shared
+  // scalar/array keys still coalesce — spread replacement equals Firestore
+  // field replacement (see `hasConflictingNestedMergeKey`).
+  if (
+    existing.type === "set" &&
+    (existing.merge ?? false) &&
+    hasConflictingNestedMergeKey(existing.data, incoming.data)
+  ) {
+    return false
+  }
   if (!isSameBaseVersion(existing.baseVersion, incoming.baseVersion))
     return false
   return true
@@ -656,7 +775,7 @@ const pathIndexKey = (userId: string, targetPath: string) =>
 const rebuildPathIndex = () => {
   pendingPathIndex.clear()
   for (const op of outbox.value) {
-    if (op.status !== "pending" || op.attempts > 0) continue
+    if (op.status !== "pending" || op.attempts > 0 || op.remoteCreated) continue
     pendingPathIndex.set(pathIndexKey(op.userId, op.targetPath), op.id)
   }
   pathIndexDirty = false
@@ -716,7 +835,11 @@ const upsertOperation = (
   )
 }
 
-const settleWaiters = (operationId: string, error?: Error) => {
+const settleWaiters = (
+  operationId: string,
+  error?: Error,
+  result: SyncMutateResult = { status: "ack" }
+) => {
   const targets = waiters.get(operationId)
   if (!targets || targets.length === 0) return
   waiters.delete(operationId)
@@ -726,7 +849,7 @@ const settleWaiters = (operationId: string, error?: Error) => {
       waiter.reject(error)
       return
     }
-    waiter.resolve()
+    waiter.resolve(result)
   })
 }
 
@@ -763,9 +886,30 @@ const scheduleSync = (delay = SYNC_BATCH_WINDOW_MS) => {
   }
   syncTimer = setTimeout(() => {
     syncTimer = null
-    void processSyncLoop()
+    processSyncLoop()
   }, delay)
 }
+
+const toCarriedOperationPayload = (
+  operation: SyncOutboxOperation
+): CarriedSyncOperationPayload => ({
+  id: operation.id,
+  userId: operation.userId,
+  clientId: operation.clientId,
+  source: operation.source,
+  targetPath: operation.targetPath,
+  type: operation.type,
+  data: operation.data ?? null,
+  merge: operation.merge ?? false,
+  baseVersion: operation.baseVersion ?? null,
+  // Only ops whose remote doc does not exist yet carry, and those are always
+  // remotely "pending" (the rules constrain a create to that status too).
+  status: "pending",
+  attempts: operation.attempts,
+  createdAtClient: operation.createdAt,
+  updatedAtClient: operation.updatedAt,
+  sentAtClient: operation.sentAt ?? null,
+})
 
 const toRemoteDocument = (
   operation: SyncOutboxOperation
@@ -773,22 +917,12 @@ const toRemoteDocument = (
   const isRejected = operation.status === "rejected"
 
   return {
-    id: operation.id,
-    userId: operation.userId,
-    clientId: operation.clientId,
-    source: operation.source,
-    targetPath: operation.targetPath,
-    type: operation.type,
-    data: operation.data ?? null,
-    merge: operation.merge ?? false,
-    baseVersion: operation.baseVersion ?? null,
+    ...toCarriedOperationPayload(operation),
+    // Remote docs only know pending|ack|reject (rules constrain the enum);
+    // the client-local "parked" state maps to "pending".
     status:
       operation.status === "acked" ? "ack" : isRejected ? "reject" : "pending",
-    attempts: operation.attempts,
     createdAt: serverTimestamp(),
-    createdAtClient: operation.createdAt,
-    updatedAtClient: operation.updatedAt,
-    sentAtClient: operation.sentAt ?? null,
     // Only include ack details when there's meaningful data (client rejection).
     // The server writes its own ack field on settlement.
     ack: isRejected
@@ -819,9 +953,10 @@ const settleAckAfterCanonical = (
     targetPath: string
     at: number
   },
-  outboxOperation?: SyncOutboxOperation
+  outboxOperation?: SyncOutboxOperation,
+  result?: SyncMutateResult
 ) => {
-  settleWaiters(operationId)
+  settleWaiters(operationId, undefined, result)
 
   // Canonical confirmation is purely observational — it exists only to notify
   // canonical subscribers. When there are none, skip the per-ack onSnapshot +
@@ -876,10 +1011,11 @@ const applyRemoteSettlement = (
   }
 
   // Count only settlements that transition a LIVE outbox entry. The ack
-  // listener replays every retained remote doc (24h server TTL) on each
-  // (re)attach, while settled outbox entries prune after 1h — counting those
-  // replays would inflate `listener` on healthy deploys and invert the
-  // callable-vs-listener diagnostic this metric exists for.
+  // listener replays every retained remote doc (2h server TTL, and the
+  // native TTL deletion can lag) on each (re)attach, while settled outbox
+  // entries prune after 1h — counting those replays would inflate `listener`
+  // on healthy deploys and invert the callable-vs-listener diagnostic this
+  // metric exists for.
   if (outboxOperation) {
     recordSettleSource(source)
   }
@@ -896,13 +1032,19 @@ const applyRemoteSettlement = (
 
   if (status === "ack") {
     if (outboxOperation) {
-      upsertOperation(operationId, (operation) => ({
-        ...operation,
-        status: "acked",
-        updatedAt: settledAt,
-        settledAt,
-        errorMessage: undefined,
-      }))
+      // Settled entries retain only ids + status (dedup/metrics) — the
+      // payload is stripped the moment the verdict lands so an hour of
+      // retained ~1MB snapshot saves can't blow the localStorage quota
+      // (see `stripSettledOperationPayload`).
+      upsertOperation(operationId, (operation) =>
+        stripSettledOperationPayload({
+          ...operation,
+          status: "acked",
+          updatedAt: settledAt,
+          settledAt,
+          errorMessage: undefined,
+        })
+      )
       recordAckLatency(outboxOperation)
     }
     notifyAckSubscribers({
@@ -910,19 +1052,37 @@ const applyRemoteSettlement = (
       status: "ack",
       message: null,
     })
-    settleAckAfterCanonical(operationId, eventBase, outboxOperation)
+    // Resolve the waiter WITH the ack details: the verdict's stamped target
+    // `updatedAt` rides along so `mutate()` callers can refresh an OCC base
+    // version without waiting for the target snapshot.
+    const ackUpdatedAtMillis = data?.ack?.updatedAtMillis
+    settleAckAfterCanonical(
+      operationId,
+      eventBase,
+      outboxOperation,
+      typeof ackUpdatedAtMillis === "number"
+        ? { status: "ack", updatedAtMillis: ackUpdatedAtMillis }
+        : { status: "ack" }
+    )
     return true
   }
 
-  const error = new Error(message ?? "Sync operation rejected")
+  // Carry the verdict code on the rejection so callers can react to specific
+  // rejections structurally (e.g. authStore drops its cached OCC token on a
+  // `failed-precondition` base-version conflict) instead of matching text.
+  const error = Object.assign(new Error(message ?? "Sync operation rejected"), {
+    code: typeof data?.ack?.code === "string" ? data?.ack?.code : undefined,
+  })
   if (outboxOperation) {
-    upsertOperation(operationId, (operation) => ({
-      ...operation,
-      status: "rejected",
-      updatedAt: settledAt,
-      settledAt,
-      errorMessage: error.message,
-    }))
+    upsertOperation(operationId, (operation) =>
+      stripSettledOperationPayload({
+        ...operation,
+        status: "rejected",
+        updatedAt: settledAt,
+        settledAt,
+        errorMessage: error.message,
+      })
+    )
   }
   notifyAckSubscribers({
     ...eventBase,
@@ -955,11 +1115,42 @@ const ensureAckListener = (userId: string) => {
   }
 
   // Scope listener to this client's operations to avoid processing
-  // stale documents from other tabs/devices as the collection grows
-  const ackQuery = query(
-    collection(firestore, "users", userId, "syncOperations"),
-    where("clientId", "==", clientId)
+  // stale documents from other tabs/devices as the collection grows.
+  // Additionally bounded below by `createdAt`: a cold boot with a stale
+  // resume token would otherwise re-bill a read per RETAINED op doc (the
+  // server keeps settled docs ~2h — `SYNC_TTL_MS` in syncSettlement.ts,
+  // enforced by the native TTL policy on `expireAt`, so actual deletion can
+  // lag the horizon) just to replay verdicts for ops the outbox no longer
+  // tracks. The horizon is `min(oldest unsettled op createdAt, now - client
+  // retention)` — see `computeAckHorizonMillis` — recomputed with a fresh
+  // `now` on every (re)attach, so it can move forward between attaches;
+  // that is fine, verdicts for pruned-old ops are unneeded. Remote
+  // `createdAt` is a server `Timestamp`, so the client-millis horizon is
+  // compared as one. The bounded shape (equality + range) needs the
+  // collection-scope composite index (clientId ASC, createdAt ASC) in
+  // firestore.indexes.json — kept worth its cost even at 2h server
+  // retention because the listener replays ALL matching retained docs on
+  // every stale-resume-token re-attach, not just cold boots; if the index
+  // is missing, `ackHorizonUnsupported` latches the unbounded fallback.
+  const operationsCollection = collection(
+    firestore,
+    "users",
+    userId,
+    "syncOperations"
   )
+  const ackQuery = ackHorizonUnsupported
+    ? query(operationsCollection, where("clientId", "==", clientId))
+    : query(
+        operationsCollection,
+        where("clientId", "==", clientId),
+        where(
+          "createdAt",
+          ">=",
+          Timestamp.fromMillis(
+            computeAckHorizonMillis(outbox.value, userId, Date.now())
+          )
+        )
+      )
 
   ackUnsubscribe = onSnapshot(
     ackQuery,
@@ -988,11 +1179,22 @@ const ensureAckListener = (userId: string) => {
       ) {
         return
       }
+      // A failed-precondition on the bounded query means the composite index
+      // (clientId ASC, createdAt ASC) is missing — retrying the same query
+      // can never succeed, so latch the downgrade and let the re-attach below
+      // fall back to the legacy unbounded query. Acks matter more than the
+      // read savings.
+      if (
+        !ackHorizonUnsupported &&
+        hasFirebaseErrorCode(error, FirestoreErrorCodes.FAILED_PRECONDITION)
+      ) {
+        ackHorizonUnsupported = true
+      }
       console.error("[syncEngine] Failed to listen for operation acks:", error)
       // `onSnapshot` tears the listener down on error, so without an explicit
       // re-attach acks would never arrive again — the send loop keeps running
-      // but nothing settles, so every op rides the retry ladder to a
-      // dead-letter — until the next auth change. Re-establish the listener
+      // but nothing settles, so every op rides the retry ladder into a
+      // parked state — until the next auth change. Re-establish the listener
       // after an escalating backoff, but only while we're still running for
       // this same user, so a transient read error self-heals instead of
       // silently wedging sync.
@@ -1013,6 +1215,12 @@ const ensureAckListener = (userId: string) => {
 
 interface ApplySyncOperationRequest {
   operationId: string
+  /**
+   * Payload carry (create-if-absent): sent on first sends only — see
+   * `CarriedSyncOperationPayload`. Old servers strip the unknown key and
+   * answer not-found, which the engine downgrades to the setDoc path.
+   */
+  operation?: CarriedSyncOperationPayload
 }
 
 /** Mirrors the server's `SyncSettlementVerdict` (functions/src/syncSettlement.ts). */
@@ -1020,6 +1228,8 @@ interface ApplySyncOperationResponse {
   status: "ack" | "reject"
   code: string | null
   message: string | null
+  /** Absent on verdicts from server deploys that predate the ack-updatedAt contract. */
+  updatedAtMillis?: number | null
 }
 
 let applySyncOperationCallable: HttpsCallable<
@@ -1036,11 +1246,83 @@ const getApplySyncOperationCallable = () => {
 }
 
 /**
+ * Feed a callable verdict through `applyRemoteSettlement` — the same
+ * idempotent entry point the ack listener uses, so whichever path reports
+ * first wins and the other no-ops. Returns false when the response carried
+ * no recognizable verdict.
+ */
+const applyCallableVerdict = (
+  operationId: string,
+  verdict: ApplySyncOperationResponse | undefined
+): boolean => {
+  if (verdict?.status !== "ack" && verdict?.status !== "reject") return false
+  applyRemoteSettlement(
+    operationId,
+    {
+      status: verdict.status,
+      ack: {
+        code: verdict.code ?? null,
+        message: verdict.message ?? null,
+        atMs: Date.now(),
+        updatedAtMillis:
+          typeof verdict.updatedAtMillis === "number"
+            ? verdict.updatedAtMillis
+            : null,
+      },
+    },
+    "callable"
+  )
+  // The settled op may have been blocking same-path successors — re-run the
+  // loop now instead of waiting for the ack snapshot (which mirrors this
+  // via its own scheduleSync) or the head's backoff wake.
+  scheduleSync()
+  return true
+}
+
+/**
+ * Warm-path FIRST send: invoke `applySyncOperation` carrying the op payload,
+ * so the server creates the op doc and settles it in a single transaction —
+ * no op-doc `setDoc` round trip first. Resolves `true` when the engine must
+ * FALL BACK to the setDoc path: the deployed server predates payload carry
+ * (the old-server not-found downgrade — not a failure), the invocation
+ * failed in transport, or the response carried no verdict. The fallback
+ * keeps the pre-carry pipeline intact: setDoc stamps `remoteCreated`, the
+ * create trigger backstop settles, and retries re-invoke the callable.
+ */
+const requestCarriedSettlement = async (
+  operation: SyncOutboxOperation
+): Promise<boolean> => {
+  try {
+    const result = await getApplySyncOperationCallable()({
+      operationId: operation.id,
+      operation: toCarriedOperationPayload(operation),
+    })
+    return !applyCallableVerdict(operation.id, result.data)
+  } catch (error) {
+    const current = outbox.value.find(
+      (candidate) => candidate.id === operation.id
+    )
+    if (current && isOldServerPayloadCarryNotFound(error, current)) {
+      // Quiet downgrade: the setDoc path is the contract the old server
+      // understands. (Never the P0 terminal disposition — that requires
+      // `remoteCreated`, and carried sends only happen without it.)
+      return true
+    }
+    console.warn(
+      "[syncEngine] Carried settlement request failed (non-fatal):",
+      error
+    )
+    return true
+  }
+}
+
+/**
  * Ask the server to settle `operation` NOW via the `applySyncOperation`
  * callable instead of waiting on the create-trigger (Eventarc) → ack-listener
- * chain. The verdict flows through `applyRemoteSettlement` — the same
- * idempotent entry point the ack listener uses — so whichever path reports
- * first wins and the other no-ops.
+ * chain. Invoked WITHOUT the payload: this path is for ops whose remote doc
+ * already exists (`remoteCreated`), where re-carrying a payload could
+ * re-create a TTL-swept doc from stale data. The verdict flows through
+ * `applyRemoteSettlement` via `applyCallableVerdict`.
  *
  * Transport errors are SOFT by design: the create trigger remains the
  * backstop, the ack listener may still deliver, and the backoff loop
@@ -1055,25 +1337,66 @@ const requestDirectSettlement = async (
     const result = await getApplySyncOperationCallable()({
       operationId: operation.id,
     })
-    const verdict = result.data
-    if (verdict?.status !== "ack" && verdict?.status !== "reject") return
-    applyRemoteSettlement(
-      operation.id,
-      {
-        status: verdict.status,
-        ack: {
-          code: verdict.code ?? null,
-          message: verdict.message ?? null,
-          atMs: Date.now(),
-        },
-      },
-      "callable"
-    )
-    // The settled op may have been blocking same-path successors — re-run the
-    // loop now instead of waiting for the ack snapshot (which mirrors this
-    // via its own scheduleSync) or the head's backoff wake.
-    scheduleSync()
+    applyCallableVerdict(operation.id, result.data)
   } catch (error) {
+    const current = outbox.value.find(
+      (candidate) => candidate.id === operation.id
+    )
+    // A callable "not-found" for an op whose create WAS acked is definitive:
+    // the op doc was settled + TTL-swept (this client missed the verdict) or
+    // orphan-swept — no verdict can ever arrive, and parking would pin the
+    // sync indicator and (via per-path FIFO) block every later write to the
+    // target forever. Settle client-side as rejected through the same path a
+    // server reject verdict takes (waiter rejects → runWrite rolls back).
+    // This converges even if the op HAD actually been acked before the sweep:
+    // reads are live listeners, so the target doc's true state re-syncs
+    // regardless of the local rollback.
+    if (current && isDefinitiveNotFound(error, current)) {
+      applyRemoteSettlement(
+        current.id,
+        {
+          status: "reject",
+          ack: {
+            code: "not-found",
+            message: "Sync operation expired before its verdict was observed",
+            atMs: Date.now(),
+          },
+        },
+        "callable"
+      )
+      // The settled op may have been blocking same-path successors.
+      scheduleSync()
+      return
+    }
+    // The invocation itself failed — the verdict may still arrive via the
+    // create-trigger → ack-listener backstop, but waiting out the full ack
+    // timeout for a KNOWN-dead attempt adds seconds of pure lag. Pull the
+    // op's eligibility forward instead (doubling per consecutive detected
+    // failure, capped at the ladder). Skip ops out of attempt budget: their
+    // remaining ladder window is the grace period for a late listener verdict
+    // before parking.
+    if (
+      current &&
+      current.status === "sent" &&
+      current.remoteCreated &&
+      !shouldPark(current)
+    ) {
+      const now = Date.now()
+      const delay = computeFastRetryDelay(
+        current.fastRetries ?? 0,
+        getRetryDelay(current.attempts)
+      )
+      upsertOperation(current.id, (op) => ({
+        ...op,
+        fastRetries: (op.fastRetries ?? 0) + 1,
+        nextEligibleAt: now + delay,
+        updatedAt: now,
+      }))
+      // Plain kick (not `scheduleSync(delay)`): the loop derives the fast
+      // wake from `nextEligibleAt` itself, and a delayed reschedule here
+      // would push back an earlier wake owed to some other op.
+      scheduleSync()
+    }
     console.warn(
       "[syncEngine] Direct settlement request failed (non-fatal):",
       error
@@ -1083,6 +1406,11 @@ const requestDirectSettlement = async (
 
 const sendOperation = async (operation: SyncOutboxOperation): Promise<void> => {
   const now = Date.now()
+  // Ladder-due sends burn an attempt; a fast retry (pulled forward by
+  // `nextEligibleAt` after a detected callable failure) does not, so detected
+  // failures can't exhaust the ~45s budget early. `fastRetries` resets on
+  // every full attempt so the next detected failure starts at the base delay.
+  const isFullAttempt = isFullAttemptSend(operation, now, getRetryDelay)
   const isRetryAttempt = operation.attempts > 0
   if (isRetryAttempt) {
     totalRetries.value += 1
@@ -1090,8 +1418,15 @@ const sendOperation = async (operation: SyncOutboxOperation): Promise<void> => {
   upsertOperation(operation.id, (current) => ({
     ...current,
     status: "sent",
-    attempts: current.attempts + 1,
-    sentAt: now,
+    attempts: isFullAttempt ? current.attempts + 1 : current.attempts,
+    fastRetries: isFullAttempt ? undefined : current.fastRetries,
+    nextEligibleAt: undefined,
+    // `sentAt` anchors the ladder: stamped only on full attempts, because
+    // restamping it on fast sends restarts the backoff clock — eligibility
+    // AND fast-vs-full classification measure from it, so against a
+    // fast-failing callable the time-to-park would stretch from the
+    // documented ~45s to a jitter-dependent ~90-150s.
+    sentAt: isFullAttempt ? now : current.sentAt,
     updatedAt: now,
     errorMessage: undefined,
   }))
@@ -1100,117 +1435,225 @@ const sendOperation = async (operation: SyncOutboxOperation): Promise<void> => {
   if (!next) return
 
   if (!next.remoteCreated) {
-    const operationRef = doc(
-      firestore,
-      "users",
-      operation.userId,
-      "syncOperations",
-      operation.id
+    // Payload carry: the callable goes out IMMEDIATELY with the op payload —
+    // no op-doc setDoc round trip first — so a warm-path write settles in one
+    // round trip. Only on fallback does the pre-carry pipeline run below.
+    const needsFallback = await requestCarriedSettlement(next)
+    if (!needsFallback) return
+
+    const current = outbox.value.find(
+      (candidate) => candidate.id === operation.id
     )
+    // A verdict (or teardown) may have raced in while the carried invocation
+    // failed — never (re)create a doc for a settled op.
+    if (!current || !isUnsettledOperation(current)) return
+    if (!(await createRemoteOperationDocument(current))) return
 
-    try {
-      await setDoc(operationRef, toRemoteDocument(next), { merge: true })
-    } catch (error) {
-      const errorCode =
-        typeof error === "object" &&
-        error &&
-        "code" in error &&
-        typeof (error as { code?: unknown }).code === "string"
-          ? (error as { code: string }).code
-          : null
-
-      if (
-        errorCode === "permission-denied" ||
-        errorCode === "invalid-argument"
-      ) {
-        try {
-          const remoteOperation = await getDoc(operationRef)
-          if (
-            remoteOperation.exists() &&
-            applyRemoteSettlement(
-              operation.id,
-              remoteOperation.data() as Partial<RemoteSyncOperationDocument>,
-              "inspect"
-            )
-          ) {
-            return
-          }
-        } catch (readError) {
-          console.warn(
-            "[syncEngine] Failed to inspect remote operation state:",
-            readError
-          )
-        }
-
-        const rejectError = new Error(getFirestoreErrorMessage(error))
-        const settledAt = Date.now()
-        upsertOperation(operation.id, (current) => ({
-          ...current,
-          status: "rejected",
-          updatedAt: settledAt,
-          settledAt,
-          errorMessage: rejectError.message,
-        }))
-        settleWaiters(operation.id, rejectError)
-        return
-      }
-
-      if (!isRetryableFirebaseError(error)) {
-        const rejectError = new Error(getFirestoreErrorMessage(error))
-        const settledAt = Date.now()
-        upsertOperation(operation.id, (current) => ({
-          ...current,
-          status: "rejected",
-          updatedAt: settledAt,
-          settledAt,
-          errorMessage: rejectError.message,
-        }))
-        settleWaiters(operation.id, rejectError)
-        console.warn("[syncEngine] Non-retryable sync submission error:", error)
-        return
-      }
-      throw error
-    }
-
-    // Created (or merged onto a doc surviving from a prior session). From
-    // here on, retries go through the callable ONLY: rewriting the doc is an
-    // update, which `onDocumentCreated` never re-fires for — so a rewrite
-    // can't recover a lost create event, it just burns a Firestore write.
-    upsertOperation(operation.id, (current) => ({
-      ...current,
-      remoteCreated: true,
-      updatedAt: Date.now(),
-    }))
+    const created = outbox.value.find(
+      (candidate) => candidate.id === operation.id
+    )
+    if (!created) return
+    // Fire-and-forget, matching the pre-carry pipeline: the waiter settles
+    // via `applyRemoteSettlement` whichever path (callable response, ack
+    // listener) reports first.
+    void requestDirectSettlement(created)
+    return
   }
 
-  // Direct settlement — fire-and-forget so the send loop never serializes
-  // behind the settlement round trip; the waiter settles via
-  // `applyRemoteSettlement` whichever path reports first.
-  void requestDirectSettlement(next)
+  await requestDirectSettlement(next)
 }
 
-const deadLetterOperation = (
-  operation: SyncOutboxOperation,
-  reason: string
-): void => {
-  const settledAt = Date.now()
+/**
+ * Create the remote op doc via `setDoc` — the pre-carry submission path, now
+ * the FALLBACK when a carried settlement could not complete (old server,
+ * transport failure): the doc create fires the trigger backstop, which
+ * settles it server-side. Returns false when the op was settled client-side
+ * instead (a deterministic verdict-equivalent submission failure); ambiguous
+ * submission errors — and verdict-equivalent ones whose post-failure inspect
+ * read itself failed — are rethrown so the caller's retry ladder keeps
+ * riding.
+ */
+const createRemoteOperationDocument = async (
+  operation: SyncOutboxOperation
+): Promise<boolean> => {
+  const operationRef = doc(
+    firestore,
+    "users",
+    operation.userId,
+    "syncOperations",
+    operation.id
+  )
+
+  try {
+    await setDoc(operationRef, toRemoteDocument(operation), { merge: true })
+  } catch (error) {
+    const errorCode =
+      typeof error === "object" &&
+      error &&
+      "code" in error &&
+      typeof (error as { code?: unknown }).code === "string"
+        ? (error as { code: string }).code
+        : null
+
+    // Only deterministic verdict-equivalent codes may settle a client-side
+    // reject without a server verdict: rules evaluation, argument
+    // validation, and precondition checks are pure functions of the op's
+    // payload and target state, so a retry can only fail identically —
+    // rejecting now matches the verdict the server would hand down. Every
+    // other code (unauthenticated, unknown, …) is ambiguous and rides the
+    // retry ladder into a park like any other verdict-less failure, instead
+    // of rolling back a write the server might still accept.
+    if (isVerdictEquivalentSubmissionCode(errorCode)) {
+      let remoteOperation
+      try {
+        remoteOperation = await getDoc(operationRef)
+      } catch (readError) {
+        // Double fault: the carried callable's transaction may have COMMITTED
+        // server-side with its response lost — this setDoc denial then only
+        // proves the doc is no longer pending (`isValidSyncOperationRetry`
+        // requires pending), and a failed inspect proves nothing at all.
+        // Settling a client reject here would roll back a write the server
+        // applied, and the later real ack would be discarded by the
+        // settle-once guard. Rethrow so the retry ladder rides instead: the
+        // next pass re-invokes the callable, which returns the stored
+        // verdict for a settled doc.
+        console.warn(
+          "[syncEngine] Failed to inspect remote operation state:",
+          readError
+        )
+        throw error
+      }
+      if (
+        remoteOperation.exists() &&
+        applyRemoteSettlement(
+          operation.id,
+          remoteOperation.data() as Partial<RemoteSyncOperationDocument>,
+          "inspect"
+        )
+      ) {
+        return false
+      }
+
+      // Inspection COMPLETED and found the doc confirmed absent or genuinely
+      // still pending — the denial really is the deterministic verdict, so
+      // settle it client-side.
+      const rejectError = new Error(getFirestoreErrorMessage(error))
+      const settledAt = Date.now()
+      upsertOperation(operation.id, (current) =>
+        stripSettledOperationPayload({
+          ...current,
+          status: "rejected",
+          updatedAt: settledAt,
+          settledAt,
+          errorMessage: rejectError.message,
+        })
+      )
+      settleWaiters(operation.id, rejectError)
+      return false
+    }
+    throw error
+  }
+
+  // Created (or merged onto a doc surviving from a prior session). From
+  // here on, retries go through the callable ONLY: rewriting the doc is an
+  // update, which `onDocumentCreated` never re-fires for — so a rewrite
+  // can't recover a lost create event, it just burns a Firestore write.
   upsertOperation(operation.id, (current) => ({
     ...current,
-    status: "rejected",
-    updatedAt: settledAt,
-    settledAt,
-    errorMessage: reason,
+    remoteCreated: true,
+    updatedAt: Date.now(),
   }))
-  // Preserve the failed payload for inspection (mirrors corrupt-entry
-  // quarantine) and fail the caller's waiter with a terminal error instead of
-  // leaving it hanging forever.
-  appendQuarantinedOutboxEntries([{ ...operation, deadLetterReason: reason }])
-  recordSettleSource("deadLetter")
-  settleWaiters(operation.id, new Error(reason))
+  return true
 }
 
-const processSyncLoop = async () => {
-  if (!isRunning.value || isSyncing.value) return
+let parkedResumeTimer: ReturnType<typeof setInterval> | null = null
+
+const hasParkedOperations = (): boolean =>
+  outbox.value.some((operation) => operation.status === "parked")
+
+const clearParkedResumeTimer = (): void => {
+  if (parkedResumeTimer) {
+    clearInterval(parkedResumeTimer)
+    parkedResumeTimer = null
+  }
+}
+
+/**
+ * Resume trigger: give the active user's parked ops a fresh attempt budget
+ * and kick the loop. Fired on the window 'online' event, engine (re)start,
+ * visibility returning, and the slow parked-resume interval — the moments
+ * connectivity plausibly changed.
+ */
+const resumeParkedForActiveUser = (): void => {
+  if (!isRunning.value) return
+  const userId = activeUserId.value
+  if (!userId) return
+  const before = outbox.value
+  updateOutbox((operations) =>
+    resumeParkedOperations(operations, userId, Date.now())
+  )
+  if (outbox.value !== before) scheduleSync()
+}
+
+const ensureParkedResumeTimer = (): void => {
+  if (parkedResumeTimer || !hasParkedOperations()) return
+  parkedResumeTimer = setInterval(() => {
+    if (!hasParkedOperations()) {
+      clearParkedResumeTimer()
+      return
+    }
+    resumeParkedForActiveUser()
+  }, PARKED_RESUME_INTERVAL_MS)
+}
+
+/**
+ * Out of attempts with no server verdict — park instead of dead-lettering.
+ * The waiter stays pending and the optimistic state stays applied: under
+ * lie-fi the op doc's `setDoc` sits in the local cache's offline queue and
+ * WILL commit + settle server-side once real connectivity returns, so a
+ * terminal rollback here would report a failure for a write the server later
+ * applies. A late verdict still settles the op normally through
+ * `applyRemoteSettlement` (parked is not a settled status, so the idempotence
+ * guard lets it through); otherwise a resume trigger restarts the ladder.
+ * Dead-letter quarantine now applies only to corrupt/schema-invalid entries.
+ */
+const parkOperation = (operation: SyncOutboxOperation): void => {
+  const now = Date.now()
+  upsertOperation(operation.id, (current) => ({
+    ...current,
+    status: "parked",
+    parkedAt: now,
+    updatedAt: now,
+  }))
+  ensureParkedResumeTimer()
+}
+
+/**
+ * Start one send and track it in the in-flight set. `sendOperation` marks
+ * the op "sent" synchronously (before its first await), so the claim happens
+ * inside the dispatching loop pass — an overlapping pass can never select
+ * the same op again, and `planDispatch`'s in-flight guard backstops even a
+ * mid-send eligibility pull (peer-tab merge, due `nextEligibleAt`).
+ */
+const dispatchSend = (operation: SyncOutboxOperation): void => {
+  inFlightSendIds.add(operation.id)
+  inFlightSendCount.value = inFlightSendIds.size
+  void sendOperation(operation)
+    .catch((error) => {
+      console.error("[syncEngine] Failed to submit operation:", error)
+    })
+    .finally(() => {
+      inFlightSendIds.delete(operation.id)
+      inFlightSendCount.value = inFlightSendIds.size
+      // A completed send frees capacity — re-select immediately so queued
+      // work (ready ops beyond the cap, freed same-path successors) goes out
+      // without waiting for a ladder wake.
+      scheduleSync()
+    })
+}
+
+const processSyncLoop = () => {
+  if (!isRunning.value) return
   const userId = activeUserId.value
   if (!userId || !isOnline.value) return
   // Only the elected leader tab for this user sends, so multiple tabs never
@@ -1218,59 +1661,36 @@ const processSyncLoop = async () => {
   // leader adopts those ops via the storage listener.
   if (!isLeader) return
 
-  const { ready, nextRetryInMs } = selectReadyOperations(
+  const { dispatch, park, nextRetryInMs } = planDispatch(
     outbox.value,
     userId,
     Date.now(),
     getRetryDelay,
+    inFlightSendIds,
     MAX_PARALLEL_SENDS
   )
 
-  if (ready.length === 0) {
-    // Nothing ready now. If something is mid-backoff, wake when it is due
-    // rather than stalling the queue.
-    if (nextRetryInMs !== null) scheduleSync(nextRetryInMs)
+  // A write that burned through its attempt budget without a server verdict
+  // parks: excluded from sending until a resume trigger, waiter left pending,
+  // optimistic state kept. Same-path successors stay queued behind it so
+  // per-path FIFO holds across the park/resume cycle.
+  for (const operation of park) {
+    parkOperation(operation)
+  }
+  for (const operation of dispatch) {
+    dispatchSend(operation)
+  }
+
+  // Parking promoted same-path successors to heads — re-select for them right
+  // away. Sooner-wins ordering: `scheduleSync` keeps a single timer, and the
+  // immediate pass re-derives any backoff wake `nextRetryInMs` called for.
+  if (park.length > 0) {
+    scheduleSync()
     return
   }
-
-  // A write that has burned through its retry budget is dead-lettered rather
-  // than retried forever — which would also head-of-line-block its path.
-  const sendable: SyncOutboxOperation[] = []
-  for (const operation of ready) {
-    if (shouldDeadLetter(operation)) {
-      deadLetterOperation(
-        operation,
-        `Sync operation failed after ${operation.attempts} attempts`
-      )
-    } else {
-      sendable.push(operation)
-    }
-  }
-
-  if (sendable.length > 0) {
-    isSyncing.value = true
-    try {
-      // Selection returned at most one op per target path, so these are
-      // independent — send concurrently and a burst across N documents costs
-      // one round trip of wall-clock instead of N.
-      const results = await Promise.allSettled(
-        sendable.map((operation) => sendOperation(operation))
-      )
-      for (const result of results) {
-        if (result.status === "rejected") {
-          console.error(
-            "[syncEngine] Failed to submit operation:",
-            result.reason
-          )
-        }
-      }
-    } finally {
-      isSyncing.value = false
-    }
-  }
-
-  // Re-evaluate immediately; the next pass schedules a backoff wake if needed.
-  scheduleSync()
+  // Something is mid-backoff: wake when it is due rather than stalling. Sends
+  // dispatched above reschedule themselves on completion.
+  if (nextRetryInMs !== null) scheduleSync(nextRetryInMs)
 }
 
 const handleUserChange = (nextUserId: string | null) => {
@@ -1318,6 +1738,7 @@ const ensureOnlineListeners = () => {
 
   const markOnline = () => {
     isOnline.value = true
+    resumeParkedForActiveUser()
     scheduleSync()
   }
   const markOffline = () => {
@@ -1351,6 +1772,27 @@ const ensureUnloadFlush = () => {
   unloadCleanup = () => {
     window.removeEventListener("pagehide", flush)
     window.removeEventListener("beforeunload", flush)
+  }
+}
+
+let visibilityCleanup: (() => void) | null = null
+
+/**
+ * Returning to a backgrounded tab is a strong "connectivity may have changed"
+ * signal that fires even when lie-fi never emits an 'online' edge — resume
+ * any parked ops so the user's oldest unsynced writes retry promptly.
+ */
+const ensureVisibilityListener = () => {
+  if (!hasWindow() || visibilityCleanup) return
+
+  const onVisibilityChange = () => {
+    if (document.visibilityState !== "visible") return
+    resumeParkedForActiveUser()
+  }
+
+  document.addEventListener("visibilitychange", onVisibilityChange)
+  visibilityCleanup = () => {
+    document.removeEventListener("visibilitychange", onVisibilityChange)
   }
 }
 
@@ -1411,7 +1853,10 @@ const ensureStorageSyncListener = (): void => {
     if (event.key !== OUTBOX_STORAGE_KEY) return
     // A peer tab rewrote the shared outbox. Merge its view into ours so we
     // converge — adopting ops it enqueued and the send/ack progress it
-    // recorded — without dropping our own in-flight operations.
+    // recorded — without dropping our own in-flight operations. (The persist
+    // fast path needs no flag flipped here: it self-verifies against the
+    // stored string — see `lastWrittenOutboxRaw` — so a missed or late
+    // storage event can never cause a peer write to be overwritten.)
     const merged = mergeOutboxSnapshots(
       outbox.value,
       parseOutbox(event.newValue).valid,
@@ -1423,6 +1868,10 @@ const ensureStorageSyncListener = (): void => {
     // ping-pong between tabs.
     outbox.value = merged
     pathIndexDirty = true
+    // Peers persist parked ops demoted to "pending" (they re-park via the
+    // scheduleSync below), but a snapshot written by a build that still
+    // persisted "parked" may carry it — keep the slow resume net armed.
+    ensureParkedResumeTimer()
     scheduleSync()
   }
 
@@ -1441,11 +1890,15 @@ const ensureInitialized = () => {
   ensureOnlineListeners()
   ensureUnloadFlush()
   ensureStorageSyncListener()
+  ensureVisibilityListener()
   pruneSettledOperations()
+  // A previous session may have persisted parked ops — keep the slow resume
+  // net running for them even before an explicit resume trigger fires.
+  ensureParkedResumeTimer()
 }
 
-const registerWaiter = (operationId: string): Promise<void> =>
-  new Promise<void>((resolve, reject) => {
+const registerWaiter = (operationId: string): Promise<SyncMutateResult> =>
+  new Promise<SyncMutateResult>((resolve, reject) => {
     const list = waiters.get(operationId) ?? []
     list.push({ resolve, reject })
     waiters.set(operationId, list)
@@ -1470,7 +1923,8 @@ export interface EnqueueOptions {
 
 export interface EnqueuedSyncOperation {
   operationId: string
-  settled: Promise<void>
+  /** Resolves with the server ack details — see {@link SyncMutateResult}. */
+  settled: Promise<SyncMutateResult>
   coalesced: boolean
 }
 
@@ -1551,6 +2005,9 @@ export function initSync(): void {
 
   const userId = auth.currentUser?.uid ?? null
   handleUserChange(userId)
+  // Engine (re)start is a resume trigger: parked ops from a previous session
+  // (or a prior stop) get a fresh attempt budget.
+  resumeParkedForActiveUser()
   scheduleSync()
 }
 
@@ -1565,6 +2022,7 @@ export function stopSync(): void {
     ackUnsubscribe = null
   }
   clearAckRetry()
+  clearParkedResumeTimer()
   if (onlineCleanup) {
     onlineCleanup()
     onlineCleanup = null
@@ -1612,10 +2070,27 @@ const validateMutationPayload = (payload: SyncMutatePayload): void => {
   }
 }
 
-export async function mutate(payload: SyncMutatePayload): Promise<void> {
+/**
+ * Enqueue a validated mutation and wait for its server verdict.
+ *
+ * Settlement contract: the promise resolves on a server ack — WITH the ack
+ * details, `{ status: "ack", updatedAtMillis?: number }`, where
+ * `updatedAtMillis` (when present) is the target document's post-settlement
+ * `updatedAt` for OCC base-version refresh (see {@link SyncMutateResult}) —
+ * and rejects only on a server reject verdict, an invalid payload
+ * (`SchemaValidationError` thrown synchronously), or engine teardown (stop /
+ * account switch). It NEVER rejects on transport failure — offline or
+ * against an unreachable backend the operation parks in the persisted outbox
+ * with its optimistic state still applied, and the promise stays pending
+ * until connectivity resumes and a verdict arrives. Callers must not treat a
+ * long-pending `mutate()` as an error.
+ */
+export async function mutate(
+  payload: SyncMutatePayload
+): Promise<SyncMutateResult> {
   validateMutationPayload(payload)
   const queued = enqueue(payload, { schedule: "microtask" })
-  await queued.settled
+  return await queued.settled
 }
 
 export function getPendingOperations(
@@ -1625,8 +2100,7 @@ export function getPendingOperations(
 
   return outbox.value.filter(
     (operation) =>
-      operation.userId === userId &&
-      (operation.status === "pending" || operation.status === "sent")
+      operation.userId === userId && isUnsettledOperation(operation)
   )
 }
 
@@ -1642,7 +2116,7 @@ export function useSyncEngineState(): SyncEngineState {
     activeUserId: computed(() => activeUserId.value),
     isRunning: computed(() => isRunning.value),
     isOnline: computed(() => isOnline.value),
-    isProcessing: computed(() => isSyncing.value),
+    isProcessing: computed(() => inFlightSendCount.value > 0),
     pendingCount,
   }
 }
@@ -1663,6 +2137,101 @@ export function useSyncMetricsState(): SyncMetricsState {
       }
     }),
   }
+}
+
+/** Raw quarantine-ring records, absent-and-corrupt tolerant. */
+const readQuarantineRecords = (): unknown[] => {
+  if (!hasWindow()) return []
+  try {
+    const raw = window.localStorage.getItem(OUTBOX_QUARANTINE_STORAGE_KEY)
+    if (!raw) return []
+    const parsed = JSON.parse(raw) as unknown
+    return Array.isArray(parsed) ? parsed : []
+  } catch {
+    return []
+  }
+}
+
+/**
+ * Read the dead-letter quarantine ring — outbox entries dropped on read
+ * because they failed schema validation (capped at 500, localStorage-backed).
+ * Diagnostics counterpart to `useSyncMetricsState().quarantineCount`: returns
+ * the raw entries so a console session (or a future UI) can inspect what was
+ * dropped and decide whether to `requeueQuarantinedOutboxEntries()`.
+ */
+export function listQuarantinedOutboxEntries(): QuarantinedOutboxEntry[] {
+  return toQuarantinedOutboxEntries(readQuarantineRecords())
+}
+
+/**
+ * Re-enqueue quarantined entries that are viable under the CURRENT outbox
+ * schema (see `planQuarantineRequeue`: unsettled, active user's, parseable —
+ * e.g. rows quarantined by an older build's stricter schema). Each viable
+ * entry re-enters the pipeline as a FRESH operation — new id, full payload
+ * validation, normal verdict lifecycle — never by resurrecting the
+ * quarantined record itself. An entry leaves the ring only AFTER its
+ * validate+enqueue succeeded: one that fails the path schema (or a full
+ * queue) stays quarantined instead of being dropped on the floor. Settlement
+ * is not awaited: a server reject of a re-enqueued write surfaces through
+ * the normal ack channels, not from this call.
+ */
+export function requeueQuarantinedOutboxEntries(): {
+  requeued: number
+  kept: number
+} {
+  const records = readQuarantineRecords()
+  const userId = activeUserId.value ?? auth.currentUser?.uid ?? null
+  if (!userId || records.length === 0) {
+    return { requeued: 0, kept: records.length }
+  }
+
+  const { requeue, keep } = planQuarantineRequeue(records, userId)
+  let requeued = 0
+  for (const { operation, record } of requeue) {
+    const payload: SyncMutatePayload = {
+      source: operation.source,
+      targetPath: operation.targetPath,
+      type: operation.type,
+      data: operation.data,
+      merge: operation.merge,
+      baseVersion: operation.baseVersion,
+    }
+    try {
+      validateMutationPayload(payload)
+      const { settled } = enqueue(payload, { schedule: "microtask" })
+      settled.catch((error) => {
+        console.warn(
+          "[syncEngine] Re-enqueued quarantined operation did not settle as ack:",
+          error
+        )
+      })
+      requeued += 1
+    } catch (error) {
+      // Validation (or enqueue) refused the payload — keep the raw record
+      // quarantined so the entry is never silently lost.
+      keep.push(record)
+      console.warn(
+        "[syncEngine] Quarantined entry failed re-enqueue; keeping it quarantined:",
+        error
+      )
+    }
+  }
+
+  if (keep.length !== records.length) {
+    try {
+      window.localStorage.setItem(
+        OUTBOX_QUARANTINE_STORAGE_KEY,
+        JSON.stringify(keep)
+      )
+    } catch (error) {
+      console.warn(
+        "[syncEngine] Failed to rewrite the outbox quarantine ring",
+        error
+      )
+    }
+  }
+
+  return { requeued, kept: keep.length }
 }
 
 export function subscribeAcks(subscriber: AckSubscriber): Unsubscribe {
@@ -1711,6 +2280,13 @@ interface SyncDocumentWriteOptions {
   baseVersion?: SyncBaseVersion | null
 }
 
+/**
+ * NOTE: the document-level helpers below deliberately stay `Promise<void>`:
+ * several callers pipe them into `Promise<void>`-typed slots, so widening
+ * them is a breaking change. Callers that need the ack details (OCC
+ * base-version refresh) should call `mutate()` — which resolves with
+ * {@link SyncMutateResult} — directly.
+ */
 export async function mutateSetDocument(
   ref: DocumentReference,
   data: Record<string, unknown>,

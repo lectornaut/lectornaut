@@ -10,10 +10,14 @@
  *               optimistic value via `setQueryData`, and HOLD the touched keys
  *               so the live listener can't clobber them with a pre-apply
  *               snapshot (see `holdOptimistic`).
- *   onError   → roll back + release the hold immediately.
+ *   onError   → roll back + release the hold immediately — unless the hold
+ *               already timed out (`OPTIMISTIC_HOLD_TIMEOUT_MS`), in which case
+ *               the pre-mutation snapshot is stale and the touched keys are
+ *               INVALIDATED instead of rolled back (see `settleMutationError`).
  *   onSettled → release the hold after a short delay, letting the ack-driven
  *               snapshot land first; on release the cache reconciles to the
  *               latest server snapshot (Decision D — hold until the server ack).
+ *               A hold that timed out first makes this release a no-op.
  *
  * `mutationFn` is supplied by the caller and may be either `syncEngine.mutate`
  * (for outbox/command writes) or a Cloud Function callable (e.g. createWorkspace)
@@ -26,7 +30,7 @@ import {
   removePending,
   withCloudSyncOperation,
 } from "@/utils/firebase/firebase-optimistic"
-import { holdOptimistic } from "@/utils/firebase/firebase-query"
+import { acquireOptimisticHold } from "@/utils/firebase/firebase-query"
 import type { FirestoreQueryKey } from "@/utils/firebase/firebase-query-keys"
 import { useMutation, type UseMutationReturnType } from "@tanstack/vue-query"
 import type { Ref } from "vue"
@@ -62,14 +66,58 @@ export interface FirestoreMutationOptions<TVars, TData> {
   source?: string | ((vars: TVars) => string | undefined)
 }
 
-interface MutationContext {
+/** @internal exported only for unit tests (see `settleMutationError`). */
+export interface MutationContext {
   release: () => void
   rollback: () => void
+  /** True once ANY of the mutation's holds self-released on timeout. */
+  holdExpired: () => boolean
+  /**
+   * Invalidate the plan's keys — the expired-hold replacement for rollback
+   * (forces a refetch / listener re-attach that restores server truth).
+   */
+  invalidate: () => void
 }
 
 const NOOP_CONTEXT: MutationContext = {
   release: () => {},
   rollback: () => {},
+  holdExpired: () => false,
+  invalidate: () => {},
+}
+
+/**
+ * Error settlement for an optimistic mutation. Ordering matters on the normal
+ * path: roll back FIRST (restore the pre-mutation snapshot), THEN release the
+ * hold — the release runs the stashed reconciler, folding the latest server
+ * snapshot over the rolled-back value (whole-value replace for doc/collection
+ * reads; head-only merge for infinite reads, so a rolled-back tail survives).
+ *
+ * EXCEPT when a hold already expired (`OPTIMISTIC_HOLD_TIMEOUT_MS`): the hold
+ * lifted long ago, so the pre-mutation snapshot is stale — running
+ * `rollback()` now could clobber newer server truth the listener delivered
+ * since. But the expiry does NOT guarantee any re-delivery happened: a parked
+ * OFFLINE write may have produced no emission at all, leaving the phantom
+ * optimistic value in the cache — and a rejected write never changed the
+ * server doc, so no correcting snapshot will ever arrive on its own. Instead
+ * of a stale rollback OR a silent skip, INVALIDATE the plan's keys: the
+ * refetch / listener re-attach restores server truth in both cases. Key-less
+ * plans (store-local optimism) have no holds to expire, so their rollback
+ * always runs. `release()` stays safe to call because every hold release is
+ * idempotent (a no-op after its timeout).
+ *
+ * @internal exported only for unit tests.
+ */
+export const settleMutationError = (
+  context: MutationContext | undefined
+): void => {
+  if (!context) return
+  if (context.holdExpired()) {
+    context.invalidate()
+  } else {
+    context.rollback()
+  }
+  context.release()
 }
 
 export function useFirestoreMutation<TVars, TData = void>(
@@ -93,24 +141,26 @@ export function useFirestoreMutation<TVars, TData = void>(
       if (!plan) return NOOP_CONTEXT
 
       // Stop any in-flight refetch from racing the optimistic write, then hold
-      // each touched key against the live listener until the mutation settles.
+      // each touched key against the live listener until the mutation settles
+      // (or the holds' own timeout lifts them first — see `settleMutationError`).
       await Promise.all(
         plan.keys.map((key) => queryClient.cancelQueries({ queryKey: key }))
       )
-      const releases = plan.keys.map((key) => holdOptimistic(key))
+      const holds = plan.keys.map((key) => acquireOptimisticHold(key))
       plan.apply()
 
       return {
-        release: () => releases.forEach((release) => release()),
+        release: () => holds.forEach((hold) => hold.release()),
         rollback: plan.rollback,
+        holdExpired: () => holds.some((hold) => hold.expired()),
+        invalidate: () => {
+          for (const key of plan.keys) {
+            void queryClient.invalidateQueries({ queryKey: key })
+          }
+        },
       }
     },
-    onError: (_error, _vars, context) => {
-      // Roll back immediately and lift the hold — there's no server write to
-      // wait for.
-      context?.rollback()
-      context?.release()
-    },
+    onError: (_error, _vars, context) => settleMutationError(context),
     onSettled: (_data, _error, _vars, context) => {
       if (!context) return
       // Release after a beat so the ack-driven snapshot reconciles the cache to

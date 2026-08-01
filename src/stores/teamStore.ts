@@ -43,6 +43,131 @@ import {
 import { Timestamp } from "firebase/firestore"
 import { defineStore, storeToRefs } from "pinia"
 
+/**
+ * Stale-team detection, extracted pure for direct unit-testing (mirrors
+ * workspaceStore's `pendingStaleSelection`). Returns the stale target — with
+ * why it's stale — or `null` when the selection is fine or the state is too
+ * indeterminate to judge. The caller re-evaluates EVERY guard through this
+ * table both when scheduling the confirm timer and again when it fires.
+ */
+export interface StaleTeamSelectionInputs {
+  teamId: string | null
+  /**
+   * The live team-doc snapshot: `undefined` while loading (indeterminate),
+   * `null` once the listener confirms the doc is genuinely gone.
+   */
+  team: ITeam | null | undefined
+  isTeamDocLoading: boolean
+  isMembershipLoading: boolean
+  /** Terminal memberships read error — its empty list means "unknown". */
+  isMembershipError: boolean
+  /** Cache-restored memberships a live snapshot hasn't reconfirmed. */
+  isMembershipStale: boolean
+  hasAnyPendingOperation: boolean
+  isPendingTeam: boolean
+  isMember: boolean
+}
+
+export interface StaleTeamSelection {
+  teamId: string
+  reason: "membership-revoked" | "team-deleted"
+}
+
+// ── Stale-selection double-confirm controller (pure timing, unit-tested) ────
+
+/**
+ * The confirm-window machinery around `evaluateStaleTeamSelection`, extracted
+ * so its timing semantics are directly testable (mirrors how authStore
+ * extracted `createSelectionWriteController`). The contract:
+ *
+ * - `observe(target)` is called on every reactive flip with the CURRENT
+ *   evaluation. A stale target schedules the countdown; `null` cancels it
+ *   (the blip healed — no write). Re-observing the SAME target lets the
+ *   running countdown stand; a DIFFERENT target restarts it from zero.
+ * - At fire, `evaluate()` re-runs the full decision table against the LATEST
+ *   state: only the same still-stale target confirms (`onConfirmed`, exactly
+ *   once per countdown); a heal or a retarget at fire time drops silently.
+ * - `cancel()` (teardown) drops any pending countdown so it can never fire
+ *   against a torn-down user.
+ */
+export interface StaleSelectionConfirmController {
+  observe(target: StaleTeamSelection | null): void
+  cancel(): void
+}
+
+export function createStaleSelectionConfirmController(options: {
+  confirmMs: number
+  evaluate: () => StaleTeamSelection | null
+  onConfirmed: (target: StaleTeamSelection) => void
+}): StaleSelectionConfirmController {
+  let timer: ReturnType<typeof setTimeout> | null = null
+  let confirmTeamId: string | null = null
+
+  const cancel = () => {
+    if (timer) {
+      clearTimeout(timer)
+      timer = null
+    }
+    confirmTeamId = null
+  }
+
+  return {
+    observe(target) {
+      if (!target) {
+        // Conditions no longer hold (membership repopulated, doc arrived) —
+        // abort any scheduled clear so a transient blip never reaches the
+        // durable write.
+        cancel()
+        return
+      }
+      // Already counting down for this exact selection — let the timer run.
+      if (timer && confirmTeamId === target.teamId) return
+      cancel()
+      confirmTeamId = target.teamId
+      timer = setTimeout(() => {
+        timer = null
+        confirmTeamId = null
+        // Re-confirm against the LATEST state: the same selection must still
+        // be stale. A transient empty/loading window has resolved by now.
+        const confirmed = options.evaluate()
+        if (!confirmed || confirmed.teamId !== target.teamId) return
+        options.onConfirmed(confirmed)
+      }, options.confirmMs)
+    },
+    cancel,
+  }
+}
+
+export function evaluateStaleTeamSelection(
+  inputs: StaleTeamSelectionInputs
+): StaleTeamSelection | null {
+  if (!inputs.teamId) return null
+  // Act only on a definitive, live answer — never interim state.
+  if (inputs.isTeamDocLoading || inputs.isMembershipLoading) return null
+  // Never act mid-mutation: a team create / join / switch marks pending and
+  // its membership snapshot may not have landed yet — clearing now would drop
+  // a selection that's about to become valid.
+  if (inputs.hasAnyPendingOperation || inputs.isPendingTeam) return null
+
+  // Membership revoked, or never a member. `teamDocRef` disables the team-doc
+  // query whenever the user isn't in `memberships`, so the doc snapshot never
+  // resolves to `null` for this path — detect it from the memberships list
+  // directly, but only once that list is a trustworthy live answer.
+  if (!inputs.isMember) {
+    if (inputs.isMembershipError || inputs.isMembershipStale) return null
+    return { teamId: inputs.teamId, reason: "membership-revoked" }
+  }
+
+  // Team deleted. The doc query is live (user is a member) and a `null`
+  // snapshot confirms the doc is genuinely gone; `undefined` is the loading
+  // window — acting on it would clear a valid selection.
+  if (inputs.team === null) {
+    return { teamId: inputs.teamId, reason: "team-deleted" }
+  }
+
+  return null
+}
+
 export const useTeamStore = defineStore("teams", () => {
   const authStore = useAuthStore()
   const membershipStore = useMembershipStore()
@@ -120,6 +245,13 @@ export const useTeamStore = defineStore("teams", () => {
   // ── Stale-selection cleanup ─────────────────────────────────────────────────
   // Drop a currentTeamId that Firestore confirms is gone (team deleted) or that
   // the user is no longer a member of (membership revoked / never joined).
+  // Clearing writes `currentTeamId: null` durably and cross-device, so a false
+  // positive wipes a selection another device just made — and every "it's
+  // gone" trigger is racy in isolation (cross-listener ordering, a mid-switch
+  // membership list, a re-subscribe window). As with workspaceStore, never
+  // clear on a single observation: the SAME selection must STILL be stale
+  // after a short confirmation delay, with every guard re-evaluated when the
+  // timer fires. A transient blip repopulates and self-cancels.
   const clearStaleSelection = async () => {
     try {
       await authStore.setCurrentTeamId(null)
@@ -129,59 +261,60 @@ export const useTeamStore = defineStore("teams", () => {
     }
   }
 
+  // Mirrors workspaceStore's STALE_SELECTION_CONFIRM_MS.
+  const STALE_SELECTION_CONFIRM_MS = 400
+
+  // Evaluate every guard against CURRENT reactive state (decision table lives
+  // on `evaluateStaleTeamSelection`, pure and unit-tested).
+  const pendingStaleTeamSelection = (): StaleTeamSelection | null => {
+    const teamId = currentTeamId.value
+    return evaluateStaleTeamSelection({
+      teamId,
+      team: firestoreCurrentTeam.value,
+      isTeamDocLoading: isTeamDocLoading.value,
+      isMembershipLoading: isMembershipLoading.value,
+      isMembershipError: isMembershipError.value,
+      isMembershipStale: isMembershipStale.value,
+      hasAnyPendingOperation: hasAnyPendingOperation.value,
+      isPendingTeam: !!teamId && pendingTeamIds.value.has(teamId),
+      isMember: !!teamId && memberships.value.some((m) => m.teamId === teamId),
+    })
+  }
+
+  // Schedule/cancel/refire semantics live on the extracted controller
+  // (`createStaleSelectionConfirmController`, unit-tested with fake timers).
+  const staleSelectionConfirm = createStaleSelectionConfirmController({
+    confirmMs: STALE_SELECTION_CONFIRM_MS,
+    evaluate: pendingStaleTeamSelection,
+    onConfirmed: (confirmed) => {
+      console.warn(
+        `[teamStore] Confirmed stale currentTeamId (${confirmed.reason}), clearing...`,
+        confirmed.teamId
+      )
+      void clearStaleSelection()
+    },
+  })
+
   watch(
     [
       currentTeamId,
       firestoreCurrentTeam,
+      memberships,
       isTeamDocLoading,
       isMembershipLoading,
       isMembershipError,
       isMembershipStale,
     ],
-    async ([teamId, team, loading, membershipLoading]) => {
-      if (!teamId || loading || membershipLoading) return
-      // Never act mid-mutation: a team create / join / switch marks pending and
-      // its membership snapshot may not have landed yet — clearing now would
-      // drop a selection that's about to become valid.
-      if (hasAnyPendingOperation.value || pendingTeamIds.value.has(teamId)) {
-        return
-      }
-
-      const isMember = memberships.value.some((m) => m.teamId === teamId)
-
-      // Case A — membership revoked, or never a member. `teamDocRef` disables
-      // the team-doc query whenever the user isn't in `memberships`, so
-      // `firestoreCurrentTeam` never resolves to `null` and Case B below can't
-      // fire for this path. Detect it from the memberships list directly — but
-      // only once that list is a trustworthy live answer: a terminal read error
-      // leaves `memberships` an empty fallback that means "unknown", not "no
-      // teams", and a stale cache may lag the user's real membership set.
-      if (!isMember) {
-        if (isMembershipError.value || isMembershipStale.value) return
-        console.warn(
-          "[teamStore] currentTeamId not in memberships (revoked or never joined), clearing...",
-          teamId
-        )
-        await clearStaleSelection()
-        return
-      }
-
-      // Case B — team deleted. The doc query is live (user is a member) and a
-      // `null` snapshot confirms the doc is genuinely gone. `undefined` is the
-      // loading window — acting on it would clear a valid selection in narrow
-      // timing windows.
-      if (team === null) {
-        console.warn(
-          "[teamStore] Detected stale team ID (deleted), clearing...",
-          teamId
-        )
-        await clearStaleSelection()
-      }
+    () => {
+      staleSelectionConfirm.observe(pendingStaleTeamSelection())
     }
   )
 
   // ── Teardown ────────────────────────────────────────────────────────────────
+  // Drop any in-flight stale-confirmation timer so it can't fire against a
+  // torn-down user (mirrors workspaceStore.cleanup).
   function cleanup() {
+    staleSelectionConfirm.cancel()
     authStore.cleanup()
     membershipStore.cleanup()
   }
@@ -295,7 +428,10 @@ export const useTeamStore = defineStore("teams", () => {
 
   async function switchTeam(teamId: string): Promise<void> {
     if (!currentUser.value || !userProfile.value) return
-    if (currentTeamId.value === teamId) return
+    // No identity guard here: `currentTeamId` reads the optimistic overlay,
+    // so only setCurrentTeamId — which sees the selection controller's
+    // in-flight state — can tell a true no-op from a re-click of an
+    // in-flight target that must re-register (last-click-wins).
     // Selection is the authStore overlay; currentTeam falls back to the target
     // team's membership snapshot for instant display, and setCurrentTeamId rolls
     // the selection back on error.

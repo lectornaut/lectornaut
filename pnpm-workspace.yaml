@@ -31,7 +31,7 @@ minimumReleaseAgeExclude:
   - stream-markdown-parser@1.0.7 || 1.1.2
   - unhead@3.1.5
   - pinia@4.0.2
-  - shadcn-vue@2.8.0
+  - shadcn-vue@2.8.0 || 2.8.1
   - "@tailwindcss/node@4.3.3"
   - "@tailwindcss/oxide-android-arm64@4.3.3"
   - "@tailwindcss/oxide-darwin-arm64@4.3.3"

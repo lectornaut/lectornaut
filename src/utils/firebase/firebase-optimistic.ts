@@ -127,9 +127,17 @@ export function removePending(pendingRef: Ref<Set<string>>, id: string): void {
 // Global Cloud Sync Queue
 // ============================================================================
 
+export type CloudSyncRetryHandler = () => void | Promise<void>
+
 export interface CloudSyncOperationOptions {
   id?: string
   source?: string
+  /**
+   * Optional retry callback registered alongside the error when this
+   * operation fails. Surfaced as a "Retry" action in the sync indicator and
+   * cleared together with the error state.
+   */
+  retry?: CloudSyncRetryHandler
 }
 
 export type CloudSyncErrorResetPolicy = "on_start" | "on_success" | "manual"
@@ -138,6 +146,7 @@ interface CloudSyncOperation {
   token: number
   id?: string
   source?: string
+  retry?: CloudSyncRetryHandler
   startedAt: number
 }
 
@@ -150,6 +159,7 @@ const totalCloudSyncFailed = ref(0)
 const lastCloudSyncSuccessAt = ref<number | null>(null)
 const lastCloudSyncErrorAt = ref<number | null>(null)
 const lastCloudSyncErrorMessage = ref<string | null>(null)
+const lastCloudSyncErrorRetry = shallowRef<CloudSyncRetryHandler | null>(null)
 const cloudSyncErrorResetPolicy = ref<CloudSyncErrorResetPolicy>("on_start")
 let cloudSyncTokenCounter = 0
 
@@ -159,6 +169,9 @@ const cloudSyncActiveCount = computed(
 const cloudSyncIsSyncing = computed(() => cloudSyncActiveCount.value > 0)
 const cloudSyncHasError = computed(
   () => lastCloudSyncErrorMessage.value !== null
+)
+const cloudSyncHasRetry = computed(
+  () => cloudSyncHasError.value && lastCloudSyncErrorRetry.value !== null
 )
 
 const toCloudSyncErrorMessage = (error: unknown): string => {
@@ -196,6 +209,26 @@ const clearActiveCloudSyncOperation = (token: number): boolean => {
 export function clearCloudSyncError(): void {
   lastCloudSyncErrorMessage.value = null
   lastCloudSyncErrorAt.value = null
+  lastCloudSyncErrorRetry.value = null
+}
+
+/**
+ * Invoke the retry handler registered with the last cloud sync error.
+ *
+ * Clears the error state optimistically first — the retried lane re-reports
+ * through the normal begin/end telemetry if it fails again — then runs the
+ * handler. A no-op (beyond clearing) when no handler was registered.
+ */
+export function retryCloudSyncError(): void {
+  const retry = lastCloudSyncErrorRetry.value
+  clearCloudSyncError()
+  if (!retry) return
+
+  Promise.resolve()
+    .then(() => retry())
+    .catch((error) => {
+      console.error("[cloudSync] Retry handler failed:", error)
+    })
 }
 
 export function setCloudSyncErrorResetPolicy(
@@ -218,6 +251,7 @@ export function beginCloudSyncOperation(
     token,
     id: options.id,
     source: options.source,
+    retry: options.retry,
     startedAt: Date.now(),
   })
 
@@ -225,6 +259,7 @@ export function beginCloudSyncOperation(
 }
 
 export function endCloudSyncOperation(token: number, error?: unknown): void {
+  const operation = activeCloudSyncOperations.value.get(token)
   const removed = clearActiveCloudSyncOperation(token)
   if (!removed) return
 
@@ -232,6 +267,7 @@ export function endCloudSyncOperation(token: number, error?: unknown): void {
     totalCloudSyncFailed.value += 1
     lastCloudSyncErrorAt.value = Date.now()
     lastCloudSyncErrorMessage.value = toCloudSyncErrorMessage(error)
+    lastCloudSyncErrorRetry.value = operation?.retry ?? null
     return
   }
 
@@ -263,6 +299,8 @@ export interface CloudSyncQueueState {
   activeCount: ComputedRef<number>
   isSyncing: ComputedRef<boolean>
   hasError: ComputedRef<boolean>
+  /** Whether the last error carries a registered retry handler. */
+  hasRetry: ComputedRef<boolean>
   lastErrorMessage: ComputedRef<string | null>
   lastErrorAt: ComputedRef<number | null>
   lastSuccessAt: ComputedRef<number | null>
@@ -271,6 +309,8 @@ export interface CloudSyncQueueState {
   totalFailed: ComputedRef<number>
   errorResetPolicy: ComputedRef<CloudSyncErrorResetPolicy>
   clearError: () => void
+  /** Clear the error optimistically and invoke its registered retry handler. */
+  retryLastError: () => void
   setErrorResetPolicy: (policy: CloudSyncErrorResetPolicy) => void
 }
 
@@ -279,6 +319,7 @@ export function useCloudSyncQueueState(): CloudSyncQueueState {
     activeCount: cloudSyncActiveCount,
     isSyncing: cloudSyncIsSyncing,
     hasError: cloudSyncHasError,
+    hasRetry: cloudSyncHasRetry,
     lastErrorMessage: computed(() => lastCloudSyncErrorMessage.value),
     lastErrorAt: computed(() => lastCloudSyncErrorAt.value),
     lastSuccessAt: computed(() => lastCloudSyncSuccessAt.value),
@@ -287,6 +328,7 @@ export function useCloudSyncQueueState(): CloudSyncQueueState {
     totalFailed: computed(() => totalCloudSyncFailed.value),
     errorResetPolicy: computed(() => cloudSyncErrorResetPolicy.value),
     clearError: clearCloudSyncError,
+    retryLastError: retryCloudSyncError,
     setErrorResetPolicy: setCloudSyncErrorResetPolicy,
   }
 }

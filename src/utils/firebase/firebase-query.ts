@@ -106,20 +106,44 @@ const optimisticHolds = new Map<string, number>()
 const stashedReconcilers = new Map<string, (cached: unknown) => unknown>()
 
 /**
- * Hold a query's cached value against live-listener overwrites until the
- * returned release fn runs (wire it to `useMutation`'s onError/onSettled). On
- * the final release the stashed reconciler runs, reconciling the cache to server
- * truth — e.g. an optimistic temp row is replaced by the real row the server
- * created. The release fn is idempotent and ref-counted.
+ * How long an optimistic hold may stand before it self-releases. A hold is
+ * meant to bridge the short window between an optimistic apply and the server
+ * ack; a write that never settles (now possible: a PARKED outbox op waiting
+ * for connectivity) would otherwise freeze live-listener reconciliation on the
+ * held keys indefinitely, hiding other-device updates. On expiry the stashed
+ * server snapshot reconciles and later snapshots flow straight into the cache
+ * again; the write itself continues unaffected, and its eventual
+ * settle/rollback must treat the hold as gone — see `OptimisticHold.expired`
+ * and the rollback skip in `firebase-mutation.ts`.
  */
-export function holdOptimistic(queryKey: FirestoreQueryKey): () => void {
+export const OPTIMISTIC_HOLD_TIMEOUT_MS = 30_000
+
+export interface OptimisticHold {
+  /** Idempotent, ref-counted release — the same fn `holdOptimistic` returns. */
+  release: () => void
+  /** True once the hold self-released via `OPTIMISTIC_HOLD_TIMEOUT_MS`. */
+  expired: () => boolean
+}
+
+/**
+ * `holdOptimistic` plus visibility into the hold's timeout state. The mutation
+ * seam (`useFirestoreMutation`) needs `expired` to decide whether a late
+ * REJECT may still roll the cache back; plain callers that only ever release
+ * can keep using `holdOptimistic`.
+ */
+export function acquireOptimisticHold(
+  queryKey: FirestoreQueryKey
+): OptimisticHold {
   const queryHash = hashKey(queryKey)
   optimisticHolds.set(queryHash, (optimisticHolds.get(queryHash) ?? 0) + 1)
 
   let released = false
-  return () => {
+  let expired = false
+
+  const release = (): void => {
     if (released) return
     released = true
+    clearTimeout(timer)
     const remaining = (optimisticHolds.get(queryHash) ?? 1) - 1
     if (remaining > 0) {
       optimisticHolds.set(queryHash, remaining)
@@ -132,6 +156,29 @@ export function holdOptimistic(queryKey: FirestoreQueryKey): () => void {
       queryClient.setQueryData(queryKey, (cached) => reconcile(cached))
     }
   }
+
+  // Expiry IS a release (run the stashed reconciler, let the listener resume
+  // owning the key) — it additionally flips `expired` so the write's eventual
+  // error/settle handling knows the optimistic window is already over.
+  const timer = setTimeout(() => {
+    expired = true
+    release()
+  }, OPTIMISTIC_HOLD_TIMEOUT_MS)
+
+  return { release, expired: () => expired }
+}
+
+/**
+ * Hold a query's cached value against live-listener overwrites until the
+ * returned release fn runs (wire it to `useMutation`'s onError/onSettled). On
+ * the final release the stashed reconciler runs, reconciling the cache to server
+ * truth — e.g. an optimistic temp row is replaced by the real row the server
+ * created. The release fn is idempotent and ref-counted, and the hold
+ * self-releases after `OPTIMISTIC_HOLD_TIMEOUT_MS` so a never-settling write
+ * cannot freeze reconciliation (a late release is then a no-op).
+ */
+export function holdOptimistic(queryKey: FirestoreQueryKey): () => void {
+  return acquireOptimisticHold(queryKey).release
 }
 
 /**
@@ -420,6 +467,51 @@ export function mergeHeadTail<T extends { id: string }>(
   return merged
 }
 
+/**
+ * Reducer for the infinite read: fold a live head emission into the cached
+ * `{ head, tail }`. On the FIRST emission after a listener attach `cached` is
+ * `undefined` (streamIntoCache resolves against it), so any restored/stale
+ * tail is wiped — pagination must reset with it, see `resolveHeadPagination`.
+ *
+ * @internal exported only for unit tests.
+ */
+export const foldHeadEmission = <T>(
+  head: T[],
+  cached: InfiniteCollectionData<T> | undefined
+): InfiniteCollectionData<T> => ({ head, tail: cached?.tail ?? [] })
+
+/**
+ * Decide whether a live head emission owns the pagination state
+ * (`cursor`/`hasMore`) and what `hasMore` becomes (`hasMore` implies the
+ * cursor moves to the emission's last doc; otherwise it clears). Two cases
+ * own it:
+ *
+ *   - the FIRST emission after a (re)attach — the initial resolve reduces
+ *     against `undefined` (`foldHeadEmission`), wiping any restored/stale tail:
+ *     a cold-start restore rehydrates `{ head, tail }` but the
+ *     `QueryDocumentSnapshot` cursor cannot be persisted. Pagination must
+ *     reset to page-1 semantics WITH the wipe. Consulting the (still-restored,
+ *     non-empty-tail) cache entry here instead left the two views disagreeing:
+ *     cursor stayed null while `hasMore` stayed true, so `loadMore` silently
+ *     no-oped until a new head change — the cold-start stranding bug;
+ *   - any later emission while no older pages are loaded — once `loadMore`
+ *     advances past page 1 its cursor is further along and a live emission
+ *     must not rewind it.
+ *
+ * Returns `null` when `loadMore` owns the cursor.
+ *
+ * @internal exported only for unit tests.
+ */
+export function resolveHeadPagination(input: {
+  isFirstEmission: boolean
+  cachedTailLength: number
+  snapshotSize: number
+  pageSize: number
+}): { hasMore: boolean } | null {
+  if (!input.isFirstEmission && input.cachedTailLength > 0) return null
+  return { hasMore: input.snapshotSize === input.pageSize }
+}
+
 export interface InfiniteCollectionSource<T> {
   /** Collection path — the stable portion of the cache key. */
   path: string
@@ -513,6 +605,9 @@ export function useInfiniteCollectionQuery<T extends { id: string }>(
         )
       }
       const key = queryKeys.list(current.path, current.params)
+      // Each queryFn run is a fresh listener attach; its first emission resets
+      // pagination to page 1 alongside the tail wipe (`resolveHeadPagination`).
+      let isFirstEmission = true
       return streamIntoCache<T[], InfiniteCollectionData<T>>(
         key,
         (onNext, onError) =>
@@ -525,26 +620,26 @@ export function useInfiniteCollectionQuery<T extends { id: string }>(
                   entry.data(SNAPSHOT_OPTIONS) as Record<string, unknown>
                 )
               )
-              // The live listener owns the cursor/hasMore ONLY while no older
-              // pages are loaded — once `loadMore` advances past page 1, its
-              // cursor is further along and a live emission must not rewind it.
-              const tailEmpty =
-                (queryClient.getQueryData<InfiniteCollectionData<T>>(key)?.tail
-                  .length ?? 0) === 0
-              if (tailEmpty) {
-                if (snap.size === current.pageSize) {
-                  cursor.value = snap.docs[snap.size - 1] ?? null
-                  hasMore.value = true
-                } else {
-                  cursor.value = null
-                  hasMore.value = false
-                }
+              const pagination = resolveHeadPagination({
+                isFirstEmission,
+                cachedTailLength:
+                  queryClient.getQueryData<InfiniteCollectionData<T>>(key)?.tail
+                    .length ?? 0,
+                snapshotSize: snap.size,
+                pageSize: current.pageSize,
+              })
+              isFirstEmission = false
+              if (pagination) {
+                hasMore.value = pagination.hasMore
+                cursor.value = pagination.hasMore
+                  ? (snap.docs[snap.size - 1] ?? null)
+                  : null
               }
               onNext(head)
             },
             onError
           ),
-        (head, cached) => ({ head, tail: cached?.tail ?? [] })
+        foldHeadEmission
       )
     },
   })

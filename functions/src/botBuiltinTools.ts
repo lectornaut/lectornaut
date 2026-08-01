@@ -231,7 +231,7 @@ export const rollDiceTool = ai.defineTool(
  * Must be a `gemini-*` wire-name that supports the `googleSearch` tool
  * (2.x+; the legacy 1.5 `googleSearchRetrieval` form is not used here).
  */
-const WEB_SEARCH_MODEL = "gemini-2.5-flash"
+const WEB_SEARCH_MODEL = "gemini-3.6-flash"
 
 /** Hard cap on returned citations — keeps the persisted tool output and
  *  the model's follow-up context bounded even when grounding returns a

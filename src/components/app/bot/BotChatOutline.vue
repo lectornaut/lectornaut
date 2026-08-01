@@ -74,13 +74,13 @@ const jumpToMessage = (messageId: string) => {
     <HoverCardContent
       side="left"
       align="center"
-      class="size-64 max-h-[80svh] overflow-clip p-1"
+      class="aspect-square w-64 overflow-clip p-0"
     >
       <!-- The height cap must sit on the OS viewport itself: the popover's
            height is auto, so percentage/stretch sizing never reaches the
            scroll element and OS measures zero overflow (dead wheel). The
            outer max-h-80 only guards the frame before deferred init. -->
-      <ScrollContainer>
+      <ScrollContainer class="p-1">
         <Button
           v-for="message in userMessages"
           :key="message.id"

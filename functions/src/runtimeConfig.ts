@@ -113,17 +113,6 @@ export const APP_CHECK_OPTS = {
   maxInstances: 10,
 }
 
-/**
- * `applySyncOperation` is the latency-critical direct settlement path for the
- * client's outbox writes — its response time is the floor for every awaited
- * `runWrite`. Default minInstances is 0 to avoid idle billing; override with
- * SYNC_MIN_INSTANCES=1 to eliminate cold starts from the sync tail.
- */
-export const SYNC_CALLABLE_OPTS = {
-  ...CALLABLE_OPTS,
-  minInstances: envInt("SYNC_MIN_INSTANCES", 0),
-}
-
 /** Default sender address for outbound emails (override via EMAIL_FROM_ADDRESS) */
 export const EMAIL_FROM =
   process.env.EMAIL_FROM_ADDRESS || "hello@lectornaut.com"

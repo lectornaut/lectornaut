@@ -36,51 +36,6 @@ service cloud.firestore {
         && teamRole(teamId) in ["owner", "admin"];
     }
 
-    // The calling user's per-workspace role override, or null when no grant
-    // doc exists at teams/{teamId}/memberships/{uid}/workspaces/{workspaceId}.
-    // That doc is functions-only write (see the memberships block below), so it
-    // can be read here but never self-assigned — not an escalation surface.
-    function workspaceRoleOverride(teamId, workspaceId) {
-      return isTeamMember(teamId)
-          && exists(/databases/$(database)/documents/teams/$(teamId)/memberships/$(request.auth.uid)/workspaces/$(workspaceId))
-        ? get(/databases/$(database)/documents/teams/$(teamId)/memberships/$(request.auth.uid)/workspaces/$(workspaceId)).data.get("role", null)
-        : null;
-    }
-
-    // The calling user's GROUP-derived per-workspace role: a denormalized
-    // `groupRole` field on the SAME override doc, kept in sync by Cloud Functions
-    // (the `onGroup*Written` triggers) = the member's max role over every group
-    // they belong to that this workspace grants. Rules can't iterate groups, so
-    // they read this mirror; the functions read path stays authoritative by
-    // resolving groups live. It is the same doc `workspaceRoleOverride` /
-    // `isWorkspaceExcluded` read, so it adds no billed read within one rule eval.
-    function workspaceGroupRoleOverride(teamId, workspaceId) {
-      return isTeamMember(teamId)
-          && exists(/databases/$(database)/documents/teams/$(teamId)/memberships/$(request.auth.uid)/workspaces/$(workspaceId))
-        ? get(/databases/$(database)/documents/teams/$(teamId)/memberships/$(request.auth.uid)/workspaces/$(workspaceId)).data.get("groupRole", null)
-        : null;
-    }
-
-    // Content management (owner/admin/member), elevation-aware: a per-workspace
-    // override OR a group grant can RAISE a member into content management within
-    // a single workspace (elevate-only — it never removes access the team role
-    // grants). Mirrors can(uid, MANAGE_WORKSPACE_CONTENT, {scope:"workspace",
-    // teamRole, workspaceRole=max(directOverride, groupRole)}) in
-    // shared/permissions.ts. Exclusion is a hard deny that beats every elevation
-    // (matches getWorkspaceRoleOverride throwing on the functions path), so an
-    // excluded member — even a team admin/owner — cannot write content here. The
-    // override role / group role / exclusion gets all hit the SAME override doc,
-    // so together they add no extra billed read within one rule eval.
-    function canManageWorkspaceContentIn(teamId, workspaceId) {
-      return isTeamMember(teamId)
-        && !isWorkspaceExcluded(teamId, workspaceId)
-        && (
-          teamRole(teamId) in ["owner", "admin", "member"]
-          || workspaceRoleOverride(teamId, workspaceId) in ["owner", "admin", "member"]
-          || workspaceGroupRoleOverride(teamId, workspaceId) in ["owner", "admin", "member"]
-        );
-    }
-
     // True when the calling user is explicitly excluded (a non-member) from this
     // workspace — set by assignWorkspaceRole({excluded:true}). It is a get() on a
     // FIXED doc (the caller's own override for this workspace), so it does NOT
@@ -181,36 +136,6 @@ service cloud.firestore {
         && resource.data.userId == request.auth.uid;
     }
 
-    function hasValidSnapshotPayload(contentId) {
-      return isSignedIn()
-        && request.resource.data.contentId == contentId
-        && request.resource.data.teamId is string
-        && request.resource.data.workspaceId is string
-        && request.resource.data.updatedBy == request.auth.uid
-        && request.resource.data.ydocBase64 is string;
-    }
-
-    function canCreateSnapshot(contentId) {
-      return hasValidSnapshotPayload(contentId)
-        && canManageWorkspaceContentIn(
-             request.resource.data.teamId,
-             request.resource.data.workspaceId
-           );
-    }
-
-    function canUpdateSnapshot(contentId) {
-      return hasValidSnapshotPayload(contentId)
-        && resource.data.teamId is string
-        && resource.data.workspaceId is string
-        && request.resource.data.teamId == resource.data.teamId
-        && request.resource.data.workspaceId == resource.data.workspaceId
-        && request.resource.data.contentId == resource.data.contentId
-        && canManageWorkspaceContentIn(
-             resource.data.teamId,
-             resource.data.workspaceId
-           );
-    }
-
     function isNullableStringField(data, field) {
       return data[field] is string || data[field] == null;
     }
@@ -238,30 +163,22 @@ service cloud.firestore {
         && isOptionalBoolField(request.resource.data, "isPublic");
     }
 
-    function isValidUserProfileUpdate(userId) {
-      return request.resource.data.uid == userId
-        && request.resource.data.createdAt == resource.data.createdAt
-        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
-             "email",
-             "displayName",
-             "photoURL",
-             "username",
-             "isPublic",
-             "updatedAt"
-           ])
-        && isNullableStringField(request.resource.data, "email")
-        && isNullableStringField(request.resource.data, "displayName")
-        && isNullableStringField(request.resource.data, "photoURL")
-        && isNullableStringField(request.resource.data, "username")
-        && isOptionalBoolField(request.resource.data, "isPublic");
-    }
-
     function isOwnedUserUsernameClaim(data) {
       return data.entityType == "user"
         && data.entityId is string
         && data.entityId == request.auth.uid;
     }
 
+    // Collab ydoc snapshots. Reads stay client-side (the collab loader
+    // `getDoc`s the snapshot on open); WRITES are server-only. Every client
+    // write flows through the sync engine's outbox — `applySyncOperation` /
+    // `onSyncOperationCreated` settle it via `routeSnapshotMutation`
+    // (functions/src/syncSettlement.ts), which enforces the payload
+    // whitelist, the 1MB `ydocBase64` cap, OCC (`baseVersion`), and the
+    // canonical MANAGE_WORKSPACE_CONTENT decision (shared/permissions.ts).
+    // The old direct create/update clauses bypassed all four, so they were
+    // removed along with their helpers (canCreateSnapshot/canUpdateSnapshot →
+    // canManageWorkspaceContentIn).
     match /snapshots/{contentId} {
       allow get: if (!exists(/databases/$(database)/documents/snapshots/$(contentId))
                      && canViewRoom(contentId))
@@ -272,9 +189,7 @@ service cloud.firestore {
                           resource.data.workspaceId
                         ));
       allow list: if false;
-      allow create: if canCreateSnapshot(contentId);
-      allow update: if canUpdateSnapshot(contentId);
-      allow delete: if false;
+      allow write: if false;
     }
 
     match /signaling/{contentId} {
@@ -304,7 +219,15 @@ service cloud.firestore {
     match /users/{userId} {
       allow create: if isSelf(userId) && isValidUserProfileCreate(userId);
       allow read: if isSelf(userId) || resource.data.isPublic == true;
-      allow update: if isSelf(userId) && isValidUserProfileUpdate(userId);
+      // Root-doc UPDATES are server-only: profile fields sync through the
+      // engine's user-root settlement route (functions/src/syncSettlement.ts
+      // `validateUserDocumentMutation`) and the account callables
+      // (syncCurrentUserAccountProfile / updateUserProfileVisibility). No
+      // client path issues a direct root update — device sessions write only
+      // the `sessions` subcollection below — so the old
+      // `isValidUserProfileUpdate` clause was removed: it bypassed the
+      // settlement's field whitelist.
+      allow update: if false;
       allow delete: if isSelf(userId);
 
       match /notifications/{notificationId} {

@@ -77,25 +77,28 @@ enableMermaid()
 void preloadExtendedLanguageIcons()
 
 // Order matters: authReady must resolve before router.isReady() so the
-// initial navigation guard sees a settled `auth.currentUser`.
+// initial navigation guard sees a settled `auth.currentUser`, and before the
+// cache restore so we hydrate the signed-in user's cache (logout clears it
+// via clearPersistedQueryCache).
 await authReady
 
-// Restore the persisted read cache for an instant cold start, then begin
-// persisting future changes. Done after auth settles so we hydrate the
-// signed-in user's cache (logout clears it via clearPersistedQueryCache).
-await restoreQueryCache()
-startQueryCachePersistence()
-
-await router.isReady()
-
-// Block mount until the active Shiki editor theme is loaded so the Tiptap,
-// CodeMirror, and markstream-vue code surfaces all render on the correct
-// theme background from the first frame instead of flashing a fallback
-// (prose muted / app background / library muted) while the async highlighter
-// loads. Runs after authReady/router so we don't widen the cold-start budget
-// (the Shiki theme load is dwarfed by those); even if it threw, we swallow it
-// — a missing theme falls back to the previous behaviour (empty colors ref).
-await preloadActiveCodeTheme().catch(() => {})
+// The three post-auth stages are mutually independent — the initial-nav guard
+// reads only `auth.currentUser`, the theme preload only its stored name — so
+// run them concurrently instead of paying their latencies in sequence.
+await Promise.all([
+  // Restore the persisted read cache for an instant cold start, then begin
+  // persisting future changes (the subscribe must not start before the
+  // restore completes, hence the chain).
+  restoreQueryCache().then(startQueryCachePersistence),
+  router.isReady(),
+  // Block mount until the active Shiki editor theme is loaded so the Tiptap,
+  // CodeMirror, and markstream-vue code surfaces all render on the correct
+  // theme background from the first frame instead of flashing a fallback
+  // (prose muted / app background / library muted) while the async
+  // highlighter loads. Even if it threw, we swallow it — a missing theme
+  // falls back to the previous behaviour (empty colors ref).
+  preloadActiveCodeTheme().catch(() => {}),
+])
 
 app.mount("#app")
 

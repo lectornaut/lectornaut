@@ -60,7 +60,7 @@ function togglePinned() {
       <Sidebar
         :collapsible="collapsibleMode"
         variant="inset"
-        class="shadow-muted-foreground/5 relative w-full p-1.25 pt-0 transition-none"
+        class="shadow-muted-foreground/5 @container/sidebar relative w-full p-1.25 pt-0 transition-none"
         data-tauri-drag-region="deep"
       >
         <!-- <Separator
@@ -80,11 +80,9 @@ function togglePinned() {
           <!-- <Separator class="absolute -translate-x-full bg-red-400" /> -->
           <div class="flex items-center gap-2">
             <Notifications />
-            <CommandKTrigger />
+            <CommandKTrigger class="hidden @min-[256px]/sidebar:inline" />
           </div>
-          <div class="flex items-center gap-2">
-            <BackForth />
-          </div>
+          <BackForth />
         </div>
         <SidebarHeader :class="[{ 'mt-10': !open && !props.preview }]">
           <TeamSwitcher />

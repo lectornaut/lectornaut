@@ -958,10 +958,10 @@ const closeTab = (id: string) => {
                       </div>
                       <div
                         v-if="!isPoppedOutMinimized"
-                        class="bg-background m-2 grow rounded border p-2"
+                        class="bg-background m-2 grow rounded border border-dashed p-2"
                       >
                         <div
-                          class="size-fullbg-[repeating-linear-gradient(45deg,var(--color-muted)_0,var(--color-muted)_1px,transparent_0,transparent_50%)] bg-size-[8px_8px] p-2"
+                          class="size-full bg-[repeating-linear-gradient(45deg,var(--color-muted)_0,var(--color-muted)_1px,transparent_0,transparent_50%)] bg-size-[8px_8px] p-2"
                         >
                           Sample Content
                         </div>

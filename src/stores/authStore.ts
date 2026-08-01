@@ -45,14 +45,16 @@ import {
 } from "@/utils/firebase/firebase-hydration"
 import { useRunWrite } from "@/utils/firebase/firebase-mutation"
 import {
+  addPending,
   cloneState,
   createPendingSet,
+  removePending,
 } from "@/utils/firebase/firebase-optimistic"
 import { useDocumentQuery } from "@/utils/firebase/firebase-query"
 import { queryKeys } from "@/utils/firebase/firebase-query-keys"
 import {
   buildUpdatedAtBaseVersion,
-  mutateSetDocument,
+  mutate,
 } from "@/utils/firebase/firebase-sync-engine"
 import type { User } from "firebase/auth"
 import { Timestamp } from "firebase/firestore"
@@ -74,6 +76,126 @@ const emptyMembershipPreferences = (): IMembershipPreferences => ({
 /** localStorage cache key for a team's membership-preferences snapshot. */
 const membershipPrefsCacheKey = (teamId: string) =>
   `membershipPreferences:${teamId}`
+
+// ── Last-click-wins selection bookkeeping (pure, unit-tested) ────────────────
+
+/**
+ * Bookkeeping for serialized selection writes where the overlay is applied
+ * synchronously per request (last-click-wins) and only the DURABLE writes are
+ * chained behind each other.
+ *
+ * Rules:
+ * - Only the latest request's write runs (`shouldWrite`); superseded slots
+ *   settle as skipped — no write, no rollback.
+ * - The rollback baseline is the state before the FIRST request of a run (the
+ *   last known durable state), captured on `begin` while idle. Later requests
+ *   in the same run never re-baseline: their overlays were never persisted,
+ *   so restoring one would disagree with server state.
+ * - A superseded write that was already in flight and SUCCEEDED re-baselines
+ *   to its persisted state — the durable doc advanced, so a later failure
+ *   must restore that, not the pre-run state.
+ * - `settleFailure` returns the baseline to restore only when the failed
+ *   request is still the latest; otherwise `null` — a newer overlay has been
+ *   applied since and must never be clobbered by an older rollback.
+ */
+export interface SelectionWriteController<TSnapshot> {
+  /** Register the new latest request; returns its id. */
+  begin(snapshot: TSnapshot): number
+  /** Whether this request is still the latest — its durable write should run. */
+  shouldWrite(requestId: number): boolean
+  /** Settle a superseded (or torn-down) slot that wrote nothing. */
+  settleSkipped(requestId: number): void
+  /** Settle a successful durable write of `persistedSnapshot`'s state. */
+  settleSuccess(requestId: number, persistedSnapshot: TSnapshot): void
+  /** Settle a failed write; returns the snapshot to restore, or null. */
+  settleFailure(requestId: number): TSnapshot | null
+  /** True once every request of the current run has settled. */
+  isIdle(): boolean
+}
+
+export function createSelectionWriteController<
+  TSnapshot,
+>(): SelectionWriteController<TSnapshot> {
+  let nextRequestId = 0
+  let latestRequestId = 0
+  let outstanding = 0
+  // Boxed so a legitimately-falsy TSnapshot stays distinguishable from "unset".
+  let baseline: { value: TSnapshot } | null = null
+
+  return {
+    begin(snapshot) {
+      const requestId = ++nextRequestId
+      latestRequestId = requestId
+      if (outstanding === 0) baseline = { value: snapshot }
+      outstanding++
+      return requestId
+    },
+    shouldWrite(requestId) {
+      return requestId === latestRequestId
+    },
+    settleSkipped() {
+      outstanding = Math.max(0, outstanding - 1)
+      // A drain via skip (teardown of the latest) leaves nothing to restore.
+      if (outstanding === 0) baseline = null
+    },
+    settleSuccess(requestId, persistedSnapshot) {
+      outstanding = Math.max(0, outstanding - 1)
+      if (requestId === latestRequestId || outstanding === 0) {
+        // Durable state now matches the latest overlay — run complete.
+        baseline = null
+      } else {
+        // A superseded in-flight write landed: the durable doc advanced past
+        // the pre-run baseline.
+        baseline = { value: persistedSnapshot }
+      }
+    },
+    settleFailure(requestId) {
+      outstanding = Math.max(0, outstanding - 1)
+      if (requestId !== latestRequestId) return null
+      const restore = baseline ? baseline.value : null
+      baseline = null
+      return restore
+    },
+    isIdle() {
+      return outstanding === 0
+    },
+  }
+}
+
+/**
+ * A server `failed-precondition` rejection of a sync write — the OCC
+ * base-version conflict verdict. The sync engine stamps the verdict code
+ * onto the rejection error (see `applyRemoteSettlement`), so this is a
+ * structural check, never message matching. Used as the self-correction
+ * trigger for the cached ack stamp: a conflict means the cached token
+ * disagreed with the doc (e.g. a skewed-high millis from an old-server
+ * settlement), so the cache must be dropped in favor of the live listener.
+ */
+export function isFailedPreconditionRejection(error: unknown): boolean {
+  return (
+    typeof error === "object" &&
+    error !== null &&
+    "code" in error &&
+    (error as { code?: unknown }).code === "failed-precondition"
+  )
+}
+
+/**
+ * Freshest-of selection for an OCC token: epoch-ms candidates from a write
+ * ack and the live listener; the largest finite number wins (per-doc
+ * `updatedAt` stamps are monotonic across settlements). Non-numeric
+ * candidates (absent doc, an old-server ack without millis) are ignored.
+ */
+export function selectFreshestUpdatedAtMillis(
+  candidates: ReadonlyArray<number | string | null | undefined>
+): number | null {
+  let freshest: number | null = null
+  for (const candidate of candidates) {
+    if (typeof candidate !== "number" || !Number.isFinite(candidate)) continue
+    if (freshest === null || candidate > freshest) freshest = candidate
+  }
+  return freshest
+}
 
 export const useAuthStore = defineStore("auth", () => {
   // ── Auth user (tri-state) ──────────────────────────────────────────────────
@@ -365,6 +487,7 @@ export const useAuthStore = defineStore("auth", () => {
     overlayUserPreferences.value = null
     overlayMembershipPreferences.value = null
     confirmedMembershipPrefsTeamId.value = null
+    ackedPreferencesUpdatedAtMillis = null
     clearHydrationCache()
     void clearPersistedQueryCache()
   }
@@ -378,9 +501,40 @@ export const useAuthStore = defineStore("auth", () => {
   })
 
   // ── Selection writes ────────────────────────────────────────────────────────
-  // Serialize currentTeamId writes so rapid switches can't interleave their
-  // optimistic/rollback against each other.
+  // Last-click-wins team switching: the overlay for the LATEST requested team
+  // applies synchronously, so a rapid switch never waits behind the previous
+  // switch's server round trip. `teamSelectionChain` serializes only the
+  // DURABLE writes; superseded targets are skipped outright (no write, no
+  // rollback), and a failed write rolls back only when no newer target was
+  // applied since — bookkeeping on `createSelectionWriteController` (pure).
   let teamSelectionChain: Promise<void> = Promise.resolve()
+  const teamSelectionWrites = createSelectionWriteController<IUserPreferences>()
+
+  // Post-settlement `updatedAt` of the preferences doc, taken from write acks.
+  // The ack resolves before the canonical snapshot lands, so the listener-
+  // cached value lags — a chained second switch would otherwise re-send the
+  // pre-write OCC token and trip a false failed-precondition conflict.
+  let ackedPreferencesUpdatedAtMillis: number | null = null
+
+  // Mirrors firebase-mutation's PENDING_RELEASE_DELAY_MS. `pendingUserIds` is
+  // a Set, not a refcount: only the CURRENT selection generation may remove
+  // its uid, and only after every request in that generation has settled.
+  // Otherwise a skipped earlier click clears the guard while the newest write
+  // is still in flight, letting a stale listener snapshot replace its overlay.
+  const TEAM_SELECTION_PENDING_RELEASE_MS = 120
+  let teamSelectionPendingGeneration = 0
+  const releaseTeamSelectionPending = (uid: string, generation: number) => {
+    setTimeout(() => {
+      if (
+        generation !== teamSelectionPendingGeneration ||
+        !teamSelectionWrites.isIdle() ||
+        (currentUser.value !== null && currentUser.value.uid !== uid)
+      ) {
+        return
+      }
+      removePending(pendingUserIds, uid)
+    }, TEAM_SELECTION_PENDING_RELEASE_MS)
+  }
 
   function setCurrentTeamIdLocal(teamId: string | null): void {
     if (!currentUser.value) return
@@ -392,36 +546,97 @@ export const useAuthStore = defineStore("auth", () => {
   }
 
   async function setCurrentTeamId(teamId: string | null): Promise<void> {
+    if (!currentUser.value) return
+    // Identity short-circuit ONLY while idle: `currentTeamId` reads the
+    // optimistic overlay, so mid-flight it already shows the pending target —
+    // dropping a re-click of that target here would lose the user's intent
+    // when the in-flight write then fails and rolls back to the OLD team.
+    // While a write is outstanding, register the re-click as a fresh request
+    // so last-click-wins converges on it.
+    if (currentTeamId.value === teamId && teamSelectionWrites.isIdle()) return
+
+    const uid = currentUser.value.uid
+    const previous = cloneState(userPreferences.value)
+    const requestId = teamSelectionWrites.begin(previous)
+    const pendingGeneration = ++teamSelectionPendingGeneration
+    // Paint the latest target NOW — the pending flag makes the overlay
+    // authoritative until the durable write settles.
+    addPending(pendingUserIds, uid)
+    setCurrentTeamIdLocal(teamId)
+
     teamSelectionChain = teamSelectionChain
       .catch(() => undefined)
       .then(async () => {
-        if (!currentUser.value) return
-        if (currentTeamId.value === teamId) return
+        // Superseded by a newer switch (or torn down mid-queue) → skip: the
+        // newest request owns both the overlay and the durable write.
+        if (
+          !teamSelectionWrites.shouldWrite(requestId) ||
+          currentUser.value?.uid !== uid
+        ) {
+          teamSelectionWrites.settleSkipped(requestId)
+          releaseTeamSelectionPending(uid, pendingGeneration)
+          return
+        }
 
-        const uid = currentUser.value.uid
-        const previous = cloneState(userPreferences.value)
-        await runWrite({
-          keys: [],
-          apply: () => setCurrentTeamIdLocal(teamId),
-          rollback: () => {
-            overlayUserPreferences.value = previous
-          },
-          fn: () =>
-            mutateSetDocument(
-              getUserPreferencesRef(uid),
-              { currentTeamId: teamId },
-              {
+        try {
+          await runWrite({
+            keys: [],
+            // Overlay + pending flag were applied synchronously at request
+            // time; rollback is conditional (last-click-wins) — handled below.
+            apply: () => {},
+            rollback: () => {},
+            fn: async () => {
+              const result = await mutate({
                 source: "auth.setCurrentTeamId",
+                targetPath: getUserPreferencesRef(uid).path,
+                type: "set",
+                data: { currentTeamId: teamId },
                 merge: true,
+                // Freshest known token wins: the last ack's post-settlement
+                // stamp vs. the live listener (which may carry a NEWER stamp
+                // from another device or an unrelated merge write).
                 baseVersion: buildUpdatedAtBaseVersion(
-                  firestoreUserPreferences.value?.updatedAt ??
-                    previous?.updatedAt
+                  selectFreshestUpdatedAtMillis([
+                    buildUpdatedAtBaseVersion(
+                      firestoreUserPreferences.value?.updatedAt ??
+                        previous.updatedAt
+                    )?.value,
+                    ackedPreferencesUpdatedAtMillis,
+                  ])
                 ),
-              }
-            ),
-          pending: { ref: pendingUserIds, ids: [uid] },
-          source: "auth.setCurrentTeamId",
-        })
+              })
+              // Refresh the cached token from the ack so the next chained
+              // switch carries a current baseVersion (absent on old-server
+              // verdicts — the listener value covers those).
+              ackedPreferencesUpdatedAtMillis = selectFreshestUpdatedAtMillis([
+                ackedPreferencesUpdatedAtMillis,
+                result.updatedAtMillis,
+              ])
+            },
+            source: "auth.setCurrentTeamId",
+          })
+          teamSelectionWrites.settleSuccess(requestId, {
+            ...previous,
+            currentTeamId: teamId,
+          })
+        } catch (error) {
+          // Self-correction for a wedged OCC token: a failed-precondition
+          // verdict means the cached ack stamp disagreed with the doc, so
+          // drop it — the next attempt trusts the live listener value
+          // instead of max()-picking the bad cache forever.
+          if (isFailedPreconditionRejection(error)) {
+            ackedPreferencesUpdatedAtMillis = null
+          }
+          const restore = teamSelectionWrites.settleFailure(requestId)
+          // Restore only when no newer overlay was applied since, and never
+          // across a user change (cleanup already reset the overlays).
+          if (restore && currentUser.value?.uid === uid) {
+            overlayUserPreferences.value = restore
+          }
+          throw error
+        } finally {
+          releaseTeamSelectionPending(uid, pendingGeneration)
+        }
       })
 
     return teamSelectionChain

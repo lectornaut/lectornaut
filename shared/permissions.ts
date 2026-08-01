@@ -368,6 +368,11 @@ export function scopesFor(capability: Capability): readonly Scope[] {
  *  - `{ excluded: false, role }` — present; `role` is the per-workspace override
  *                                  role (the max of the direct grant and any
  *                                  group elevation), or `null` when no grant.
+ *                                  A two-phase resolver that granted on the
+ *                                  cheap-grant probe reports the DIRECT role
+ *                                  with group elevation unread — same decision,
+ *                                  possibly under-reported role (see
+ *                                  {@link ParticipationCheapGrant}).
  */
 export type Participation =
   { excluded: true } | { excluded: false; role: IMembershipRole | null }
@@ -410,8 +415,84 @@ export interface AuthorizationInputs {
    * what lets a team admin short-circuit at `"team"` without ever reading (and
    * being denied by) an exclusion that does not apply to their entity-level
    * right.
+   *
+   * A resolver may consume {@link takeParticipationCheapGrant} synchronously at
+   * entry to skip its group-grant reads when the direct override alone already
+   * grants the capability under decision (see {@link ParticipationCheapGrant}).
    */
   resolveParticipation: () => Participation | Promise<Participation>
+}
+
+// ============================================================================
+// Two-phase participation (group-read avoidance)
+// ============================================================================
+
+/**
+ * A probe {@link resolveAuthorization} offers its participation resolver for
+ * the duration of the thunk call: given the DIRECT override role alone (group
+ * elevation unresolved), is the capability under decision already granted?
+ * When it answers true — and the principal is not excluded — the resolver may
+ * skip its group-grant reads entirely and report the direct role: group
+ * folding is elevate-only (`effectiveRole` takes the max), so an unread group
+ * role could only raise the effective role further, never flip that grant into
+ * a denial. The DECISION is identical either way; only the reads are saved.
+ */
+export type ParticipationCheapGrant = (
+  directRole: IMembershipRole | null
+) => boolean
+
+/**
+ * The single-shot handoff slot for the probe. `AuthorizationInputs.
+ * resolveParticipation` is a zero-arg thunk at every call site, so the probe
+ * cannot travel as a parameter without rewriting each thunk; instead
+ * `resolveAuthorization` arms this slot for exactly the SYNCHRONOUS prefix of
+ * the thunk call and withdraws it before awaiting. Single-threaded JS makes
+ * that window race-free: only a resolver invoked synchronously by the thunk can
+ * observe the probe, and it must consume it before its first await. A resolver
+ * that defers its read past an await (or one that predates the probe) simply
+ * takes `null` and performs the full resolution — correct, just unoptimized.
+ */
+let offeredCheapGrant: ParticipationCheapGrant | null = null
+
+/**
+ * Consume (single-shot) the cheap-grant probe armed by an in-flight
+ * {@link resolveAuthorization}, or `null` when none is — i.e. when the
+ * participation resolver was invoked directly (collab join, bot turn setup,
+ * the memory gates), which is exactly the opt-in to the FULL group resolution.
+ * Must be called synchronously at resolver entry, before any await.
+ */
+export function takeParticipationCheapGrant(): ParticipationCheapGrant | null {
+  const probe = offeredCheapGrant
+  offeredCheapGrant = null
+  return probe
+}
+
+/**
+ * The pure TWO-PHASE participation decision. Phase 1 is the direct-override
+ * read the caller has already performed (exclusion + the direct role); phase 2
+ * — the group-grant resolution, the expensive reads — runs ONLY when no armed
+ * cheap-grant probe can already grant on the direct role alone. Exclusion is
+ * honored before ANY allow: an excluded principal is denied regardless of team
+ * role, so the probe is never consulted for them. Pure — the group reads
+ * arrive as a thunk — so the server resolver stays a thin I/O binding and this
+ * decision composes with {@link resolveAuthorization} in unit tests.
+ */
+export async function decideParticipation(
+  direct: { excluded: boolean; directRole: IMembershipRole | null },
+  resolveGroupRole: () =>
+    IMembershipRole | null | Promise<IMembershipRole | null>,
+  cheapGrant: ParticipationCheapGrant | null
+): Promise<Participation> {
+  if (direct.excluded) return { excluded: true }
+  // Phase 1: the direct role alone already grants — group folding is
+  // elevate-only, so the unread group role could only raise the effective
+  // role, never revoke this grant. Skip the group reads entirely.
+  if (cheapGrant?.(direct.directRole)) {
+    return { excluded: false, role: direct.directRole }
+  }
+  // Phase 2: fold in the group elevation (or its absence).
+  const groupRole = await resolveGroupRole()
+  return { excluded: false, role: effectiveRole(direct.directRole, groupRole) }
 }
 
 /**
@@ -431,6 +512,26 @@ export async function resolveAuthorization(
   let bestEffective: IMembershipRole | null = teamRole ?? null
   let sawExcluded = false
 
+  // Call the participation thunk with the cheap-grant probe armed for exactly
+  // its SYNCHRONOUS prefix: a two-phase resolver consumes the probe at entry
+  // (see `takeParticipationCheapGrant`) to skip its group reads when the
+  // direct role alone already grants; the `finally` withdraws it before the
+  // caller awaits, so the slot can never leak into other in-flight work.
+  const resolveParticipationWithProbe = ():
+    Participation | Promise<Participation> => {
+    offeredCheapGrant = (directRole) =>
+      can(principal, capability, {
+        scope: "workspace",
+        teamRole,
+        workspaceRole: directRole,
+      })
+    try {
+      return inputs.resolveParticipation()
+    } finally {
+      offeredCheapGrant = null
+    }
+  }
+
   for (const scope of scopesFor(capability)) {
     if (scope === "workspace") {
       // Resolve participation lazily, once. Reaching here at all means an
@@ -443,7 +544,7 @@ export async function resolveAuthorization(
       // (and reporting) an "excluded" state. (A deliberate future
       // "workspace-only" principal would relax this.)
       if (teamRole == null) continue
-      if (!participation) participation = await inputs.resolveParticipation()
+      if (!participation) participation = await resolveParticipationWithProbe()
       if (participation.excluded) {
         sawExcluded = true
         continue

@@ -134,7 +134,7 @@ const BOT_AGENT_MODEL_REGISTRY = [
   { id: "gemini-3.1-pro-preview", provider: "google" },
   // Anthropic Claude
   { id: "claude-fable-5", provider: "anthropic" },
-  { id: "claude-opus-4-8", provider: "anthropic" },
+  { id: "claude-opus-5", provider: "anthropic" },
   { id: "claude-sonnet-5", provider: "anthropic" },
   // OpenAI
   { id: "gpt-5.6", provider: "openai" },

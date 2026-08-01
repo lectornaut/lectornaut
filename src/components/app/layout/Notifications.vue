@@ -121,8 +121,13 @@ useInfiniteScroll(
               t("components.notifications.title")
             }}</span>
           </div>
-          <TabsList>
-            <TabsTrigger value="inbox">
+          <TabsList
+            class="no-scrollbar bg-input/50 scroll-fade-x min-w-0 shrink justify-start overflow-clip overflow-x-auto p-0"
+          >
+            <TabsTrigger
+              value="inbox"
+              class="data-[state=active]:border-border! data-[state=active]:bg-background h-full"
+            >
               <IconInbox />
               {{ t("components.notifications.inbox") }}
               <Badge
@@ -133,7 +138,10 @@ useInfiniteScroll(
                 {{ inboxUnreadCount }}
               </Badge>
             </TabsTrigger>
-            <TabsTrigger value="saved">
+            <TabsTrigger
+              value="saved"
+              class="data-[state=active]:border-border! data-[state=active]:bg-background h-full"
+            >
               <IconBookmark />
               {{ t("components.notifications.saved") }}
               <Badge
@@ -144,7 +152,10 @@ useInfiniteScroll(
                 {{ savedUnreadCount }}
               </Badge>
             </TabsTrigger>
-            <TabsTrigger value="done">
+            <TabsTrigger
+              value="done"
+              class="data-[state=active]:border-border! data-[state=active]:bg-background h-full"
+            >
               <IconCheck />
               {{ t("components.notifications.done") }}
               <Badge

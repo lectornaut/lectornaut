@@ -51,3 +51,21 @@ export const queryClient = new QueryClient({
     },
   },
 })
+
+/**
+ * Self-heal for terminally-errored queries. `refetchOnReconnect: false` above
+ * is correct for HEALTHY queries — their listener re-delivers on its own — but
+ * an errored query has no listener left: once the retries above exhaust it
+ * stays errored (and, never having succeeded, permanently stale) for the rest
+ * of the session, wedging every bootstrap gate derived from it. When
+ * connectivity returns, refetch exactly the errored set; healthy queries stay
+ * untouched.
+ */
+export const isErroredQuery = (query: { state: { status: string } }): boolean =>
+  query.state.status === "error"
+
+if (typeof window !== "undefined") {
+  window.addEventListener("online", () => {
+    void queryClient.refetchQueries({ predicate: isErroredQuery })
+  })
+}

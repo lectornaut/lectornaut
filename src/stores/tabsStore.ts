@@ -14,10 +14,20 @@
  * (loading), `null` (confirmed-absent), or the parsed document.
  * Snapshot-application is gated by `pendingTabIds` so an in-flight optimistic
  * edit is never clobbered by an interim server tick.
+ *
+ * Watcher-lane persistence is split by change kind (see
+ * {@link classifyTabsChange}): structural strip changes keep the fast 500ms
+ * debounce, while passive pointer changes (active tab id, the active tab's
+ * path refresh from navigation — the highest-volume write family in the app)
+ * ride a long debounce flushed on `visibilitychange`→hidden and `pagehide`.
+ * A failed lane persist arms one bounded retry (re-armed while still dirty)
+ * instead of leaving the doc silently stale. Local state stays instant either
+ * way.
  */
 
 import { generateId, isDefaultRoute } from "@/helpers/utilities"
 import { firestore } from "@/modules/firebase"
+import { canPersistTabs, shouldMarkHydrated } from "@/stores/tabsStoreHydration"
 import { useTeamStore } from "@/stores/teamStore"
 import { useWorkspaceStore } from "@/stores/workspaceStore"
 import type {
@@ -32,16 +42,101 @@ import {
 } from "@/utils/firebase/firebase-optimistic"
 import { useDocumentQuery } from "@/utils/firebase/firebase-query"
 import { safeSetDocument as safeSetDoc } from "@/utils/firebase/firebase-sync-engine"
-import { watchDebounced } from "@vueuse/core"
+import {
+  tryOnScopeDispose,
+  useEventListener,
+  watchDebounced,
+} from "@vueuse/core"
 import { doc } from "firebase/firestore"
 import { defineStore, storeToRefs } from "pinia"
 import { useCurrentUser } from "vuefire"
 
 export type Tab = LayoutTab
 
-// Debounce for every "settled state → Firestore" watcher. Long enough to
+// Debounce for the STRUCTURAL "settled state → Firestore" lane. Long enough to
 // collapse a burst of edits into one write, short enough to feel instant.
 const PERSIST_DEBOUNCE_MS = 500
+
+// Debounce for the POINTER lane. Every in-app navigation refreshes the active
+// tab's pointer state, making it plausibly the highest-volume write family in
+// the system — and each whole-doc write costs a full settlement round trip.
+// Local state is instant either way and cross-device pointer sync tolerates
+// seconds of lag, so coalesce hard and rely on the hidden/pagehide flush for
+// the tail write.
+const POINTER_PERSIST_DEBOUNCE_MS = 15_000
+// Ceiling for continuous navigation: without it, a user who never pauses for
+// the full debounce window would defer the pointer write indefinitely.
+const POINTER_PERSIST_MAX_WAIT_MS = 60_000
+// Delay for the single bounded re-attempt after a watcher-lane persist
+// rejection (see `armPersistRetry` in the store below).
+const PERSIST_RETRY_DELAY_MS = 30_000
+
+/** The exact shape `persistTabs` writes (and a snapshot application yields). */
+export type PersistedTabsState = {
+  tabs: Tab[]
+  active: string
+  recentlyClosed: Tab[]
+}
+
+export type TabsPersistChangeKind = "none" | "pointer" | "structural"
+
+const sameTabIdentity = (a: Tab, b: Tab): boolean =>
+  a.id === b.id && Boolean(a.pinned) === Boolean(b.pinned)
+
+const sameClosedEntry = (a: Tab, b: Tab): boolean =>
+  a.id === b.id &&
+  a.name === b.name &&
+  a.fullPath === b.fullPath &&
+  Boolean(a.pinned) === Boolean(b.pinned)
+
+/**
+ * Classify the delta between two persisted shapes for the split watcher lanes.
+ * Pure — exported for tests.
+ *
+ * - `structural`: the strip itself changed — a tab added/removed/reordered, a
+ *   pin toggled, or the recently-closed history edited. Rides the fast
+ *   {@link PERSIST_DEBOUNCE_MS} lane.
+ * - `pointer`: only passive cursor state moved — the active tab id, or an
+ *   existing tab's path/name refresh as navigation consumes it, with the tab
+ *   set otherwise identical. Rides the long
+ *   {@link POINTER_PERSIST_DEBOUNCE_MS} lane.
+ * - `none`: shapes match, nothing to persist. This is also what kills the
+ *   write echo: applying a remote snapshot refreshes the lane baseline, so
+ *   the lane timers that application triggers classify `none` and skip.
+ */
+export function classifyTabsChange(
+  previous: PersistedTabsState,
+  next: PersistedTabsState
+): TabsPersistChangeKind {
+  if (
+    previous.recentlyClosed.length !== next.recentlyClosed.length ||
+    previous.recentlyClosed.some((entry, i) => {
+      const other = next.recentlyClosed[i]
+      return !other || !sameClosedEntry(entry, other)
+    })
+  ) {
+    return "structural"
+  }
+
+  if (previous.tabs.length !== next.tabs.length) return "structural"
+
+  let pointerChanged = previous.active !== next.active
+  for (let i = 0; i < previous.tabs.length; i++) {
+    const prevTab = previous.tabs[i]
+    const nextTab = next.tabs[i]
+    if (!prevTab || !nextTab || !sameTabIdentity(prevTab, nextTab)) {
+      return "structural"
+    }
+    if (
+      prevTab.fullPath !== nextTab.fullPath ||
+      prevTab.name !== nextTab.name
+    ) {
+      pointerChanged = true
+    }
+  }
+
+  return pointerChanged ? "pointer" : "none"
+}
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null
@@ -91,6 +186,13 @@ export const useTabsStore = defineStore("tabs", () => {
 
   const isHydrated = ref(false)
 
+  // Doc path of the last successful read this session (reset on team/workspace
+  // switch). Latched by the hydration gate below and required by the persist
+  // guard, so persistence stays unlocked across mid-session refetch windows
+  // (where `isHydrated` drops back to false) but never opens before one
+  // successful read of the doc it would overwrite.
+  const confirmedReadPath = ref<string | null>(null)
+
   // Pending-operation tracking. While a tab id sits in `pendingTabIds`, inbound
   // snapshots for the tabs doc are ignored so the optimistic edit survives.
   const pendingTabIds = shallowRef(createPendingSet())
@@ -138,25 +240,74 @@ export const useTabsStore = defineStore("tabs", () => {
   // Reads (TanStack Query, realtime)
   // ==========================================================================
 
-  const { data: tabsDocData, isLoading: tabsPending } =
-    useDocumentQuery(tabsDocRef)
+  const {
+    data: tabsDocData,
+    isLoading: tabsPending,
+    isError: tabsReadFailed,
+    error: tabsReadError,
+  } = useDocumentQuery(tabsDocRef)
 
   const isLoading = computed(() => tabsPending.value && !isHydrated.value)
+
+  // Terminal tabs read failure, exposed so UI can surface a retry. Recovery
+  // lands via normal query invalidation/refetch flipping the hydration gate
+  // back on; nothing here needs to be re-armed manually.
+  const hydrationError = computed(() =>
+    tabsReadFailed.value ? tabsReadError.value : null
+  )
 
   // ==========================================================================
   // Persistence helpers (function declarations: hoisted so the watchers and
   // the debounced sync below can reference them before this point in source).
   // ==========================================================================
 
+  // Last server-confirmed shape: the most recent applied snapshot, or the
+  // payload of the most recent successful persist. The watcher lanes classify
+  // live state against this baseline, so a persist from ANY path (lane, flush,
+  // retry, or a `runWrite` action) marks the covered delta clean — no lane
+  // re-writes what another path already persisted, and applying a remote
+  // snapshot never echoes an identical doc back out. Not reactive on purpose:
+  // pure bookkeeping, and every mutation replaces (never mutates) the arrays
+  // it holds.
+  let persistedBaseline: PersistedTabsState = {
+    tabs: [],
+    active: "",
+    recentlyClosed: [],
+  }
+
+  function currentPersistShape(): PersistedTabsState {
+    return {
+      tabs: tabs.value,
+      active: activeTabId.value,
+      recentlyClosed: recentlyClosed.value,
+    }
+  }
+
   function persistTabs(): Promise<boolean> {
-    return safeSetDoc(
-      tabsDocRef.value,
-      {
-        tabs: tabs.value,
-        active: activeTabId.value,
-        recentlyClosed: recentlyClosed.value,
-      },
-      "layout.tabs.persist"
+    // Structural guard at the one whole-doc write seam: this payload replaces
+    // the saved `tabs`/`recentlyClosed` arrays wholesale (merge:true only
+    // merges maps), so it must never run before a successful read of the doc
+    // it targets — after a terminal read error the local strip is empty, and a
+    // single navigation would silently wipe the user's saved tabs
+    // cross-device. Local tab mutations made while blocked stay local and may
+    // be overwritten when real hydration arrives — acceptable.
+    if (
+      !canPersistTabs({
+        targetPath: tabsDocRef.value?.path ?? null,
+        confirmedReadPath: confirmedReadPath.value,
+      })
+    ) {
+      return Promise.resolve(false)
+    }
+    // Capture the payload so a success promotes exactly what was written to
+    // the lane baseline — live state may move again while the write is in
+    // flight, and that residue must keep classifying as dirty.
+    const payload = currentPersistShape()
+    return safeSetDoc(tabsDocRef.value, payload, "layout.tabs.persist").then(
+      (persisted) => {
+        if (persisted) persistedBaseline = payload
+        return persisted
+      }
     )
   }
 
@@ -211,6 +362,7 @@ export const useTabsStore = defineStore("tabs", () => {
         activeTabId.value = ""
         recentlyClosed.value = []
         tabIndicators.value = {}
+        persistedBaseline = currentPersistShape()
         return
       }
 
@@ -219,6 +371,10 @@ export const useTabsStore = defineStore("tabs", () => {
       activeTabId.value = tabsDoc?.active ?? ""
       recentlyClosed.value = normalizeTabHistory(tabsDoc?.recentlyClosed ?? [])
       pruneTabIndicators(tabs.value)
+      // The applied snapshot IS the server state — refresh the lane baseline
+      // so the persistence watchers this application triggers classify `none`
+      // instead of echoing the identical doc back out.
+      persistedBaseline = currentPersistShape()
     },
     { immediate: true }
   )
@@ -235,43 +391,173 @@ export const useTabsStore = defineStore("tabs", () => {
       if (!teamChanged && !workspaceChanged) return
 
       isHydrated.value = false
+      confirmedReadPath.value = null
       tabs.value = []
       activeTabId.value = ""
       recentlyClosed.value = []
       tabIndicators.value = {}
+      // The lanes target a different doc now: drop any armed failure retry and
+      // re-seed the baseline at the cleared state. Un-persisted dirt from the
+      // outgoing workspace is abandoned (same semantics as a rollback).
+      cancelPersistRetry()
+      persistedBaseline = currentPersistShape()
     }
   )
 
-  // Hydration gate: hydrated only once we have a valid tabs ref AND the tabs
-  // doc is no longer pending. Re-enters hydration mode while it refreshes.
+  // Hydration gate: hydrated only after a SUCCESSFUL read for the current tabs
+  // ref — the doc's data landed, or the listener confirmed it absent. A
+  // terminal read error also ends with `tabsPending === false` (and `data`
+  // still undefined), so "no longer pending" alone must never be the signal.
+  // Re-enters hydration mode while the query refreshes; `confirmedReadPath`
+  // latches the first success so persistence stays unlocked across those
+  // windows.
   watch(
-    [tabsPending, tabsDocRef],
-    ([tp, tabsRef]) => {
-      if (!tabsRef || tp) {
-        isHydrated.value = false
-        return
-      }
-      isHydrated.value = true
+    [tabsDocRef, tabsDocData, tabsPending, tabsReadFailed],
+    ([tabsRef, snapshot, tp, readFailed]) => {
+      const hydrated = shouldMarkHydrated({
+        hasRef: Boolean(tabsRef),
+        hasData: snapshot !== undefined && snapshot !== null,
+        confirmedAbsent: snapshot === null,
+        isError: readFailed,
+        isPending: tp,
+      })
+      isHydrated.value = hydrated
+      if (hydrated && tabsRef) confirmedReadPath.value = tabsRef.path
     },
     { immediate: true }
   )
 
   // ==========================================================================
-  // Persistence watchers (debounced: settled local state → Firestore)
+  // Persistence watchers (debounced: settled local state → Firestore, split
+  // into a fast structural lane and a long pointer lane by classifying the
+  // live state against `persistedBaseline`)
   // ==========================================================================
 
-  // Tabs. No `deep` — every mutation reassigns the array or replaces tab
-  // objects, so top-level reactivity is enough (and a deep walk would fire on
-  // every route navigation via `updateActiveTab`).
+  // Shared lane gate: an in-flight `runWrite` op owns persistence right now,
+  // and nothing may write before hydration (P0 persist guard).
+  function canRunPersistLane(): boolean {
+    if (pendingTabIds.value.size > 0) return false
+    if (!tabsDocRef.value || tabsPending.value || !isHydrated.value)
+      return false
+    return true
+  }
+
+  // Single bounded re-attempt after a lane persist failure (see
+  // `armPersistRetry`). A raw timer instead of another debounced watcher: it
+  // must fire with NO further state changes — the exact case the watcher lanes
+  // can never cover.
+  let persistRetryTimer: ReturnType<typeof setTimeout> | null = null
+
+  function cancelPersistRetry() {
+    if (persistRetryTimer) {
+      clearTimeout(persistRetryTimer)
+      persistRetryTimer = null
+    }
+  }
+
+  // Arm ONE pending retry after `PERSIST_RETRY_DELAY_MS`. Re-armed by the next
+  // failure while still dirty — a spaced ladder, never a tight loop — and
+  // superseded whenever a lane/flush dispatch takes over (mirrors the snapshot
+  // manager's retry scheduler in `utils/collab/snapshots.ts`). At fire time it
+  // re-checks the gate and the classification: a runWrite op in flight or a
+  // closed persist guard drops the retry (hydration re-seeds the baseline
+  // anyway), and a clean baseline ends the ladder.
+  function armPersistRetry() {
+    if (persistRetryTimer) return
+    persistRetryTimer = setTimeout(() => {
+      persistRetryTimer = null
+      if (!canRunPersistLane()) return
+      if (
+        classifyTabsChange(persistedBaseline, currentPersistShape()) === "none"
+      ) {
+        return
+      }
+      dispatchLanePersist()
+    }, PERSIST_RETRY_DELAY_MS)
+  }
+
+  // The one watcher-lane write path: this dispatch owns the retry decision, so
+  // any armed retry is superseded first. `safeSetDoc` resolves `false` (and
+  // reports through the sync engine's normal telemetry) on failure — the lane
+  // reacts by arming the bounded retry instead of leaving the doc stale.
+  // `runWrite` actions do NOT route through here: their failure path rolls
+  // local state back to the baseline, so there is nothing left to retry.
+  function dispatchLanePersist() {
+    cancelPersistRetry()
+    void persistTabs().then((persisted) => {
+      if (!persisted) armPersistRetry()
+    })
+  }
+
+  // Immediate tail write for the pointer lane (also exposed on the store):
+  // fired on `visibilitychange`→hidden and `pagehide` so a long-debounced
+  // pointer move can't be lost to a tab switch or window close.
+  function flushTabsPersist() {
+    if (!canRunPersistLane()) return
+    if (
+      classifyTabsChange(persistedBaseline, currentPersistShape()) === "none"
+    ) {
+      return
+    }
+    dispatchLanePersist()
+  }
+
+  // STRUCTURAL lane: the strip itself changed — persist fast. No `deep` —
+  // every mutation reassigns the array or replaces tab objects, so top-level
+  // reactivity is enough (and a deep walk would fire on every route navigation
+  // via `updateActiveTab`). A structural persist inherently flushes the
+  // pointer lane: the payload carries the newest pointer state (persists
+  // always write live state, so ordering can never invert) and refreshes the
+  // baseline, so a pending pointer timer classifies `none` and skips.
   watchDebounced(
     [tabs, activeTabId, recentlyClosed],
     () => {
-      if (pendingTabIds.value.size > 0) return
-      if (!tabsDocRef.value || tabsPending.value || !isHydrated.value) return
-      void persistTabs()
+      if (!canRunPersistLane()) return
+      if (
+        classifyTabsChange(persistedBaseline, currentPersistShape()) !==
+        "structural"
+      ) {
+        return
+      }
+      dispatchLanePersist()
     },
     { debounce: PERSIST_DEBOUNCE_MS }
   )
+
+  // POINTER lane: only passive cursor state moved — coalesce hard, with a
+  // maxWait ceiling so continuous navigation still checkpoints. Persists on
+  // any non-`none` delta (not just `pointer`): if a structural persist failed
+  // and left the baseline stale, this lane's write covers it too — the payload
+  // is always the whole live doc.
+  watchDebounced(
+    [tabs, activeTabId, recentlyClosed],
+    () => {
+      if (!canRunPersistLane()) return
+      if (
+        classifyTabsChange(persistedBaseline, currentPersistShape()) === "none"
+      ) {
+        return
+      }
+      dispatchLanePersist()
+    },
+    {
+      debounce: POINTER_PERSIST_DEBOUNCE_MS,
+      maxWait: POINTER_PERSIST_MAX_WAIT_MS,
+    }
+  )
+
+  // Tail-write triggers (guarded: absent in the node test environment).
+  if (typeof document !== "undefined") {
+    useEventListener(document, "visibilitychange", () => {
+      if (document.visibilityState === "hidden") flushTabsPersist()
+    })
+  }
+  if (typeof window !== "undefined") {
+    useEventListener(window, "pagehide", () => flushTabsPersist())
+  }
+
+  // Store teardown (tests, HMR): nothing should fire after the scope is gone.
+  tryOnScopeDispose(cancelPersistRetry)
 
   // ==========================================================================
   // Tab actions (optimistic)
@@ -600,6 +886,7 @@ export const useTabsStore = defineStore("tabs", () => {
     tabIndicators,
     isLoading,
     isHydrated,
+    hydrationError,
 
     // Pending state
     pendingTabIds,
@@ -623,5 +910,6 @@ export const useTabsStore = defineStore("tabs", () => {
     clearRecentlyClosed,
     reopenLastClosed,
     normalizeTabOrder,
+    flushTabsPersist,
   }
 })

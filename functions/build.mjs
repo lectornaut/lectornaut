@@ -44,6 +44,16 @@ async function writeDeployPackageJson() {
     main: "index.js",
     engines: pkg.engines,
     dependencies: pkg.dependencies,
+    // TODO: Cloud Build npm-installs from this manifest with no lockfile, so
+    // transitives drift between deploys. @firebase/database-compat@2.1.5
+    // (2026-07-30) hard-requires its new @firebase/app peer, which the GCF
+    // builder doesn't install → every container exits at load. Pin to the
+    // pnpm-locked version; drop once upstream ships a fixed release.
+    // ponytail: single override; if another transitive drifts, ship a real
+    // package-lock.json (npm ci) instead of piling more pins here.
+    overrides: {
+      "@firebase/database-compat": "2.1.4",
+    },
   }
   await writeFile(
     path.join(OUT_DIR, "package.json"),

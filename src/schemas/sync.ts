@@ -18,12 +18,21 @@ export const syncMutationTypeSchema = z.enum(SYNC_MUTATION_TYPES)
  * `@lectornaut/shared/domain`: the server's `SyncOperationStatus`
  * (`pending | ack | reject`) is a different state machine (per-op Firestore
  * ack), not a drifted copy of this one — only `SyncMutationType` is shared.
+ *
+ * `parked` is purely client-local — an op that exhausted its send attempts
+ * without ever receiving a server verdict — and in fact purely IN-MEMORY: it
+ * maps to the remote `pending` status when written to Firestore (rules
+ * constrain the op-doc enum) AND is demoted to `pending` when persisted to
+ * the shared localStorage outbox (older app versions quarantine-and-drop
+ * statuses outside their enum — see `toPersistedOperations`). The member
+ * stays in this schema so in-memory snapshots still validate.
  */
 export const syncOperationStatusSchema = z.enum([
   "pending",
   "sent",
   "acked",
   "rejected",
+  "parked",
 ])
 
 export const syncBaseVersionSchema = z.object({
@@ -40,6 +49,17 @@ export const syncMutatePayloadSchema = z.object({
   baseVersion: syncBaseVersionSchema.nullable().optional(),
 })
 
+/**
+ * One persisted outbox entry.
+ *
+ * SETTLED (acked/rejected) entries are stored PAYLOAD-LESS: the engine strips
+ * `data` and `baseVersion` the moment a verdict lands (see
+ * `stripSettledOperationPayload` in `firebase-sync-queue.ts`) because settled
+ * retention only serves duplicate-verdict dedup and metrics, while retaining
+ * an hour of ~1MB snapshot payloads would blow the localStorage quota. Both
+ * fields therefore MUST stay optional/absent-tolerant here — stripped entries
+ * and old fat entries persisted by earlier builds parse alike.
+ */
 export const syncOutboxOperationSchema = syncMutatePayloadSchema.extend({
   id: z.string(),
   userId: z.string(),
@@ -48,6 +68,12 @@ export const syncOutboxOperationSchema = syncMutatePayloadSchema.extend({
   attempts: z.number(),
   createdAt: z.number(),
   updatedAt: z.number(),
+  /**
+   * When the last FULL (ladder) attempt was sent. Fast retries deliberately
+   * never restamp it: retry eligibility and fast-vs-full classification both
+   * measure from this anchor, so a burst of detected callable failures cannot
+   * restart the ladder clock and stretch time-to-park past ~45s.
+   */
   sentAt: z.number().optional(),
   settledAt: z.number().optional(),
   errorMessage: z.string().optional(),
@@ -59,6 +85,22 @@ export const syncOutboxOperationSchema = syncMutatePayloadSchema.extend({
    * older app versions still parse.
    */
   remoteCreated: z.boolean().optional(),
+  /**
+   * Consecutive fast retries since the last full (ladder) attempt. Fast
+   * retries re-invoke the callable after a DETECTED transport failure and are
+   * tracked separately from `attempts` so they cannot burn the attempt budget
+   * early. Optional (like every field below) so entries persisted by older
+   * app versions still parse.
+   */
+  fastRetries: z.number().optional(),
+  /**
+   * Eligibility pulled forward by a detected callable failure: the op may
+   * re-send at this timestamp instead of waiting out the full ladder window.
+   * The ladder remains the ceiling — see `computeRetryInMs`.
+   */
+  nextEligibleAt: z.number().optional(),
+  /** When the op entered the `parked` status (diagnostics only). */
+  parkedAt: z.number().optional(),
 })
 
 /**

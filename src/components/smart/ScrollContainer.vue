@@ -21,7 +21,7 @@ defineExpose({
 </script>
 
 <template>
-  <!-- Native scroll viewport. The scroll-fade-* utilities (styles/index.css)
+  <!-- Native scroll viewport. The scroll-fade-* utilities (shadcn-vue/tailwind.css)
        carry the edge "more content" hints via scroll-driven CSS animations —
        no scroll listeners, no measurement, no library. `flex-col` matches the
        column flex context the old OverlayScrollbars content element imposed,

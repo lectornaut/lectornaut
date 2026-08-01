@@ -452,9 +452,9 @@ export const botModels = [
     supportsEffort: true,
   },
   {
-    id: "claude-opus-4-8",
+    id: "claude-opus-5",
     provider: "anthropic",
-    name: "Claude Opus 4.8",
+    name: "Claude Opus 5",
     description: "Most capable Opus — long-horizon reasoning and writing.",
     badge: "Opus",
     supportsEffort: true,

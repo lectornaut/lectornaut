@@ -2,8 +2,10 @@ import type { Transaction } from "firebase-admin/firestore"
 import { FieldValue } from "firebase-admin/firestore"
 import { db } from "./firebase.js"
 import {
+  decideParticipation,
   effectiveRole,
   isMembershipRole,
+  takeParticipationCheapGrant,
   type Participation,
 } from "./permissions.js"
 import type { IMembershipRole } from "./types.js"
@@ -46,11 +48,24 @@ export async function resolveWorkspaceGroupRole(
 }
 
 /**
- * The principal's PARTICIPATION in a workspace, resolved as DATA (never throws):
+ * The principal's PARTICIPATION in a workspace, resolved as DATA (never
+ * throws), in TWO PHASES (`decideParticipation`):
  *
- *   - `{ excluded: true }`        when the direct override marks them excluded.
+ *   - `{ excluded: true }`        when the direct override marks them excluded
+ *     (honored before ANY allow — the probe is never consulted for them).
  *   - `{ excluded: false, role }` otherwise, where `role` is the elevate-only
- *     per-workspace role `max(directOverride, groupRole)`, or `null`.
+ *     per-workspace role `max(directOverride, groupRole)`, or `null` — or just
+ *     `directOverride` when the cheap-grant probe granted (same decision, the
+ *     group reads skipped).
+ *
+ * Phase 1 is the direct-override read alone: when an in-flight
+ * `resolveAuthorization` armed the cheap-grant probe and the direct role
+ * already grants the capability under decision (owner/admin/member on the
+ * content path), resolution stops there — the group query + grant getAll
+ * (>= 1 billed read per call, paid every snapshot settlement) are skipped.
+ * Phase 2 folds in the group contribution only when phase 1 could not grant,
+ * which is what keeps elevate-only guests ALLOWED. A direct call (collab, bot,
+ * memory — no probe armed) always performs the full resolution.
  *
  * The data-returning counterpart to {@link getWorkspaceRoleOverride}: exclusion
  * becomes a value the scope walk denies on (see `resolveAuthorization`), not a
@@ -68,27 +83,28 @@ export async function resolveParticipation(
   principalId: string,
   transaction?: Transaction
 ): Promise<Participation> {
+  // Single-shot: must be consumed synchronously at entry, before the first
+  // await, while the arming `resolveAuthorization` still holds its
+  // synchronous window open (see `takeParticipationCheapGrant`).
+  const cheapGrant = takeParticipationCheapGrant()
+
   const overrideRef = db.doc(
     `teams/${teamId}/memberships/${principalId}/workspaces/${workspaceId}`
   )
   const overrideSnap = transaction
     ? await transaction.get(overrideRef)
     : await overrideRef.get()
+  const overrideData = overrideSnap.exists ? overrideSnap.data() : undefined
+  const directRoleRaw = overrideData?.role
 
-  if (overrideSnap.exists && overrideSnap.data()?.excluded === true) {
-    return { excluded: true }
-  }
-
-  const directRoleRaw = overrideSnap.exists
-    ? overrideSnap.data()?.role
-    : undefined
-  const directRole = isMembershipRole(directRoleRaw) ? directRoleRaw : null
-  const groupRole = await resolveWorkspaceGroupRole(
-    teamId,
-    workspaceId,
-    principalId
+  return decideParticipation(
+    {
+      excluded: overrideData?.excluded === true,
+      directRole: isMembershipRole(directRoleRaw) ? directRoleRaw : null,
+    },
+    () => resolveWorkspaceGroupRole(teamId, workspaceId, principalId),
+    cheapGrant
   )
-  return { excluded: false, role: effectiveRole(directRole, groupRole) }
 }
 
 /**

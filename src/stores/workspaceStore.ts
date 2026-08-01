@@ -44,6 +44,42 @@ import { mutateSetDocument } from "@/utils/firebase/firebase-sync-engine"
 import { query as fsQuery, Timestamp, where } from "firebase/firestore"
 import { defineStore, storeToRefs } from "pinia"
 
+/**
+ * App-shell bootstrap gate, extracted pure for direct unit-testing.
+ *
+ * Hold the spinner until the selection is definitively resolved: a selected id
+ * that doesn't yet map to a workspace keeps spinning (either the workspace
+ * arrives, or the cleanup watch nulls the selection out). Cached hydration
+ * deliberately does NOT release the gate — a stale cached list can claim
+ * "resolved" while missing the selected workspace and flash the selector.
+ *
+ * EXCEPTION — a terminally-errored list query. Its retries are exhausted,
+ * `refetchOnWindowFocus`/`refetchOnReconnect` are off, and a never-succeeded
+ * query is permanently stale, so nothing inside the query layer will ever
+ * resolve the selection. A terminal failure is a definitive answer that must
+ * release the gate, not spin forever (mirrors authStore's membership-
+ * preferences escape): the shell falls through to the workspace selector, and
+ * the queryClient's `online` listener refetches the errored query — on success
+ * the selection resolves reactively from there.
+ */
+export interface WorkspaceBootstrapInputs {
+  hasTeam: boolean
+  isSelectionResolved: boolean
+  hasSelectedWorkspaceId: boolean
+  isWorkspaceResolved: boolean
+  isListErrored: boolean
+}
+
+export function evaluateWorkspaceBootstrap(
+  inputs: WorkspaceBootstrapInputs
+): boolean {
+  if (!inputs.hasTeam) return false
+  if (!inputs.isSelectionResolved) return true
+  if (!inputs.hasSelectedWorkspaceId) return false
+  if (inputs.isWorkspaceResolved) return false
+  return !inputs.isListErrored
+}
+
 export const useWorkspaceStore = defineStore("workspaces", () => {
   const authStore = useAuthStore()
   const membershipStore = useMembershipStore()
@@ -137,17 +173,16 @@ export const useWorkspaceStore = defineStore("workspaces", () => {
     return isMembershipLoading.value && !hasCurrentTeamMembership.value
   })
 
-  // Hold the app-shell spinner until the selection is definitively resolved: a
-  // selected id that doesn't yet map to a workspace keeps spinning (either the
-  // workspace arrives, or the cleanup watch nulls the selection out). Cached
-  // hydration deliberately does NOT release the gate — a stale cached list can
-  // claim "resolved" while missing the selected workspace and flash the selector.
-  const isBootstrapping = computed(() => {
-    if (!currentTeamId.value) return false
-    if (!hasResolvedCurrentWorkspaceSelection.value) return true
-    if (currentWorkspaceId.value) return !currentWorkspace.value
-    return false
-  })
+  // Decision table lives on `evaluateWorkspaceBootstrap` (pure, unit-tested).
+  const isBootstrapping = computed(() =>
+    evaluateWorkspaceBootstrap({
+      hasTeam: !!currentTeamId.value,
+      isSelectionResolved: hasResolvedCurrentWorkspaceSelection.value,
+      hasSelectedWorkspaceId: !!currentWorkspaceId.value,
+      isWorkspaceResolved: !!currentWorkspace.value,
+      isListErrored: workspacesQuery.isError.value,
+    })
+  )
 
   const isWorkspacePending = computed(
     () => (id: string) => pendingWorkspaceIds.value.has(id)

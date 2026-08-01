@@ -93,17 +93,17 @@
           "order": "ASCENDING"
         },
         {
-          "fieldPath": "processedAt",
+          "fieldPath": "createdAt",
           "order": "ASCENDING"
         }
       ]
     },
     {
       "collectionGroup": "syncOperations",
-      "queryScope": "COLLECTION_GROUP",
+      "queryScope": "COLLECTION",
       "fields": [
         {
-          "fieldPath": "status",
+          "fieldPath": "clientId",
           "order": "ASCENDING"
         },
         {

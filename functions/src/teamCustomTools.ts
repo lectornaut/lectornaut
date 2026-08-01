@@ -235,7 +235,7 @@ async function executePromptTemplate(
   } else if (context?.effectiveModel) {
     modelName = context.effectiveModel
   } else {
-    modelName = "gemini-2.5-flash"
+    modelName = "gemini-3.6-flash"
   }
   // The generation call deliberately avoids `output: { schema }`
   // because the tool's outputSchema is admin-defined and may be
