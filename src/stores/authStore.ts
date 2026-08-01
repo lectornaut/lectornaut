@@ -685,6 +685,13 @@ export const useAuthStore = defineStore("auth", () => {
       ...(photoURL !== undefined ? { photoURL: normalizedPhotoURL } : {}),
     }
 
+    // Deliberately NO `pending: { ref: pendingUserIds }` here: the profile
+    // cache is already held via `keys`, while `pendingUserIds` gates the
+    // PREFERENCES overlays and the team-selection release guard — marking it
+    // for a profile write made the preference getters go overlay-first
+    // spuriously, and its unguarded release (no selection generation) cleared
+    // the uid while a slow team-switch write was still in flight, reverting
+    // `currentTeamId` to the old team until the ack snapshot landed.
     await runWrite({
       keys: [key],
       apply: () => queryClient.setQueryData(key, optimistic),
@@ -692,7 +699,6 @@ export const useAuthStore = defineStore("auth", () => {
       fn: async () => {
         await updateOwnUserProfileFn(payload)
       },
-      pending: { ref: pendingUserIds, ids: [user.uid] },
     })
   }
 

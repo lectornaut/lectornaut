@@ -20,6 +20,8 @@ const MAX_SNAPSHOT_BYTES = 750_000 // ~750KB limit before base64 expansion hits 
 export const SNAPSHOT_RETRY_DELAYS_MS: readonly number[] = [
   15_000, 30_000, 60_000,
 ]
+// Cap on how long destroy() waits for the final save's verdict — see destroy.
+const DESTROY_SAVE_WAIT_MS = 5_000
 
 export interface SnapshotRetryScheduler {
   /** Arm (or re-arm) the retry timer with the next escalated delay. */
@@ -355,8 +357,17 @@ export function createSnapshotManager(
     }
     retryScheduler.cancel()
 
-    // Final flush before marking as destroyed
-    await runSave()
+    // Final flush before marking as destroyed — BOUNDED. The write is
+    // durable the moment it enters the sync outbox; only the server VERDICT
+    // is awaited beyond that, and a parked op's verdict can stay pending
+    // indefinitely (offline / unreachable backend). The doc-switch path
+    // awaits destroy() before creating the next session, so an unbounded
+    // wait here wedges the editor with no error. Past the cap the save keeps
+    // settling in the background via the outbox.
+    await Promise.race([
+      runSave(),
+      new Promise<void>((resolve) => setTimeout(resolve, DESTROY_SAVE_WAIT_MS)),
+    ])
     destroyed = true
     // The final save runs before `destroyed` flips, so a failure re-arms the
     // retry — cancel again so nothing fires after teardown.

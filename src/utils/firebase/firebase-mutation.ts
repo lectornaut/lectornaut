@@ -30,7 +30,10 @@ import {
   removePending,
   withCloudSyncOperation,
 } from "@/utils/firebase/firebase-optimistic"
-import { acquireOptimisticHold } from "@/utils/firebase/firebase-query"
+import {
+  acquireOptimisticHold,
+  OPTIMISTIC_HOLD_TIMEOUT_MS,
+} from "@/utils/firebase/firebase-query"
 import type { FirestoreQueryKey } from "@/utils/firebase/firebase-query-keys"
 import { useMutation, type UseMutationReturnType } from "@tanstack/vue-query"
 import type { Ref } from "vue"
@@ -237,6 +240,18 @@ export function useRunWrite(
     if (pending) {
       for (const id of pending.ids) addPending(pending.ref, id)
     }
+    // Watchdog release: a PARKED write's promise stays pending indefinitely
+    // (see `mutate()`'s settlement contract), so the `finally` below — the
+    // only release path — may not run for hours. Stores gate inbound snapshot
+    // application and their persist lanes on these ids, so an unbounded hold
+    // wedges them for the session. Cap it like the cache hold
+    // (`OPTIMISTIC_HOLD_TIMEOUT_MS`): bounded staleness beats a dead lane,
+    // and the eventual settle's release is an idempotent Set delete.
+    const pendingWatchdog = pending
+      ? setTimeout(() => {
+          for (const id of pending.ids) removePending(pending.ref, id)
+        }, OPTIMISTIC_HOLD_TIMEOUT_MS)
+      : null
     try {
       await mutation.mutateAsync({
         keys,
@@ -246,6 +261,7 @@ export function useRunWrite(
         source: callSource,
       })
     } finally {
+      if (pendingWatchdog) clearTimeout(pendingWatchdog)
       if (pending) {
         const { ref, ids } = pending
         setTimeout(() => {

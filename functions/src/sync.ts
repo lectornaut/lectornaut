@@ -602,7 +602,15 @@ export const applySyncOperation = defineCallable({
       throw error
     }
     if (!verdict) {
-      throw new HttpsError("not-found", "Sync operation not found")
+      // `operationMissing` lets the client tell THIS deliberate "the op doc
+      // does not exist" verdict apart from the transport-level 404 the SDK
+      // also surfaces as `functions/not-found` (undeployed callable, region
+      // misroute) — the engine's terminal not-found disposition requires it
+      // (see `isDefinitiveNotFound`), so an infra 404 can never roll back a
+      // healthy write.
+      throw new HttpsError("not-found", "Sync operation not found", {
+        operationMissing: true,
+      })
     }
     return verdict
   },

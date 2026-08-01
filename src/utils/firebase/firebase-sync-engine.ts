@@ -334,6 +334,18 @@ const flushOutboxPersist = () => {
       (raw) => parseOutbox(raw).valid,
       Date.now()
     )
+    // Adopt the union into MEMORY too, not just storage: `merged` can carry
+    // peer ops this tab never received a storage event for (events are not
+    // delivered to — nor replayed for — bfcache'd documents). Without
+    // adoption, a later flush's byte-identical fast path would rewrite the
+    // key from memory alone and silently drop them; adoption also settles
+    // local waiters for any of our ops a peer already settled.
+    if (merged !== snapshot && !outboxSnapshotsEqual(merged, outbox.value)) {
+      outbox.value = merged
+      pathIndexDirty = true
+      settleWaitersFromAdoptedVerdicts(merged)
+      scheduleSync()
+    }
     // Demote "parked" to "pending" at the storage boundary — the key is
     // shared with older app versions whose stricter status enum would
     // quarantine-and-drop a parked entry (see `toPersistedOperations`).
@@ -814,7 +826,12 @@ const tryCoalesceOperation = (
       ...existing,
       data: { ...(existing.data ?? {}), ...(incoming.data ?? {}) },
       source: incoming.source,
-      updatedAt: incoming.updatedAt,
+      // Strictly advance `updatedAt`: `outboxSnapshotsEqual` compares
+      // id/status/updatedAt/attempts but never `data`, so a same-millisecond
+      // coalesce with an unchanged stamp would be invisible to peer tabs —
+      // the leader would equality-skip the adoption and send the
+      // pre-coalesce payload while this waiter still resolves as acked.
+      updatedAt: Math.max(incoming.updatedAt, existing.updatedAt + 1),
     }
     changed = true
     result = { operationId: existing.id, coalesced: true }
@@ -851,6 +868,32 @@ const settleWaiters = (
     }
     waiter.resolve(result)
   })
+}
+
+/**
+ * Settle local waiters for ops whose verdict arrived by ADOPTION (a peer
+ * tab's snapshot merged in) rather than through `applyRemoteSettlement`.
+ * Without this, the adopted settled status makes the duplicate-report guard
+ * in `applyRemoteSettlement` swallow the verdict when this tab's own ack
+ * listener later delivers it — and the caller's `mutate()` hangs forever.
+ * Adopted acks carry no `updatedAtMillis`; waiters resolve with the plain
+ * ack, which the contract allows (the field is optional).
+ */
+const settleWaitersFromAdoptedVerdicts = (
+  operations: readonly SyncOutboxOperation[]
+) => {
+  if (waiters.size === 0) return
+  for (const operation of operations) {
+    if (!waiters.has(operation.id)) continue
+    if (operation.status === "acked") {
+      settleWaiters(operation.id)
+    } else if (operation.status === "rejected") {
+      settleWaiters(
+        operation.id,
+        new Error(operation.errorMessage ?? "Sync operation rejected")
+      )
+    }
+  }
 }
 
 const rejectWaitersForUser = (userId: string, message: string) => {
@@ -1868,9 +1911,13 @@ const ensureStorageSyncListener = (): void => {
     // ping-pong between tabs.
     outbox.value = merged
     pathIndexDirty = true
-    // Peers persist parked ops demoted to "pending" (they re-park via the
-    // scheduleSync below), but a snapshot written by a build that still
-    // persisted "parked" may carry it — keep the slow resume net armed.
+    // A settled status adopted here must settle OUR waiters: once the entry
+    // is settled locally, `applyRemoteSettlement`'s duplicate-report guard
+    // swallows the ack listener's later delivery, so this is the only settle
+    // path left for waiters registered in this tab.
+    settleWaitersFromAdoptedVerdicts(merged)
+    // A snapshot written by a build that still persisted "parked" may carry
+    // it — keep the slow resume net armed.
     ensureParkedResumeTimer()
     scheduleSync()
   }

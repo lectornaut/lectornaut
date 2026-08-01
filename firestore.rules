@@ -228,7 +228,13 @@ service cloud.firestore {
       // `isValidUserProfileUpdate` clause was removed: it bypassed the
       // settlement's field whitelist.
       allow update: if false;
-      allow delete: if isSelf(userId);
+      // Delete is server-only too: a client delete would reopen the update
+      // door via delete-then-recreate (the create clause admits `username`,
+      // `isPublic`, and an arbitrary `createdAt`, so the pair forges every
+      // field the settlement whitelist and account callables own). No client
+      // path deletes the root doc — account deletion removes memberships and
+      // the Auth user; Firestore cleanup is admin-side.
+      allow delete: if false;
 
       match /notifications/{notificationId} {
         allow read: if isSelf(userId);

@@ -304,6 +304,13 @@ export const useTeamStore = defineStore("teams", () => {
       isMembershipLoading,
       isMembershipError,
       isMembershipStale,
+      // The fire-time re-evaluation drops the countdown while ANY write is
+      // pending (`hasAnyPendingOperation` / `isPendingTeam` guards). A write
+      // that settles without touching the sources above (e.g. an unrelated
+      // membership write) would otherwise leave a genuinely stale selection
+      // un-rearmed for the whole session — watch the pending union so its
+      // clearing re-runs observe().
+      hasAnyPendingOperation,
     ],
     () => {
       staleSelectionConfirm.observe(pendingStaleTeamSelection())

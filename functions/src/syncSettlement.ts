@@ -1080,12 +1080,22 @@ export const SYNC_TRIGGER_RETRY_GIVE_UP_MS = 10 * 60 * 1000
  * rethrow until the event outlives the give-up horizon. A non-finite age
  * (an unparseable event timestamp) keeps retrying rather than converting
  * into a reject.
+ *
+ * KNOWN-TRANSIENT failures are exempt from the horizon: the client treats a
+ * reject as terminal and rolls back optimistic state ("a transient must
+ * never settle as one" — see `settleSyncOperation`), and `event.time` is
+ * fixed at doc creation, so a sustained partial outage or a backlogged
+ * Eventarc delivery would otherwise durably reject writes the next healthy
+ * retry applies. Transients always rethrow — Eventarc's own retry window
+ * bounds them — while the horizon keeps bounding the deterministic-bug
+ * class (unclassified, non-transient) it exists for.
  */
 export const triggerFailureRejectDetails = (
   error: unknown,
   eventAgeMs: number
 ): { code: string; message: string } | null => {
   if (isTerminalSyncRejection(error)) return toRejectDetails(error)
+  if (isTransientSyncError(error)) return null
   if (eventAgeMs >= SYNC_TRIGGER_RETRY_GIVE_UP_MS) {
     const underlying = toRejectDetails(error)
     return {

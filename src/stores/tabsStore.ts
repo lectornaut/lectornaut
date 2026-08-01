@@ -345,6 +345,40 @@ export const useTabsStore = defineStore("tabs", () => {
   // Hydration watchers (read → local state, guarded against optimistic clobber)
   // ==========================================================================
 
+  // Team/workspace change → pause sync and clear local tabs until the new
+  // workspace's snapshot lands. The `oldId !== undefined` guard skips the
+  // initial resolution (when both go from undefined to a value).
+  //
+  // REGISTERED BEFORE the tabs-doc application watcher on purpose: watchers
+  // flush in creation order, and a cache-warm switch delivers the new
+  // workspace's CACHED doc in the same flush as the id flip. Wipe-then-apply
+  // leaves the strip correctly populated; the reverse order applies the doc
+  // first and then wipes it — and because the live refetch resolves
+  // deep-equal to the cache (structural sharing keeps the same reference),
+  // the application watcher never re-fires, leaving an empty strip that the
+  // open persist gate could later write over the server doc.
+  watch(
+    [() => currentTeam.value?.id, () => currentWorkspace.value?.id],
+    ([newTeamId, newWorkspaceId], [oldTeamId, oldWorkspaceId]) => {
+      const teamChanged = newTeamId !== oldTeamId && oldTeamId !== undefined
+      const workspaceChanged =
+        newWorkspaceId !== oldWorkspaceId && oldWorkspaceId !== undefined
+      if (!teamChanged && !workspaceChanged) return
+
+      isHydrated.value = false
+      confirmedReadPath.value = null
+      tabs.value = []
+      activeTabId.value = ""
+      recentlyClosed.value = []
+      tabIndicators.value = {}
+      // The lanes target a different doc now: drop any armed failure retry and
+      // re-seed the baseline at the cleared state. Un-persisted dirt from the
+      // outgoing workspace is abandoned (same semantics as a rollback).
+      cancelPersistRetry()
+      persistedBaseline = currentPersistShape()
+    }
+  )
+
   // Tabs doc → local tab state.
   watch(
     tabsDocData,
@@ -377,31 +411,6 @@ export const useTabsStore = defineStore("tabs", () => {
       persistedBaseline = currentPersistShape()
     },
     { immediate: true }
-  )
-
-  // Team/workspace change → pause sync and clear local tabs until the new
-  // workspace's snapshot lands. The `oldId !== undefined` guard skips the
-  // initial resolution (when both go from undefined to a value).
-  watch(
-    [() => currentTeam.value?.id, () => currentWorkspace.value?.id],
-    ([newTeamId, newWorkspaceId], [oldTeamId, oldWorkspaceId]) => {
-      const teamChanged = newTeamId !== oldTeamId && oldTeamId !== undefined
-      const workspaceChanged =
-        newWorkspaceId !== oldWorkspaceId && oldWorkspaceId !== undefined
-      if (!teamChanged && !workspaceChanged) return
-
-      isHydrated.value = false
-      confirmedReadPath.value = null
-      tabs.value = []
-      activeTabId.value = ""
-      recentlyClosed.value = []
-      tabIndicators.value = {}
-      // The lanes target a different doc now: drop any armed failure retry and
-      // re-seed the baseline at the cleared state. Un-persisted dirt from the
-      // outgoing workspace is abandoned (same semantics as a rollback).
-      cancelPersistRetry()
-      persistedBaseline = currentPersistShape()
-    }
   )
 
   // Hydration gate: hydrated only after a SUCCESSFUL read for the current tabs

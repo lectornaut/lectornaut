@@ -176,9 +176,25 @@ export function acquireOptimisticHold(
  * created. The release fn is idempotent and ref-counted, and the hold
  * self-releases after `OPTIMISTIC_HOLD_TIMEOUT_MS` so a never-settling write
  * cannot freeze reconciliation (a late release is then a no-op).
+ *
+ * A release that arrives AFTER the hold expired additionally invalidates the
+ * key. Direct callers of this wrapper roll back with a pre-mutation snapshot
+ * unconditionally on failure; past the expiry that snapshot is stale (live
+ * emissions may have landed since the hold lifted), and with the app's
+ * `staleTime: Infinity` / no focus-or-reconnect refetch, a stale rollback
+ * would otherwise stick until an unrelated server change. The forced refetch
+ * restores server truth either way; expiry-aware callers use
+ * `acquireOptimisticHold` and handle it themselves.
  */
 export function holdOptimistic(queryKey: FirestoreQueryKey): () => void {
-  return acquireOptimisticHold(queryKey).release
+  const hold = acquireOptimisticHold(queryKey)
+  return () => {
+    const expiredBeforeRelease = hold.expired()
+    hold.release()
+    if (expiredBeforeRelease) {
+      void queryClient.invalidateQueries({ queryKey })
+    }
+  }
 }
 
 /**

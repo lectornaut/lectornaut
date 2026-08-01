@@ -396,12 +396,19 @@ const FUNCTIONS_NOT_FOUND_CODE = "functions/not-found"
 /**
  * True when a failed `applySyncOperation` invocation is a DEFINITIVE terminal
  * disposition rather than a transient transport error. A callable "not-found"
- * means the op doc does not exist server-side; for an op whose create WAS
- * acknowledged (`remoteCreated`) the only way that happens is that the doc
- * was settled + TTL-swept (this client missed the verdict) or orphan-swept —
+ * ALONE is not enough: the Functions SDK maps a transport-level HTTP 404 —
+ * an undeployed callable, a region misroute, a proxy — to the very same
+ * `functions/not-found` code, and treating that as definitive would roll
+ * back healthy writes the create-trigger backstop then acks. The handler's
+ * deliberate "op doc does not exist" verdict therefore carries
+ * `details.operationMissing`, and only that shape qualifies; for an op
+ * whose create WAS acknowledged (`remoteCreated`) it means the doc was
+ * settled + TTL-swept (this client missed the verdict) or orphan-swept —
  * no verdict can ever arrive, so retrying/parking would pin the op (and,
  * via per-path FIFO, every later write to its target) forever. The engine
  * settles such ops client-side as rejected through the normal verdict path.
+ * A details-less not-found (old server deploy, infra 404) stays on the
+ * park/ladder path — the safe, pre-carry behavior.
  */
 export const isDefinitiveNotFound = (
   error: unknown,
@@ -412,7 +419,11 @@ export const isDefinitiveNotFound = (
   typeof error === "object" &&
   error !== null &&
   "code" in error &&
-  (error as { code: unknown }).code === FUNCTIONS_NOT_FOUND_CODE
+  (error as { code: unknown }).code === FUNCTIONS_NOT_FOUND_CODE &&
+  "details" in error &&
+  typeof (error as { details?: unknown }).details === "object" &&
+  (error as { details: { operationMissing?: unknown } | null }).details
+    ?.operationMissing === true
 
 /**
  * The payload-carry mirror of `isDefinitiveNotFound`: a callable "not-found"
@@ -562,11 +573,14 @@ export const mergeOutboxSnapshots = (
  * with a stricter status enum and quarantine-and-drop entries they cannot
  * parse — their next flush rewrites the key without the op, silently losing
  * the write during a version-overlap window (desktop builds lag web deploys).
- * Parked ops are therefore demoted to "pending" with their exhausted attempt
- * count intact: this version re-parks them on the first loop pass
- * (`shouldPark` fires before any send), and old versions just see ordinary
- * pending work. `parkedAt` is stripped along with the status so nothing
- * persisted ever carries a trace of the parked state.
+ * Parked ops are therefore demoted to "pending" WITH a fresh attempt budget
+ * (mirroring `resumeParkedOperations`): persisting the exhausted count would
+ * make an old-build peer dead-letter the op terminally before ever sending it
+ * (old `shouldDeadLetter` fires at attempts >= max), and would make this
+ * build re-park it on the first post-reload loop pass without a send — a
+ * reload is a resume trigger, so the restored op must ride a full ladder
+ * before parking again. `parkedAt` is stripped along with the status so
+ * nothing persisted ever carries a trace of the parked state.
  *
  * Settled entries persist payload-less (`stripSettledOperationPayload`): the
  * engine already strips at settlement time, so this is the boundary backstop
@@ -578,7 +592,15 @@ export const toPersistedOperations = (
 ): SyncOutboxOperation[] =>
   operations.map((operation) =>
     operation.status === "parked"
-      ? { ...operation, status: "pending" as const, parkedAt: undefined }
+      ? {
+          ...operation,
+          status: "pending" as const,
+          attempts: 0,
+          fastRetries: undefined,
+          nextEligibleAt: undefined,
+          sentAt: undefined,
+          parkedAt: undefined,
+        }
       : stripSettledOperationPayload(operation)
   )
 

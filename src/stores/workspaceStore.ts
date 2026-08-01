@@ -423,7 +423,16 @@ export const useWorkspaceStore = defineStore("workspaces", () => {
     await runWrite({
       keys: [],
       apply: () => authStore.setCurrentWorkspaceId(workspaceId),
-      rollback: () => authStore.setCurrentWorkspaceId(previousWorkspaceId),
+      rollback: () => {
+        // Superseded-click guard: two rapid switches run concurrently (no
+        // serialization here, unlike the team-side selection controller), so
+        // an OLDER switch's late reject must not roll the overlay back over
+        // the user's NEWER choice — only undo a selection this write still
+        // owns.
+        if (currentWorkspaceId.value === workspaceId) {
+          authStore.setCurrentWorkspaceId(previousWorkspaceId)
+        }
+      },
       fn: () =>
         mutateSetDocument(
           getMembershipPreferencesRef(teamId, uid),
