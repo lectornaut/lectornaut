@@ -1035,7 +1035,7 @@ const isFullscreen = useIsFullscreen()
         <TooltipProvider>
           <ToggleGroup
             type="single"
-            class="overflow-clip rounded-md"
+            class="overflow-clip rounded-4xl"
             :model-value="fileListLayout"
             @update:model-value="updateFileListLayout"
           >
@@ -1111,7 +1111,7 @@ const isFullscreen = useIsFullscreen()
                 {{ t("components.fileDropOverlay.buttons.save") }}
               </Button>
               <SheetContent
-                class="m-2 mt-[calc(var(--spacing-titlebar-height,0px)+(--spacing(2)))] h-auto! gap-0 overflow-clip rounded border"
+                class="m-2 mt-[calc(var(--spacing-titlebar-height,0px)+(--spacing(2)))] h-auto! gap-0 overflow-clip rounded-4xl border"
                 :class="{ 'mt-12': isTauri && !isFullscreen }"
               >
                 <SheetHeader>

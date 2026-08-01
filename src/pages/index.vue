@@ -78,7 +78,7 @@ const { t } = useI18n()
             </RouterLink>
             <RouterLink
               to="/enter"
-              class="group after: relative flex items-stretch after:absolute after:-inset-0.5 after:-z-10 after:bg-linear-to-r after:from-lime-500 after:via-amber-500 after:to-pink-500 after:opacity-20 after:blur-2xl"
+              class="group relative flex items-stretch after:absolute after:-inset-0.5 after:-z-10 after:bg-linear-to-r after:from-lime-500 after:via-amber-500 after:to-pink-500 after:opacity-20 after:blur-2xl"
             >
               <Alert
                 class="bg-background flex flex-col items-stretch gap-4 p-4 shadow-md transition group-hover:shadow-lg"

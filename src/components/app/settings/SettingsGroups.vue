@@ -196,7 +196,7 @@ onMounted(() => {
         <Field orientation="horizontal">
           <FieldContent class="min-w-0">
             <LoadingState v-if="isLoading" />
-            <div v-else class="overflow-clip rounded border">
+            <div v-else class="overflow-clip rounded-4xl border">
               <Table>
                 <TableHeader>
                   <TableRow>

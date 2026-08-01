@@ -43,7 +43,7 @@ const isSelected = (workflowIds: string[]): boolean =>
       <label
         v-for="item in group.items"
         :key="item.key"
-        class="hover:bg-accent flex cursor-pointer items-center gap-2 rounded-md px-1 py-0.5 text-sm"
+        class="hover:bg-accent flex cursor-pointer items-center gap-2 rounded-4xl px-1 py-0.5 text-sm"
       >
         <Checkbox
           :model-value="isSelected(item.workflowIds)"

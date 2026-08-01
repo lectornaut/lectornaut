@@ -656,7 +656,7 @@ const handleSave = async (): Promise<void> => {
                       {{ t("settings.workflows.instructions") }}
                     </span>
                     <p
-                      class="bg-background text-foreground/90 max-h-48 overflow-auto rounded border p-2.5 text-xs whitespace-pre-wrap"
+                      class="bg-background text-foreground/90 max-h-48 overflow-auto rounded-4xl border p-2.5 text-xs whitespace-pre-wrap"
                     >
                       {{
                         draft.instructions ||
@@ -969,7 +969,7 @@ const handleSave = async (): Promise<void> => {
 
               <div
                 v-if="draft.triggerType === 'schedule'"
-                class="flex flex-col gap-3 rounded border p-3"
+                class="flex flex-col gap-3 rounded-4xl border p-3"
               >
                 <Select v-model="draft.scheduleType">
                   <SelectTrigger>
@@ -1044,7 +1044,7 @@ const handleSave = async (): Promise<void> => {
 
               <div
                 v-if="draft.triggerType === 'event'"
-                class="flex flex-col gap-3 rounded border p-3"
+                class="flex flex-col gap-3 rounded-4xl border p-3"
               >
                 <div class="flex flex-col gap-1.5">
                   <Label>{{ t("settings.workflows.eventScope") }}</Label>
@@ -1110,7 +1110,7 @@ const handleSave = async (): Promise<void> => {
                 <div
                   v-for="(n, i) in draft.contextNodes"
                   :key="`${n.scope}:${n.nodeId}`"
-                  class="flex items-center justify-between rounded border px-2 py-1 text-sm"
+                  class="flex items-center justify-between rounded-4xl border px-2 py-1 text-sm"
                 >
                   <span class="truncate">{{ n.scope }} / {{ n.nodeId }}</span>
                   <Button variant="ghost" @click="removeContextNode(i)">

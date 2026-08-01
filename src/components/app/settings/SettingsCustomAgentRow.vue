@@ -89,7 +89,7 @@ const onToggleEnabled = (value: boolean | string): void => {
       Item sizes. We override `rounded-sm` → `rounded` because
       boring-avatars renders a SVG portrait that wants a circle clip.
     -->
-    <ItemMedia variant="image" class="rounded-md">
+    <ItemMedia variant="image" class="rounded-4xl">
       <AppAvatar variant="beam" :name="avatarSeedEffective" class="size-full" />
     </ItemMedia>
 

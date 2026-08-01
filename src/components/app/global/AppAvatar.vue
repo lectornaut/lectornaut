@@ -23,7 +23,7 @@ const DEFAULT_AVATAR_COLORS = [
 // ONE `class` prop drives everything: size AND shape. The image, the initials
 // fallback and the generative blob all `size-full` + `rounded-[inherit]`, so
 // they automatically follow whatever size/rounding you put on the root — no
-// per-part class props needed (e.g. `class="size-16 rounded-md"` makes the
+// per-part class props needed (e.g. `class="size-16  rounded-4xl"` makes the
 // photo square too). Initials auto-scale to the box via a container query.
 // The root IS the shadcn <Avatar>, so `class` / `:class` / `@click` / `:style`
 // fall through and merge via cn(). Override the fallback (icon, +N, mixed) via

@@ -207,7 +207,7 @@ onBeforeUnmount(() => {
     v-bind="props"
     :lazy="true"
     :use-placeholder="true"
-    class="cursor-zoom-in overflow-clip rounded-md object-contain"
+    class="cursor-zoom-in overflow-clip rounded-4xl object-contain"
     @click="openZoom"
   />
   <Teleport to="body">
@@ -232,7 +232,7 @@ onBeforeUnmount(() => {
         :src="zoomSrc"
         :alt="zoomAlt"
         draggable="false"
-        class="fixed m-0 max-w-none origin-top-left cursor-zoom-out overflow-clip rounded-md object-contain will-change-transform"
+        class="fixed m-0 max-w-none origin-top-left cursor-zoom-out overflow-clip rounded-4xl object-contain will-change-transform"
       />
     </div>
   </Teleport>

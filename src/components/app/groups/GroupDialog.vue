@@ -194,7 +194,7 @@ const handleSubmit = async () => {
               <TooltipProvider>
                 <Tooltip>
                   <TooltipTrigger as-child>
-                    <div class="bg-secondary cursor-pointer rounded-md p-3">
+                    <div class="bg-secondary cursor-pointer rounded-4xl p-3">
                       <AppAvatar
                         class="size-16"
                         :src="photoPreview"
@@ -299,7 +299,7 @@ const handleSubmit = async () => {
             </EmptyHeader>
           </Empty>
           <ItemGroup
-            class="bg-secondary max-h-56 overflow-y-auto rounded-md p-3"
+            class="bg-secondary max-h-56 overflow-y-auto rounded-4xl p-3"
           >
             <Item
               v-for="member in filteredMembers"

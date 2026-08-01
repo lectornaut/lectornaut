@@ -496,7 +496,9 @@ watch(copied, (isCopied) => {
                         <Kbd>{{ index + 1 }}</Kbd>
                       </KbdGroup>
                     </div>
-                    <div class="bg-secondary aspect-video rounded border"></div>
+                    <div
+                      class="bg-secondary aspect-video rounded-4xl border"
+                    ></div>
                   </HoverCardContent>
                 </HoverCard>
               </div>

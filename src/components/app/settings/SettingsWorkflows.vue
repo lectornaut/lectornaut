@@ -283,7 +283,7 @@ const rowDescription = (wf: IWorkflow): string =>
            every preset toggle read OFF, with no clue why. -->
     <div
       v-else-if="loadError"
-      class="text-destructive border-destructive/30 rounded border p-4 text-sm"
+      class="text-destructive border-destructive/30 rounded-4xl border p-4 text-sm"
     >
       {{ t("settings.workflows.loadError") }}
       <span class="text-muted-foreground mt-1 block text-xs">

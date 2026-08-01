@@ -250,7 +250,7 @@ const emptyHint = computed(() =>
          files list scrolls via ScrollContainer, whose viewport resolves
          `height: 100%` against this flex column. -->
     <SheetContent
-      class="m-2 mt-[calc(var(--spacing-titlebar-height,0px)+(--spacing(2)))] h-auto! gap-0 overflow-clip rounded border"
+      class="m-2 mt-[calc(var(--spacing-titlebar-height,0px)+(--spacing(2)))] h-auto! gap-0 overflow-clip rounded-4xl border"
       :class="{ 'mt-12': isTauri && !isFullscreen }"
     >
       <SheetHeader>
@@ -289,7 +289,7 @@ const emptyHint = computed(() =>
 
         <div
           v-if="importError"
-          class="text-destructive rounded-xl border p-2 text-xs"
+          class="text-destructive rounded-4xl border p-2 text-xs"
         >
           {{ importError }}
         </div>
@@ -323,7 +323,7 @@ const emptyHint = computed(() =>
 
           <div
             v-else-if="listError"
-            class="text-muted-foreground space-y-2 rounded-xl border border-dashed p-4 text-sm"
+            class="text-muted-foreground space-y-2 rounded-4xl border border-dashed p-4 text-sm"
           >
             <p>{{ listError }}</p>
             <Button variant="secondary" @click="load()"> Try again </Button>

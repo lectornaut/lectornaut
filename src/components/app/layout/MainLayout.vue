@@ -338,7 +338,7 @@ const closeTab = (id: string) => {
         <TooltipTrigger as-child>
           <ResizableHandle
             v-motion-fade-visible
-            class="data-[resize-handle-state=drag]:after:bg-foreground data-[resize-handle-state=hover]:after:bg-muted focus-visible:after:bg-muted! z-30 bg-transparent transition before:pointer-events-auto before:absolute before:inset-y-0 before:left-1/2 before:w-3 before:-translate-x-1/2 after:rounded-md focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:outline-none focus-visible:after:inset-y-2 data-resize-handle:after:w-1 data-[resize-handle-state=drag]:after:inset-y-2 data-[resize-handle-state=hover]:after:inset-y-2"
+            class="data-[resize-handle-state=drag]:after:bg-foreground data-[resize-handle-state=hover]:after:bg-muted focus-visible:after:bg-muted! z-30 bg-transparent transition before:pointer-events-auto before:absolute before:inset-y-0 before:left-1/2 before:w-3 before:-translate-x-1/2 after:rounded-3xl focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:outline-none focus-visible:after:inset-y-2 data-resize-handle:after:w-1 data-[resize-handle-state=drag]:after:inset-y-2 data-[resize-handle-state=hover]:after:inset-y-2"
             :class="{
               'bg-muted': !sidebarPanel?.isCollapsed,
               'w-0!': sidebarPanel?.isCollapsed,
@@ -388,12 +388,12 @@ const closeTab = (id: string) => {
           >
             <div
               id="left-dock"
-              class="shadow-muted-foreground/5 bg-background flex max-w-80 shrink-0 flex-col overflow-clip rounded border shadow empty:hidden"
+              class="shadow-muted-foreground/5 bg-background flex max-w-80 shrink-0 flex-col overflow-clip rounded-3xl border shadow empty:hidden"
             ></div>
             <ResizablePanelGroup
               :style="{ overflow: 'clip' }"
               :class="[
-                'shadow-muted-foreground/5 size-full min-h-0 min-w-0 rounded border shadow',
+                'shadow-muted-foreground/5 size-full min-h-0 min-w-0 rounded-3xl border shadow',
                 { 'animate-layout-panels': animatePanels },
               ]"
               direction="horizontal"
@@ -415,7 +415,7 @@ const closeTab = (id: string) => {
                   >
                     <div class="grid size-full min-h-0 min-w-0">
                       <div class="mr-0 min-h-0 min-w-0">
-                        <!-- overflow-clip rounded border -->
+                        <!-- overflow-clip rounded-3xl border -->
                         <div
                           id="left-sidebar"
                           ref="leftSidebarEl"
@@ -435,7 +435,7 @@ const closeTab = (id: string) => {
                 <Tooltip>
                   <TooltipTrigger as-child>
                     <ResizableHandle
-                      class="data-[resize-handle-state=drag]:after:bg-foreground data-[resize-handle-state=hover]:after:bg-muted focus-visible:after:bg-muted! z-20 bg-transparent transition before:pointer-events-auto before:absolute before:inset-y-0 before:left-1/2 before:w-3 before:-translate-x-1/2 after:rounded-md focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:outline-none focus-visible:after:inset-y-2 data-resize-handle:after:w-1 data-[resize-handle-state=drag]:after:inset-y-2 data-[resize-handle-state=hover]:after:inset-y-2"
+                      class="data-[resize-handle-state=drag]:after:bg-foreground data-[resize-handle-state=hover]:after:bg-muted focus-visible:after:bg-muted! z-20 bg-transparent transition before:pointer-events-auto before:absolute before:inset-y-0 before:left-1/2 before:w-3 before:-translate-x-1/2 after:rounded-3xl focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:outline-none focus-visible:after:inset-y-2 data-resize-handle:after:w-1 data-[resize-handle-state=drag]:after:inset-y-2 data-[resize-handle-state=hover]:after:inset-y-2"
                       :class="{
                         'bg-muted': !leftPanel?.isCollapsed,
                         'w-0!': leftPanel?.isCollapsed,
@@ -501,7 +501,7 @@ const closeTab = (id: string) => {
                         <div
                           class="bg-background flex min-h-0 min-w-0 grow flex-col"
                         >
-                          <!-- overflow-clip rounded border -->
+                          <!-- overflow-clip rounded-3xl border -->
                           <!-- Non-scrollable sub-header with backdrop blur -->
                           <SubNavigation />
                           <!-- Scrollable content area -->
@@ -532,7 +532,7 @@ const closeTab = (id: string) => {
                     <Tooltip>
                       <TooltipTrigger as-child>
                         <ResizableHandle
-                          class="data-[resize-handle-state=drag]:after:bg-foreground data-[resize-handle-state=hover]:after:bg-muted focus-visible:after:bg-muted! z-10 h-px! w-full! bg-transparent transition before:pointer-events-auto before:absolute before:inset-x-0 before:top-1/2 before:h-3 before:-translate-y-1/2 after:top-1/2! after:bottom-auto! after:left-0! after:w-full! after:translate-x-0! after:-translate-y-1/2! after:rounded-md focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:outline-none focus-visible:after:inset-x-2! focus-visible:after:w-auto! data-resize-handle:after:h-1! data-[resize-handle-state=drag]:after:inset-x-2! data-[resize-handle-state=drag]:after:w-auto! data-[resize-handle-state=hover]:after:inset-x-2! data-[resize-handle-state=hover]:after:w-auto!"
+                          class="data-[resize-handle-state=drag]:after:bg-foreground data-[resize-handle-state=hover]:after:bg-muted focus-visible:after:bg-muted! z-10 h-px! w-full! bg-transparent transition before:pointer-events-auto before:absolute before:inset-x-0 before:top-1/2 before:h-3 before:-translate-y-1/2 after:top-1/2! after:bottom-auto! after:left-0! after:w-full! after:translate-x-0! after:-translate-y-1/2! after:rounded-3xl focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:outline-none focus-visible:after:inset-x-2! focus-visible:after:w-auto! data-resize-handle:after:h-1! data-[resize-handle-state=drag]:after:inset-x-2! data-[resize-handle-state=drag]:after:w-auto! data-[resize-handle-state=hover]:after:inset-x-2! data-[resize-handle-state=hover]:after:w-auto!"
                           :class="{
                             'bg-muted':
                               !bottomPanel?.isCollapsed &&
@@ -595,7 +595,7 @@ const closeTab = (id: string) => {
                           class="size-full min-h-0 min-w-0"
                         >
                           <div class="size-full min-h-0 min-w-0">
-                            <!-- overflow-clip rounded border -->
+                            <!-- overflow-clip rounded-3xl border -->
                             <div
                               id="bottom-sidebar"
                               class="bg-background flex size-full min-h-0 min-w-0 flex-col overflow-clip overscroll-none"
@@ -782,7 +782,7 @@ const closeTab = (id: string) => {
                 <Tooltip>
                   <TooltipTrigger as-child>
                     <ResizableHandle
-                      class="data-[resize-handle-state=drag]:after:bg-foreground data-[resize-handle-state=hover]:after:bg-muted focus-visible:after:bg-muted! z-20 bg-transparent transition before:pointer-events-auto before:absolute before:inset-y-0 before:left-1/2 before:w-3 before:-translate-x-1/2 after:rounded-md focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:outline-none focus-visible:after:inset-y-2 data-resize-handle:after:w-1 data-[resize-handle-state=drag]:after:inset-y-2 data-[resize-handle-state=hover]:after:inset-y-2"
+                      class="data-[resize-handle-state=drag]:after:bg-foreground data-[resize-handle-state=hover]:after:bg-muted focus-visible:after:bg-muted! z-20 bg-transparent transition before:pointer-events-auto before:absolute before:inset-y-0 before:left-1/2 before:w-3 before:-translate-x-1/2 after:rounded-3xl focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:outline-none focus-visible:after:inset-y-2 data-resize-handle:after:w-1 data-[resize-handle-state=drag]:after:inset-y-2 data-[resize-handle-state=hover]:after:inset-y-2"
                       :class="{
                         'bg-muted': !rightPanel?.isCollapsed,
                         'w-0!': rightPanel?.isCollapsed,
@@ -839,7 +839,7 @@ const closeTab = (id: string) => {
                   >
                     <div class="grid size-full min-h-0 min-w-0">
                       <div class="ml-0 min-h-0 min-w-0">
-                        <!-- overflow-clip rounded border -->
+                        <!-- overflow-clip rounded-3xl border -->
                         <div
                           id="right-sidebar"
                           ref="rightSidebarEl"
@@ -895,7 +895,7 @@ const closeTab = (id: string) => {
                               height: `${observedSize.height}px`,
                             }
                       "
-                      class="bg-background pointer-events-auto absolute flex min-w-64 flex-col overflow-clip rounded border will-change-transform"
+                      class="bg-background pointer-events-auto absolute flex min-w-64 flex-col overflow-clip rounded-3xl border will-change-transform"
                       :class="
                         isPoppedOutMinimized
                           ? 'border-foreground shadow ring-1'
@@ -958,7 +958,7 @@ const closeTab = (id: string) => {
                       </div>
                       <div
                         v-if="!isPoppedOutMinimized"
-                        class="bg-background m-2 grow rounded border border-dashed p-2"
+                        class="bg-background m-2 grow rounded-3xl border border-dashed p-2"
                       >
                         <div
                           class="size-full bg-[repeating-linear-gradient(45deg,var(--color-muted)_0,var(--color-muted)_1px,transparent_0,transparent_50%)] bg-size-[8px_8px] p-2"
@@ -989,7 +989,7 @@ const closeTab = (id: string) => {
             </Transition>
             <div
               id="right-dock"
-              class="shadow-muted-foreground/5 bg-background flex max-w-80 shrink-0 flex-col overflow-clip rounded border shadow empty:hidden"
+              class="shadow-muted-foreground/5 bg-background flex max-w-80 shrink-0 flex-col overflow-clip rounded-3xl border shadow empty:hidden"
             ></div>
           </div>
         </div>

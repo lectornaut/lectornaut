@@ -75,7 +75,7 @@ const surfaceStyle = computed(() => ({
 
 <template>
   <NodeViewWrapper
-    class="code-block group relative overflow-clip rounded border"
+    class="code-block group relative overflow-clip rounded-4xl border"
   >
     <div
       contenteditable="false"

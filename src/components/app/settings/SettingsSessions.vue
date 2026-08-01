@@ -674,7 +674,7 @@ const submitDelete = async () => {
                 :data="sessions"
                 :columns="columns"
                 :column-pinning="{ left: ['select'], right: ['actions'] }"
-                class="overflow-clip rounded border"
+                class="overflow-clip rounded-4xl border"
               >
                 <!-- Bulk actions for the footer's selected-count chip. Admins -->
                 <!-- can mutate any row, so the whole selection is actionable. -->

@@ -617,7 +617,7 @@ const handleEditorSave = async (): Promise<void> => {
                       <div
                         v-for="(field, index) in draft.inputSchema.fields"
                         :key="`prev-in-${index}`"
-                        class="bg-background rounded border p-2 text-xs"
+                        class="bg-background rounded-4xl border p-2 text-xs"
                       >
                         <div class="flex flex-wrap items-center gap-1.5">
                           <span class="font-mono font-medium">
@@ -663,7 +663,7 @@ const handleEditorSave = async (): Promise<void> => {
                       <div
                         v-for="(field, index) in draft.outputSchema.fields"
                         :key="`prev-out-${index}`"
-                        class="bg-background rounded border p-2 text-xs"
+                        class="bg-background rounded-4xl border p-2 text-xs"
                       >
                         <div class="flex flex-wrap items-center gap-1.5">
                           <span class="font-mono font-medium">
@@ -848,7 +848,7 @@ const handleEditorSave = async (): Promise<void> => {
                 <div
                   v-for="(field, index) in draft.inputSchema.fields"
                   :key="`in-${index}`"
-                  class="bg-muted/40 grid gap-2 rounded border p-3"
+                  class="bg-muted/40 grid gap-2 rounded-4xl border p-3"
                 >
                   <div class="grid grid-cols-12 gap-2">
                     <Input
@@ -942,7 +942,7 @@ const handleEditorSave = async (): Promise<void> => {
                 <div
                   v-for="(field, index) in draft.outputSchema.fields"
                   :key="`out-${index}`"
-                  class="bg-muted/40 grid gap-2 rounded border p-3"
+                  class="bg-muted/40 grid gap-2 rounded-4xl border p-3"
                 >
                   <div class="grid grid-cols-12 gap-2">
                     <Input

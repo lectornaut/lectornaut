@@ -252,7 +252,7 @@ const opStyle = (op: string) => OP_STYLE[op] ?? OP_STYLE.update
               <span class="text-muted-foreground text-xs font-medium">
                 {{ t("settings.workflows.changesWord") }} ({{ changes.length }})
               </span>
-              <div class="overflow-hidden rounded border font-mono text-xs">
+              <div class="overflow-hidden rounded-4xl border font-mono text-xs">
                 <div
                   v-for="(c, ci) in changes"
                   :key="ci"
@@ -265,7 +265,7 @@ const opStyle = (op: string) => OP_STYLE[op] ?? OP_STYLE.update
                     {{ opStyle(c.op).sign }}
                   </span>
                   <span
-                    class="shrink-0 rounded-md px-1 py-0.5 text-[10px] font-semibold uppercase"
+                    class="shrink-0 rounded-4xl px-1 py-0.5 text-[10px] font-semibold uppercase"
                     :class="opStyle(c.op).badge"
                   >
                     {{ c.op }}
@@ -327,7 +327,7 @@ const opStyle = (op: string) => OP_STYLE[op] ?? OP_STYLE.update
       </CollapsibleTrigger>
       <CollapsibleContent>
         <pre
-          class="text-muted-foreground bg-background mt-1 max-h-48 overflow-auto rounded border p-2 text-xs wrap-break-word whitespace-pre-wrap"
+          class="text-muted-foreground bg-background mt-1 max-h-48 overflow-auto rounded-4xl border p-2 text-xs wrap-break-word whitespace-pre-wrap"
           >{{ run.prompt }}</pre>
       </CollapsibleContent>
     </Collapsible>

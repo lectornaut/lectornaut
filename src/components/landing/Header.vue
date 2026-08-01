@@ -293,7 +293,7 @@ const { t } = useI18n()
                     </TooltipContent>
                   </SheetTrigger>
                   <SheetContent
-                    class="m-2 mt-[calc(var(--spacing-titlebar-height,0)+(--spacing(2)))] h-auto! gap-0 overflow-clip rounded border"
+                    class="m-2 mt-[calc(var(--spacing-titlebar-height,0)+(--spacing(2)))] h-auto! gap-0 overflow-clip rounded-4xl border"
                     :class="{ 'mt-12': isTauri && !isFullscreen }"
                   >
                     <SheetHeader>

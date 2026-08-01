@@ -48,9 +48,9 @@ const {
     class="container mx-auto flex max-w-4xl flex-col items-center justify-center p-2"
   >
     <div
-      class="aspect-video max-h-40 w-full rounded border bg-[repeating-linear-gradient(45deg,var(--color-muted)_0,var(--color-muted)_1px,transparent_0,transparent_50%)] bg-size-[8px_8px]"
+      class="aspect-video max-h-40 w-full rounded-4xl border bg-[repeating-linear-gradient(45deg,var(--color-muted)_0,var(--color-muted)_1px,transparent_0,transparent_50%)] bg-size-[8px_8px]"
     ></div>
-    <div class="bg-background mx-auto -mt-10 rounded border p-1">
+    <div class="bg-background mx-auto -mt-10 rounded-4xl border p-1">
       <AppAvatar
         class="size-20"
         :src="user?.photoURL"

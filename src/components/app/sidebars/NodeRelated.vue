@@ -150,7 +150,7 @@ const isEmpty = computed(
       <div class="flex flex-col gap-2 px-2 pb-2">
         <!-- Error state — covers the rare callable failure (permission,
              network). The Refresh button above stays usable. -->
-        <div v-if="error" class="space-y-2 rounded border p-2">
+        <div v-if="error" class="space-y-2 rounded-4xl border p-2">
           <div class="text-destructive flex items-start gap-2 text-xs">
             <IconAlertTriangle />
             <span>{{ error }}</span>
@@ -165,7 +165,7 @@ const isEmpty = computed(
         <!-- Empty state — the embedding may still be pending on a
              brand-new file (the embed-on-write trigger runs async after
              the doc write); the user can hit Refresh to retry. -->
-        <Empty v-else-if="isEmpty" class="rounded-xl border border-dashed p-6">
+        <Empty v-else-if="isEmpty" class="rounded-4xl border border-dashed p-6">
           <EmptyHeader>
             <EmptyMedia variant="icon">
               <IconLink />

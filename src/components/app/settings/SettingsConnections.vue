@@ -531,7 +531,7 @@ const openInfoDialog = (provider: ConnectionProvider): void => {
                             <IconListFilter />
                             <span
                               v-if="isFilterActive"
-                              class="bg-primary absolute -top-0.5 -right-0.5 size-2 rounded-md"
+                              class="bg-primary absolute -top-0.5 -right-0.5 size-2 rounded-4xl"
                             />
                           </InputGroupButton>
                         </DropdownMenuTrigger>
@@ -804,7 +804,7 @@ const openInfoDialog = (provider: ConnectionProvider): void => {
              distinction), same toolbar narrowing; sorting + actions-menu
              anatomy mirror SettingsGroups/SettingsWorkspaces. -->
           <TabsContent value="manage" class="min-w-0">
-            <div class="min-w-0 overflow-clip rounded border">
+            <div class="min-w-0 overflow-clip rounded-4xl border">
               <Table>
                 <TableHeader>
                   <TableRow>

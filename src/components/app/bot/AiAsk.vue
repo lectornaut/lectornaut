@@ -76,7 +76,7 @@ const popOut = () => {
           <TooltipContent class="flex items-center gap-2 px-2">
             <Badge
               variant="ghost"
-              class="rounded-md"
+              class="rounded-4xl"
               @click="isDocked = !isDocked"
             >
               <IconPin v-if="!isDocked" />
@@ -93,7 +93,7 @@ const popOut = () => {
           <AiChatShell />
         </Teleport>
         <SheetContent
-          class="m-2 mt-[calc(var(--spacing-titlebar-height,0px)+(--spacing(2)))] h-auto! gap-0 overflow-clip rounded border"
+          class="m-2 mt-[calc(var(--spacing-titlebar-height,0px)+(--spacing(2)))] h-auto! gap-0 overflow-clip rounded-4xl border"
           :class="{ 'mt-12': isTauri && !isFullscreen }"
           :show-close-button="false"
         >

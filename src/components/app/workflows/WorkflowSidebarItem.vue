@@ -90,7 +90,10 @@ const toggleIcon = computed(() =>
           class="h-auto items-start gap-2 py-2 pr-8"
           @click="emit('select')"
         >
-          <span class="mt-1.5 size-1.5 shrink-0 rounded-md" :class="dotClass" />
+          <span
+            class="mt-1.5 size-1.5 shrink-0 rounded-4xl"
+            :class="dotClass"
+          />
           <span class="flex min-w-0 grow flex-col gap-0.5">
             <span class="flex items-center gap-2">
               <span class="truncate text-sm">{{ workflow.name }}</span>

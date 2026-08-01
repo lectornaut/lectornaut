@@ -403,7 +403,7 @@ const handleDelete = async (attachment: IBotSessionAttachment) => {
               pendingUploadFiles.length === 0 &&
               pendingDriveImports.length === 0
             "
-            class="rounded-xl border border-dashed p-6"
+            class="rounded-4xl border border-dashed p-6"
           >
             <EmptyHeader>
               <EmptyMedia variant="icon">
@@ -455,7 +455,7 @@ const handleDelete = async (attachment: IBotSessionAttachment) => {
             label="Loading attachments…"
           />
 
-          <div v-else-if="error" class="space-y-2 rounded border p-2">
+          <div v-else-if="error" class="space-y-2 rounded-4xl border p-2">
             <div class="text-destructive flex items-start gap-2 text-xs">
               <IconAlertTriangle />
               <span>{{ error }}</span>
@@ -468,7 +468,7 @@ const handleDelete = async (attachment: IBotSessionAttachment) => {
 
           <Empty
             v-else-if="attachments.length === 0"
-            class="rounded-xl border border-dashed p-6"
+            class="rounded-4xl border border-dashed p-6"
           >
             <EmptyHeader>
               <EmptyMedia variant="icon"><IconUpload /></EmptyMedia>

@@ -524,7 +524,7 @@ const handleSubmit = async () => {
                   <TooltipTrigger as-child>
                     <div
                       :class="[
-                        'dark:bg-input/30 rounded border p-2.5 shadow-xs',
+                        'bg-input/50 rounded-full p-3',
                         {
                           'cursor-not-allowed opacity-50':
                             (!canCreateWorkspace && mode === 'create') ||
@@ -686,10 +686,7 @@ const handleSubmit = async () => {
             </TabsList>
 
             <!-- Member access -->
-            <TabsContent
-              value="members"
-              class="dark:bg-input/30 rounded border p-2.5 shadow-xs"
-            >
+            <TabsContent value="members" class="bg-input/50 rounded-3xl p-3">
               <LoadingState v-if="rolesLoading" />
               <template v-else>
                 <Empty
@@ -827,10 +824,7 @@ const handleSubmit = async () => {
             </TabsContent>
 
             <!-- Group access -->
-            <TabsContent
-              value="groups"
-              class="dark:bg-input/30 rounded border p-2.5 shadow-xs"
-            >
+            <TabsContent value="groups" class="bg-input/50 rounded-3xl p-3">
               <LoadingState v-if="groupRolesLoading" />
               <template v-else>
                 <Empty

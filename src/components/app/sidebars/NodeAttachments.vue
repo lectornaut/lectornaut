@@ -546,7 +546,7 @@ watch(selectedCreateFiles, async (files) => {
           :label="t('components.nodeAttachments.loadingAttachments')"
         />
 
-        <div v-else-if="error" class="space-y-2 rounded border p-2">
+        <div v-else-if="error" class="space-y-2 rounded-4xl border p-2">
           <div class="text-destructive flex items-start gap-2 text-xs">
             <IconAlertTriangle />
             <span>{{ error }}</span>
@@ -560,7 +560,7 @@ watch(selectedCreateFiles, async (files) => {
 
         <Empty
           v-else-if="attachments.length === 0"
-          class="rounded-xl border border-dashed p-6"
+          class="rounded-4xl border border-dashed p-6"
         >
           <EmptyHeader>
             <EmptyMedia variant="icon">
