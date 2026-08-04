@@ -67,7 +67,7 @@ const actionItems: ActionItem[] = [
             <Component :is="item.icon" />
           </ItemMedia>
           <ItemContent>
-            <ItemTitle class="text-secondary-foreground">
+            <ItemTitle>
               {{ item.title }}
             </ItemTitle>
           </ItemContent>

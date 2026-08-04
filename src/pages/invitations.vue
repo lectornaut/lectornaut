@@ -65,13 +65,7 @@ onMounted(async () => {
   if (code.value) {
     await loadInvitation(code.value)
   } else {
-    // If no code but authenticated, maybe just show list if exists?
     isLoading.value = false
-    if (userInvitations.value?.length) {
-      error.value = null
-    } else {
-      error.value = t("pages.join.errors.invalidLink")
-    }
   }
 })
 
@@ -191,10 +185,10 @@ const formatInvitationTimestamp = (
 <template>
   <div class="flex grow flex-col items-center">
     <PageHeader />
-    <div class="grid w-full max-w-md gap-2 px-2">
-      <Label for="team-select">
+    <Field class="max-w-md px-2">
+      <FieldLabel for="team-select">
         {{ $t("pages.join.labels.findInvite") }}
-      </Label>
+      </FieldLabel>
       <Select id="team-select" v-model="selectedCode">
         <SelectTrigger
           class="bg-background w-full truncate **:data-desc:hidden"
@@ -264,10 +258,10 @@ const formatInvitationTimestamp = (
           </template>
         </SelectContent>
       </Select>
-    </div>
+    </Field>
     <ScrollContainer class="w-full max-w-md items-center justify-between p-2">
       <div
-        class="bg-sidebar flex size-full flex-col items-center justify-between p-2"
+        class="bg-sidebar flex size-full flex-col items-center justify-between rounded-2xl p-2"
       >
         <div class="m-auto grid grow flex-col items-center justify-center">
           <LoadingState

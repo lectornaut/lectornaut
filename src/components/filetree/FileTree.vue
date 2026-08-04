@@ -623,15 +623,13 @@ onBeforeUnmount(() => {
         </DialogTitle>
         <DialogDescription>{{ t("fileTree.createHint") }}</DialogDescription>
       </DialogHeader>
-      <form class="space-y-4" @submit.prevent="handleCreateSubmit">
-        <div class="space-y-2">
-          <Input
-            id="node-name"
-            v-model="createName"
-            :placeholder="t('fileTree.untitledPlaceholder')"
-            autocomplete="off"
-          />
-        </div>
+      <form class="flex flex-col gap-4" @submit.prevent="handleCreateSubmit">
+        <Input
+          id="node-name"
+          v-model="createName"
+          :placeholder="t('fileTree.untitledPlaceholder')"
+          autocomplete="off"
+        />
         <DialogFooter>
           <DialogClose as-child>
             <Button variant="outline">
@@ -661,18 +659,18 @@ onBeforeUnmount(() => {
         <DialogTitle>{{ t("fileTree.renameTitle") }}</DialogTitle>
         <DialogDescription>{{ t("fileTree.renameHint") }}</DialogDescription>
       </DialogHeader>
-      <form class="space-y-4" @submit.prevent="handleRenameSubmit">
-        <div class="grid gap-2">
-          <Label class="text-secondary-foreground text-xs" for="rename-name">
+      <form class="flex flex-col gap-4" @submit.prevent="handleRenameSubmit">
+        <Field>
+          <FieldLabel for="rename-name">
             {{ t("labels.name") }}
-          </Label>
+          </FieldLabel>
           <Input
             id="rename-name"
             v-model="renameName"
             :placeholder="t('fileTree.untitledPlaceholder')"
             autocomplete="off"
           />
-        </div>
+        </Field>
         <DialogFooter>
           <DialogClose as-child>
             <Button variant="outline">

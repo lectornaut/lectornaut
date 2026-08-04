@@ -128,18 +128,22 @@ const insertFromUrl = () => {
         }}</DialogDescription>
       </DialogHeader>
 
-      <div class="space-y-4">
-        <div class="space-y-2">
-          <Label for="editor-image-url">{{
+      <div class="flex flex-col gap-4">
+        <Field :data-invalid="!!error || undefined">
+          <FieldLabel for="editor-image-url">{{
             t("components.textEditor.imageDialog.urlLabel")
-          }}</Label>
+          }}</FieldLabel>
           <Input
             id="editor-image-url"
             v-model="imageUrl"
             :placeholder="t('components.textEditor.imageDialog.urlPlaceholder')"
+            :aria-invalid="!!error || undefined"
             @keydown.enter.prevent="insertFromUrl"
           />
-        </div>
+          <FieldError v-if="error">
+            {{ error }}
+          </FieldError>
+        </Field>
 
         <div class="flex items-center justify-between gap-2">
           <div v-if="uploadImage" class="flex items-center">
@@ -170,10 +174,6 @@ const insertFromUrl = () => {
           </div>
         </div>
       </div>
-
-      <p v-if="error" class="text-destructive text-sm">
-        {{ error }}
-      </p>
     </DialogContent>
   </Dialog>
 </template>

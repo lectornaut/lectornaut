@@ -22,7 +22,7 @@ import Sitemap from "vite-plugin-sitemap"
 import Layouts from "vite-plugin-vue-layouts"
 import { VueRouterAutoImports } from "vue-router/unplugin"
 import VueRouter from "vue-router/vite"
-import { generateThemesCssPlugin } from "./src/plugins/theme"
+import { generateThemesCssPlugin } from "./src/plugins/theme/generateThemesCssPlugin.ts"
 
 const host = process.env.TAURI_DEV_HOST
 const file = fileURLToPath(new URL("package.json", import.meta.url))
@@ -40,7 +40,7 @@ export default defineConfig({
   },
   plugins: [
     generateThemesCssPlugin({
-      outFile: "./styles/theme.css",
+      outFile: "./src/styles/theme.css",
     }),
     VueRouter(),
     Vue(),

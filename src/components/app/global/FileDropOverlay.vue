@@ -1131,13 +1131,19 @@ const isFullscreen = useIsFullscreen()
                     :model-value="activeSaveScope"
                     @update:model-value="updateActiveSaveScope"
                   >
-                    <TabsList class="m-2 bg-transparent">
-                      <TabsTrigger value="code">
+                    <TabsList class="bg-input/50 m-2 h-9! p-0">
+                      <TabsTrigger
+                        value="code"
+                        class="data-[state=active]:border-border! data-[state=active]:bg-background h-9"
+                      >
                         {{
                           t("components.fileDropOverlay.saveSheet.tabs.code")
                         }}
                       </TabsTrigger>
-                      <TabsTrigger value="write">
+                      <TabsTrigger
+                        value="write"
+                        class="data-[state=active]:border-border! data-[state=active]:bg-background h-9"
+                      >
                         {{
                           t("components.fileDropOverlay.saveSheet.tabs.write")
                         }}

@@ -15,7 +15,7 @@ const currentUser = useCurrentUser()
     :class="{ 'pl-22': isTauri && !isFullscreen }"
   >
     <div class="flex items-center justify-start gap-2">
-      <Button variant="ghost" size="icon" as-child>
+      <Button variant="ghost" size="icon-sm" as-child>
         <RouterLink to="/start">
           <IconArrowLeft />
         </RouterLink>
@@ -24,7 +24,7 @@ const currentUser = useCurrentUser()
     <div class="flex items-center justify-end">
       <DropdownMenu v-if="currentUser">
         <DropdownMenuTrigger as-child>
-          <Button variant="ghost">
+          <Button variant="ghost" size="sm">
             <AppAvatar
               class="size-4"
               :src="currentUser.photoURL"

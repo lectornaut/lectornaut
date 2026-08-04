@@ -403,7 +403,7 @@ const getButtonLabel = (planId: BillingPlanKey) => {
                     :value="plan.id"
                     class="sr-only"
                   />
-                  <FieldDescription class="text-xs">
+                  <FieldDescription>
                     {{
                       t("settings.plans.perSeatMonthly", {
                         price: getPlanPricePerMonthLabel(plan.id, billingCycle),

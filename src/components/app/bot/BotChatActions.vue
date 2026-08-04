@@ -216,16 +216,13 @@ const submitDelete = async () => {
                 :value="opt.value"
               />
               <FieldContent>
-                <FieldLabel
-                  :for="`bot-mode-${opt.value}`"
-                  class="flex items-center gap-2 text-sm"
-                >
+                <FieldLabel :for="`bot-mode-${opt.value}`">
                   <Component :is="modeIcons[opt.value]" class="size-4" />
                   {{ t(`ai.modes.${opt.value}.label`) }}
                 </FieldLabel>
-                <p class="text-muted-foreground text-xs">
+                <FieldDescription>
                   {{ t(`ai.modes.${opt.value}.longDescription`) }}
-                </p>
+                </FieldDescription>
               </FieldContent>
             </Field>
           </RadioGroup>
@@ -253,9 +250,7 @@ const submitDelete = async () => {
               v-for="opt in visibilityOptions"
               :key="opt.value"
               orientation="horizontal"
-              :class="{
-                'opacity-60': opt.disabled,
-              }"
+              :data-disabled="opt.disabled || undefined"
             >
               <RadioGroupItem
                 :id="`bot-visibility-${opt.value}`"
@@ -263,16 +258,13 @@ const submitDelete = async () => {
                 :disabled="opt.disabled"
               />
               <FieldContent>
-                <FieldLabel
-                  :for="`bot-visibility-${opt.value}`"
-                  class="flex items-center gap-2 text-sm"
-                >
+                <FieldLabel :for="`bot-visibility-${opt.value}`">
                   <Component :is="opt.icon" class="size-4" />
                   {{ opt.label }}
                 </FieldLabel>
-                <p class="text-muted-foreground text-xs">
+                <FieldDescription>
                   {{ opt.description }}
-                </p>
+                </FieldDescription>
               </FieldContent>
             </Field>
           </RadioGroup>

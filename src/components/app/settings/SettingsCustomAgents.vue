@@ -566,12 +566,18 @@ const handleEditorSave = async (): Promise<void> => {
       </DialogHeader>
 
       <Tabs v-model="activeTab" class="min-h-0">
-        <TabsList class="self-start">
-          <TabsTrigger value="prompt">
+        <TabsList class="bg-input/50 h-9! self-start p-0">
+          <TabsTrigger
+            value="prompt"
+            class="data-[state=active]:border-border! data-[state=active]:bg-background h-9"
+          >
             <IconSparkles />
             {{ t("settings.agents.custom.ai.tabPrompt") }}
           </TabsTrigger>
-          <TabsTrigger value="configure">
+          <TabsTrigger
+            value="configure"
+            class="data-[state=active]:border-border! data-[state=active]:bg-background h-9"
+          >
             {{ t("settings.agents.custom.ai.tabConfigure") }}
           </TabsTrigger>
         </TabsList>
@@ -972,7 +978,6 @@ const handleEditorSave = async (): Promise<void> => {
                     <FieldContent>
                       <FieldLabel
                         :for="`agent-tool-${row.name}-${editingAgent?.id ?? 'new'}`"
-                        class="flex items-center gap-2"
                       >
                         {{ row.label }}
                         <Badge v-if="!row.enabledAtTeam" variant="outline">
@@ -1024,7 +1029,7 @@ const handleEditorSave = async (): Promise<void> => {
                 <template v-if="customToolsForAgent.length > 0">
                   <Field orientation="vertical">
                     <FieldContent>
-                      <FieldLabel class="flex items-center gap-2">
+                      <FieldLabel>
                         {{ t("settings.agents.custom.customToolsHeader") }}
                         <Badge v-if="!customToolsFeatureOn" variant="outline">
                           {{ t("settings.agents.custom.tools.disabledAtTeam") }}
@@ -1045,7 +1050,6 @@ const handleEditorSave = async (): Promise<void> => {
                       <FieldContent>
                         <FieldLabel
                           :for="`agent-custom-tool-${tool.id}-${editingAgent?.id ?? 'new'}`"
-                          class="flex items-center gap-2"
                         >
                           <!--
                         Use displayName when admins set it; otherwise

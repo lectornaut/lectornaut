@@ -338,7 +338,7 @@ const closeTab = (id: string) => {
         <TooltipTrigger as-child>
           <ResizableHandle
             v-motion-fade-visible
-            class="data-[resize-handle-state=drag]:after:bg-foreground data-[resize-handle-state=hover]:after:bg-muted focus-visible:after:bg-muted! z-30 bg-transparent transition before:pointer-events-auto before:absolute before:inset-y-0 before:left-1/2 before:w-3 before:-translate-x-1/2 after:rounded-3xl focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:outline-none focus-visible:after:inset-y-2 data-resize-handle:after:w-1 data-[resize-handle-state=drag]:after:inset-y-2 data-[resize-handle-state=hover]:after:inset-y-2"
+            class="data-[resize-handle-state=drag]:after:bg-foreground data-[resize-handle-state=hover]:after:bg-muted focus-visible:after:bg-muted! z-30 bg-transparent transition before:pointer-events-auto before:absolute before:inset-y-0 before:left-1/2 before:w-3 before:-translate-x-1/2 after:rounded-3xl focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:outline-none focus-visible:after:inset-y-6 data-resize-handle:after:w-1 data-[resize-handle-state=drag]:after:inset-y-6 data-[resize-handle-state=hover]:after:inset-y-6"
             :class="{
               'bg-muted': !sidebarPanel?.isCollapsed,
               'w-0!': sidebarPanel?.isCollapsed,
@@ -393,7 +393,7 @@ const closeTab = (id: string) => {
             <ResizablePanelGroup
               :style="{ overflow: 'clip' }"
               :class="[
-                'shadow-muted-foreground/5 size-full min-h-0 min-w-0 rounded-3xl border shadow',
+                'shadow-muted-foreground/5 size-full min-h-0 min-w-0 rounded-3xl',
                 { 'animate-layout-panels': animatePanels },
               ]"
               direction="horizontal"
@@ -403,6 +403,7 @@ const closeTab = (id: string) => {
                 <ContextMenuTrigger as-child>
                   <ResizablePanel
                     ref="leftPanel"
+                    class="shadow-muted-foreground/5 rounded-3xl shadow"
                     collapsible
                     :min-size="15"
                     :default-size="20"
@@ -435,7 +436,7 @@ const closeTab = (id: string) => {
                 <Tooltip>
                   <TooltipTrigger as-child>
                     <ResizableHandle
-                      class="data-[resize-handle-state=drag]:after:bg-foreground data-[resize-handle-state=hover]:after:bg-muted focus-visible:after:bg-muted! z-20 bg-transparent transition before:pointer-events-auto before:absolute before:inset-y-0 before:left-1/2 before:w-3 before:-translate-x-1/2 after:rounded-3xl focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:outline-none focus-visible:after:inset-y-2 data-resize-handle:after:w-1 data-[resize-handle-state=drag]:after:inset-y-2 data-[resize-handle-state=hover]:after:inset-y-2"
+                      class="data-[resize-handle-state=drag]:after:bg-foreground data-[resize-handle-state=hover]:after:bg-muted focus-visible:after:bg-muted! z-20 bg-transparent transition before:pointer-events-auto before:absolute before:inset-y-0 before:left-1/2 before:w-3 before:-translate-x-1/2 after:rounded-3xl focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:outline-none focus-visible:after:inset-y-6 data-resize-handle:bg-transparent data-resize-handle:after:w-1 data-[resize-handle-state=drag]:after:inset-y-6 data-[resize-handle-state=hover]:after:inset-y-6"
                       :class="{
                         'bg-muted': !leftPanel?.isCollapsed,
                         'w-0!': leftPanel?.isCollapsed,
@@ -480,7 +481,7 @@ const closeTab = (id: string) => {
                 <ResizablePanelGroup
                   :style="{ overflow: 'clip' }"
                   :class="[
-                    'size-full min-h-0 min-w-0',
+                    'shadow-muted-foreground/5 size-full min-h-0 min-w-0 rounded-3xl',
                     { 'animate-layout-panels': animatePanels },
                   ]"
                   direction="vertical"
@@ -490,6 +491,7 @@ const closeTab = (id: string) => {
                     <ContextMenuTrigger as-child>
                       <ResizablePanel
                         ref="topPanel"
+                        class="shadow-muted-foreground/5 rounded-3xl shadow"
                         collapsible
                         :min-size="15"
                         :default-size="80"
@@ -532,7 +534,7 @@ const closeTab = (id: string) => {
                     <Tooltip>
                       <TooltipTrigger as-child>
                         <ResizableHandle
-                          class="data-[resize-handle-state=drag]:after:bg-foreground data-[resize-handle-state=hover]:after:bg-muted focus-visible:after:bg-muted! z-10 h-px! w-full! bg-transparent transition before:pointer-events-auto before:absolute before:inset-x-0 before:top-1/2 before:h-3 before:-translate-y-1/2 after:top-1/2! after:bottom-auto! after:left-0! after:w-full! after:translate-x-0! after:-translate-y-1/2! after:rounded-3xl focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:outline-none focus-visible:after:inset-x-2! focus-visible:after:w-auto! data-resize-handle:after:h-1! data-[resize-handle-state=drag]:after:inset-x-2! data-[resize-handle-state=drag]:after:w-auto! data-[resize-handle-state=hover]:after:inset-x-2! data-[resize-handle-state=hover]:after:w-auto!"
+                          class="data-[resize-handle-state=drag]:after:bg-foreground data-[resize-handle-state=hover]:after:bg-muted focus-visible:after:bg-muted! z-10 h-px! w-full! bg-transparent transition before:pointer-events-auto before:absolute before:inset-x-0 before:top-1/2 before:h-3 before:-translate-y-1/2 after:top-1/2! after:bottom-auto! after:left-0! after:w-full! after:translate-x-0! after:-translate-y-1/2! after:rounded-3xl focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:outline-none focus-visible:after:inset-x-6! focus-visible:after:w-auto! data-resize-handle:bg-transparent data-resize-handle:after:h-1! data-[resize-handle-state=drag]:after:inset-x-6! data-[resize-handle-state=drag]:after:w-auto! data-[resize-handle-state=hover]:after:inset-x-6! data-[resize-handle-state=hover]:after:w-auto!"
                           :class="{
                             'bg-muted':
                               !bottomPanel?.isCollapsed &&
@@ -580,6 +582,7 @@ const closeTab = (id: string) => {
                     <ContextMenuTrigger as-child>
                       <ResizablePanel
                         ref="bottomPanel"
+                        class="shadow-muted-foreground/5 rounded-3xl shadow"
                         collapsible
                         :min-size="15"
                         :default-size="20"
@@ -782,7 +785,7 @@ const closeTab = (id: string) => {
                 <Tooltip>
                   <TooltipTrigger as-child>
                     <ResizableHandle
-                      class="data-[resize-handle-state=drag]:after:bg-foreground data-[resize-handle-state=hover]:after:bg-muted focus-visible:after:bg-muted! z-20 bg-transparent transition before:pointer-events-auto before:absolute before:inset-y-0 before:left-1/2 before:w-3 before:-translate-x-1/2 after:rounded-3xl focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:outline-none focus-visible:after:inset-y-2 data-resize-handle:after:w-1 data-[resize-handle-state=drag]:after:inset-y-2 data-[resize-handle-state=hover]:after:inset-y-2"
+                      class="data-[resize-handle-state=drag]:after:bg-foreground data-[resize-handle-state=hover]:after:bg-muted focus-visible:after:bg-muted! z-20 bg-transparent transition before:pointer-events-auto before:absolute before:inset-y-0 before:left-1/2 before:w-3 before:-translate-x-1/2 after:rounded-3xl focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:outline-none focus-visible:after:inset-y-6 data-resize-handle:bg-transparent data-resize-handle:after:w-1 data-[resize-handle-state=drag]:after:inset-y-6 data-[resize-handle-state=hover]:after:inset-y-6"
                       :class="{
                         'bg-muted': !rightPanel?.isCollapsed,
                         'w-0!': rightPanel?.isCollapsed,
@@ -827,6 +830,7 @@ const closeTab = (id: string) => {
                 <ContextMenuTrigger as-child>
                   <ResizablePanel
                     ref="rightPanel"
+                    class="shadow-muted-foreground/5 rounded-3xl shadow"
                     collapsible
                     :min-size="25"
                     :default-size="30"

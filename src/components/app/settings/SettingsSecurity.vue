@@ -692,7 +692,7 @@ const handleDeleteSso = () => deleteSsoDialog.confirm(() => deleteSsoConfig())
                   <!-- Delete SSO -->
                   <Field v-if="hasSso" orientation="horizontal">
                     <FieldContent>
-                      <FieldLabel class="text-destructive text-sm">
+                      <FieldLabel class="text-destructive">
                         {{ t("settings.security.sso.removeLabel") }}
                       </FieldLabel>
                       <FieldDescription>

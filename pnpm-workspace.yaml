@@ -4,6 +4,15 @@ packages:
 
 ignoreWorkspaceRootCheck: true
 
+# Dedupe sharp: @vite-pwa/assets-generator pins 0.33.x, which drags in a second
+# @img/sharp-libvips prebuild and macOS warns about duplicate objc classes when
+# both dylibs load into one dev-server process.
+catalog:
+  sharp: ^0.35.3
+
+overrides:
+  sharp: "catalog:"
+
 allowBuilds:
   re2: false
   "@firebase/util": false

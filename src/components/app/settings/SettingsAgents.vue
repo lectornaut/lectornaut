@@ -280,10 +280,7 @@ const handleRemoveAgent = async (agent: ITeamAgent): Promise<void> => {
           orientation="horizontal"
         >
           <FieldContent>
-            <FieldLabel
-              :for="`builtin-agent-${row.id}`"
-              class="flex items-center gap-2"
-            >
+            <FieldLabel :for="`builtin-agent-${row.id}`">
               {{ row.name }}
               <Badge v-if="row.customized" variant="secondary">
                 {{ t("settings.agents.builtInAgents.customizedBadge") }}

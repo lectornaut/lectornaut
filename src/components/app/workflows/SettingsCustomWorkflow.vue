@@ -487,12 +487,18 @@ const handleSave = async (): Promise<void> => {
       </DialogHeader>
 
       <Tabs v-model="activeTab" class="min-h-0">
-        <TabsList class="self-start">
-          <TabsTrigger value="prompt">
+        <TabsList class="bg-input/50 h-9! self-start p-0">
+          <TabsTrigger
+            value="prompt"
+            class="data-[state=active]:border-border! data-[state=active]:bg-background h-9"
+          >
             <IconSparkles />
             {{ t("settings.workflows.ai.tabPrompt") }}
           </TabsTrigger>
-          <TabsTrigger value="configure">
+          <TabsTrigger
+            value="configure"
+            class="data-[state=active]:border-border! data-[state=active]:bg-background h-9"
+          >
             {{ t("settings.workflows.ai.tabConfigure") }}
           </TabsTrigger>
         </TabsList>
@@ -698,22 +704,24 @@ const handleSave = async (): Promise<void> => {
         <!-- ── Configure tab — full manual form ───────────────────────── -->
         <TabsContent value="configure" class="min-h-0">
           <ScrollContainer class="-mx-6 h-full w-[-webkit-fill-available]">
-            <div class="flex flex-col gap-4 p-6">
-              <div class="flex flex-col gap-1.5">
-                <Label for="wf-name">{{ t("settings.workflows.name") }}</Label>
+            <FieldGroup class="gap-4 p-6">
+              <Field>
+                <FieldLabel for="wf-name">{{
+                  t("settings.workflows.name")
+                }}</FieldLabel>
                 <Input
                   id="wf-name"
                   v-model="draft.name"
                   :placeholder="t('settings.workflows.namePlaceholder')"
                 />
-              </div>
+              </Field>
 
-              <div class="flex flex-col gap-1.5">
-                <Label for="wf-desc">{{
+              <Field>
+                <FieldLabel for="wf-desc">{{
                   t("settings.workflows.description")
-                }}</Label>
+                }}</FieldLabel>
                 <Input id="wf-desc" v-model="draft.description" />
-              </div>
+              </Field>
 
               <!--
                 Avatar seed — live preview + input, mirroring the agent / tool
@@ -721,10 +729,10 @@ const handleSave = async (): Promise<void> => {
                 `SettingsWorkflowRow` 1:1, so the preview equals the list row
                 after save. Blank falls back to the workflow name.
               -->
-              <div class="flex flex-col gap-1.5">
-                <Label for="wf-avatar-seed">{{
+              <Field>
+                <FieldLabel for="wf-avatar-seed">{{
                   t("settings.workflows.avatarSeed.label")
-                }}</Label>
+                }}</FieldLabel>
                 <div class="flex items-center gap-3">
                   <AppAvatar
                     variant="bauhaus"
@@ -741,16 +749,16 @@ const handleSave = async (): Promise<void> => {
                     class="grow"
                   />
                 </div>
-                <p class="text-muted-foreground text-xs">
+                <FieldDescription>
                   {{ t("settings.workflows.avatarSeed.description") }}
-                </p>
-              </div>
+                </FieldDescription>
+              </Field>
 
-              <div class="flex flex-col gap-1.5">
+              <Field>
                 <div class="flex items-center justify-between">
-                  <Label for="wf-run-as">{{
+                  <FieldLabel for="wf-run-as">{{
                     t("settings.workflows.runAsAgentToggle")
-                  }}</Label>
+                  }}</FieldLabel>
                   <Switch
                     id="wf-run-as"
                     :model-value="runAsSpecificAgent"
@@ -762,12 +770,9 @@ const handleSave = async (): Promise<void> => {
                 </div>
 
                 <!-- Toggle OFF → runs as the Default agent; no picker. -->
-                <p
-                  v-if="!runAsSpecificAgent"
-                  class="text-muted-foreground text-xs"
-                >
+                <FieldDescription v-if="!runAsSpecificAgent">
                   {{ t("settings.workflows.runAsAgentHint") }}
-                </p>
+                </FieldDescription>
 
                 <!-- Toggle ON → composer-style grouped picker, Default first. -->
                 <Select v-else v-model="draft.agentId" :disabled="!!editingId">
@@ -912,27 +917,27 @@ const handleSave = async (): Promise<void> => {
                     </template>
                   </SelectContent>
                 </Select>
-              </div>
+              </Field>
 
-              <div class="flex flex-col gap-1.5">
-                <Label for="wf-instructions">{{
+              <Field>
+                <FieldLabel for="wf-instructions">{{
                   t("settings.workflows.instructions")
-                }}</Label>
+                }}</FieldLabel>
                 <Textarea
                   id="wf-instructions"
                   v-model="draft.instructions"
                   :rows="5"
                   :placeholder="t('settings.workflows.instructionsPlaceholder')"
                 />
-                <p class="text-muted-foreground text-xs">
+                <FieldDescription>
                   {{ t("settings.workflows.instructionsHint") }}
-                </p>
-              </div>
+                </FieldDescription>
+              </Field>
 
-              <div class="flex flex-col gap-1.5">
-                <Label for="wf-additional">{{
+              <Field>
+                <FieldLabel for="wf-additional">{{
                   t("settings.workflows.additionalPrompt")
-                }}</Label>
+                }}</FieldLabel>
                 <Textarea
                   id="wf-additional"
                   v-model="draft.additionalPrompt"
@@ -941,12 +946,12 @@ const handleSave = async (): Promise<void> => {
                     t('settings.workflows.additionalPromptPlaceholder')
                   "
                 />
-              </div>
+              </Field>
 
-              <div class="flex flex-col gap-1.5">
-                <Label for="wf-trigger">{{
+              <Field>
+                <FieldLabel for="wf-trigger">{{
                   t("settings.workflows.trigger")
-                }}</Label>
+                }}</FieldLabel>
                 <Select v-model="draft.triggerType">
                   <SelectTrigger id="wf-trigger">
                     <SelectValue />
@@ -965,7 +970,7 @@ const handleSave = async (): Promise<void> => {
                     </SelectGroup>
                   </SelectContent>
                 </Select>
-              </div>
+              </Field>
 
               <div
                 v-if="draft.triggerType === 'schedule'"
@@ -1046,8 +1051,10 @@ const handleSave = async (): Promise<void> => {
                 v-if="draft.triggerType === 'event'"
                 class="flex flex-col gap-3 rounded-4xl border p-3"
               >
-                <div class="flex flex-col gap-1.5">
-                  <Label>{{ t("settings.workflows.eventScope") }}</Label>
+                <Field>
+                  <FieldLabel>{{
+                    t("settings.workflows.eventScope")
+                  }}</FieldLabel>
                   <Select v-model="draft.eventScope">
                     <SelectTrigger>
                       <SelectValue />
@@ -1063,7 +1070,7 @@ const handleSave = async (): Promise<void> => {
                       </SelectGroup>
                     </SelectContent>
                   </Select>
-                </div>
+                </Field>
                 <div class="flex items-center gap-2">
                   <span class="text-sm">{{
                     t("settings.workflows.debounce")
@@ -1081,10 +1088,10 @@ const handleSave = async (): Promise<void> => {
                 </div>
               </div>
 
-              <div class="flex flex-col gap-1.5">
-                <Label for="wf-target">{{
+              <Field>
+                <FieldLabel for="wf-target">{{
                   t("settings.workflows.targetScope")
-                }}</Label>
+                }}</FieldLabel>
                 <Select v-model="draft.targetScope">
                   <SelectTrigger id="wf-target">
                     <SelectValue />
@@ -1100,13 +1107,15 @@ const handleSave = async (): Promise<void> => {
                     </SelectGroup>
                   </SelectContent>
                 </Select>
-              </div>
+              </Field>
 
-              <div class="flex flex-col gap-1.5">
-                <Label>{{ t("settings.workflows.contextNodes") }}</Label>
-                <p class="text-muted-foreground text-xs">
+              <Field>
+                <FieldLabel>{{
+                  t("settings.workflows.contextNodes")
+                }}</FieldLabel>
+                <FieldDescription>
                   {{ t("settings.workflows.contextNodesHint") }}
-                </p>
+                </FieldDescription>
                 <div
                   v-for="(n, i) in draft.contextNodes"
                   :key="`${n.scope}:${n.nodeId}`"
@@ -1141,12 +1150,12 @@ const handleSave = async (): Promise<void> => {
                     {{ t("settings.workflows.add") }}
                   </Button>
                 </div>
-              </div>
+              </Field>
 
-              <div class="flex flex-col gap-1.5">
-                <Label for="wf-mode">{{
+              <Field>
+                <FieldLabel for="wf-mode">{{
                   t("settings.workflows.updateMode")
-                }}</Label>
+                }}</FieldLabel>
                 <Select v-model="draft.updateMode">
                   <SelectTrigger id="wf-mode">
                     <SelectValue />
@@ -1162,20 +1171,20 @@ const handleSave = async (): Promise<void> => {
                     </SelectGroup>
                   </SelectContent>
                 </Select>
-                <p class="text-muted-foreground text-xs">
+                <FieldDescription>
                   {{
                     draft.updateMode === "automatic"
                       ? t("settings.workflows.modeAutomaticHint")
                       : t("settings.workflows.modeReviewHint")
                   }}
-                </p>
-              </div>
+                </FieldDescription>
+              </Field>
 
               <!-- ── Connections access (P3) ─────────────────────────── -->
-              <div class="flex flex-col gap-1.5">
-                <Label for="wf-acts-as">
+              <Field>
+                <FieldLabel for="wf-acts-as">
                   {{ t("settings.workflows.connectionsLabel") }}
-                </Label>
+                </FieldLabel>
                 <div class="flex items-center justify-between gap-2">
                   <span class="text-sm">
                     {{ t("settings.workflows.connectionsToggle") }}
@@ -1186,12 +1195,12 @@ const handleSave = async (): Promise<void> => {
                     @update:model-value="(v) => handleToggleActsAs(Boolean(v))"
                   />
                 </div>
-                <p class="text-muted-foreground text-xs">
+                <FieldDescription>
                   {{ t("settings.workflows.connectionsHint") }}
-                </p>
+                </FieldDescription>
                 <!-- Bound by ANOTHER member: their consented grant powers
                      runs; toggling replaces it with yours, off revokes. -->
-                <p v-if="actsAsIsOther" class="text-muted-foreground text-xs">
+                <FieldDescription v-if="actsAsIsOther">
                   {{
                     t("settings.workflows.connectionsOther", {
                       name:
@@ -1199,9 +1208,9 @@ const handleSave = async (): Promise<void> => {
                         t("settings.workflows.connectionsOtherFallback"),
                     })
                   }}
-                </p>
-              </div>
-            </div>
+                </FieldDescription>
+              </Field>
+            </FieldGroup>
           </ScrollContainer>
         </TabsContent>
       </Tabs>

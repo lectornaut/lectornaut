@@ -730,9 +730,7 @@ const expandedCard = ref<number | null>(null)
             </Tooltip>
           </TooltipProvider>
         </Popover>
-        <TabsList
-          class="no-scrollbar bg-input/50 scroll-fade-x h-9! shrink-0 justify-start overflow-clip overflow-x-auto p-0"
-        >
+        <TabsList class="bg-input/50 h-9! p-0">
           <TabsTrigger
             value="overview"
             class="data-[state=active]:border-border! data-[state=active]:bg-background h-9"

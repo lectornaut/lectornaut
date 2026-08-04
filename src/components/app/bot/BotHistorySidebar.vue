@@ -644,15 +644,19 @@ const onArchiveToggle = (session: IBotSession) => {
           {{ t("ai.renameChatHint") }}
         </DialogDescription>
       </DialogHeader>
-      <form class="grid gap-2" @submit.prevent="submitRename">
-        <Label for="bot-rename-input">{{ t("ai.chatTitle") }}</Label>
-        <Input
-          id="bot-rename-input"
-          v-model="renameInput"
-          :placeholder="t('ai.chatTitlePlaceholder')"
-          maxlength="120"
-          :disabled="isMutating"
-        />
+      <form @submit.prevent="submitRename">
+        <Field>
+          <FieldLabel for="bot-rename-input">{{
+            t("ai.chatTitle")
+          }}</FieldLabel>
+          <Input
+            id="bot-rename-input"
+            v-model="renameInput"
+            :placeholder="t('ai.chatTitlePlaceholder')"
+            maxlength="120"
+            :disabled="isMutating"
+          />
+        </Field>
       </form>
       <DialogFooter>
         <DialogClose as-child>

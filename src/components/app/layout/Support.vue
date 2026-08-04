@@ -311,15 +311,12 @@ const startOnboarding = () => {
             <DialogDescription>
               {{ $t("components.support.contactSalesDesc") }}
             </DialogDescription>
-            <div class="mt-4 grid gap-4">
+            <FieldGroup class="mt-4 gap-4">
               <div class="grid grid-cols-2 gap-4">
-                <div class="grid gap-2">
-                  <Label
-                    class="text-secondary-foreground text-xs"
-                    for="first-name"
-                  >
+                <Field>
+                  <FieldLabel for="first-name">
                     {{ $t("components.support.firstName") }}
-                  </Label>
+                  </FieldLabel>
                   <Input
                     id="first-name"
                     type="text"
@@ -327,14 +324,11 @@ const startOnboarding = () => {
                       $t('components.support.placeholders.firstName')
                     "
                   />
-                </div>
-                <div class="grid gap-2">
-                  <Label
-                    class="text-secondary-foreground text-xs"
-                    for="last-name"
-                  >
+                </Field>
+                <Field>
+                  <FieldLabel for="last-name">
                     {{ $t("components.support.lastName") }}
-                  </Label>
+                  </FieldLabel>
                   <Input
                     id="last-name"
                     type="text"
@@ -342,25 +336,22 @@ const startOnboarding = () => {
                       $t('components.support.placeholders.lastName')
                     "
                   />
-                </div>
+                </Field>
               </div>
-              <div class="grid gap-2">
-                <Label class="text-secondary-foreground text-xs" for="email">
+              <Field>
+                <FieldLabel for="email">
                   {{ $t("components.support.workEmail") }}
-                </Label>
+                </FieldLabel>
                 <Input
                   id="email"
                   type="email"
                   :placeholder="$t('components.support.placeholders.email')"
                 />
-              </div>
-              <div class="grid gap-2">
-                <Label
-                  class="text-secondary-foreground text-xs"
-                  for="company-size"
-                >
+              </Field>
+              <Field>
+                <FieldLabel for="company-size">
                   {{ $t("components.support.companySize") }}
-                </Label>
+                </FieldLabel>
                 <Select v-model="selectedCompanySize">
                   <SelectTrigger>
                     <SelectValue
@@ -381,11 +372,11 @@ const startOnboarding = () => {
                     </SelectGroup>
                   </SelectContent>
                 </Select>
-              </div>
-              <div class="grid gap-2">
-                <Label class="text-secondary-foreground text-xs" for="category">
+              </Field>
+              <Field>
+                <FieldLabel for="category">
                   {{ $t("components.support.category") }}
-                </Label>
+                </FieldLabel>
                 <Select v-model="selectedCategory">
                   <SelectTrigger>
                     <SelectValue
@@ -406,13 +397,11 @@ const startOnboarding = () => {
                     </SelectGroup>
                   </SelectContent>
                 </Select>
-              </div>
-              <div v-if="selectedCategory === 'other'" class="grid gap-2">
-                <Label
-                  class="text-secondary-foreground text-xs"
-                  for="message"
-                  >{{ $t("components.support.message") }}</Label
-                >
+              </Field>
+              <Field v-if="selectedCategory === 'other'">
+                <FieldLabel for="message">{{
+                  $t("components.support.message")
+                }}</FieldLabel>
                 <Textarea
                   id="message"
                   :placeholder="
@@ -420,8 +409,8 @@ const startOnboarding = () => {
                   "
                   class="resize-none"
                 />
-              </div>
-            </div>
+              </Field>
+            </FieldGroup>
           </DialogHeader>
           <DialogFooter>
             <DialogClose as-child>

@@ -5,13 +5,13 @@ import {
   paletteVar,
   type AccentFamily,
   type BaseFamily,
-} from "../../utils/theme/families"
+} from "../../utils/theme/families.ts"
 import {
   buildBaseTokens,
   paletteColor,
   pickContrastVar,
   type BaseSourceToken,
-} from "../../utils/theme/tokens"
+} from "../../utils/theme/tokens.ts"
 
 export type ThemeMode = "light" | "dark"
 

@@ -56,10 +56,10 @@ const remove = () => {
           {{ t("components.textEditor.linkDialog.description") }}
         </DialogDescription>
       </DialogHeader>
-      <div class="space-y-2">
-        <Label for="editor-link-input">{{
+      <Field>
+        <FieldLabel for="editor-link-input">{{
           t("components.textEditor.linkDialog.urlLabel")
-        }}</Label>
+        }}</FieldLabel>
         <Input
           id="editor-link-input"
           v-model="href"
@@ -67,7 +67,7 @@ const remove = () => {
           autofocus
           @keydown.enter.prevent="submit"
         />
-      </div>
+      </Field>
       <DialogFooter class="gap-2 sm:justify-between">
         <Button variant="outline" @click="remove">
           <IconTrash />

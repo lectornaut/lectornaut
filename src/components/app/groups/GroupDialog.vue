@@ -185,9 +185,9 @@ const handleSubmit = async () => {
 
       <div class="mt-4 grid gap-4">
         <!-- Group Photo -->
-        <Field class="grid gap-2">
+        <Field>
           <div class="flex flex-col items-center gap-2">
-            <FieldLabel class="text-secondary-foreground text-xs">
+            <FieldLabel>
               {{ t("components.groupDialog.photoLabel") }}
             </FieldLabel>
             <div class="group relative">
@@ -228,11 +228,8 @@ const handleSubmit = async () => {
         </Field>
 
         <!-- Name -->
-        <Field class="grid gap-2">
-          <FieldLabel
-            class="text-secondary-foreground text-xs"
-            for="group-name"
-          >
+        <Field>
+          <FieldLabel for="group-name">
             {{ t("components.groupDialog.nameLabel") }}
           </FieldLabel>
           <Input
@@ -244,11 +241,8 @@ const handleSubmit = async () => {
         </Field>
 
         <!-- Description -->
-        <Field class="grid gap-2">
-          <FieldLabel
-            class="text-secondary-foreground text-xs"
-            for="group-description"
-          >
+        <Field>
+          <FieldLabel for="group-description">
             {{ t("components.groupDialog.descriptionLabel") }}
           </FieldLabel>
           <Textarea
@@ -259,9 +253,9 @@ const handleSubmit = async () => {
         </Field>
 
         <!-- Members -->
-        <Field class="grid gap-2">
+        <Field>
           <div class="flex items-center justify-between">
-            <FieldLabel class="text-secondary-foreground text-xs">
+            <FieldLabel>
               {{ t("components.groupDialog.membersLabel") }}
             </FieldLabel>
             <span class="text-muted-foreground text-xs">

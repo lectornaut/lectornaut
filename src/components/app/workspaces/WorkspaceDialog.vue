@@ -513,9 +513,9 @@ const handleSubmit = async () => {
 
       <div class="mt-4 grid gap-4">
         <!-- Workspace Profile Picture -->
-        <Field class="grid gap-2">
+        <Field>
           <div class="flex flex-col items-center gap-2">
-            <FieldLabel class="text-secondary-foreground text-xs">
+            <FieldLabel>
               {{ t("components.workspaceDialog.photoLabel") }}
             </FieldLabel>
             <div class="group relative">
@@ -588,8 +588,8 @@ const handleSubmit = async () => {
         </Field>
 
         <!-- Workspace Name -->
-        <Field class="grid gap-2">
-          <FieldLabel class="text-secondary-foreground text-xs" for="name">
+        <Field>
+          <FieldLabel for="name">
             {{ t("components.workspaceDialog.nameLabel") }}
           </FieldLabel>
           <TooltipProvider>
@@ -627,11 +627,8 @@ const handleSubmit = async () => {
         </Field>
 
         <!-- Workspace Description -->
-        <Field class="grid gap-2">
-          <FieldLabel
-            class="text-secondary-foreground text-xs"
-            for="description"
-          >
+        <Field>
+          <FieldLabel for="description">
             {{ t("components.workspaceDialog.descriptionLabel") }}
           </FieldLabel>
           <TooltipProvider>
@@ -668,18 +665,18 @@ const handleSubmit = async () => {
         </Field>
 
         <!-- Per-workspace access (members + groups), elevate-only -->
-        <Field v-if="canAssignWorkspaceRoles" class="grid gap-2">
+        <Field v-if="canAssignWorkspaceRoles">
           <Tabs default-value="members">
-            <TabsList class="m-0 h-auto! gap-2 bg-transparent p-0">
+            <TabsList class="bg-input/50 h-9! p-0">
               <TabsTrigger
                 value="members"
-                class="text-secondary-foreground data-[state=inactive]:text-secondary-foreground/50 h-auto p-0 text-xs data-[state=active]:shadow-none!"
+                class="data-[state=active]:border-border! data-[state=active]:bg-background h-9"
               >
                 {{ t("components.workspaceDialog.roles.label") }}
               </TabsTrigger>
               <TabsTrigger
                 value="groups"
-                class="text-secondary-foreground data-[state=inactive]:text-secondary-foreground/50 h-auto p-0 text-xs data-[state=active]:shadow-none!"
+                class="data-[state=active]:border-border! data-[state=active]:bg-background h-9"
               >
                 {{ t("components.workspaceDialog.groups.label") }}
               </TabsTrigger>

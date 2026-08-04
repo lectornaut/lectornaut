@@ -469,12 +469,18 @@ const handleEditorSave = async (): Promise<void> => {
       </DialogHeader>
 
       <Tabs v-model="activeTab" class="min-h-0">
-        <TabsList class="self-start">
-          <TabsTrigger value="prompt">
+        <TabsList class="bg-input/50 h-9! self-start p-0">
+          <TabsTrigger
+            value="prompt"
+            class="data-[state=active]:border-border! data-[state=active]:bg-background h-9"
+          >
             <IconSparkles />
             {{ t("settings.agents.customTools.ai.tabPrompt") }}
           </TabsTrigger>
-          <TabsTrigger value="configure">
+          <TabsTrigger
+            value="configure"
+            class="data-[state=active]:border-border! data-[state=active]:bg-background h-9"
+          >
             {{ t("settings.agents.customTools.ai.tabConfigure") }}
           </TabsTrigger>
         </TabsList>
@@ -878,7 +884,7 @@ const handleEditorSave = async (): Promise<void> => {
                         v-model="field.required"
                         :disabled="!canManage"
                       />
-                      <Label :for="`in-required-${index}`" class="text-xs">
+                      <Label :for="`in-required-${index}`">
                         {{ t("settings.agents.customTools.field.required") }}
                       </Label>
                     </div>
@@ -972,7 +978,7 @@ const handleEditorSave = async (): Promise<void> => {
                         v-model="field.required"
                         :disabled="!canManage"
                       />
-                      <Label :for="`out-required-${index}`" class="text-xs">
+                      <Label :for="`out-required-${index}`">
                         {{ t("settings.agents.customTools.field.required") }}
                       </Label>
                     </div>

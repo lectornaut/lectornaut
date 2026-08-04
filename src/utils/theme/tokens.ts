@@ -8,13 +8,13 @@
 // inside the Vite config (where the `@/` alias isn't wired yet).
 
 import colors from "tailwindcss/colors"
-import { getContrastRatio, parseCssColor, rgbToHex } from "./color"
+import { getContrastRatio, parseCssColor, rgbToHex } from "./color.ts"
 import {
   ANCHOR_FAMILY,
   DARK_SURFACE_SHADE,
   LIGHT_SURFACE_SHADE,
   paletteVar,
-} from "./families"
+} from "./families.ts"
 
 // ── Palette readers ─────────────────────────────────────────────────────────
 

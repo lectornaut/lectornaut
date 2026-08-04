@@ -245,8 +245,8 @@ onUnmounted(() => {
             {{ t("settings.account.mfa.sendingCode") }}
           </span>
         </div>
-        <Field v-if="isTotp || smsSent" class="grid gap-4">
-          <FieldLabel class="text-secondary-foreground text-xs">
+        <Field v-if="isTotp || smsSent">
+          <FieldLabel>
             <template v-if="isTotp">
               {{ t("settings.account.mfa.enterTotpCode") }}
             </template>

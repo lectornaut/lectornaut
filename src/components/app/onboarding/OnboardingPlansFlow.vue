@@ -146,32 +146,30 @@ const getTotalPriceLabel = (
               {{ t("pages.welcome.content.plansDescription") }}
             </FieldDescription>
           </FieldContent>
-          <FieldDescription
-            v-if="hasActivePlan"
-            class="text-muted-foreground border px-3 py-2 text-sm"
-          >
-            {{
-              t("pages.welcome.plans.activeSummary", {
-                plan: activePlanLabel,
-                interval: activeIntervalLabel,
-                status: statusLabel,
-              })
-            }}
-            <br />
-            {{ t("pages.welcome.plans.activeReadOnly") }}
-            <br />
-            {{
-              t("pages.welcome.plans.quantitySummary", {
-                seats: seatCountLabel,
-              })
-            }}
-          </FieldDescription>
-          <FieldDescription
-            v-else-if="!canManageBilling"
-            class="text-muted-foreground border px-3 py-2 text-sm"
-          >
-            {{ t("pages.welcome.plans.noPermission") }}
-          </FieldDescription>
+          <Alert v-if="hasActivePlan">
+            <AlertDescription>
+              {{
+                t("pages.welcome.plans.activeSummary", {
+                  plan: activePlanLabel,
+                  interval: activeIntervalLabel,
+                  status: statusLabel,
+                })
+              }}
+              <br />
+              {{ t("pages.welcome.plans.activeReadOnly") }}
+              <br />
+              {{
+                t("pages.welcome.plans.quantitySummary", {
+                  seats: seatCountLabel,
+                })
+              }}
+            </AlertDescription>
+          </Alert>
+          <Alert v-else-if="!canManageBilling">
+            <AlertDescription>
+              {{ t("pages.welcome.plans.noPermission") }}
+            </AlertDescription>
+          </Alert>
         </Field>
       </FieldSet>
 
@@ -195,42 +193,43 @@ const getTotalPriceLabel = (
               (value) => (selectedPlanKeyModel = value as BillingPlanKey | null)
             "
           >
-            <Field
+            <FieldLabel
               v-for="plan in planOptions"
               :key="plan.id"
-              orientation="horizontal"
-              class="items-start gap-3 border px-3 py-2"
+              :for="`onboarding-plan-${plan.id}`"
             >
-              <RadioGroupItem
-                :id="`onboarding-plan-${plan.id}`"
-                :value="plan.id"
-              />
-              <FieldContent class="gap-0.5">
-                <FieldLabel :for="`onboarding-plan-${plan.id}`">
-                  {{ t(plan.titleKey) }}
-                </FieldLabel>
-                <FieldDescription>
-                  {{ t(plan.descriptionKey) }}
-                </FieldDescription>
-                <FieldDescription>
-                  {{
-                    t("pages.welcome.plans.pricingSummaryPerSeat", {
-                      monthly: getPriceLabel(plan.id, "month"),
-                      annual: getPriceLabel(plan.id, "year"),
-                    })
-                  }}
-                </FieldDescription>
-                <FieldDescription>
-                  {{
-                    t("pages.welcome.plans.pricingSummaryTotal", {
-                      monthly: getTotalPriceLabel(plan.id, "month"),
-                      annual: getTotalPriceLabel(plan.id, "year"),
-                      seats: seatCountLabel,
-                    })
-                  }}
-                </FieldDescription>
-              </FieldContent>
-            </Field>
+              <Field orientation="horizontal">
+                <RadioGroupItem
+                  :id="`onboarding-plan-${plan.id}`"
+                  :value="plan.id"
+                />
+                <FieldContent>
+                  <FieldTitle>
+                    {{ t(plan.titleKey) }}
+                  </FieldTitle>
+                  <FieldDescription>
+                    {{ t(plan.descriptionKey) }}
+                  </FieldDescription>
+                  <FieldDescription>
+                    {{
+                      t("pages.welcome.plans.pricingSummaryPerSeat", {
+                        monthly: getPriceLabel(plan.id, "month"),
+                        annual: getPriceLabel(plan.id, "year"),
+                      })
+                    }}
+                  </FieldDescription>
+                  <FieldDescription>
+                    {{
+                      t("pages.welcome.plans.pricingSummaryTotal", {
+                        monthly: getTotalPriceLabel(plan.id, "month"),
+                        annual: getTotalPriceLabel(plan.id, "year"),
+                        seats: seatCountLabel,
+                      })
+                    }}
+                  </FieldDescription>
+                </FieldContent>
+              </Field>
+            </FieldLabel>
           </RadioGroup>
         </Field>
       </FieldSet>
@@ -256,37 +255,38 @@ const getTotalPriceLabel = (
                 (selectedIntervalModel = value as BillingInterval | null)
             "
           >
-            <Field
-              orientation="horizontal"
-              class="items-start gap-3 border px-3 py-2"
-            >
-              <RadioGroupItem
-                id="onboarding-plan-interval-month"
-                value="month"
-              />
-              <FieldContent class="gap-0.5">
-                <FieldLabel for="onboarding-plan-interval-month">
-                  {{ t("settings.plans.subscriptionTerm.monthly") }}
-                </FieldLabel>
-                <FieldDescription>
-                  {{ t("pages.welcome.plans.monthlyDescription") }}
-                </FieldDescription>
-              </FieldContent>
-            </Field>
-            <Field
-              orientation="horizontal"
-              class="items-start gap-3 border px-3 py-2"
-            >
-              <RadioGroupItem id="onboarding-plan-interval-year" value="year" />
-              <FieldContent class="gap-0.5">
-                <FieldLabel for="onboarding-plan-interval-year">
-                  {{ t("settings.plans.subscriptionTerm.annually") }}
-                </FieldLabel>
-                <FieldDescription>
-                  {{ t("pages.welcome.plans.annualDescription") }}
-                </FieldDescription>
-              </FieldContent>
-            </Field>
+            <FieldLabel for="onboarding-plan-interval-month">
+              <Field orientation="horizontal">
+                <RadioGroupItem
+                  id="onboarding-plan-interval-month"
+                  value="month"
+                />
+                <FieldContent>
+                  <FieldTitle>
+                    {{ t("settings.plans.subscriptionTerm.monthly") }}
+                  </FieldTitle>
+                  <FieldDescription>
+                    {{ t("pages.welcome.plans.monthlyDescription") }}
+                  </FieldDescription>
+                </FieldContent>
+              </Field>
+            </FieldLabel>
+            <FieldLabel for="onboarding-plan-interval-year">
+              <Field orientation="horizontal">
+                <RadioGroupItem
+                  id="onboarding-plan-interval-year"
+                  value="year"
+                />
+                <FieldContent>
+                  <FieldTitle>
+                    {{ t("settings.plans.subscriptionTerm.annually") }}
+                  </FieldTitle>
+                  <FieldDescription>
+                    {{ t("pages.welcome.plans.annualDescription") }}
+                  </FieldDescription>
+                </FieldContent>
+              </Field>
+            </FieldLabel>
           </RadioGroup>
         </Field>
       </FieldSet>

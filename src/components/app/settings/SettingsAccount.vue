@@ -1568,8 +1568,8 @@ const getDeviceIcon = (deviceType: string) => {
 
             <!-- Verify step -->
             <div v-if="totpStep === 'verify'" class="flex flex-col gap-4">
-              <Field class="grid gap-2">
-                <FieldLabel class="text-secondary-foreground text-xs">
+              <Field>
+                <FieldLabel>
                   {{ t("settings.account.mfa.enterTotpCode") }}
                 </FieldLabel>
                 <InputOTP
@@ -1591,8 +1591,8 @@ const getDeviceIcon = (deviceType: string) => {
                   </InputOTPGroup>
                 </InputOTP>
               </Field>
-              <Field class="grid gap-2">
-                <FieldLabel class="text-secondary-foreground text-xs">
+              <Field>
+                <FieldLabel>
                   {{ t("settings.account.mfa.displayNamePlaceholder") }}
                 </FieldLabel>
                 <Input
@@ -1641,8 +1641,8 @@ const getDeviceIcon = (deviceType: string) => {
 
             <!-- Phone number step -->
             <div v-if="smsStep === 'phone'" class="flex flex-col gap-4">
-              <Field class="grid gap-2">
-                <FieldLabel class="text-secondary-foreground text-xs">
+              <Field>
+                <FieldLabel>
                   {{ t("settings.account.mfa.phone") }}
                 </FieldLabel>
                 <Input
@@ -1659,8 +1659,8 @@ const getDeviceIcon = (deviceType: string) => {
 
             <!-- Verify step -->
             <div v-if="smsStep === 'verify'" class="flex flex-col gap-4">
-              <Field class="grid gap-2">
-                <FieldLabel class="text-secondary-foreground text-xs">
+              <Field>
+                <FieldLabel>
                   {{
                     t("settings.account.mfa.enterSmsCode", {
                       phone: smsPhoneNumber,
@@ -1686,8 +1686,8 @@ const getDeviceIcon = (deviceType: string) => {
                   </InputOTPGroup>
                 </InputOTP>
               </Field>
-              <Field class="grid gap-2">
-                <FieldLabel class="text-secondary-foreground text-xs">
+              <Field>
+                <FieldLabel>
                   {{ t("settings.account.mfa.displayNamePlaceholder") }}
                 </FieldLabel>
                 <Input
