@@ -75,7 +75,7 @@ const handleClick = () => {
             <Component :is="typeIcon" />
             <span
               v-if="notification.read === false"
-              class="bg-primary ring-accent size-2.5ring-2 absolute -top-1 -left-1 flex"
+              class="bg-primary ring-sidebar absolute -top-1 -left-1 flex size-2 rounded-full ring-2"
             ></span>
           </ItemMedia>
           <ItemContent>
@@ -93,7 +93,7 @@ const handleClick = () => {
                   <Tooltip>
                     <TooltipTrigger as-child>
                       <Button
-                        variant="outline"
+                        variant="secondary"
                         size="icon"
                         @click.prevent.stop="
                           notification.read
@@ -111,12 +111,10 @@ const handleClick = () => {
                       }}
                     </TooltipContent>
                   </Tooltip>
-                </ButtonGroup>
-                <ButtonGroup>
                   <Tooltip v-if="notification.status !== 'inbox'">
                     <TooltipTrigger as-child>
                       <Button
-                        variant="outline"
+                        variant="secondary"
                         size="icon"
                         @click.prevent.stop="
                           emit('mark-inbox', notification.id)
@@ -134,7 +132,7 @@ const handleClick = () => {
                   <Tooltip v-if="notification.status !== 'saved'">
                     <TooltipTrigger as-child>
                       <Button
-                        variant="outline"
+                        variant="secondary"
                         size="icon"
                         @click.prevent.stop="
                           emit('mark-saved', notification.id)
@@ -150,7 +148,7 @@ const handleClick = () => {
                   <Tooltip v-if="notification.status !== 'done'">
                     <TooltipTrigger as-child>
                       <Button
-                        variant="outline"
+                        variant="secondary"
                         size="icon"
                         @click.prevent.stop="emit('mark-done', notification.id)"
                       >
@@ -165,7 +163,7 @@ const handleClick = () => {
               </TooltipProvider>
             </ButtonGroup>
             <span
-              class="text-muted-foreground/50 flex text-xs group-hover:hidden"
+              class="text-muted-foreground/50 block min-w-28 truncate text-right text-xs group-hover:hidden"
             >
               {{ timeAgo }}
             </span>

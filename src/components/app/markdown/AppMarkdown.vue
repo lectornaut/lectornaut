@@ -181,6 +181,9 @@ const codeBlockFontVars = computed(() => ({
 // because its only other caller is the Tiptap code-block extension, which never
 // mounts on the chat / changelog surfaces. Colors are empty until the theme
 // loads, so the first tick falls back to the library default.
+// Blocks only — INLINE code deliberately stays on prose colors (see the
+// `--inline-code-*` overrides in @/styles/index.css): a full Shiki-theme
+// surface on an inline chip reads as a mini code block mid-sentence.
 startCodeThemeColorSync()
 const codeBlockColorVars = computed(() => {
   const { bg, fg } = activeCodeThemeColors.value

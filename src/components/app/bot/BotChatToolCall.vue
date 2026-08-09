@@ -14,7 +14,8 @@
  *
  *   1. Interrupt (`isInterrupt`) — an `askQuestion`, with two sub-states by
  *      position. LIVE (`isLiveInterrupt`, the conversation tail) pauses the
- *      chat and renders the question + choice buttons; clicking one calls
+ *      chat and renders the question as a shadcn Questionnaire (choices +
+ *      optional free-form input under one "answer" item); submitting calls
  *      `respondToInterrupt` to resume. ABANDONED (`isAbandonedInterrupt`, no
  *      longer the tail because the user sent another message) renders the
  *      question read-only as a collapsed historical card — resuming a
@@ -56,6 +57,7 @@
  * doesn't match the expected shape, in which case the template falls
  * through to the generic JSON view rather than crashing.
  */
+import type { QuestionnaireItemDefinition } from "@/components/ui/questionnaire"
 import {
   BotChatContextKey,
   type BotChatToolCall,
@@ -247,15 +249,13 @@ const interruptAnswer = computed<string | null>(() => {
   return typeof obj.answer === "string" ? obj.answer : null
 })
 
-const customAnswer = ref("")
-const submittingChoice = ref<string | null>(null)
-const isSubmitting = computed(() => submittingChoice.value !== null)
+const isSubmitting = ref(false)
 
 const submitAnswer = async (answer: string) => {
   if (!botChat) return
   if (!answer) return
   if (isSubmitting.value) return
-  submittingChoice.value = answer
+  isSubmitting.value = true
   try {
     await botChat.respondToInterrupt({
       messageId: props.messageId,
@@ -263,23 +263,36 @@ const submitAnswer = async (answer: string) => {
       name: props.tool.name,
       answer: { answer },
     })
-    customAnswer.value = ""
   } finally {
-    submittingChoice.value = null
+    isSubmitting.value = false
   }
 }
 
-const submitCustom = () => {
-  const text = customAnswer.value.trim()
-  if (!text) return
-  void submitAnswer(text)
-}
+// The live form is the shadcn Questionnaire: ONE required item whose `name`
+// is "answer", so the form's FormData is exactly the `{ answer: string }`
+// payload `respondToInterrupt` submits for server-side validation. Declaring
+// `choices` on the item definition pins the letter shortcuts to the declared
+// order (per-DOM fallback assignment would reshuffle if choices re-render).
+const askQuestionItems = computed<QuestionnaireItemDefinition[]>(() => {
+  const input = askQuestionInput.value
+  if (!input) return []
+  return [
+    {
+      name: "answer",
+      required: true,
+      choices: input.choices.map((choice) => ({ value: choice })),
+    },
+  ]
+})
 
-const onCustomKeydown = (event: KeyboardEvent) => {
-  if (event.key === "Enter" && !event.shiftKey && !event.isComposing) {
-    event.preventDefault()
-    submitCustom()
-  }
+const onQuestionnaireSubmit = (event: Event) => {
+  // Without this the native form submit navigates the SPA away.
+  event.preventDefault()
+  const answer = String(
+    new FormData(event.target as HTMLFormElement).get("answer") ?? ""
+  ).trim()
+  if (!answer) return
+  void submitAnswer(answer)
 }
 
 // ── Calendar-write confirmation (connection tools, P2) ─────────────────────
@@ -1319,40 +1332,50 @@ const showChevron = computed(
     <CollapsibleContent class="select-auto">
       <!-- ============================================================== -->
       <!-- Live interrupt: question + choices form (chat is paused here). -->
+      <!-- Rendered with the shadcn Questionnaire: select (click, arrows, -->
+      <!-- or letter shortcut) then confirm with Send / Enter. The free-  -->
+      <!-- form input joins the same item when `allowOther` is set — only -->
+      <!-- the selected control submits under the "answer" name.         -->
       <!-- ============================================================== -->
       <Card v-if="isLiveInterrupt && askQuestionInput">
-        <CardHeader>
-          <CardTitle>{{ askQuestionInput.question }}</CardTitle>
-        </CardHeader>
         <CardContent>
-          <div class="flex flex-wrap gap-2">
-            <Button
-              v-for="choice in askQuestionInput.choices"
-              :key="choice"
-              variant="outline"
-              :disabled="isSubmitting"
-              @click="submitAnswer(choice)"
-            >
-              <Spinner v-if="submittingChoice === choice" />
-              {{ choice }}
-            </Button>
-          </div>
-        </CardContent>
-        <CardFooter v-if="askQuestionInput.allowOther" class="gap-2">
-          <Input
-            v-model="customAnswer"
-            :placeholder="t('ai.toolCall.customAnswer')"
-            :disabled="isSubmitting"
-            @keydown="onCustomKeydown"
-          />
-          <Button
-            :disabled="!customAnswer.trim() || isSubmitting"
-            @click="submitCustom"
+          <Questionnaire
+            :items="askQuestionItems"
+            shortcuts="letters"
+            @submit="onQuestionnaireSubmit"
           >
-            <Spinner v-if="submittingChoice === customAnswer.trim()" />
-            {{ t("ai.toolCall.send") }}
-          </Button>
-        </CardFooter>
+            <QuestionnaireItem name="answer" required>
+              <QuestionnaireTitle>
+                {{ askQuestionInput.question }}
+              </QuestionnaireTitle>
+              <QuestionnaireChoices>
+                <QuestionnaireChoice
+                  v-for="choice in askQuestionInput.choices"
+                  :key="choice"
+                  :value="choice"
+                  :disabled="isSubmitting"
+                >
+                  {{ choice }}
+                </QuestionnaireChoice>
+                <QuestionnaireInput
+                  v-if="askQuestionInput.allowOther"
+                  :placeholder="t('ai.toolCall.customAnswer')"
+                  :aria-label="t('ai.toolCall.customAnswer')"
+                  :disabled="isSubmitting"
+                />
+              </QuestionnaireChoices>
+              <QuestionnaireError>
+                {{ t("ai.toolCall.chooseAnswer") }}
+              </QuestionnaireError>
+            </QuestionnaireItem>
+            <QuestionnaireActions>
+              <QuestionnaireSubmit :disabled="isSubmitting">
+                <Spinner v-if="isSubmitting" />
+                {{ t("ai.toolCall.send") }}
+              </QuestionnaireSubmit>
+            </QuestionnaireActions>
+          </Questionnaire>
+        </CardContent>
       </Card>
 
       <!-- ============================================================== -->

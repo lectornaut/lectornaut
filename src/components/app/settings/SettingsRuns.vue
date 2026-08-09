@@ -1,5 +1,6 @@
 <script lang="ts" setup>
 import { runColumns, type RunRow } from "@/components/app/runs/runColumns"
+import type { AppTableFeatures } from "@/components/table/features"
 import { useCanViewTeamSettings } from "@/composables/useCanViewTeamSettings"
 import { useRunsExplorer } from "@/composables/useRunsExplorer"
 import { useRunsTableFilters } from "@/composables/useRunsTableFilters"
@@ -32,7 +33,9 @@ const columns = computed(() =>
 
 // Date + workflow filter popovers (mirrors the Runs page sidebar) drive the same
 // columnFilters the built-in toolbar does, via the exposed table ref.
-const tableRef = ref<{ table: VueTable<RunRow> } | null>(null)
+const tableRef = ref<{
+  getTable: () => VueTable<AppTableFeatures, RunRow>
+} | null>(null)
 const {
   dateRange,
   rangeSummary,
@@ -41,7 +44,7 @@ const {
   clearWorkflows,
   hasFilters,
   clearAll,
-} = useRunsTableFilters(() => tableRef.value?.table)
+} = useRunsTableFilters(() => tableRef.value?.getTable())
 </script>
 
 <template>
@@ -138,7 +141,7 @@ const {
                 ref="tableRef"
                 :data="allRows"
                 :columns="columns"
-                :column-pinning="{ left: ['select'], right: ['actions'] }"
+                :column-pinning="{ start: ['select'], end: ['actions'] }"
                 class="overflow-clip rounded-4xl border"
               >
                 <template #expanded="{ row }">

@@ -192,6 +192,7 @@
       "failed": "Failed",
       "customAnswer": "Or type your own answer...",
       "send": "Send",
+      "chooseAnswer": "Choose an answer to continue.",
       "malformedInterrupt": "The assistant tried to ask a question but didn't include valid choices. Send another message to continue.",
       "waitingForReturn": "Waiting for tool to return...",
       "calendarWrite": {

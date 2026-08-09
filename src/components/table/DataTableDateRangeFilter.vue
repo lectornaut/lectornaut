@@ -1,7 +1,8 @@
-<script lang="ts" setup generic="TData">
+<script lang="ts" setup generic="TData extends RowData">
+import type { AppTableFeatures } from "@/components/table/features"
 import { IconCalendar } from "@/data/icons"
 import { getLocalTimeZone, parseDate, today } from "@internationalized/date"
-import type { Column } from "@tanstack/vue-table"
+import type { Column, RowData } from "@tanstack/vue-table"
 import type { DateRange } from "reka-ui"
 import { computed, ref } from "vue"
 
@@ -13,7 +14,7 @@ interface DateRangeValue {
 }
 
 const props = defineProps<{
-  column?: Column<TData, unknown>
+  column?: Column<AppTableFeatures, TData, unknown>
   title?: string
 }>()
 

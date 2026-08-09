@@ -8,6 +8,7 @@
 
 import RunRowActions from "@/components/app/runs/RunRowActions.vue"
 import DataTableColumnHeader from "@/components/table/DataTableColumnHeader.vue"
+import type { AppTableFeatures } from "@/components/table/features"
 import { Badge } from "@/components/ui/badge"
 import { Checkbox } from "@/components/ui/checkbox"
 import { IconChevronRight } from "@/data/icons"
@@ -19,7 +20,7 @@ import {
   type RunOption,
 } from "@/data/workflowRunConstants"
 import type { IWorkflowRun } from "@/types/domain"
-import type { Column, ColumnDef } from "@tanstack/vue-table"
+import type { Column, ColumnDef, RowData } from "@tanstack/vue-table"
 import { h } from "vue"
 
 export interface RunRow {
@@ -86,8 +87,8 @@ const fmtDuration = (ms: number | null): string => {
 const fmtTokens = (n: number): string => (n ? n.toLocaleString() : "—")
 const fmtCost = (n: number): string => (n ? `$${n.toFixed(4)}` : "—")
 
-const toUnknownColumn = (column: Column<RunRow, unknown>) =>
-  column as Column<unknown, unknown>
+const toUnknownColumn = (column: Column<AppTableFeatures, RunRow, unknown>) =>
+  column as unknown as Column<AppTableFeatures, RowData, unknown>
 
 const optionCell = (value: string, options: RunOption[], colored = false) => {
   const opt = options.find((o) => o.value === value)
@@ -171,7 +172,7 @@ export interface RunColumnsOptions {
  */
 export function runColumns(
   options: RunColumnsOptions = {}
-): ColumnDef<RunRow>[] {
+): ColumnDef<AppTableFeatures, RunRow>[] {
   const { workflowOptions, dateRangeFilter = false } = options
   return [
     {

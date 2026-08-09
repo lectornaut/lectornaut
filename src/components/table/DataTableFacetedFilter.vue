@@ -1,12 +1,13 @@
-<script lang="ts" setup generic="TData">
+<script lang="ts" setup generic="TData extends RowData">
+import type { AppTableFeatures } from "@/components/table/features"
 import { IconCirclePlus } from "@/data/icons"
-import type { Column } from "@tanstack/vue-table"
+import type { Column, RowData } from "@tanstack/vue-table"
 import type { Component } from "vue"
 
 const { t } = useI18n()
 
 const props = defineProps<{
-  column?: Column<TData, unknown>
+  column?: Column<AppTableFeatures, TData, unknown>
   title?: string
   options: {
     label: string

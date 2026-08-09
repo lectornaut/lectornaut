@@ -1,9 +1,10 @@
-<script lang="ts" setup generic="TData">
-import type { Table } from "@tanstack/vue-table"
+<script lang="ts" setup generic="TData extends RowData">
+import type { AppTableFeatures } from "@/components/table/features"
+import type { RowData, Table } from "@tanstack/vue-table"
 
 const props = withDefaults(
   defineProps<{
-    table: Table<TData>
+    table: Table<AppTableFeatures, TData>
     showSearch?: boolean
     showFilters?: boolean
     showGrouping?: boolean

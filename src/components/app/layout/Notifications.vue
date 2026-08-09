@@ -103,7 +103,7 @@ useInfiniteScroll(
         <Badge
           v-if="unreadCount > 0"
           variant="secondary"
-          class="bg-sidebar-primary text-sidebar-primary-foreground aspect-square h-4 px-1"
+          class="bg-sidebar-primary text-sidebar-primary-foreground aspect-square h-4 rounded-3xl px-1"
         >
           {{ unreadCount }}
         </Badge>
@@ -111,15 +111,15 @@ useInfiniteScroll(
     </PopoverTrigger>
     <PopoverContent class="mx-2 w-auto p-2">
       <Tabs v-model="activeTab" default-value="inbox">
-        <div class="flex items-center justify-between">
+        <div class="flex items-center justify-between gap-2">
           <div class="flex items-center gap-2">
             <Button variant="ghost" size="icon" @click="isDocked = !isDocked">
               <IconPin v-if="!isDocked" />
               <IconPinOff v-else />
             </Button>
-            <span class="font-semibold">{{
-              t("components.notifications.title")
-            }}</span>
+            <span class="font-semibold">
+              {{ t("components.notifications.title") }}
+            </span>
           </div>
           <TabsList
             class="no-scrollbar bg-input/50 scroll-fade-x min-w-0 shrink justify-start overflow-clip overflow-x-auto p-0"
@@ -170,7 +170,7 @@ useInfiniteScroll(
         </div>
         <ScrollContainer
           ref="scrollableContainer"
-          class="bg-sidebar aspect-square w-md"
+          class="bg-sidebar aspect-square min-w-md rounded-2xl p-2"
         >
           <Empty
             v-if="filteredNotifications.length === 0 && !isLoading"

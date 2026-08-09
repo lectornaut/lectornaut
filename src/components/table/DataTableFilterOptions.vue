@@ -1,6 +1,7 @@
-<script lang="ts" setup generic="TData">
+<script lang="ts" setup generic="TData extends RowData">
+import type { AppTableFeatures } from "@/components/table/features"
 import { IconCircleX } from "@/data/icons"
-import type { Column, Table } from "@tanstack/vue-table"
+import type { Column, RowData, Table } from "@tanstack/vue-table"
 import type { Component } from "vue"
 import { computed } from "vue"
 
@@ -18,23 +19,23 @@ interface FacetedFilterMeta {
 
 type FilterDescriptor =
   | {
-      column: Column<TData, unknown>
+      column: Column<AppTableFeatures, TData, unknown>
       title: string
       type: "dateRange"
     }
   | {
-      column: Column<TData, unknown>
+      column: Column<AppTableFeatures, TData, unknown>
       title: string
       type: "faceted"
       options: FacetedOption[]
     }
 
 const props = defineProps<{
-  table: Table<TData>
+  table: Table<AppTableFeatures, TData>
 }>()
 
 const isFiltered = computed(
-  () => props.table.getState().columnFilters.length > 0
+  () => props.table.atoms.columnFilters.get().length > 0
 )
 
 const filterableColumns = computed<FilterDescriptor[]>(() => {

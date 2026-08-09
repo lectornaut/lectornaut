@@ -1,9 +1,13 @@
 {
+  "color-space-for-untagged-svg-colors": "display-p3",
   "fill": "automatic",
   "groups": [
     {
       "layers": [
         {
+          "blend-mode": "normal",
+          "fill": "automatic",
+          "hidden": false,
           "image-name": "icon.png",
           "name": "icon"
         }

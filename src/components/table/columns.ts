@@ -1,15 +1,16 @@
 import DataTableColumnHeader from "@/components/table/DataTableColumnHeader.vue"
 import DataTableRowActions from "@/components/table/DataTableRowActions.vue"
+import type { AppTableFeatures } from "@/components/table/features"
 import { Badge } from "@/components/ui/badge"
 import { Checkbox } from "@/components/ui/checkbox"
 import { labels, priorities, statuses } from "@/data/constants"
 import type { Task } from "@/data/schema"
-import type { Column, ColumnDef } from "@tanstack/vue-table"
+import type { Column, ColumnDef, RowData } from "@tanstack/vue-table"
 
-const toUnknownColumn = (column: Column<Task, unknown>) =>
-  column as Column<unknown, unknown>
+const toUnknownColumn = (column: Column<AppTableFeatures, Task, unknown>) =>
+  column as unknown as Column<AppTableFeatures, RowData, unknown>
 
-export const columns: ColumnDef<Task>[] = [
+export const columns: ColumnDef<AppTableFeatures, Task>[] = [
   {
     id: "select",
     header: ({ table }) =>
@@ -131,7 +132,9 @@ export const columns: ColumnDef<Task>[] = [
     cell: ({ row }) =>
       h(DataTableRowActions, {
         row,
-        onExpand: row.toggleExpanded,
+        // v9 instance methods live on the prototype — a bare method reference
+        // loses its `this`, so hand over a bound closure instead.
+        onExpand: () => row.toggleExpanded(),
       }),
     enablePinning: true,
     enableSorting: false,

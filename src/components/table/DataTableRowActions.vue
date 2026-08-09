@@ -3,10 +3,11 @@ import { labels } from "@/data/constants"
 import { IconEllipsis } from "@/data/icons"
 import type { Task } from "@/data/schema"
 import { taskSchema } from "@/data/schema"
+import type { AppTableFeatures } from "@/components/table/features"
 import type { Row } from "@tanstack/vue-table"
 
 interface DataTableRowActionsProps {
-  row: Row<Task>
+  row: Row<AppTableFeatures, Task>
 }
 const props = defineProps<DataTableRowActionsProps>()
 

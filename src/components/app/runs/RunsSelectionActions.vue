@@ -1,5 +1,6 @@
 <script lang="ts" setup>
 import type { RunRow } from "@/components/app/runs/runColumns"
+import type { AppTableFeatures } from "@/components/table/features"
 import { useTeamWorkflows } from "@/composables/useTeamWorkflows"
 import { IconCheck, IconSquareX, IconTrash2, IconX } from "@/data/icons"
 import type { Row, Table } from "@tanstack/vue-table"
@@ -15,8 +16,8 @@ import { computed, ref } from "vue"
 // detached callables that toast globally, so an in-flight bulk op finishes even
 // if this component unmounts; `clear()` acts on the parent-owned table ref.
 const props = defineProps<{
-  table: Table<RunRow>
-  rows: Row<RunRow>[]
+  table: Table<AppTableFeatures, RunRow>
+  rows: Row<AppTableFeatures, RunRow>[]
   count: number
 }>()
 

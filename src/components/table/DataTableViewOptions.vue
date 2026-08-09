@@ -1,4 +1,4 @@
-<script lang="ts" setup generic="TData">
+<script lang="ts" setup generic="TData extends RowData">
 import {
   IconArrowLeftToLine,
   IconArrowRightToLine,
@@ -13,10 +13,11 @@ import {
   IconSquareDashedMousePointer,
   IconSquareMousePointer,
 } from "@/data/icons"
-import type { Table } from "@tanstack/vue-table"
+import type { AppTableFeatures } from "@/components/table/features"
+import type { RowData, Table } from "@tanstack/vue-table"
 
 const props = defineProps<{
-  table: Table<TData>
+  table: Table<AppTableFeatures, TData>
 }>()
 
 const columns = computed(() =>
@@ -29,7 +30,7 @@ const columns = computed(() =>
 )
 
 const pageSizeString = computed({
-  get: () => String(props.table.getState().pagination.pageSize),
+  get: () => String(props.table.atoms.pagination.get().pageSize),
   set: (val: string) => {
     props.table.setPageSize(Number(val))
   },
@@ -70,7 +71,7 @@ function onPageSizeChange(val: unknown) {
               :key="column.id"
               :model-value="column.getIsVisible()"
               class="capitalize"
-              @update:model-value="column.toggleVisibility"
+              @update:model-value="(value) => column.toggleVisibility(!!value)"
             >
               {{ column.id }}
             </DropdownMenuCheckboxItem>

@@ -3,8 +3,9 @@ import DataTableColumnHeader from "@/components/table/DataTableColumnHeader.vue"
 import { Badge } from "@/components/ui/badge"
 import { useAuditLogs } from "@/composables/useAuditLogs"
 import { IconAlertTriangle, IconRefreshCw } from "@/data/icons"
+import type { AppTableFeatures } from "@/components/table/features"
 import type { ILogEntry } from "@/types/logs"
-import type { Column, ColumnDef } from "@tanstack/vue-table"
+import type { Column, ColumnDef, RowData } from "@tanstack/vue-table"
 import { computed, h, onMounted } from "vue"
 
 const { t } = useI18n()
@@ -38,8 +39,9 @@ const formatActor = (entry: ILogEntry) =>
 const formatResource = (entry: ILogEntry) =>
   `${entry.resource.type}: ${entry.resource.id}`
 
-const toUnknownColumn = (column: Column<ILogEntry, unknown>) =>
-  column as Column<unknown, unknown>
+const toUnknownColumn = (
+  column: Column<AppTableFeatures, ILogEntry, unknown>
+) => column as unknown as Column<AppTableFeatures, RowData, unknown>
 
 const actorOptions = computed(() => {
   const values = new Set<string>()
@@ -52,7 +54,7 @@ const actorOptions = computed(() => {
     .map((actor) => ({ label: actor, value: actor }))
 })
 
-const columns = computed<ColumnDef<ILogEntry>[]>(() => [
+const columns = computed<ColumnDef<AppTableFeatures, ILogEntry>[]>(() => [
   {
     id: "timestamp",
     accessorFn: (row) => row.timestamp?.toDate?.().getTime() ?? 0,

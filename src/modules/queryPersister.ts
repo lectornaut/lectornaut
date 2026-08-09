@@ -11,7 +11,9 @@
  * don't survive a JSON round-trip (they'd come back as plain
  * `{ seconds, nanoseconds }` objects, breaking `.toDate()` and sort
  * comparators), so we tag instances on the way out and revive them on the way
- * back in.
+ * back in. JS `Date`s get the same treatment: rows whose `toRow` converts to
+ * `Date` (e.g. notifications `createdAt`) would otherwise be reduced to `{}`
+ * by the deep clone and crash sort comparators on the restored entry.
  */
 
 import { queryClient } from "@/modules/queryClient"
@@ -28,7 +30,8 @@ import { Timestamp } from "firebase/firestore"
 const STORAGE_KEY = "lectornaut.query-cache.v1"
 const MAX_AGE_MS = 1000 * 60 * 60 * 24 // 24h — drop anything older on restore.
 // Bump to discard incompatible persisted caches after a cache-shape change.
-const CACHE_BUSTER = "v1"
+// v2: Dates are tagged; v1 blobs hold `{}` where rows had `Date` fields.
+const CACHE_BUSTER = "v2"
 
 /**
  * Throttle window for the subscribe-driven save path. Every save deep-clones
@@ -56,15 +59,22 @@ const PERSIST_THROTTLE_MS = 5_000
 export const MAX_PERSISTED_LIST_ROWS = 200
 
 const TIMESTAMP_TAG = "__firestoreTimestamp__"
+const DATE_TAG = "__jsDate__"
 
 interface TaggedTimestamp {
   [TIMESTAMP_TAG]: { seconds: number; nanoseconds: number }
 }
 
+interface TaggedDate {
+  [DATE_TAG]: number
+}
+
 const isTaggedTimestamp = (value: object): value is TaggedTimestamp =>
   TIMESTAMP_TAG in value
 
-/** Deep-replace Firestore `Timestamp` instances with a JSON-safe tagged form. */
+const isTaggedDate = (value: object): value is TaggedDate => DATE_TAG in value
+
+/** Deep-replace `Timestamp`/`Date` instances with a JSON-safe tagged form. */
 export function tagTimestamps(value: unknown): unknown {
   if (value instanceof Timestamp) {
     return {
@@ -73,6 +83,9 @@ export function tagTimestamps(value: unknown): unknown {
         nanoseconds: value.nanoseconds,
       },
     }
+  }
+  if (value instanceof Date) {
+    return { [DATE_TAG]: value.getTime() }
   }
   if (Array.isArray(value)) return value.map(tagTimestamps)
   if (value && typeof value === "object") {
@@ -93,6 +106,7 @@ export function reviveTimestamps(value: unknown): unknown {
       const { seconds, nanoseconds } = value[TIMESTAMP_TAG]
       return new Timestamp(seconds, nanoseconds)
     }
+    if (isTaggedDate(value)) return new Date(value[DATE_TAG])
     const result: Record<string, unknown> = {}
     for (const key of Object.keys(value)) {
       result[key] = reviveTimestamps((value as Record<string, unknown>)[key])

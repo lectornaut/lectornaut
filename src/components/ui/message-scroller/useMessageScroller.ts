@@ -953,6 +953,16 @@ function createEngine(props: MessageScrollerProviderProps) {
 
   function setContentElement(element: HTMLElement | null) {
     content = element
+    // Vendored patch: seed already-rendered anchors (restored history) as
+    // handled — otherwise the equal-count observer branch scrolls to the
+    // OLDEST unhandled anchor when the Thinking marker unmounts in the same
+    // flush the streamed reply mounts.
+    if (element) {
+      for (const child of getMessageChildren(element, spacer)) {
+        if (child.dataset.scrollAnchor === "true")
+          handledScrollAnchors.add(child)
+      }
+    }
   }
 
   function setSpacerElement(element: HTMLElement | null) {

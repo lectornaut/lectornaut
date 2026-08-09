@@ -425,6 +425,14 @@
   --markstream-code-font-family: var(--font-mono);
   --ms-font-weight-code: 500;
 
+  /* Inline code: prose colors with a slight lift. Full text foreground
+   * (the library default fades it to 75%) on a faint foreground tint, so
+   * chips read as part of the sentence in both light and dark — distinct
+   * from the code BLOCKS, which adopt the active Shiki theme's own
+   * bg/fg (set inline in AppMarkdown.vue). */
+  --inline-code-fg: hsl(var(--ms-foreground));
+  --inline-code-bg: hsl(var(--ms-foreground) / 6%);
+
   /* Cap tall code payloads (long JSON / tool output) so one block can't
    * dominate a chat bubble. The Shiki code surface reads this via
    * `max-height: min(70vh, var(--ms-size-code-max-height))` and scrolls past

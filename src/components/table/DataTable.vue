@@ -1,39 +1,29 @@
-<script lang="ts" setup generic="TData">
+<script lang="ts" setup generic="TData extends RowData">
+import { features, type AppTableFeatures } from "@/components/table/features"
 import { valueUpdater } from "@/components/ui/table/utils"
 import { IconChevronRight, IconDatabase, IconListFilter } from "@/data/icons"
 import type {
   ColumnDef,
   ColumnFiltersState,
   ColumnPinningState,
+  ColumnVisibilityState,
   ExpandedState,
   GroupingState,
   Row,
+  RowData,
   SortingState,
   Table,
-  VisibilityState,
 } from "@tanstack/vue-table"
-import {
-  FlexRender,
-  getCoreRowModel,
-  getExpandedRowModel,
-  getFacetedRowModel,
-  getFacetedUniqueValues,
-  getFilteredRowModel,
-  getGroupedRowModel,
-  getPaginationRowModel,
-  getSortedRowModel,
-  useVueTable,
-} from "@tanstack/vue-table"
+import { FlexRender, useTable } from "@tanstack/vue-table"
 
 const props = withDefaults(
   defineProps<{
-    columns: ColumnDef<TData, unknown>[]
+    columns: ColumnDef<AppTableFeatures, TData>[]
     data: TData[]
     columnPinning?: ColumnPinningState
     stickyHeader?: boolean
     showToolbar?: boolean
     showPagination?: boolean
-    paginate?: boolean
     showSearch?: boolean
     showFilters?: boolean
     showGrouping?: boolean
@@ -42,13 +32,12 @@ const props = withDefaults(
   }>(),
   {
     columnPinning: () => ({
-      left: ["select"],
-      right: ["actions"],
+      start: ["select"],
+      end: ["actions"],
     }),
     stickyHeader: false,
     showToolbar: true,
     showPagination: true,
-    paginate: true,
     showSearch: true,
     showFilters: true,
     showGrouping: true,
@@ -63,14 +52,14 @@ const props = withDefaults(
  * behaviour untouched (grouped tables still expand via their group toggle).
  */
 const slots = defineSlots<{
-  expanded?: (props: { row: Row<TData> }) => unknown
+  expanded?: (props: { row: Row<AppTableFeatures, TData> }) => unknown
   /**
    * Bulk actions for the current row selection. When provided, the footer's
    * selected-count chip turns into a dropdown trigger that renders these items.
    */
   "selection-actions"?: (props: {
-    table: Table<TData>
-    rows: Row<TData>[]
+    table: Table<AppTableFeatures, TData>
+    rows: Row<AppTableFeatures, TData>[]
     count: number
   }) => unknown
 }>()
@@ -81,12 +70,13 @@ const NON_EXPAND_COLUMNS = new Set(["select", "actions"])
 
 const sorting = ref<SortingState>([])
 const columnFilters = ref<ColumnFiltersState>([])
-const columnVisibility = ref<VisibilityState>({})
+const columnVisibility = ref<ColumnVisibilityState>({})
 const rowSelection = ref({})
 const expanded = ref<ExpandedState>({})
 const grouping = ref<GroupingState>([])
 
-const table = useVueTable({
+const table = useTable({
+  features,
   get data() {
     return props.data
   },
@@ -126,14 +116,6 @@ const table = useVueTable({
     valueUpdater(updaterOrValue, rowSelection),
   onExpandedChange: (updaterOrValue) => valueUpdater(updaterOrValue, expanded),
   onGroupingChange: (updaterOrValue) => valueUpdater(updaterOrValue, grouping),
-  getCoreRowModel: getCoreRowModel(),
-  getFilteredRowModel: getFilteredRowModel(),
-  getPaginationRowModel: props.paginate ? getPaginationRowModel() : undefined,
-  getSortedRowModel: getSortedRowModel(),
-  getFacetedRowModel: getFacetedRowModel(),
-  getFacetedUniqueValues: getFacetedUniqueValues(),
-  getExpandedRowModel: getExpandedRowModel(),
-  getGroupedRowModel: getGroupedRowModel(),
   // Let leaf rows expand to a detail row when an `#expanded` slot is provided;
   // otherwise fall back to the default (only rows with subRows, i.e. groups).
   getRowCanExpand: hasExpandedSlot.value ? () => true : undefined,
@@ -154,7 +136,10 @@ function onCellClick(columnId: string, event: MouseEvent): void {
     event.stopPropagation()
 }
 
-defineExpose({ table })
+// Exposed as a getter, not the object: Vue's exposed-instance typing remaps
+// exposed objects and breaks the v9 table's TanStack Store class types, while
+// function return types pass through untouched.
+defineExpose({ getTable: () => table })
 </script>
 
 <template>
@@ -191,9 +176,9 @@ defineExpose({ table })
                   {
                     'from-card/50 sticky from-50%': header.column.getIsPinned(),
                   },
-                  header.column.getIsPinned() === 'left'
+                  header.column.getIsPinned() === 'start'
                     ? 'left-0 bg-linear-to-r'
-                    : header.column.getIsPinned() === 'right'
+                    : header.column.getIsPinned() === 'end'
                       ? 'right-0 bg-linear-to-l'
                       : '',
                 ]"
@@ -229,9 +214,9 @@ defineExpose({ table })
                         'from-card/50 sticky from-50%':
                           cell.column.getIsPinned(),
                       },
-                      cell.column.getIsPinned() === 'left'
+                      cell.column.getIsPinned() === 'start'
                         ? 'left-0 bg-linear-to-r'
-                        : cell.column.getIsPinned() === 'right'
+                        : cell.column.getIsPinned() === 'end'
                           ? 'right-0 bg-linear-to-l'
                           : '',
                     ]"

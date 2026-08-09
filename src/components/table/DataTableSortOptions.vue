@@ -1,11 +1,12 @@
-<script lang="ts" setup generic="TData">
+<script lang="ts" setup generic="TData extends RowData">
+import type { AppTableFeatures } from "@/components/table/features"
 import { IconArrowDown, IconArrowUp, IconArrowUpDown } from "@/data/icons"
-import type { Table } from "@tanstack/vue-table"
+import type { RowData, Table } from "@tanstack/vue-table"
 
 const { t } = useI18n()
 
 const props = defineProps<{
-  table: Table<TData>
+  table: Table<AppTableFeatures, TData>
 }>()
 
 const columns = computed(() =>

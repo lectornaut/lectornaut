@@ -1,5 +1,6 @@
 <script lang="ts" setup>
 import { runColumns, type RunRow } from "@/components/app/runs/runColumns"
+import type { AppTableFeatures } from "@/components/table/features"
 import { useRunsExplorer } from "@/composables/useRunsExplorer"
 import { useRunsTableFilters } from "@/composables/useRunsTableFilters"
 import { useTeamWorkflows } from "@/composables/useTeamWorkflows"
@@ -41,15 +42,20 @@ const columns = computed(() =>
 // calendar + workflow tree and the built-in toolbar both drive it through the
 // exposed table ref, kept in sync by useRunsTableFilters (shared with
 // Settings → Runs so the two surfaces behave identically).
-const tableRef = ref<{ table: VueTable<RunRow> } | null>(null)
+const tableRef = ref<{
+  getTable: () => VueTable<AppTableFeatures, RunRow>
+} | null>(null)
 const { dateRange, isWorkflowSelected, toggleWorkflow, hasFilters, clearAll } =
-  useRunsTableFilters(() => tableRef.value?.table)
+  useRunsTableFilters(() => tableRef.value?.getTable())
 
 // Right-sidebar summary over the currently-filtered runs (falls back to the full
 // set until the table mounts and its filtered model is available).
 const stats = computed(() => {
   const rows: RunRow[] = tableRef.value
-    ? tableRef.value.table.getFilteredRowModel().rows.map((r) => r.original)
+    ? tableRef.value
+        .getTable()
+        .getFilteredRowModel()
+        .rows.map((r) => r.original)
     : allRows.value
   const byStatus = new Map<string, number>()
   let cost = 0
@@ -169,7 +175,7 @@ const stats = computed(() => {
       :data="allRows"
       :columns="columns"
       sticky-header
-      :column-pinning="{ left: ['select'], right: ['actions'] }"
+      :column-pinning="{ start: ['select'], end: ['actions'] }"
     >
       <template #expanded="{ row }">
         <RunDetails :run="row.original.run" />

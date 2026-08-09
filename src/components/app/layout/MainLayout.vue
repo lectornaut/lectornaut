@@ -388,12 +388,12 @@ const closeTab = (id: string) => {
           >
             <div
               id="left-dock"
-              class="shadow-muted-foreground/5 bg-background flex max-w-80 shrink-0 flex-col overflow-clip rounded-3xl border shadow empty:hidden"
+              class="bg-background flex max-w-80 shrink-0 flex-col overflow-clip rounded-3xl empty:hidden"
             ></div>
             <ResizablePanelGroup
               :style="{ overflow: 'clip' }"
               :class="[
-                'shadow-muted-foreground/5 size-full min-h-0 min-w-0 rounded-3xl',
+                'size-full min-h-0 min-w-0 rounded-3xl',
                 { 'animate-layout-panels': animatePanels },
               ]"
               direction="horizontal"
@@ -403,7 +403,7 @@ const closeTab = (id: string) => {
                 <ContextMenuTrigger as-child>
                   <ResizablePanel
                     ref="leftPanel"
-                    class="shadow-muted-foreground/5 rounded-3xl shadow"
+                    class="rounded-3xl"
                     collapsible
                     :min-size="15"
                     :default-size="20"
@@ -481,7 +481,7 @@ const closeTab = (id: string) => {
                 <ResizablePanelGroup
                   :style="{ overflow: 'clip' }"
                   :class="[
-                    'shadow-muted-foreground/5 size-full min-h-0 min-w-0 rounded-3xl',
+                    'size-full min-h-0 min-w-0 rounded-3xl',
                     { 'animate-layout-panels': animatePanels },
                   ]"
                   direction="vertical"
@@ -491,7 +491,7 @@ const closeTab = (id: string) => {
                     <ContextMenuTrigger as-child>
                       <ResizablePanel
                         ref="topPanel"
-                        class="shadow-muted-foreground/5 rounded-3xl shadow"
+                        class="rounded-3xl"
                         collapsible
                         :min-size="15"
                         :default-size="80"
@@ -582,7 +582,7 @@ const closeTab = (id: string) => {
                     <ContextMenuTrigger as-child>
                       <ResizablePanel
                         ref="bottomPanel"
-                        class="shadow-muted-foreground/5 rounded-3xl shadow"
+                        class="rounded-3xl"
                         collapsible
                         :min-size="15"
                         :default-size="20"
@@ -830,7 +830,7 @@ const closeTab = (id: string) => {
                 <ContextMenuTrigger as-child>
                   <ResizablePanel
                     ref="rightPanel"
-                    class="shadow-muted-foreground/5 rounded-3xl shadow"
+                    class="rounded-3xl"
                     collapsible
                     :min-size="25"
                     :default-size="30"
@@ -902,7 +902,7 @@ const closeTab = (id: string) => {
                       class="bg-background pointer-events-auto absolute flex min-w-64 flex-col overflow-clip rounded-3xl border will-change-transform"
                       :class="
                         isPoppedOutMinimized
-                          ? 'border-foreground shadow ring-1'
+                          ? 'border-foreground ring-1'
                           : 'min-h-64 resize shadow-lg'
                       "
                     >
@@ -993,7 +993,7 @@ const closeTab = (id: string) => {
             </Transition>
             <div
               id="right-dock"
-              class="shadow-muted-foreground/5 bg-background flex max-w-80 shrink-0 flex-col overflow-clip rounded-3xl border shadow empty:hidden"
+              class="bg-background flex max-w-80 shrink-0 flex-col overflow-clip rounded-3xl empty:hidden"
             ></div>
           </div>
         </div>

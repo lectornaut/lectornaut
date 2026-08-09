@@ -691,6 +691,9 @@ const renderedMessages = computed(() =>
             </ContextMenu>
           </MessageScrollerItem>
           <Marker v-if="showThinking" role="status" class="px-3 py-6">
+            <MarkerIcon>
+              <AiOrb :size="16" />
+            </MarkerIcon>
             <MarkerContent class="shimmer">
               {{ t("ai.thinking") }}
             </MarkerContent>

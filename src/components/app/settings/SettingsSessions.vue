@@ -20,7 +20,13 @@ import {
 import { useMembershipStore } from "@/stores/membershipStore"
 import type { IBotSession, IBotSessionVisibility } from "@/types/domain"
 import { isUserMembership, type IMembership } from "@/types/membership"
-import type { Column, ColumnDef, Table as VueTable } from "@tanstack/vue-table"
+import type { AppTableFeatures } from "@/components/table/features"
+import type {
+  Column,
+  ColumnDef,
+  RowData,
+  Table as VueTable,
+} from "@tanstack/vue-table"
 import { Timestamp } from "firebase/firestore"
 import { storeToRefs } from "pinia"
 import { computed, h, ref } from "vue"
@@ -163,8 +169,9 @@ const ownerOptions = computed(() => {
   ]
 })
 
-const toUnknownColumn = (column: Column<IBotSession, unknown>) =>
-  column as Column<unknown, unknown>
+const toUnknownColumn = (
+  column: Column<AppTableFeatures, IBotSession, unknown>
+) => column as unknown as Column<AppTableFeatures, RowData, unknown>
 
 // ── Single-row dialog state ──────────────────────────────────────────────────
 
@@ -195,7 +202,7 @@ const openDelete = (session: IBotSession) => {
 
 // ── Columns ──────────────────────────────────────────────────────────────────
 
-const columns = computed<ColumnDef<IBotSession>[]>(() => [
+const columns = computed<ColumnDef<AppTableFeatures, IBotSession>[]>(() => [
   {
     id: "select",
     header: ({ table }) =>
@@ -462,7 +469,7 @@ const columns = computed<ColumnDef<IBotSession>[]>(() => [
         { class: "text-muted-foreground tabular-nums" },
         formatRelative(tsMillis(row.original.updatedAt))
       ),
-    sortingFn: "basic",
+    sortFn: "basic",
     enableSorting: true,
     enableGrouping: false,
     enableHiding: true,
@@ -482,7 +489,7 @@ const columns = computed<ColumnDef<IBotSession>[]>(() => [
         { class: "text-muted-foreground tabular-nums" },
         formatRelative(tsMillis(row.original.createdAt))
       ),
-    sortingFn: "basic",
+    sortFn: "basic",
     enableSorting: true,
     enableGrouping: false,
     enableHiding: true,
@@ -510,13 +517,13 @@ const columns = computed<ColumnDef<IBotSession>[]>(() => [
 // ── Selection bridge to bulk-actions row ─────────────────────────────────────
 
 interface DataTableExpose {
-  table: VueTable<IBotSession>
+  getTable: () => VueTable<AppTableFeatures, IBotSession>
 }
 
 const tableRef = ref<DataTableExpose | null>(null)
 
 const selectedRows = computed(() => {
-  const table = tableRef.value?.table
+  const table = tableRef.value?.getTable()
   if (!table) return []
   return table.getFilteredSelectedRowModel().rows
 })
@@ -536,7 +543,7 @@ const selectionHasArchived = computed(() =>
   selectedSessions.value.some((s) => !!s.archivedAt)
 )
 
-const clearSelection = () => tableRef.value?.table.resetRowSelection()
+const clearSelection = () => tableRef.value?.getTable().resetRowSelection()
 
 // ── Bulk actions ─────────────────────────────────────────────────────────────
 
@@ -673,7 +680,7 @@ const submitDelete = async () => {
                 ref="tableRef"
                 :data="sessions"
                 :columns="columns"
-                :column-pinning="{ left: ['select'], right: ['actions'] }"
+                :column-pinning="{ start: ['select'], end: ['actions'] }"
                 class="overflow-clip rounded-4xl border"
               >
                 <!-- Bulk actions for the footer's selected-count chip. Admins -->

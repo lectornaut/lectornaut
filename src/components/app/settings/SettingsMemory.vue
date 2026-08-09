@@ -23,7 +23,13 @@ import type {
 } from "@/schemas/memory"
 import { useAuthStore } from "@/stores/authStore"
 import { MEMORY_CATEGORIES } from "@lectornaut/shared/domain"
-import type { Column, ColumnDef, Table as VueTable } from "@tanstack/vue-table"
+import type { AppTableFeatures } from "@/components/table/features"
+import type {
+  Column,
+  ColumnDef,
+  RowData,
+  Table as VueTable,
+} from "@tanstack/vue-table"
 import { Timestamp } from "firebase/firestore"
 import { storeToRefs } from "pinia"
 import { computed, h, reactive, ref } from "vue"
@@ -119,8 +125,8 @@ const importanceOptions = computed(() => [
   { label: t("settings.memory.importance.high"), value: "high" },
 ])
 
-const toUnknownColumn = (column: Column<IMemory, unknown>) =>
-  column as Column<unknown, unknown>
+const toUnknownColumn = (column: Column<AppTableFeatures, IMemory, unknown>) =>
+  column as unknown as Column<AppTableFeatures, RowData, unknown>
 
 const canShareRow = (m: IMemory): boolean =>
   !!myUid.value && m.ownerUid === myUid.value
@@ -262,7 +268,7 @@ const submitDelete = async () => {
 
 // ── Columns ──────────────────────────────────────────────────────────────────
 
-const columns = computed<ColumnDef<IMemory>[]>(() => [
+const columns = computed<ColumnDef<AppTableFeatures, IMemory>[]>(() => [
   {
     id: "select",
     header: ({ table }) =>
@@ -477,7 +483,7 @@ const columns = computed<ColumnDef<IMemory>[]>(() => [
         { class: "text-muted-foreground tabular-nums" },
         formatRelative(tsMillis(row.original.updatedAt))
       ),
-    sortingFn: "basic",
+    sortFn: "basic",
     enableSorting: true,
     enableGrouping: false,
     enableHiding: true,
@@ -507,13 +513,13 @@ const columns = computed<ColumnDef<IMemory>[]>(() => [
 // ── Selection bridge to bulk-actions row ─────────────────────────────────────
 
 interface DataTableExpose {
-  table: VueTable<IMemory>
+  getTable: () => VueTable<AppTableFeatures, IMemory>
 }
 
 const tableRef = ref<DataTableExpose | null>(null)
 
 const selectedRows = computed(() => {
-  const table = tableRef.value?.table
+  const table = tableRef.value?.getTable()
   if (!table) return []
   return table.getFilteredSelectedRowModel().rows
 })
@@ -531,7 +537,7 @@ const selectionHasArchived = computed(() =>
   selectedMemories.value.some((m) => m.archived === true)
 )
 
-const clearSelection = () => tableRef.value?.table.resetRowSelection()
+const clearSelection = () => tableRef.value?.getTable().resetRowSelection()
 
 // ── Bulk actions ─────────────────────────────────────────────────────────────
 
@@ -674,7 +680,7 @@ const submitBulkDelete = async () => {
                 ref="tableRef"
                 :data="memories"
                 :columns="columns"
-                :column-pinning="{ left: ['select'], right: ['actions'] }"
+                :column-pinning="{ start: ['select'], end: ['actions'] }"
                 class="overflow-clip rounded-4xl border"
               >
                 <template #selection-actions>

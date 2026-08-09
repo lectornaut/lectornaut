@@ -10,13 +10,14 @@
  * workflow doc ids (a preset row toggles its several ids as a unit).
  */
 import type { RunRow } from "@/components/app/runs/runColumns"
+import type { AppTableFeatures } from "@/components/table/features"
 import type { RunsDateRange } from "@/composables/useRunsExplorer"
 import { parseDate } from "@internationalized/date"
 import type { Table as VueTable } from "@tanstack/vue-table"
 import { computed } from "vue"
 
 export function useRunsTableFilters(
-  getTable: () => VueTable<RunRow> | undefined
+  getTable: () => VueTable<AppTableFeatures, RunRow> | undefined
 ) {
   const queuedColumn = () => getTable()?.getColumn("queuedAtMs")
   const workflowColumn = () => getTable()?.getColumn("workflowName")
@@ -76,7 +77,7 @@ export function useRunsTableFilters(
   }
 
   const hasFilters = computed(
-    () => (getTable()?.getState().columnFilters.length ?? 0) > 0
+    () => (getTable()?.atoms.columnFilters.get().length ?? 0) > 0
   )
   const clearAll = (): void => getTable()?.resetColumnFilters()
 

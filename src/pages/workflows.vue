@@ -1,5 +1,6 @@
 <script lang="ts" setup>
 import { runColumns, type RunRow } from "@/components/app/runs/runColumns"
+import type { AppTableFeatures } from "@/components/table/features"
 import { useRunsExplorer } from "@/composables/useRunsExplorer"
 import { useTeamAgents } from "@/composables/useTeamAgents"
 import { useTeamWorkflows } from "@/composables/useTeamWorkflows"
@@ -62,7 +63,9 @@ const columns = computed(() =>
 // Exposed table instance — lets the left-sidebar selection drive the table's
 // Workflow column filter (clicking a workflow focuses its runs), mirroring how
 // the Runs page sidebar drives its filters.
-const tableRef = ref<{ table: VueTable<RunRow> } | null>(null)
+const tableRef = ref<{
+  getTable: () => VueTable<AppTableFeatures, RunRow>
+} | null>(null)
 
 // Saved team-wide gate for custom workflows (creation only; predefined unaffected).
 const { customWorkflowsEnabled } = storeToRefs(useTeamAgentsStore())
@@ -120,7 +123,7 @@ const selectedWorkflow = computed<IWorkflow | null>(() => {
 // toolbar's Workflow/Date filters layer on top and can broaden or clear it.
 const select = (id: string): void => {
   selectedId.value = id
-  tableRef.value?.table.getColumn("workflowName")?.setFilterValue([id])
+  tableRef.value?.getTable().getColumn("workflowName")?.setFilterValue([id])
 }
 
 // ── Editor dialog ───────────────────────────────────────────────────────────
@@ -349,7 +352,7 @@ const formatWhen = (ts: unknown): string =>
       :data="allRows"
       :columns="columns"
       sticky-header
-      :column-pinning="{ left: ['select'], right: ['actions'] }"
+      :column-pinning="{ start: ['select'], end: ['actions'] }"
     >
       <template #expanded="{ row }">
         <RunDetails :run="row.original.run" />

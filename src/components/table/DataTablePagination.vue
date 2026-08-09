@@ -1,4 +1,4 @@
-<script lang="ts" setup generic="TData">
+<script lang="ts" setup generic="TData extends RowData">
 import {
   IconArrowLeftToLine,
   IconArrowRightToLine,
@@ -6,10 +6,11 @@ import {
   IconChevronLeft,
   IconChevronRight,
 } from "@/data/icons"
-import type { Row, Table } from "@tanstack/vue-table"
+import type { AppTableFeatures } from "@/components/table/features"
+import type { Row, RowData, Table } from "@tanstack/vue-table"
 
 defineProps<{
-  table: Table<TData>
+  table: Table<AppTableFeatures, TData>
 }>()
 
 // Optional bulk-actions menu for the current selection. When a consumer wires
@@ -17,8 +18,8 @@ defineProps<{
 // otherwise it stays a plain informational chip (backward compatible).
 defineSlots<{
   "selection-actions"?: (props: {
-    table: Table<TData>
-    rows: Row<TData>[]
+    table: Table<AppTableFeatures, TData>
+    rows: Row<AppTableFeatures, TData>[]
     count: number
   }) => unknown
 }>()
@@ -67,13 +68,13 @@ defineSlots<{
         </span>
         <Tooltip>
           <Select
-            v-model="table.getState().pagination.pageSize"
+            :model-value="table.atoms.pagination.get().pageSize"
             @update:model-value="table.setPageSize($event as number)"
           >
             <TooltipTrigger as-child>
               <SelectTrigger>
                 <SelectValue
-                  :placeholder="String(table.getState().pagination.pageSize)"
+                  :placeholder="String(table.atoms.pagination.get().pageSize)"
                 />
               </SelectTrigger>
               <SelectContent>
@@ -96,7 +97,7 @@ defineSlots<{
         <span>
           {{
             $t("components.dataTable.page", {
-              page: table.getState().pagination.pageIndex + 1,
+              page: table.atoms.pagination.get().pageIndex + 1,
               pages: table.getPageCount(),
             })
           }}

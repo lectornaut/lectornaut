@@ -1,11 +1,12 @@
-<script lang="ts" setup generic="TData">
+<script lang="ts" setup generic="TData extends RowData">
+import type { AppTableFeatures } from "@/components/table/features"
 import { IconSearch } from "@/data/icons"
-import type { Table } from "@tanstack/vue-table"
+import type { RowData, Table } from "@tanstack/vue-table"
 
 const { t } = useI18n()
 
 const props = defineProps<{
-  table: Table<TData>
+  table: Table<AppTableFeatures, TData>
 }>()
 </script>
 
@@ -18,7 +19,7 @@ const props = defineProps<{
     </span>
     <Input
       :placeholder="t('components.dataTable.search')"
-      :model-value="(props.table.getState().globalFilter as string) ?? ''"
+      :model-value="(props.table.atoms.globalFilter.get() as string) ?? ''"
       class="pl-9"
       @input="
         props.table.setGlobalFilter(($event.target as HTMLInputElement).value)
