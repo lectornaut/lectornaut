@@ -111,7 +111,7 @@ const CATALOG_BY_NAME: Record<BotToolName, BotToolDescriptor> = {
   },
   askQuestion: {
     name: "askQuestion",
-    label: "Ask a clarifying question",
+    label: "Ask a question",
     description: "Pause and ask me a question with choices to pick from.",
     icon: IconHelpCircle,
     example: "Ask me a clarifying question about ",

@@ -746,7 +746,6 @@ watch(copied, (isCopied) => {
                   </DropdownMenu>
                 </Tooltip>
               </TooltipProvider>
-              <AiAsk />
             </div>
           </div>
         </div>

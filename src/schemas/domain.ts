@@ -888,6 +888,8 @@ export const botSessionSchema = z.object({
   updatedAt: timestampSchema.optional(),
   /** Set when archived; null/undefined when active. */
   archivedAt: timestampSchema.nullable().optional(),
+  /** Set when pinned; null/undefined when not. Drives the "Pinned" group. */
+  pinnedAt: timestampSchema.nullable().optional(),
   /**
    * Composite key `${ownerUid}:${scope}:${nodeId}` for single-equality
    * Firestore queries against the chat's pinned node. Written once on

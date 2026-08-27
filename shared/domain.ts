@@ -176,6 +176,8 @@ export const LOG_RESOURCE_TYPES = [
   "connection",
   "integration",
   "workflow",
+  "session",
+  "billing",
 ] as const
 export type LogResourceType = (typeof LOG_RESOURCE_TYPES)[number]
 
@@ -191,6 +193,11 @@ export const AUDIT_ACTIONS = [
   "team.create",
   "team.update",
   "team.delete",
+  // The team-wide agent config at teams/{t}/settings/agent — system prompt,
+  // model, and which side-effecting tools the bot may call. Admin-only, and it
+  // changes what the AI will do for EVERY member, so it audits like any other
+  // team-scoped capability change.
+  "team.agent_config.update",
   // workspace
   "workspace.create",
   "workspace.update",
@@ -215,6 +222,19 @@ export const AUDIT_ACTIONS = [
   "membership.remove",
   "membership.agent.add",
   "membership.agent.remove",
+  // Self-service account erasure. Written once per team the user belonged to,
+  // so each team's log shows the member's account going away. Deliberately
+  // carries NO email/username/displayName — see `deleteCurrentUserAccountData`.
+  "membership.account.delete",
+  // User-scoped identity changes, fanned into each team the user belongs to —
+  // same shape as `membership.account.delete`. These are what a teammate SEES
+  // (display name, handle, public profile), so the team whose log they land in
+  // is the audience that can act on an impersonation attempt. Deliberately NOT
+  // extended to device sessions: see `sessions.ts`.
+  "membership.profile.update",
+  "membership.username.claim",
+  "membership.username.release",
+  "membership.visibility.update",
   // group
   "group.create",
   "group.update",
@@ -239,6 +259,10 @@ export const AUDIT_ACTIONS = [
   "invitation.update",
   "invitation.delete",
   "invitation.decline",
+  // The join itself — the invitation doc is DELETED on acceptance, so this
+  // entry is the only surviving link between the invited email and the uid
+  // that consumed it (carried in `changes.after.invitationId`).
+  "invitation.accept",
   // connection (team-level app lifecycle + per-member account bindings;
   // resource id == provider key, e.g. "google-calendar")
   "connection.install",
@@ -268,6 +292,23 @@ export const AUDIT_ACTIONS = [
   "workflow.availability.update",
   "workflow.run.review",
   "workflow.run.delete",
+  // Firing a workflow off-schedule — the human decision behind an otherwise
+  // autonomous agent run.
+  "workflow.run.start",
+  // bot session (chat) — only the two acts an ADMIN may perform on another
+  // member's session are audited; owner-only cosmetics (rename/archive/pin)
+  // are not.
+  "session.visibility.update",
+  "session.delete",
+  // billing (team-scoped, Stripe-backed). `portal.open` records no state change
+  // of its own: it is the door through which a member makes changes INSIDE
+  // Stripe, which return as webhook-driven mutations with no human attached —
+  // this entry is the only thing tying those back to a person.
+  "billing.checkout.start",
+  "billing.portal.open",
+  "billing.plan.change",
+  "billing.cancel",
+  "billing.restore",
   // security
   "sso.configured",
   "sso.deleted",

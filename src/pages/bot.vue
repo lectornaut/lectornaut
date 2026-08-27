@@ -69,7 +69,10 @@ watch(botChat.sessionId, (id) => {
 const popOut = () => {
   openAiAskPopoutWindow({
     sessionId: botChat.sessionId.value,
-    title: t("pages.start.askAi"),
+    // Hand the real chat title over so the new window opens named,
+    // rather than starting on the fallback and renaming itself once
+    // the session doc loads there.
+    title: botChat.activeSession.value?.title || t("pages.start.askAi"),
   })
 }
 </script>

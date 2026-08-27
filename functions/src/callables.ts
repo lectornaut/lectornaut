@@ -6,6 +6,7 @@ import {
   HttpsError,
   onCall,
 } from "firebase-functions/v2/https"
+import { buildContext, logEvent } from "./audit.js"
 import { BUILT_IN_AGENTS_BY_ID, isBuiltInAgentId } from "./builtInAgents.js"
 import { COST_BUDGET } from "./costBudget.js"
 import { sendEmailInternal } from "./email.js"
@@ -360,6 +361,36 @@ export const acceptInvitation = onCall(CALLABLE_OPTS, async (request) => {
     }
 
     transaction.delete(invRef)
+
+    // The membership create and its audit entry commit together. This is the
+    // ONLY record that survives acceptance: `invRef` is deleted just above, so
+    // without this entry the log shows an invitation being sent and then
+    // nothing — the moment someone actually joined the team would be missing
+    // while every other invitation event (create/resend/update/delete/decline)
+    // is recorded. `invitationId` is carried in `changes` so an auditor can
+    // still tie the invited email to the uid that consumed it.
+    await logEvent(
+      {
+        teamId: invitation.teamId,
+        actor: {
+          userId: uid,
+          email: authedEmail ?? undefined,
+          role: invitationRole,
+        },
+        action: "invitation.accept",
+        resource: {
+          type: "membership",
+          id: uid,
+          parentId: invitation.teamId,
+        },
+        context: buildContext(request),
+        changes: {
+          fields: ["role"],
+          after: { role: invitationRole, invitationId },
+        },
+      },
+      { transaction }
+    )
 
     if (!currentTeamId) {
       transaction.set(

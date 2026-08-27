@@ -9,6 +9,8 @@ import {
   IconLock,
   IconMoreHorizontal,
   IconPencil,
+  IconPin,
+  IconPinOff,
   IconPlus,
   IconRotateCcw,
   IconSearch,
@@ -124,11 +126,25 @@ const groupLabel = (key: string): string => {
   if (key === "private") return t("ai.visibilityPrivate")
   if (key === "shared") return t("ai.visibilityShared")
   if (key === "public") return t("ai.visibilityPublic")
+  if (key === "pinned") return t("ai.pinned")
   // `all` is the only key emitted when groupBy=none.
   return t("labels.history")
 }
 
-const myGroups = computed(() => filter.groupSessions(mySessions.value))
+const isPinned = (session: IBotSession) => !!session.pinnedAt
+
+// Pinned chats are hoisted into their own bucket ahead of whatever
+// `groupBy` produces, so "Pinned" stays at the top regardless of the
+// active view option. They're removed from the normal groups first —
+// a pinned chat appearing twice would be worse than not pinning it.
+const myGroups = computed(() => {
+  const pinned = mySessions.value.filter(isPinned)
+  const groups = filter.groupSessions(
+    mySessions.value.filter((s) => !isPinned(s))
+  )
+  if (pinned.length === 0) return groups
+  return [{ key: "pinned", items: filter.sortSessions(pinned) }, ...groups]
+})
 const sharedGroups = computed(() => filter.groupSessions(sharedSessions.value))
 
 const hasAnyRawSessions = computed(
@@ -216,6 +232,10 @@ const onSelectSession = (id: string) => {
 
 const onArchiveToggle = (session: IBotSession) => {
   void botChat?.archiveSession(session.id, !session.archivedAt)
+}
+
+const onPinToggle = (session: IBotSession) => {
+  void botChat?.pinSession(session.id, !session.pinnedAt)
 }
 </script>
 
@@ -365,6 +385,16 @@ const onArchiveToggle = (session: IBotSession) => {
                           </SidebarMenuButton>
                         </ContextMenuTrigger>
                         <ContextMenuContent>
+                          <ContextMenuItem @click="onPinToggle(item)">
+                            <Component
+                              :is="isPinned(item) ? IconPinOff : IconPin"
+                            />
+                            {{
+                              isPinned(item)
+                                ? t("actions.unpin")
+                                : t("actions.pin")
+                            }}
+                          </ContextMenuItem>
                           <ContextMenuItem @click="openRename(item)">
                             <IconPencil />
                             {{ t("actions.rename") }}
@@ -400,6 +430,20 @@ const onArchiveToggle = (session: IBotSession) => {
                               t("ai.chatActions")
                             }}</TooltipContent>
                             <DropdownMenuContent align="end">
+                              <DropdownMenuItem
+                                data-hotkey="p"
+                                @click="onPinToggle(item)"
+                              >
+                                <Component
+                                  :is="isPinned(item) ? IconPinOff : IconPin"
+                                />
+                                {{
+                                  isPinned(item)
+                                    ? t("actions.unpin")
+                                    : t("actions.pin")
+                                }}
+                                <DropdownMenuShortcut>P</DropdownMenuShortcut>
+                              </DropdownMenuItem>
                               <DropdownMenuItem
                                 data-hotkey="r"
                                 @click="openRename(item)"

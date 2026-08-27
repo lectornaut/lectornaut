@@ -17,12 +17,13 @@
  *   - load: owner OR (visibility === "shared" AND team member)
  *   - findByPinnedNode: any team member (returns at most their own pin)
  *   - updateVisibility: owner OR team admin
- *   - rename / archive / delete: owner OR team admin (`assertCanMutate`)
+ *   - rename / archive / pin / delete: owner OR team admin (`assertCanMutate`)
  */
 
 import { FieldValue } from "firebase-admin/firestore"
 import { HttpsError } from "firebase-functions/v2/https"
 import { z } from "zod"
+import { buildContext, logEvent } from "./audit.js"
 import {
   extractMessagesFromSessionData,
   getMembershipRole,
@@ -164,6 +165,7 @@ export const updateBotSessionVisibility = defineCallable({
   handler: async ({
     auth,
     input,
+    request,
   }): Promise<UpdateBotSessionVisibilityResponse> => {
     const { teamId, workspaceId, sessionId, visibility } = input
 
@@ -182,6 +184,10 @@ export const updateBotSessionVisibility = defineCallable({
       )
     }
 
+    if (existing.visibility === visibility) {
+      return { sessionId, visibility }
+    }
+
     await db
       .doc(`teams/${teamId}/workspaces/${workspaceId}/botSessions/${sessionId}`)
       .set(
@@ -191,6 +197,33 @@ export const updateBotSessionVisibility = defineCallable({
         },
         { merge: true }
       )
+
+    // Audited because `canChange` admits a team ADMIN acting on someone else's
+    // chat: flipping a private session to "shared" exposes another member's
+    // conversation to the whole team. `ownerUid` is recorded so a reader can
+    // tell an owner's own toggle apart from an admin reaching into it.
+    //
+    // Logged after the write rather than inside a transaction: this callable
+    // does a plain merge-set, and wrapping it in one just to co-commit the log
+    // would mean threading a transaction through `readSessionDoc` and
+    // `getMembershipRole` in bot.ts. A write that lands with a failed log is
+    // the accepted ceiling here, same as connections.ts / workflows.ts.
+    await logEvent({
+      teamId,
+      workspaceId,
+      actor: { userId: auth.uid, email: auth.token.email ?? undefined },
+      action: "session.visibility.update",
+      resource: { type: "session", id: sessionId, parentId: workspaceId },
+      context: buildContext(request),
+      changes: {
+        fields: ["visibility"],
+        before: {
+          visibility: existing.visibility,
+          ownerUid: existing.ownerUid,
+        },
+        after: { visibility, ownerUid: existing.ownerUid },
+      },
+    })
 
     return { sessionId, visibility }
   },
@@ -202,13 +235,17 @@ export const updateBotSessionVisibility = defineCallable({
 
 const TITLE_LIMIT = 120
 
-/** Owner OR team admin can mutate (rename / archive / delete). */
+/**
+ * Owner OR team admin can mutate (rename / archive / pin / delete). Returns the
+ * session it just authorized against so a caller that audits (delete) can name
+ * the OWNER without re-reading the doc.
+ */
 async function assertCanMutate(
   teamId: string,
   workspaceId: string,
   sessionId: string,
   uid: string
-): Promise<void> {
+): Promise<NonNullable<Awaited<ReturnType<typeof readSessionDoc>>>> {
   const role = await getMembershipRole(teamId, uid)
   const existing = await readSessionDoc(teamId, workspaceId, sessionId)
   if (!existing) {
@@ -221,6 +258,7 @@ async function assertCanMutate(
       "Only the owner or a team admin can modify this chat."
     )
   }
+  return existing
 }
 
 interface RenameBotSessionResponse {
@@ -287,6 +325,39 @@ export const archiveBotSession = defineCallable({
   },
 })
 
+interface PinBotSessionResponse {
+  sessionId: string
+  pinned: boolean
+}
+
+/**
+ * Pin or unpin a session. Pinned chats render in a dedicated "Pinned"
+ * group at the top of the history sidebar regardless of the active
+ * group-by. Unlike archive this deliberately does NOT bump `updatedAt`
+ * — pinning is a view preference, not activity, and bumping it would
+ * reshuffle the date buckets the chat falls back into when unpinned.
+ */
+export const pinBotSession = defineCallable({
+  name: "pinBotSession",
+  auth: "verified",
+  appCheck: true,
+  input: sessionTargetSchema.extend({ pinned: z.boolean() }),
+  handler: async ({ auth, input }): Promise<PinBotSessionResponse> => {
+    const { teamId, workspaceId, sessionId, pinned } = input
+
+    await assertCanMutate(teamId, workspaceId, sessionId, auth.uid)
+
+    await db
+      .doc(`teams/${teamId}/workspaces/${workspaceId}/botSessions/${sessionId}`)
+      .set(
+        { pinnedAt: pinned ? FieldValue.serverTimestamp() : null },
+        { merge: true }
+      )
+
+    return { sessionId, pinned }
+  },
+})
+
 interface DeleteBotSessionResponse {
   sessionId: string
   deleted: true
@@ -297,15 +368,50 @@ export const deleteBotSession = defineCallable({
   auth: "verified",
   appCheck: true,
   input: sessionTargetSchema,
-  handler: async ({ auth, input }): Promise<DeleteBotSessionResponse> => {
+  handler: async ({
+    auth,
+    input,
+    request,
+  }): Promise<DeleteBotSessionResponse> => {
     const { teamId, workspaceId, sessionId } = input
 
-    await assertCanMutate(teamId, workspaceId, sessionId, auth.uid)
+    const existing = await assertCanMutate(
+      teamId,
+      workspaceId,
+      sessionId,
+      auth.uid
+    )
 
     // Single document; no subcollections to traverse.
     await db
       .doc(`teams/${teamId}/workspaces/${workspaceId}/botSessions/${sessionId}`)
       .delete()
+
+    // Destructive and admin-reachable: a team admin may delete a member's chat,
+    // and the doc is gone afterwards, so this entry is the only surviving trace.
+    // `ownerUid` is what makes it answerable — it distinguishes a user clearing
+    // their own history from an admin removing someone else's.
+    //
+    // The session TITLE is deliberately omitted. An admin can delete a session
+    // whose visibility is "private" but cannot read one (see the permission
+    // model at the top of this file), and titles are auto-generated from the
+    // conversation — recording it would publish the content of a private chat
+    // into a log every admin can read.
+    await logEvent({
+      teamId,
+      workspaceId,
+      actor: { userId: auth.uid, email: auth.token.email ?? undefined },
+      action: "session.delete",
+      resource: { type: "session", id: sessionId, parentId: workspaceId },
+      context: buildContext(request),
+      changes: {
+        fields: ["ownerUid", "visibility"],
+        before: {
+          ownerUid: existing.ownerUid,
+          visibility: existing.visibility,
+        },
+      },
+    })
 
     return { sessionId, deleted: true }
   },

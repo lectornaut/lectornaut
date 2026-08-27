@@ -21,7 +21,7 @@
  *                     + RouterLink), AppMarkdownImage (lazy + placeholder)
  *   changelog-sheet → SafeLink (author content can still cite externals)
  *   changelog-page  → SafeLink + AppMarkdownHeading (anchor permalinks)
- *   all surfaces    → code_block (MarkdownCodeBlockNode — Shiki highlighting,
+ *   all surfaces    → code_block (CodeBlockNode — Shiki highlighting,
  *                     replacing the default Monaco renderer so this surface
  *                     matches the CodeMirror + Tiptap code surfaces, all three
  *                     driven by the same Shiki themes)
@@ -30,23 +30,23 @@ import BotThinkingBlock from "@/components/app/bot/BotThinkingBlock.vue"
 import AppMarkdownHeading from "@/components/app/markdown/AppMarkdownHeading.vue"
 import AppMarkdownImage from "@/components/app/markdown/AppMarkdownImage.vue"
 import SafeLink from "@/components/app/markdown/SafeLink.vue"
-import { MarkdownCodeBlockNode, setCustomComponents } from "markstream-vue"
+import { CodeBlockNode, setCustomComponents } from "markstream-vue"
 import { markRaw } from "vue"
 
 setCustomComponents("chat", {
   thinking: markRaw(BotThinkingBlock),
   link: markRaw(SafeLink),
   image: markRaw(AppMarkdownImage),
-  code_block: markRaw(MarkdownCodeBlockNode),
+  code_block: markRaw(CodeBlockNode),
 })
 setCustomComponents("changelog-sheet", {
   link: markRaw(SafeLink),
   image: markRaw(AppMarkdownImage),
-  code_block: markRaw(MarkdownCodeBlockNode),
+  code_block: markRaw(CodeBlockNode),
 })
 setCustomComponents("changelog-page", {
   link: markRaw(SafeLink),
   heading: markRaw(AppMarkdownHeading),
   image: markRaw(AppMarkdownImage),
-  code_block: markRaw(MarkdownCodeBlockNode),
+  code_block: markRaw(CodeBlockNode),
 })

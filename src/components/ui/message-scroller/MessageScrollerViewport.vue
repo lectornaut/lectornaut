@@ -68,7 +68,7 @@ onBeforeUnmount(() => {
     :data-autoscrolling="autoscrolling ? '' : undefined"
     :class="
       cn(
-        'scroll-fade-b size-full min-h-0 min-w-0 scrollbar-thin scrollbar-gutter-stable overflow-y-auto overscroll-contain contain-content data-autoscrolling:scrollbar-thumb-transparent data-autoscrolling:scrollbar-track-transparent',
+        'scroll-fade-y size-full min-h-0 min-w-0 scrollbar-thin scrollbar-gutter-stable overflow-y-auto overscroll-contain contain-content data-autoscrolling:scrollbar-thumb-transparent data-autoscrolling:scrollbar-track-transparent',
         props.class
       )
     "

@@ -17,6 +17,10 @@ export const openAiAskPopoutWindow = (options: {
   const params = new URLSearchParams()
   if (options.sessionId) params.set("sessionId", options.sessionId)
   if (options.agentId) params.set("agentId", options.agentId)
+  // Handed over so the page can render the right heading on its first
+  // frame. Without it `/ask` shows its "Ask AI" fallback until the
+  // session doc loads, which reads as the window renaming itself.
+  if (options.title) params.set("title", options.title)
   const search = params.toString()
   const query = search ? `?${search}` : ""
 

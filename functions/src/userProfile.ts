@@ -1,14 +1,16 @@
-import { FieldValue } from "firebase-admin/firestore"
+import { FieldValue, type Transaction } from "firebase-admin/firestore"
 import * as logger from "firebase-functions/logger"
 import {
   onDocumentCreated,
   onDocumentUpdated,
 } from "firebase-functions/v2/firestore"
 import { HttpsError, onCall } from "firebase-functions/v2/https"
+import { buildContext, logEvent } from "./audit.js"
 import { assertAuthenticated } from "./auth.js"
 import { COST_BUDGET } from "./costBudget.js"
 import { auth, db } from "./firebase.js"
 import { CALLABLE_OPTS, TRIGGER_OPTS } from "./runtimeConfig.js"
+import type { LogEventParams } from "./types.js"
 
 const USERNAME_MIN_LENGTH = 3
 const USERNAME_MAX_LENGTH = 30
@@ -499,6 +501,7 @@ export const updateOwnUserProfile = onCall(
 
     const userRef = db.doc(`users/${uid}`)
     const authProfile = await getAuthProfile(uid)
+    const teamIds = await readUserTeamIds(uid)
 
     // Run the Firestore merge inside a transaction so we can compute a
     // sharp before/after diff for the audit log (and so the structured
@@ -547,6 +550,27 @@ export const updateOwnUserProfile = onCall(
         changedFields.push("photoURL")
         before.photoURL = beforeData.photoURL ?? null
         after.photoURL = payload.photoURL
+      }
+
+      // The diff above was already built "for the audit log" but no entry was
+      // ever written. Display name and photo are the identity every teammate
+      // sees on member lists and on each of this user's own log entries, so a
+      // change to them belongs in the log of each team that renders it.
+      if (changedFields.length > 0) {
+        await logToEveryTeam(
+          teamIds,
+          {
+            actor: {
+              userId: uid,
+              email: request.auth?.token.email ?? undefined,
+            },
+            action: "membership.profile.update",
+            resource: { type: "membership", id: uid },
+            context: buildContext(request),
+            changes: { fields: changedFields, before, after },
+          },
+          { transaction }
+        )
       }
 
       return { changedFields, before, after }
@@ -600,6 +624,49 @@ export const updateOwnUserProfile = onCall(
   }
 )
 
+/**
+ * Every team the user belongs to, derived from the membership doc PATH rather
+ * than its denormalized `teamId` field (a path cannot drift).
+ *
+ * Read OUTSIDE any caller transaction on purpose: a membership created
+ * concurrently with a profile edit is not worth holding a read-lock over the
+ * whole `memberships` collection group.
+ */
+async function readUserTeamIds(uid: string): Promise<string[]> {
+  const snapshot = await db
+    .collectionGroup("memberships")
+    .where("userId", "==", uid)
+    .select()
+    .limit(COST_BUDGET.QUERY_MAX_LIMIT)
+    .get()
+  return snapshot.docs
+    .map((doc) => doc.ref.parent.parent?.id)
+    .filter((teamId): teamId is string => !!teamId)
+}
+
+/**
+ * Fan one entry out into every team's log.
+ *
+ * The audit log is partitioned by `teamId` — `firestore.rules` gates reads on
+ * `canReadAuditLogs(resource.data.teamId)` and `useAuditLogs` queries by it —
+ * so an entry written without one is unreadable by anybody and may as well not
+ * exist. User-scoped identity events therefore have to fan out, and fanning out
+ * is also what makes them answerable: the team whose log an entry lands in is
+ * exactly the audience that can act on it (a member renaming themselves to
+ * impersonate a colleague is that team's problem, not a global one).
+ *
+ * Deliberately NOT extended to device sessions — see the note in `sessions.ts`.
+ */
+async function logToEveryTeam(
+  teamIds: string[],
+  entry: Omit<LogEventParams, "teamId">,
+  options?: { transaction?: Transaction }
+): Promise<void> {
+  for (const teamId of teamIds) {
+    await logEvent({ ...entry, teamId }, options)
+  }
+}
+
 export const claimUsername = onCall({ ...CALLABLE_OPTS }, async (request) => {
   assertAuthenticated(request)
 
@@ -608,6 +675,7 @@ export const claimUsername = onCall({ ...CALLABLE_OPTS }, async (request) => {
   const userRef = db.doc(`users/${uid}`)
   const usernameRef = db.doc(`usernames/${normalized}`)
   const authProfile = await getAuthProfile(uid)
+  const teamIds = await readUserTeamIds(uid)
 
   await db.runTransaction(async (transaction) => {
     const userSnap = await transaction.get(userRef)
@@ -661,6 +729,26 @@ export const claimUsername = onCall({ ...CALLABLE_OPTS }, async (request) => {
     ) {
       transaction.delete(oldUsernameRef)
     }
+
+    // A username is globally unique and fronts the public `/agents/{uid}`
+    // profile, so taking one is an identity change teammates can see. Both
+    // handles are recorded: the impersonation case is someone dropping a
+    // handle and picking up one close to a colleague's.
+    await logToEveryTeam(
+      teamIds,
+      {
+        actor: { userId: uid, email: request.auth?.token.email ?? undefined },
+        action: "membership.username.claim",
+        resource: { type: "membership", id: uid },
+        context: buildContext(request),
+        changes: {
+          fields: ["username"],
+          before: { username: oldNormalized ?? null },
+          after: { username: normalized },
+        },
+      },
+      { transaction }
+    )
   })
 
   return { username: normalized }
@@ -680,6 +768,7 @@ export const releaseUsername = onCall({ ...CALLABLE_OPTS }, async (request) => {
 
   const userRef = db.doc(`users/${uid}`)
   const usernameRef = db.doc(`usernames/${normalized}`)
+  const teamIds = await readUserTeamIds(uid)
 
   const released = await db.runTransaction(async (transaction) => {
     const userSnap = await transaction.get(userRef)
@@ -708,7 +797,26 @@ export const releaseUsername = onCall({ ...CALLABLE_OPTS }, async (request) => {
       )
     }
 
-    return usernameOwnedByUser || userCurrentUsername === normalized
+    const didRelease = usernameOwnedByUser || userCurrentUsername === normalized
+    if (didRelease) {
+      await logToEveryTeam(
+        teamIds,
+        {
+          actor: { userId: uid, email: request.auth?.token.email ?? undefined },
+          action: "membership.username.release",
+          resource: { type: "membership", id: uid },
+          context: buildContext(request),
+          changes: {
+            fields: ["username"],
+            before: { username: normalized },
+            after: { username: null },
+          },
+        },
+        { transaction }
+      )
+    }
+
+    return didRelease
   })
 
   return { released }
@@ -727,12 +835,16 @@ export const updateUserProfileVisibility = onCall(
     const isPublic = request.data.isPublic
     const userRef = db.doc(`users/${uid}`)
     const authProfile = await getAuthProfile(uid)
+    const teamIds = await readUserTeamIds(uid)
 
     await db.runTransaction(async (transaction) => {
       const userSnap = await transaction.get(userRef)
       const username = userSnap.exists
         ? nullableString(userSnap.data()?.username)
         : null
+      const wasPublic = userSnap.exists
+        ? userSnap.data()?.isPublic === true
+        : false
 
       if (isPublic && !username) {
         throw new HttpsError(
@@ -751,6 +863,30 @@ export const updateUserProfileVisibility = onCall(
         },
         { merge: true }
       )
+
+      // Flipping a profile public exposes it at `/agents/{uid}` to anyone with
+      // the link. Skipped when nothing actually changes so a re-save of the
+      // same setting does not add a row.
+      if (wasPublic !== isPublic) {
+        await logToEveryTeam(
+          teamIds,
+          {
+            actor: {
+              userId: uid,
+              email: request.auth?.token.email ?? undefined,
+            },
+            action: "membership.visibility.update",
+            resource: { type: "membership", id: uid },
+            context: buildContext(request),
+            changes: {
+              fields: ["isPublic"],
+              before: { isPublic: wasPublic },
+              after: { isPublic, username },
+            },
+          },
+          { transaction }
+        )
+      }
     })
 
     return { isPublic }
@@ -764,6 +900,11 @@ export const deleteCurrentUserAccountData = onCall(
 
     const uid = request.auth.uid
     const userRef = db.doc(`users/${uid}`)
+
+    // Each team this account belonged to gets its own entry, so an admin
+    // reviewing their team's log sees the member's account go away (their
+    // content stays; the identity behind it does not).
+    const teamIds = await readUserTeamIds(uid)
 
     const deleted = await db.runTransaction(async (transaction) => {
       const userSnap = await transaction.get(userRef)
@@ -786,6 +927,24 @@ export const deleteCurrentUserAccountData = onCall(
 
       if (userSnap.exists) {
         transaction.delete(userRef)
+
+        // Erasure event: the actor carries ONLY the uid, and no `changes` are
+        // recorded. Writing the email, display name or username here would
+        // preserve in the audit log precisely the personal data this call
+        // exists to erase — unlike the identity-change entries above, where the
+        // handle IS the thing worth recording. The uid stays because it is what
+        // makes the entry answerable and it is already the join key across every
+        // other entry in the log.
+        await logToEveryTeam(
+          teamIds,
+          {
+            actor: { userId: uid },
+            action: "membership.account.delete",
+            resource: { type: "membership", id: uid },
+            context: buildContext(request),
+          },
+          { transaction }
+        )
       }
 
       return userSnap.exists

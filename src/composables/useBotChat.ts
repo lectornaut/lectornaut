@@ -27,6 +27,7 @@ import {
   deleteBotSession,
   findBotSessionByPinnedNode,
   loadBotSession,
+  pinBotSession,
   renameBotSession,
   respondToBotInterrupt,
   sendBotMessage,
@@ -270,6 +271,7 @@ export interface BotChatContext {
   setActiveVisibility: (visibility: IBotSessionVisibility) => Promise<void>
   renameSession: (id: string, title: string) => Promise<void>
   archiveSession: (id: string, archived: boolean) => Promise<void>
+  pinSession: (id: string, pinned: boolean) => Promise<void>
   removeSession: (id: string) => Promise<void>
   // ── Attached workspace nodes (context) ──────────────────────────────
   /**
@@ -1544,6 +1546,23 @@ export function useBotChat(options?: BotChatOptions): BotChatContext {
     }
   }
 
+  const pinSession = async (id: string, pinned: boolean) => {
+    const teamId = currentTeamId.value
+    const workspaceId = currentWorkspaceId.value
+    if (!teamId || !workspaceId) return
+    if (isMutatingSession.value) return
+
+    isMutatingSession.value = true
+    try {
+      await pinBotSession({ teamId, workspaceId, sessionId: id, pinned })
+    } catch (error) {
+      console.error("[useBotChat] pinBotSession failed:", error)
+      toast.error("Failed to update chat.")
+    } finally {
+      isMutatingSession.value = false
+    }
+  }
+
   const removeSession = async (id: string) => {
     const teamId = currentTeamId.value
     const workspaceId = currentWorkspaceId.value
@@ -1654,6 +1673,7 @@ export function useBotChat(options?: BotChatOptions): BotChatContext {
     setActiveVisibility,
     renameSession,
     archiveSession,
+    pinSession,
     removeSession,
     attachedNodes,
     canAttachMoreNodes,

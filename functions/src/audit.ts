@@ -2208,6 +2208,15 @@ export async function createNodeAttachmentDoc(opts: {
   actorEmail: string | undefined
   role: IMembershipRole | undefined
   context: Context | undefined
+  /**
+   * Where the bytes came from, when they did NOT come from a direct upload.
+   * A Drive import and a local upload are otherwise indistinguishable in the
+   * log — same action, same filename — yet only one of them pulled data out of
+   * a connected external account, which is the question a provenance review
+   * actually asks. `connection.binding.create` proves a binding exists; only
+   * this proves it was used to move a file in.
+   */
+  source?: { provider: string; externalId: string }
 }): Promise<{ attachmentId: string; logId: string }> {
   const {
     teamId,
@@ -2289,12 +2298,14 @@ export async function createNodeAttachmentDoc(opts: {
             "displayName",
             "originalName",
             "storagePath",
+            ...(opts.source ? ["source"] : []),
           ],
           after: {
             attachmentId,
             displayName,
             originalName,
             storagePath,
+            ...(opts.source ? { source: opts.source } : {}),
           },
         },
       },

@@ -121,16 +121,16 @@ const codeBlockThemes = computed(
     editorThemes[0]
 )
 
-// Preload EVERY selectable variant into markstream's Shiki runtime
-// (a cached singleton highlighter — one-time cost, not per block). The
-// library only reliably swaps between *preregistered* themes; without this
-// list, changing the editor-theme setting asks the highlighter to apply a
-// theme it never loaded, so the block silently keeps the previous one. Listing all
-// variants guarantees the active light/dark pair is already registered when
-// markstream calls setTheme on a switch.
-const codeBlockThemeNames = editorThemes.flatMap((theme) => [
-  theme.light,
-  theme.dark,
+// The pair markstream loads into its Shiki runtime (a cached singleton
+// highlighter — one-time cost, not per block). markstream 2 types `themes`
+// as `[dark, light]` and loads exactly what it is handed, so the active pair
+// is registered on every switch. v1 needed the opposite: it only swapped
+// between *preregistered* themes, so we listed every selectable variant or
+// the block silently kept the previous one. That preload list is gone —
+// don't reintroduce it, v2 rejects anything but a two-element tuple.
+const codeBlockThemePair = computed<[dark: string, light: string]>(() => [
+  codeBlockThemes.value.dark,
+  codeBlockThemes.value.light,
 ])
 
 // Code blocks get a header strip with a copy button — same on every
@@ -145,7 +145,7 @@ const codeBlockProps = {
   showPreviewButton: false,
 } as const
 
-// Code blocks render through markstream's Shiki node (MarkdownCodeBlockNode,
+// Code blocks render through markstream's Shiki node (CodeBlockNode,
 // wired in registerMarkdownOverrides) — driven by the same Shiki themes the
 // CodeMirror and Tiptap surfaces use, so all three match. Display-only: the
 // node emits static highlighted HTML, with no editor runtime.
@@ -223,7 +223,7 @@ const isDev = import.meta.env.DEV
     :html-policy="htmlPolicy"
     :code-block-light-theme="codeBlockThemes.light"
     :code-block-dark-theme="codeBlockThemes.dark"
-    :themes="codeBlockThemeNames"
+    :themes="codeBlockThemePair"
     :code-block-props="codeBlockProps"
     :style="[codeBlockFontVars, codeBlockColorVars]"
     :mermaid-props="mermaidProps"

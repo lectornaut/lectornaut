@@ -15,6 +15,7 @@ import {
 import { onSchedule } from "firebase-functions/v2/scheduler"
 import { createHash } from "node:crypto"
 import Stripe from "stripe"
+import { buildContext, logEvent } from "./audit.js"
 import { assertAuthenticated } from "./auth.js"
 import {
   BillingInterval,
@@ -29,7 +30,13 @@ import { makeEventIdempotencyKey } from "./idempotency.js"
 import { can } from "./permissions.js"
 import { CALLABLE_OPTS, SCHEDULED_OPTS, TRIGGER_OPTS } from "./runtimeConfig.js"
 import { stripeSecretKey, stripeWebhookSecret } from "./secrets.js"
-import { Capabilities, IMembershipRole, isMembershipRole } from "./types.js"
+import {
+  AuditAction,
+  Capabilities,
+  Changes,
+  IMembershipRole,
+  isMembershipRole,
+} from "./types.js"
 
 type PlanChangeTiming = "immediate" | "period_end"
 type StripeEventMeta = {
@@ -70,6 +77,34 @@ interface TeamBillingContext {
   teamRole: IMembershipRole
   teamRef: DocumentReference
   teamData: Record<string, unknown>
+}
+
+/**
+ * Emit a billing audit entry. Unlike a content mutation — which co-commits its
+ * log inside the same Firestore transaction — a billing change lands in STRIPE
+ * first, so the entry is written after Stripe returns and a failed log leaves a
+ * real change unrecorded. That is the ceiling any third-party API boundary
+ * imposes; the alternative is no record at all of who moved the team's money,
+ * since the follow-up webhook mutations carry no human actor.
+ */
+async function logBillingEvent(
+  request: CallableRequest,
+  context: TeamBillingContext,
+  action: AuditAction,
+  changes?: Changes
+): Promise<void> {
+  await logEvent({
+    teamId: context.teamId,
+    actor: {
+      userId: context.uid,
+      email: request.auth?.token.email ?? undefined,
+      role: context.teamRole,
+    },
+    action,
+    resource: { type: "billing", id: context.teamId },
+    context: buildContext(request),
+    ...(changes ? { changes } : {}),
+  })
 }
 
 interface StripeSubscriptionReference {
@@ -1810,6 +1845,11 @@ export const createCheckoutSession = onCall(
       )
     }
 
+    await logBillingEvent(request, context, "billing.checkout.start", {
+      fields: ["planKey", "interval"],
+      after: { planKey, interval, seatCount },
+    })
+
     await context.teamRef.set(
       {
         billing: {
@@ -1874,6 +1914,8 @@ export const createBillingPortalSession = onCall(
         ),
       }
     )
+
+    await logBillingEvent(request, context, "billing.portal.open")
 
     return { url: portalSession.url }
   }
@@ -2006,6 +2048,19 @@ export const changeSubscriptionPlan = onCall(
         }
       )
       const summary = summarizeSubscription(updated, targetPriceId)
+      await logBillingEvent(request, context, "billing.plan.change", {
+        fields: ["planKey", "interval"],
+        before: {
+          planKey: currentPlan.planKey,
+          interval: currentPlan.interval,
+        },
+        after: {
+          planKey: targetPlanKey,
+          interval: targetInterval,
+          timing: "immediate",
+          status: summary.status,
+        },
+      })
       await context.teamRef.set(
         {
           billing: {
@@ -2040,6 +2095,16 @@ export const changeSubscriptionPlan = onCall(
     })
 
     const summary = summarizeSubscription(subscription)
+    await logBillingEvent(request, context, "billing.plan.change", {
+      fields: ["planKey", "interval"],
+      before: { planKey: currentPlan.planKey, interval: currentPlan.interval },
+      after: {
+        planKey: targetPlanKey,
+        interval: targetInterval,
+        timing: "period_end",
+        status: summary.status,
+      },
+    })
     await context.teamRef.set(
       {
         billing: {
@@ -2145,6 +2210,16 @@ export const cancelSubscription = onCall(
 
     const summary = summarizeSubscription(updated)
     const existingBilling = getTeamBillingData(context.teamData)
+    await logBillingEvent(request, context, "billing.cancel", {
+      fields: ["cancelAtPeriodEnd"],
+      after: {
+        planKey: existingBilling.planKey ?? null,
+        interval: existingBilling.interval ?? null,
+        cancelAtPeriodEnd: summary.cancelAtPeriodEnd,
+        status: summary.status,
+        currentPeriodEnd: summary.currentPeriodEnd,
+      },
+    })
     await context.teamRef.set(
       {
         billing: {
@@ -2228,6 +2303,15 @@ export const restoreSubscription = onCall(
 
     const summary = summarizeSubscription(updated)
     const existingBilling = getTeamBillingData(context.teamData)
+    await logBillingEvent(request, context, "billing.restore", {
+      fields: ["cancelAtPeriodEnd"],
+      after: {
+        planKey: existingBilling.planKey ?? null,
+        interval: existingBilling.interval ?? null,
+        cancelAtPeriodEnd: summary.cancelAtPeriodEnd,
+        status: summary.status,
+      },
+    })
     await context.teamRef.set(
       {
         billing: {

@@ -11,6 +11,7 @@
     "core:window:allow-close",
     "core:webview:allow-create-webview-window",
     "core:window:allow-set-badge-count",
+    "core:window:allow-set-title",
     "core:window:allow-set-overlay-icon",
     "core:image:allow-new",
     "core:webview:allow-set-webview-zoom",

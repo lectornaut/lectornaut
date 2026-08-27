@@ -1060,6 +1060,18 @@ export interface ArchiveBotSessionResponse {
   archived: boolean
 }
 
+export interface PinBotSessionRequest {
+  teamId: string
+  workspaceId: string
+  sessionId: string
+  pinned: boolean
+}
+
+export interface PinBotSessionResponse {
+  sessionId: string
+  pinned: boolean
+}
+
 export interface DeleteBotSessionRequest {
   teamId: string
   workspaceId: string
@@ -1969,6 +1981,16 @@ export const archiveBotSession = createTypedCallable<
   ArchiveBotSessionRequest,
   ArchiveBotSessionResponse
 >("archiveBotSession")
+
+/**
+ * Pin or unpin a bot chat session. Pinned chats surface in a dedicated
+ * "Pinned" group at the top of the history list. Owner or team admin
+ * only.
+ */
+export const pinBotSession = createTypedCallable<
+  PinBotSessionRequest,
+  PinBotSessionResponse
+>("pinBotSession")
 
 /** Delete a bot chat session permanently. Owner or team admin only. */
 export const deleteBotSession = createTypedCallable<
@@ -2926,6 +2948,7 @@ export function useFunctions() {
     updateBotSessionVisibility,
     renameBotSession,
     archiveBotSession,
+    pinBotSession,
     deleteBotSession,
 
     // Team agent config operations

@@ -594,6 +594,7 @@ export const importDriveNodeAttachment = defineCallable({
         actorEmail: auth.token.email ?? undefined,
         role,
         context: buildContext(request),
+        source: { provider: "google-drive", externalId: fileId },
       })
     } catch (error) {
       // Don't leak the orphaned blob if the metadata doc failed to commit.

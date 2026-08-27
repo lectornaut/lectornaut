@@ -30,6 +30,10 @@
 import { FieldValue } from "firebase-admin/firestore"
 import { HttpsError, onCall } from "firebase-functions/v2/https"
 import { z } from "genkit/beta"
+// Call-time-only use, exactly like `botNodeTools.ts` — the resulting
+// audit → connections → bot → botAgentConfig → audit cycle is the same class
+// as the one already documented in audit.ts and is init-safe.
+import { buildContext, logEvent } from "./audit.js"
 import { requireVerifiedAuth } from "./auth.js"
 import { getMembershipRole } from "./bot.js"
 import { BOT_CHAT_MODES, type BotChatMode } from "./botBuiltinTools.js"
@@ -931,6 +935,39 @@ export const updateTeamAgentConfig = onCall<UpdateTeamAgentConfigRequest>(
     )
 
     const snap = await ref.get()
-    return { config: applyAgentConfigOverrides(snap.data()) }
+    const nextConfig = applyAgentConfigOverrides(snap.data())
+
+    // Admin-only, and it rewrites the system prompt, the model, and which
+    // side-effecting tools the bot may call for EVERY member of the team — the
+    // same class of team-wide capability change as `integration.update`, which
+    // already audits.
+    //
+    // `fields` names everything that changed, but before/after carry only the
+    // small structured values. Prompt suffixes are free text of unbounded
+    // length; dumping both revisions into every edit's entry would bloat the
+    // log without making it more answerable ("the prompt changed, by whom,
+    // when" is the question it needs to answer).
+    const changedFields = Object.keys(updatesToWrite)
+    if (changedFields.length > 0) {
+      const auditableValues = (config: typeof nextConfig) => ({
+        model: config.model,
+        providers: config.providers,
+        models: config.models,
+      })
+      await logEvent({
+        teamId,
+        actor: { userId: auth.uid, email: auth.token.email ?? undefined, role },
+        action: "team.agent_config.update",
+        resource: { type: "team", id: teamId },
+        context: buildContext(request),
+        changes: {
+          fields: changedFields,
+          before: auditableValues(currentConfig),
+          after: auditableValues(nextConfig),
+        },
+      })
+    }
+
+    return { config: nextConfig }
   }
 )

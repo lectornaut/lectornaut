@@ -785,7 +785,7 @@ export const runTeamWorkflowNow = onCall<{
   if (typeof workflowId !== "string" || !workflowId) {
     throw new HttpsError("invalid-argument", "workflowId is required.")
   }
-  await assertAdminRole(teamId, auth.uid)
+  const role = await assertAdminRole(teamId, auth.uid)
 
   const snap = await db
     .doc(`${workflowsPath(teamId, workspaceId)}/${workflowId}`)
@@ -807,6 +807,24 @@ export const runTeamWorkflowNow = onCall<{
     workflow: wf,
     triggeredBy: { type: "manual", uid: auth.uid },
   })
+
+  // The human decision behind an otherwise autonomous run. Every other
+  // workflow callable audits, and the run itself is attributed to the AGENT —
+  // without this entry there is nothing recording which admin fired it
+  // off-schedule.
+  await logEvent({
+    teamId,
+    workspaceId,
+    actor: { userId: auth.uid, email: auth.token.email ?? undefined, role },
+    action: "workflow.run.start",
+    resource: { type: "workflow", id: runId, parentId: workflowId },
+    context: buildContext(request),
+    changes: {
+      fields: ["trigger"],
+      after: { trigger: "manual", workflowName: wf.name ?? null },
+    },
+  })
+
   return { runId }
 })
 

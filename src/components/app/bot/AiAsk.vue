@@ -66,11 +66,12 @@ const popOut = () => {
           <TooltipTrigger as-child>
             <Button
               id="tour-ai-assistant"
-              variant="ghost"
+              variant="outline"
               class="shadow-none"
-              size="icon-sm"
+              size="sm"
             >
               <IconAi />
+              Agent
             </Button>
           </TooltipTrigger>
           <TooltipContent class="flex items-center gap-2 px-2">

@@ -59,6 +59,7 @@
     "visibilityPublic": "Public",
     "archive": "Archive",
     "archived": "Archived",
+    "pinned": "Pinned",
     "unarchive": "Unarchive",
     "restore": "Restore",
     "untitledChat": "Untitled chat",

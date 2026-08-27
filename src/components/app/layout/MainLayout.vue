@@ -19,6 +19,7 @@ import {
   IconTerminal,
   IconX,
 } from "@/data/icons"
+import { usePopout } from "@/composables/usePopout"
 import { generateId } from "@/helpers/utilities"
 import { emitter } from "@/modules/mitt"
 import { useUiPreferencesStore } from "@/stores/uiPreferencesStore"
@@ -257,8 +258,9 @@ const innerHeight = window.innerHeight
 const draggableContainer = ref<HTMLElement | null>(null)
 const draggableEl = ref<HTMLElement | null>(null)
 const draggableHandleEl = ref<HTMLElement | null>(null)
-const isPoppedOut = useLocalStorage("popout-state", false)
-const isPoppedOutMinimized = useLocalStorage("popout-minimized-state", false)
+// Window chrome lives here; the content is teleported into
+// `#popout-dock` by whoever opened it (see `usePopout`).
+const { isPoppedOut, isPoppedOutMinimized, poppedOutTitle } = usePopout()
 const observedSize = useLocalStorage("popout-size", { width: 300, height: 400 })
 const observedPosition = useLocalStorage("popout-position", { x: 0.5, y: 0.5 })
 
@@ -908,17 +910,25 @@ const closeTab = (id: string) => {
                     >
                       <div
                         ref="draggableHandleEl"
-                        class="flex cursor-move items-center justify-between p-2"
+                        class="flex cursor-move items-center justify-between gap-2 p-2"
                         :class="
-                          isPoppedOutMinimized ? 'bg-sidebar' : 'bg-secondary'
+                          isPoppedOutMinimized ? 'bg-sidebar' : 'bg-background'
                         "
                         @dblclick="isPoppedOutMinimized = !isPoppedOutMinimized"
                       >
                         <span class="ml-2 flex items-center gap-2 font-medium">
                           <IconGripHorizontal />
-                          {{ t("layouts.app.popout.title") }}
+                          {{ poppedOutTitle || t("layouts.app.popout.title") }}
                         </span>
                         <span class="flex items-center gap-2">
+                          <!-- Actions belonging to whatever is docked -->
+                          <!-- inside (e.g. PoppedOutChat's "open in a -->
+                          <!-- native window"), teleported in beside -->
+                          <!-- the window controls. -->
+                          <span
+                            id="popout-actions"
+                            class="flex items-center empty:hidden"
+                          ></span>
                           <!-- <ButtonGroup> -->
                           <TooltipProvider>
                             <Tooltip>
@@ -961,15 +971,10 @@ const closeTab = (id: string) => {
                         </span>
                       </div>
                       <div
-                        v-if="!isPoppedOutMinimized"
-                        class="bg-background m-2 grow rounded-3xl border border-dashed p-2"
-                      >
-                        <div
-                          class="size-full bg-[repeating-linear-gradient(45deg,var(--color-muted)_0,var(--color-muted)_1px,transparent_0,transparent_50%)] bg-size-[8px_8px] p-2"
-                        >
-                          Sample Content
-                        </div>
-                      </div>
+                        v-show="!isPoppedOutMinimized"
+                        id="popout-dock"
+                        class="flex min-h-0 min-w-0 grow flex-col overflow-clip"
+                      ></div>
                     </Draggable>
                   </ContextMenuTrigger>
                   <ContextMenuContent>
@@ -996,6 +1001,7 @@ const closeTab = (id: string) => {
               class="bg-background flex max-w-80 shrink-0 flex-col overflow-clip rounded-3xl empty:hidden"
             ></div>
           </div>
+          <AiBar />
         </div>
       </SidebarInset>
     </ResizablePanel>
