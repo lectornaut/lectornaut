@@ -84,8 +84,8 @@ declare module 'vue-router/auto-routes' {
     '/bot': RouteRecordInfo<
       '/bot',
       '/bot/:id?',
-      Record<never, never>,
-      Record<never, never>,
+      { id?: ParamValueZeroOrOne<true> },
+      { id?: ParamValueZeroOrOne<false> },
       | never
     >,
     '/changelog': RouteRecordInfo<
@@ -98,8 +98,8 @@ declare module 'vue-router/auto-routes' {
     '/code': RouteRecordInfo<
       '/code',
       '/code/:nodeId?',
-      Record<never, never>,
-      Record<never, never>,
+      { nodeId?: ParamValueZeroOrOne<true> },
+      { nodeId?: ParamValueZeroOrOne<false> },
       | never
     >,
     '/connections/callback': RouteRecordInfo<
@@ -232,8 +232,8 @@ declare module 'vue-router/auto-routes' {
     '/write': RouteRecordInfo<
       '/write',
       '/write/:nodeId?',
-      Record<never, never>,
-      Record<never, never>,
+      { nodeId?: ParamValueZeroOrOne<true> },
+      { nodeId?: ParamValueZeroOrOne<false> },
       | never
     >,
   }

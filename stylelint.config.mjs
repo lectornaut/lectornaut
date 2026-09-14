@@ -7,6 +7,9 @@ export default {
     // also flagged separately as a deprecated CSS proposal, hence the
     // dedicated `at-rule-no-deprecated` ignore.
     "at-rule-no-deprecated": [true, { ignoreAtRules: ["apply"] }],
+    // Same story for the prelude check: it validates `@apply` against the
+    // dead CSS proposal (`@apply --prop`), not Tailwind utility names.
+    "at-rule-prelude-no-invalid": [true, { ignoreAtRules: ["apply"] }],
     "at-rule-no-unknown": [
       true,
       {
