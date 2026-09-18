@@ -759,7 +759,7 @@ const expandedCard = ref<number | null>(null)
             >
               {{ group.title }}
             </h2>
-            <p >{{ group.description }}</p>
+            <p>{{ group.description }}</p>
           </div> -->
           <div
             class="container mx-auto grid max-w-4xl grid-cols-1 gap-2 p-2 @xl:grid-cols-2"

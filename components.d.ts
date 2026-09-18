@@ -402,6 +402,7 @@ declare module 'vue' {
     SettingsTeams: typeof import('./src/components/app/settings/SettingsTeams.vue')['default']
     SettingsTools: typeof import('./src/components/app/settings/SettingsTools.vue')['default']
     SettingsUnsavedBar: typeof import('./src/components/app/settings/SettingsUnsavedBar.vue')['default']
+    SettingsUsage: typeof import('./src/components/app/settings/SettingsUsage.vue')['default']
     SettingsWorkflowRow: typeof import('./src/components/app/settings/SettingsWorkflowRow.vue')['default']
     SettingsWorkflows: typeof import('./src/components/app/settings/SettingsWorkflows.vue')['default']
     SettingsWorkspaces: typeof import('./src/components/app/settings/SettingsWorkspaces.vue')['default']

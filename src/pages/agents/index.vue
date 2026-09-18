@@ -198,7 +198,7 @@ const openNewAgentDialog = (): void => {
         </Empty>
 
         <template v-else>
-          <div v-if="builtInRows.length > 0" class="flex flex-col gap-3">
+          <div v-if="builtInRows.length > 0" class="flex flex-col gap-2">
             <h2 class="text-lg font-semibold tracking-tight">
               {{ t("pages.agents.builtInSection") }}
             </h2>
@@ -233,7 +233,7 @@ const openNewAgentDialog = (): void => {
             </ItemGroup>
           </div>
 
-          <div v-if="customRows.length > 0" class="flex flex-col gap-3">
+          <div v-if="customRows.length > 0" class="flex flex-col gap-2">
             <h2 class="text-lg font-semibold tracking-tight">
               {{ t("pages.agents.customSection") }}
             </h2>

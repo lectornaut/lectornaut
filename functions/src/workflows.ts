@@ -74,7 +74,6 @@ import {
 } from "./secrets.js"
 import { getTeamAdminsAndOwners } from "./teams.js"
 import type { LogEventParams, WorkspaceNodeScope } from "./types.js"
-import { assertWorkflowAutomaticEntitled } from "./usageMetering.js"
 import { getWorkflowPreset } from "./workflowPresets.js"
 
 /** Max scheduled workflows enqueued per dispatcher tick (fits one 300s run). */
@@ -1718,23 +1717,9 @@ export const executeWorkflowRun = onDocumentCreated(
         const targetScope =
           (run.targetScope as WorkspaceNodeScope | null | undefined) ?? null
 
-        // Entitlement gate for AUTO-APPLY runs (the brief's hard rule): an
-        // automatic run mutates content unattended, so it additionally
-        // requires an entitled team. require_review is human-gated and skips
-        // this. Budget (assertWithinBudget) covers BOTH inside runAgentTurn.
-        if (updateMode === "automatic") {
-          try {
-            await assertWorkflowAutomaticEntitled(teamId)
-          } catch (err) {
-            await finish("blocked", {
-              error: (err instanceof Error ? err.message : String(err)).slice(
-                0,
-                500
-              ),
-            })
-            return
-          }
-        }
+        // Auto-apply runs apply unattended by design. Spend is bounded by
+        // assertWithinBudget inside runAgentTurn (plan allowance, or the
+        // team's own monthlyTokenCap when lower) — no entitlement gate.
 
         // P3: the workflow may run with a member's connection bindings
         // ("runs with {member}'s connected accounts") — validated live so

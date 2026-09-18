@@ -128,6 +128,7 @@ import IconFolderOpen from "~icons/lucide/folder-open"
 import IconFolderPlus from "~icons/lucide/folder-plus"
 import IconForward from "~icons/lucide/forward"
 import IconGalleryHorizontalEnd from "~icons/lucide/gallery-horizontal-end"
+import IconGauge from "~icons/lucide/gauge"
 import IconGift from "~icons/lucide/gift"
 import IconGlobe from "~icons/lucide/globe"
 import IconGraduationCap from "~icons/lucide/graduation-cap"
@@ -423,6 +424,7 @@ export {
   IconRiFontSansSerif as IconFontSansSerif,
   IconForward,
   IconGalleryHorizontalEnd,
+  IconGauge,
   IconGift,
   IconGlobe,
   IconMdiGoogle as IconGoogle,

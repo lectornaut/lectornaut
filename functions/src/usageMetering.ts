@@ -1,13 +1,13 @@
 /**
- * Per-team LLM token metering + monthly budget enforcement.
+ * Per-team LLM token/cost metering + monthly budget enforcement.
  *
  * Every agent turn (interactive chat OR a headless Workflows run) is metered
  * by the response-side `meteringMiddleware` (genkitMiddleware.ts), which calls
- * `incrementTeamTokenUsage` with the turn's input/output token counts. Usage
- * accumulates in `teams/{teamId}/usage/{YYYY-MM}`. Before a turn runs,
- * `assertWithinBudget` compares the month's `totalTokens` against the team's
- * plan allowance (billingConfig.ts) and throws `resource-exhausted` once the
- * cap is reached — a HARD cap covering interactive AND autonomous runs.
+ * `incrementTeamTokenUsage` with the turn's model and input/output token
+ * counts. Usage accumulates in `teams/{teamId}/usage/{YYYY-MM}`. Before a turn
+ * runs, `assertWithinBudget` compares the month's token and estimated-cost
+ * usage against their active caps and throws `resource-exhausted` once either
+ * cap is reached — covering interactive AND autonomous runs.
  *
  * NOTE: minor AI surfaces (summarize, compare, config generators) are not yet
  * metered — only chat turns, which dominate cost. Wire `onUsage` through their
@@ -17,7 +17,15 @@
 import { FieldValue } from "firebase-admin/firestore"
 import * as logger from "firebase-functions/logger"
 import { HttpsError } from "firebase-functions/v2/https"
-import { getPlanTokenAllowance, type PlanKey } from "./billingConfig.js"
+import {
+  estimateTokenCostUsd,
+  getPlanTokenAllowance,
+  type PlanKey,
+} from "./billingConfig.js"
+import {
+  MONTHLY_COST_CAP_MIN_CENTS,
+  resolveEffectiveTokenAllowance,
+} from "./domain.js"
 import { db } from "./firebase.js"
 
 /** Calendar-month bucket key (UTC), e.g. "2026-05". */
@@ -42,12 +50,14 @@ function usageDocRef(
  */
 export async function incrementTeamTokenUsage(
   teamId: string,
+  model: string | null | undefined,
   inputTokens: number,
   outputTokens: number
 ): Promise<void> {
   const input = Number.isFinite(inputTokens) ? Math.max(0, inputTokens) : 0
   const output = Number.isFinite(outputTokens) ? Math.max(0, outputTokens) : 0
   if (input === 0 && output === 0) return
+  const estimatedCostUsd = estimateTokenCostUsd(model, input, output)
   const monthKey = currentUsageMonthKey()
   try {
     await usageDocRef(teamId, monthKey).set(
@@ -56,6 +66,7 @@ export async function incrementTeamTokenUsage(
         inputTokens: FieldValue.increment(input),
         outputTokens: FieldValue.increment(output),
         totalTokens: FieldValue.increment(input + output),
+        estimatedCostUsd: FieldValue.increment(estimatedCostUsd),
         turnCount: FieldValue.increment(1),
         updatedAt: FieldValue.serverTimestamp(),
       },
@@ -79,28 +90,60 @@ export interface TeamUsageBudget {
   /** Tokens left before the cap; `Infinity` for unlimited plans. */
   remaining: number
   unlimited: boolean
+  /** Estimated USD cost accumulated this month. */
+  estimatedCostUsd: number
+  /** Configured monthly estimated-cost cap in USD; `Infinity` when unset. */
+  costAllowanceUsd: number
+  /** Estimated USD cost remaining before the optional cost cap. */
+  costRemainingUsd: number
+  costLimited: boolean
 }
 
 /** Read a team's plan allowance + this month's usage. */
 export async function getTeamUsageAndBudget(
   teamId: string
 ): Promise<TeamUsageBudget> {
-  const [teamSnap, usageSnap] = await Promise.all([
+  const [teamSnap, usageSnap, agentCfgSnap] = await Promise.all([
     db.doc(`teams/${teamId}`).get(),
     usageDocRef(teamId).get(),
+    // Read the raw doc rather than importing botAgentConfig.ts (which
+    // imports bot.ts, which imports this file) — avoids a load-order cycle.
+    db.doc(`teams/${teamId}/settings/agent`).get(),
   ])
   const billing = (teamSnap.data()?.billing ?? {}) as {
     planKey?: PlanKey | null
   }
   const planKey: PlanKey = billing.planKey ?? "personal"
-  const rawAllowance = getPlanTokenAllowance(planKey)
+  const planAllowance = getPlanTokenAllowance(planKey)
+  // Team-set soft cap (Settings → Usage). Only ever LOWERS the plan allowance.
+  const teamCap = agentCfgSnap.data()?.monthlyTokenCap
+  const rawAllowance = resolveEffectiveTokenAllowance(planAllowance, teamCap)
   const unlimited = rawAllowance < 0
   const used = Number(usageSnap.data()?.totalTokens ?? 0)
+  const estimatedCostUsd = Number(usageSnap.data()?.estimatedCostUsd ?? 0)
+  const rawCostCapCents = agentCfgSnap.data()?.monthlyCostCapCents
+  const costAllowanceUsd =
+    typeof rawCostCapCents === "number" &&
+    Number.isFinite(rawCostCapCents) &&
+    rawCostCapCents >= MONTHLY_COST_CAP_MIN_CENTS
+      ? rawCostCapCents / 100
+      : Number.POSITIVE_INFINITY
+  const costRemainingUsd = Math.max(0, costAllowanceUsd - estimatedCostUsd)
   const allowance = unlimited ? Number.POSITIVE_INFINITY : rawAllowance
   const remaining = unlimited
     ? Number.POSITIVE_INFINITY
     : Math.max(0, rawAllowance - used)
-  return { planKey, allowance, used, remaining, unlimited }
+  return {
+    planKey,
+    allowance,
+    used,
+    remaining,
+    unlimited,
+    estimatedCostUsd,
+    costAllowanceUsd,
+    costRemainingUsd,
+    costLimited: Number.isFinite(costAllowanceUsd),
+  }
 }
 
 /**
@@ -109,37 +152,36 @@ export async function getTeamUsageAndBudget(
  * Workflows), so both inherit the same ceiling.
  */
 export async function assertWithinBudget(teamId: string): Promise<void> {
-  const { remaining, used, allowance, planKey, unlimited } =
-    await getTeamUsageAndBudget(teamId)
-  if (unlimited || remaining > 0) return
+  const {
+    remaining,
+    used,
+    allowance,
+    planKey,
+    unlimited,
+    estimatedCostUsd,
+    costAllowanceUsd,
+    costLimited,
+  } = await getTeamUsageAndBudget(teamId)
+  if (
+    (unlimited || remaining > 0) &&
+    (!costLimited || estimatedCostUsd < costAllowanceUsd)
+  ) {
+    return
+  }
+  if (costLimited && estimatedCostUsd >= costAllowanceUsd) {
+    throw new HttpsError(
+      "resource-exhausted",
+      `This team has reached its monthly estimated AI cost limit ` +
+        `($${estimatedCostUsd.toFixed(2)} / $${costAllowanceUsd.toFixed(2)}). ` +
+        `It resets at the start of next month — lower usage or raise the ` +
+        `cost cap in Settings → Usage.`
+    )
+  }
   throw new HttpsError(
     "resource-exhausted",
     `This team has reached its monthly AI usage limit ` +
       `(${used.toLocaleString()} / ${allowance.toLocaleString()} tokens on the ` +
-      `${planKey} plan). It resets at the start of next month — or upgrade the ` +
-      `plan for a higher limit.`
+      `${planKey} plan). It resets at the start of next month — raise the ` +
+      `team cap in Settings → Usage or upgrade the plan for a higher limit.`
   )
-}
-
-/**
- * Entitlement gate for AUTOMATIC (auto-apply) Workflows runs. `require_review`
- * runs are human-gated and skip this; an `automatic` run both spends tokens
- * AND mutates content with no human in the loop, so it additionally requires
- * the team to be entitled (active/among-grace subscription). Blocks only when
- * entitlement is EXPLICITLY false, so a team with the field unset isn't locked
- * out — tune to `!== true` for a stricter posture. Throws `failed-precondition`
- * (the worker maps it to a `blocked` run, not an error — no spend, no edits).
- */
-export async function assertWorkflowAutomaticEntitled(
-  teamId: string
-): Promise<void> {
-  const teamSnap = await db.doc(`teams/${teamId}`).get()
-  const billing = (teamSnap.data()?.billing ?? {}) as { isEntitled?: boolean }
-  if (billing.isEntitled === false) {
-    throw new HttpsError(
-      "failed-precondition",
-      "Automatic workflows require an active subscription. Switch this " +
-        "workflow to require-review, or update billing to enable auto-apply."
-    )
-  }
 }

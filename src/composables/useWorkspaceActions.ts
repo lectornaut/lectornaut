@@ -1,5 +1,6 @@
 import { createActionRunner } from "@/composables/useActionRunner"
 import { useLoadingState } from "@/composables/useLoadingState"
+import { useTeamUsage } from "@/composables/useTeamUsage"
 import { useAuthStore } from "@/stores/authStore"
 import { useMembershipStore } from "@/stores/membershipStore"
 import { useWorkspaceStore } from "@/stores/workspaceStore"
@@ -28,12 +29,21 @@ export function useWorkspaceActions() {
     })
   )
 
-  const canCreateWorkspace = canManageWorkspaces
-  const getCannotCreateWorkspaceReason = computed(() =>
-    !canManageWorkspaces.value
-      ? "Only team owners and admins can create workspaces"
-      : null
+  // Plan gate mirrors the server's createWorkspace check (same shared table).
+  const { isAtWorkspaceLimit, planWorkspaceAllowance } = useTeamUsage()
+  const canCreateWorkspace = computed(
+    () => canManageWorkspaces.value && !isAtWorkspaceLimit.value
   )
+  const getCannotCreateWorkspaceReason = computed(() => {
+    if (!canManageWorkspaces.value) {
+      return "Only team owners and admins can create workspaces"
+    }
+    if (isAtWorkspaceLimit.value) {
+      const n = planWorkspaceAllowance.value
+      return `This team's plan includes ${n} workspace${n === 1 ? "" : "s"}. Upgrade the plan to add more.`
+    }
+    return null
+  })
 
   // Per-workspace EDIT / DELETE gates. Unlike create (a team-level act), these
   // are workspace-scoped: a team member elevated to admin/owner inside a single

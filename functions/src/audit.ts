@@ -14,6 +14,7 @@ import {
   onCall,
   type CallableOptions,
 } from "firebase-functions/v2/https"
+import { onSchedule } from "firebase-functions/v2/scheduler"
 import Stripe from "stripe"
 import { z, type ZodType } from "zod"
 import { assertAuthenticated, type AuthData } from "./auth.js"
@@ -21,6 +22,7 @@ import { authorize, requireAuthorized } from "./authorize.js"
 import { BUILT_IN_AGENTS_BY_ID, isBuiltInAgentId } from "./builtInAgents.js"
 import { COST_BUDGET } from "./costBudget.js"
 import { defineCallable } from "./defineCallable.js"
+import { auditLogRetentionCutoff, getPlanWorkspaceAllowance } from "./domain.js"
 import { db } from "./firebase.js"
 import {
   ATTACHMENT_NAME_MAX_LENGTH,
@@ -31,7 +33,11 @@ import {
   workspaceNodeAttachmentsCollectionPath,
 } from "./nodeAttachments.js"
 import { can, effectiveRole, type Capability } from "./permissions.js"
-import { CALLABLE_OPTS, DESTRUCTIVE_CALLABLE_OPTS } from "./runtimeConfig.js"
+import {
+  CALLABLE_OPTS,
+  DESTRUCTIVE_CALLABLE_OPTS,
+  SCHEDULED_OPTS,
+} from "./runtimeConfig.js"
 import { stripeSecretKey } from "./secrets.js"
 import {
   Actor,
@@ -1457,6 +1463,29 @@ export const createWorkspace = defineMutation({
   action: "workspace.create",
   handler: async ({ input, tx }) => {
     const { teamId, name, description } = input
+
+    // Plan gate: workspaces per team (PLAN_WORKSPACE_ALLOWANCES, shared).
+    // Counted INSIDE the transaction so two concurrent creates can't both
+    // squeeze under the limit. Plan read live → a downgrade applies at once
+    // to new workspaces (existing ones are never touched).
+    const [teamSnap, workspaceCountSnap] = await Promise.all([
+      tx.get(db.doc(`teams/${teamId}`)),
+      tx.get(db.collection(`teams/${teamId}/workspaces`).count()),
+    ])
+    const planKey =
+      (teamSnap.data()?.billing as { planKey?: string } | undefined)?.planKey ??
+      null
+    const workspaceAllowance = getPlanWorkspaceAllowance(planKey)
+    const workspaceCount = workspaceCountSnap.data().count
+    if (workspaceAllowance >= 0 && workspaceCount >= workspaceAllowance) {
+      throw new HttpsError(
+        "failed-precondition",
+        `The team's ${planKey ?? "personal"} plan includes ` +
+          `${workspaceAllowance} workspace${workspaceAllowance === 1 ? "" : "s"} ` +
+          `and it already has ${workspaceCount}. Upgrade the plan in ` +
+          "Settings → Plans to add more."
+      )
+    }
 
     // Seed memberUids = the team's human members (airtight list-level
     // participation; agents excluded). Read in-transaction for consistency.
@@ -4246,3 +4275,68 @@ export const declineInvitation = onCall(CALLABLE_OPTS, async (request) => {
     )
   })
 })
+
+// ===========================================================================
+// Audit-log retention (per plan) — daily sweep
+// ===========================================================================
+
+/**
+ * Deletes each team's audit-log entries older than its plan's retention
+ * window (PLAN_AUDIT_LOG_RETENTION_DAYS, shared). The plan is read LIVE per
+ * team, so an upgrade keeps everything still on disk and a downgrade trims
+ * on the next run. Enterprise (unlimited) is skipped entirely. Uses the
+ * existing (teamId ASC, timestamp DESC) index on `logs`.
+ *
+ * ponytail: one pass over `teams` per day; move to a per-doc `expireAt` +
+ * native TTL if the team count ever makes this sweep slow.
+ */
+export const cleanupAuditLogs = onSchedule(
+  {
+    schedule: "every 24 hours",
+    timeZone: "UTC",
+    retryCount: 1,
+    ...SCHEDULED_OPTS,
+  },
+  async () => {
+    const batchSize = COST_BUDGET.MAX_BATCH_SIZE
+    const now = new Date()
+    let teamsSwept = 0
+    let deleted = 0
+
+    const teamsSnap = await db
+      .collection("teams")
+      .select("billing")
+      .limit(COST_BUDGET.QUERY_MAX_LIMIT)
+      .get()
+
+    for (const teamDoc of teamsSnap.docs) {
+      const planKey = (
+        teamDoc.data()?.billing as { planKey?: string } | undefined
+      )?.planKey
+      const cutoff = auditLogRetentionCutoff(planKey ?? null, now)
+      if (!cutoff) continue // unlimited retention
+      teamsSwept += 1
+
+      for (;;) {
+        const stale = await db
+          .collection("logs")
+          .where("teamId", "==", teamDoc.id)
+          .where("timestamp", "<", cutoff)
+          .orderBy("timestamp", "desc")
+          .limit(batchSize)
+          .get()
+        if (stale.empty) break
+        const batch = db.batch()
+        stale.docs.forEach((d) => batch.delete(d.ref))
+        await batch.commit()
+        deleted += stale.size
+        if (stale.size < batchSize) break
+      }
+    }
+
+    logger.info("[cleanupAuditLogs] retention sweep complete", {
+      teamsSwept,
+      deleted,
+    })
+  }
+)

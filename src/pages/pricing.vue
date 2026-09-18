@@ -9,11 +9,22 @@ import { useTeamActions } from "@/composables/useTeamActions"
 import { IconCircleCheck } from "@/data/icons"
 import { hasActiveLikeBillingStatus } from "@/helpers/billing"
 import {
+  formatPlanAuditLogRetention,
+  formatPlanModelsAdded,
+  formatPlanWorkspaces,
+  formatPlanTokenAllowance,
+} from "@/helpers/defaults"
+import {
   closePendingExternalTab,
   createPendingExternalTab,
   openExternalUrl,
 } from "@/helpers/openExternalUrl"
 import { useBillingStore } from "@/stores/billingStore"
+import {
+  PLAN_TOKEN_ALLOWANCES,
+  PLAN_WORKSPACE_ALLOWANCES,
+  canExportAuditLogsOnPlan,
+} from "@lectornaut/shared/domain"
 import { storeToRefs } from "pinia"
 import { toast } from "vue-sonner"
 import { useCurrentUser } from "vuefire"
@@ -181,6 +192,35 @@ const getDisplayedPrice = (
   return `${formatCurrencyAmount(price.unitAmount, price.currency)}${suffix}`
 }
 
+// Same table the server enforces (PLAN_TOKEN_ALLOWANCES via shared/domain).
+const tokenLine = (plan: BillingPlanKey): string =>
+  PLAN_TOKEN_ALLOWANCES[plan] < 0
+    ? t("pages.pricing.features.aiTokensUnlimited")
+    : t("pages.pricing.features.aiTokens", {
+        tokens: formatPlanTokenAllowance(plan),
+      })
+
+const modelsLine = (plan: BillingPlanKey): string =>
+  plan === "personal"
+    ? t("pages.pricing.features.models", {
+        models: formatPlanModelsAdded(plan),
+      })
+    : t("pages.pricing.features.modelsAdded", {
+        models: formatPlanModelsAdded(plan).slice(2),
+      })
+
+const workspacesLine = (plan: BillingPlanKey): string =>
+  PLAN_WORKSPACE_ALLOWANCES[plan] < 0
+    ? t("pages.pricing.features.workspacesUnlimited")
+    : t("pages.pricing.features.workspaces", PLAN_WORKSPACE_ALLOWANCES[plan])
+
+const auditLogsLine = (plan: BillingPlanKey): string =>
+  canExportAuditLogsOnPlan(plan)
+    ? t("pages.pricing.features.auditLogsExport")
+    : t("pages.pricing.features.auditLogs", {
+        retention: formatPlanAuditLogRetention(plan),
+      })
+
 const pricingPlans = computed(() => [
   {
     title: t("pages.pricing.plans.personal.title"),
@@ -188,9 +228,12 @@ const pricingPlans = computed(() => [
     monthlyPrice: getDisplayedPrice("personal", "month"),
     annualPrice: getDisplayedPrice("personal", "year"),
     overview: [
-      t("pages.pricing.features.unlimitedConnections"),
-      t("pages.pricing.features.professionalFeatures"),
-      t("pages.pricing.features.communitySupport"),
+      tokenLine("personal"),
+      modelsLine("personal"),
+      workspacesLine("personal"),
+      auditLogsLine("personal"),
+      t("pages.pricing.features.agentsToolsWorkflows"),
+      t("pages.pricing.features.connections"),
     ],
   },
   {
@@ -199,9 +242,11 @@ const pricingPlans = computed(() => [
     monthlyPrice: getDisplayedPrice("professional", "month"),
     annualPrice: getDisplayedPrice("professional", "year"),
     overview: [
+      tokenLine("professional"),
+      modelsLine("professional"),
+      workspacesLine("professional"),
+      auditLogsLine("professional"),
       t("pages.pricing.features.everythingInPersonal"),
-      t("pages.pricing.features.advancedFeatures"),
-      t("pages.pricing.features.prioritySupport"),
     ],
   },
   {
@@ -210,12 +255,11 @@ const pricingPlans = computed(() => [
     monthlyPrice: getDisplayedPrice("business", "month"),
     annualPrice: getDisplayedPrice("business", "year"),
     overview: [
+      tokenLine("business"),
+      modelsLine("business"),
+      workspacesLine("business"),
+      auditLogsLine("business"),
       t("pages.pricing.features.everythingInProfessional"),
-      t("pages.pricing.features.teamManagement"),
-      t("pages.pricing.features.enhancedSecurity"),
-      t("pages.pricing.features.customizableWorkflows"),
-      t("pages.pricing.features.analyticsAndReporting"),
-      t("pages.pricing.features.dedicatedSupport"),
     ],
   },
   {
@@ -224,116 +268,55 @@ const pricingPlans = computed(() => [
     monthlyPrice: getDisplayedPrice("enterprise", "month"),
     annualPrice: getDisplayedPrice("enterprise", "year"),
     overview: [
+      tokenLine("enterprise"),
+      modelsLine("enterprise"),
+      workspacesLine("enterprise"),
+      auditLogsLine("enterprise"),
       t("pages.pricing.features.everythingInBusiness"),
-      t("pages.pricing.features.customSLAs"),
-      t("pages.pricing.features.dedicatedAccountManager"),
-      t("pages.pricing.features.integrationSupport"),
-      t("pages.pricing.features.complianceAndAudits"),
+      t("pages.pricing.features.sso"),
     ],
   },
 ])
 
+// Only what the product enforces per plan (see settingsPlanFeatures).
 const comparisonPlans = computed(() => [
   {
-    feature: t("pages.pricing.comparison.features.agents"),
-    personal: t("pages.pricing.comparison.agents.5"),
-    professional: t("pages.pricing.comparison.agents.10"),
-    business: t("pages.pricing.comparison.agents.unlimited"),
-    enterprise: t("pages.pricing.comparison.agents.unlimited"),
+    feature: t("pages.pricing.comparison.features.aiTokens"),
+    personal: formatPlanTokenAllowance("personal"),
+    professional: formatPlanTokenAllowance("professional"),
+    business: formatPlanTokenAllowance("business"),
+    enterprise: t("pages.pricing.comparison.unlimited"),
   },
   {
-    feature: t("pages.pricing.comparison.features.members"),
-    personal: t("pages.pricing.comparison.members.1"),
-    professional: t("pages.pricing.comparison.members.1"),
-    business: t("pages.pricing.comparison.members.unlimited"),
-    enterprise: t("pages.pricing.comparison.members.unlimited"),
+    feature: t("pages.pricing.comparison.features.workspaces"),
+    personal: formatPlanWorkspaces("personal"),
+    professional: formatPlanWorkspaces("professional"),
+    business: formatPlanWorkspaces("business"),
+    enterprise: t("pages.pricing.comparison.unlimited"),
   },
   {
-    feature: t("pages.pricing.comparison.features.teams"),
-    personal: t("pages.pricing.comparison.teams.2"),
-    professional: t("pages.pricing.comparison.teams.5"),
-    business: t("pages.pricing.comparison.teams.unlimited"),
-    enterprise: t("pages.pricing.comparison.teams.unlimited"),
+    feature: t("pages.pricing.comparison.features.models"),
+    personal: formatPlanModelsAdded("personal"),
+    professional: formatPlanModelsAdded("professional"),
+    business: formatPlanModelsAdded("business"),
+    enterprise: formatPlanModelsAdded("enterprise"),
   },
   {
-    feature: t("pages.pricing.comparison.features.storage"),
-    personal: t("pages.pricing.comparison.storage.10mb"),
-    professional: t("pages.pricing.comparison.storage.100mb"),
-    business: t("pages.pricing.comparison.storage.1gb"),
-    enterprise: t("pages.pricing.comparison.storage.unlimited"),
+    feature: t("pages.pricing.comparison.features.auditLogRetention"),
+    personal: formatPlanAuditLogRetention("personal"),
+    professional: formatPlanAuditLogRetention("professional"),
+    business: formatPlanAuditLogRetention("business"),
+    enterprise: t("pages.pricing.comparison.unlimited"),
   },
   {
-    feature: t("pages.pricing.comparison.features.workflows"),
-    personal: t("pages.pricing.comparison.runs.10"),
-    professional: t("pages.pricing.comparison.runs.100"),
-    business: t("pages.pricing.comparison.runs.500"),
-    enterprise: t("pages.pricing.comparison.runs.unlimited"),
-  },
-  {
-    feature: t("pages.pricing.comparison.features.authentication"),
-    personal: t("pages.pricing.comparison.auth.basic"),
-    professional: t("pages.pricing.comparison.auth.mfa"),
-    business: t("pages.pricing.comparison.auth.sso"),
-    enterprise: t("pages.pricing.comparison.auth.oidc"),
-  },
-  {
-    feature: t("pages.pricing.comparison.features.support"),
-    personal: t("pages.pricing.comparison.support.community"),
-    professional: t("pages.pricing.comparison.support.email"),
-    business: t("pages.pricing.comparison.support.priority"),
-    enterprise: t("pages.pricing.comparison.support.dedicated"),
-  },
-  {
-    feature: t("pages.pricing.comparison.features.integrations"),
-    personal: t("pages.pricing.comparison.common.no"),
-    professional: t("pages.pricing.comparison.common.yes"),
-    business: t("pages.pricing.comparison.common.yes"),
-    enterprise: t("pages.pricing.comparison.common.yes"),
-  },
-  {
-    feature: t("pages.pricing.comparison.features.apiAccess"),
-    personal: t("pages.pricing.comparison.common.no"),
-    professional: t("pages.pricing.comparison.common.yes"),
-    business: t("pages.pricing.comparison.common.yes"),
-    enterprise: t("pages.pricing.comparison.common.yes"),
-  },
-  {
-    feature: t("pages.pricing.comparison.features.accountManager"),
-    personal: t("pages.pricing.comparison.common.no"),
-    professional: t("pages.pricing.comparison.common.no"),
-    business: t("pages.pricing.comparison.common.yes"),
-    enterprise: t("pages.pricing.comparison.common.yes"),
-  },
-  {
-    feature: t("pages.pricing.comparison.features.analytics"),
-    personal: t("pages.pricing.comparison.common.no"),
-    professional: t("pages.pricing.comparison.common.no"),
-    business: t("pages.pricing.comparison.common.yes"),
-    enterprise: t("pages.pricing.comparison.common.yes"),
-  },
-  {
-    feature: t("pages.pricing.comparison.features.auditLog"),
+    feature: t("pages.pricing.comparison.features.auditLogExport"),
     personal: t("pages.pricing.comparison.common.no"),
     professional: t("pages.pricing.comparison.common.no"),
     business: t("pages.pricing.comparison.common.no"),
     enterprise: t("pages.pricing.comparison.common.yes"),
   },
   {
-    feature: t("pages.pricing.comparison.features.scim"),
-    personal: t("pages.pricing.comparison.common.no"),
-    professional: t("pages.pricing.comparison.common.no"),
-    business: t("pages.pricing.comparison.common.no"),
-    enterprise: t("pages.pricing.comparison.common.yes"),
-  },
-  {
-    feature: t("pages.pricing.comparison.features.compliance"),
-    personal: t("pages.pricing.comparison.common.no"),
-    professional: t("pages.pricing.comparison.common.no"),
-    business: t("pages.pricing.comparison.common.no"),
-    enterprise: t("pages.pricing.comparison.common.yes"),
-  },
-  {
-    feature: t("pages.pricing.comparison.features.uptime"),
+    feature: t("pages.pricing.comparison.features.sso"),
     personal: t("pages.pricing.comparison.common.no"),
     professional: t("pages.pricing.comparison.common.no"),
     business: t("pages.pricing.comparison.common.no"),

@@ -1118,6 +1118,8 @@ export type UpdateTeamAgentConfigPatch = Partial<{
   tools: Partial<IBotAgentConfig["tools"]>
   titleMaxLength: number
   previewMaxLength: number
+  monthlyTokenCap: number | null
+  monthlyCostCapCents: number | null
 }>
 
 export interface UpdateTeamAgentConfigRequest {

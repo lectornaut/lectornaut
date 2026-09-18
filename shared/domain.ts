@@ -408,7 +408,7 @@ export const WORKFLOW_RUN_STATUSES = [
   "partially_applied", // require_review run: approved, some changes failed
   "cancelled", // require_review run: rejected by an admin
   "error",
-  "blocked", // over budget / not entitled — no spend
+  "blocked", // over budget — no spend
   "skipped", // workflow disabled or removed before it ran
 ] as const
 export type WorkflowRunStatus = (typeof WORKFLOW_RUN_STATUSES)[number]
@@ -820,3 +820,192 @@ export type BillingPlanKey = (typeof BILLING_PLAN_KEYS)[number]
 
 export const BILLING_INTERVALS = ["month", "year"] as const
 export type BillingInterval = (typeof BILLING_INTERVALS)[number]
+
+/**
+ * Monthly LLM token allowance per plan, in TOTAL tokens (input + output)
+ * across every agent turn a team runs in a calendar month — interactive chat
+ * AND autonomous Workflows runs draw from the same pool. Enforced as a HARD
+ * CAP by `assertWithinBudget` (functions/usageMetering.ts) and rendered by
+ * Settings → Usage on the client. `-1` = unlimited.
+ */
+export const PLAN_TOKEN_ALLOWANCES: Record<BillingPlanKey, number> = {
+  personal: 1_500_000,
+  professional: 25_000_000,
+  business: 150_000_000,
+  enterprise: -1,
+}
+
+/**
+ * Workspaces per team, per plan. `-1` = unlimited. Enforced inside the
+ * `createWorkspace` transaction (functions/audit.ts) against a live count, and
+ * advertised on Settings → Plans and the pricing page from this same table.
+ */
+export const PLAN_WORKSPACE_ALLOWANCES: Record<BillingPlanKey, number> = {
+  personal: 1,
+  professional: 5,
+  business: 20,
+  enterprise: -1,
+}
+
+/** Workspace allowance for a plan; missing/unknown plan → the lowest plan. */
+export function getPlanWorkspaceAllowance(
+  planKey: string | null | undefined
+): number {
+  return (
+    PLAN_WORKSPACE_ALLOWANCES[planKey as BillingPlanKey] ??
+    PLAN_WORKSPACE_ALLOWANCES.personal
+  )
+}
+
+/**
+ * Audit-log retention per plan, in days. `-1` = unlimited. Enforced by the
+ * daily `cleanupAuditLogs` sweep (functions/audit.ts) against each team's
+ * LIVE plan — so an upgrade keeps everything still on disk, and a downgrade
+ * trims to the new window on the next sweep. The client query hides older
+ * rows immediately (useAuditLogs). Export is an Enterprise capability.
+ */
+export const PLAN_AUDIT_LOG_RETENTION_DAYS: Record<BillingPlanKey, number> = {
+  personal: 30,
+  professional: 90,
+  business: 365,
+  enterprise: -1,
+}
+
+/** Retention for a plan in days; missing/unknown plan → the lowest plan. */
+export function getPlanAuditLogRetentionDays(
+  planKey: string | null | undefined
+): number {
+  return (
+    PLAN_AUDIT_LOG_RETENTION_DAYS[planKey as BillingPlanKey] ??
+    PLAN_AUDIT_LOG_RETENTION_DAYS.personal
+  )
+}
+
+/** Oldest timestamp still retained, or `null` when retention is unlimited. */
+export function auditLogRetentionCutoff(
+  planKey: string | null | undefined,
+  now: Date = new Date()
+): Date | null {
+  const days = getPlanAuditLogRetentionDays(planKey)
+  if (days < 0) return null
+  return new Date(now.getTime() - days * 24 * 60 * 60 * 1000)
+}
+
+/** Plans that may export audit logs. Only Enterprise today. */
+export function canExportAuditLogsOnPlan(
+  planKey: string | null | undefined
+): boolean {
+  return planKey === "enterprise"
+}
+
+/**
+ * Plan fit: what a team must FIX before it may move to `plan`. Pure and shared
+ * so the Plans page and the plan-change callables can never disagree. Only
+ * remediable, hard-gated facts block:
+ *   - workspaces  → delete down to the plan's allowance (createWorkspace gate)
+ *   - sso         → turn SSO off (Enterprise-only, functions/sso.ts)
+ * Non-remediable effects (this month's token usage, shorter audit-log
+ * retention, a default model outside the plan) auto-resolve on the server and
+ * are surfaced as warnings, never blockers.
+ */
+export interface PlanFitSnapshot {
+  workspaceCount: number
+  ssoEnabled: boolean
+}
+export type PlanFitBlocker =
+  { kind: "workspaces"; count: number; allowance: number } | { kind: "sso" }
+
+export function getPlanFitBlockers(
+  plan: BillingPlanKey,
+  snapshot: PlanFitSnapshot
+): PlanFitBlocker[] {
+  const blockers: PlanFitBlocker[] = []
+  const allowance = PLAN_WORKSPACE_ALLOWANCES[plan]
+  if (allowance >= 0 && snapshot.workspaceCount > allowance) {
+    blockers.push({
+      kind: "workspaces",
+      count: snapshot.workspaceCount,
+      allowance,
+    })
+  }
+  if (snapshot.ssoEnabled && plan !== "enterprise") {
+    blockers.push({ kind: "sso" })
+  }
+  return blockers
+}
+
+/** Bounds for the team-set monthly token cap (Settings → Usage). */
+export const MONTHLY_TOKEN_CAP_MIN = 10_000
+
+/** Minimum team-set monthly estimated-cost cap, in USD cents. */
+export const MONTHLY_COST_CAP_MIN_CENTS = 100
+
+/**
+ * Model tier: the LOWEST plan that may use each model; higher plans inherit.
+ * The single source for the server's effective-config policy
+ * (functions/botAgentConfig.ts), the AI settings + composer pickers, and the
+ * plan copy on Settings → Plans and the pricing page. Every model in
+ * `BOT_AGENT_MODELS` must have an entry (the Record type enforces it).
+ */
+export const MODEL_MIN_PLAN: Record<BotAgentModel, BillingPlanKey> = {
+  "gemini-3.6-flash": "personal",
+  "deepseek-v4-flash": "personal",
+  "gemini-3.1-pro-preview": "professional",
+  "claude-sonnet-5": "professional",
+  "deepseek-v4-pro": "professional",
+  "claude-opus-5": "business",
+  "gpt-5.6": "business",
+  "grok-4.5": "business",
+  "claude-fable-5": "enterprise",
+}
+
+/**
+ * The model every plan can always fall back to. Its provider (Google) is the
+ * one the server always has configured — embeddings and web grounding need it
+ * — so a turn can never be left with no resolvable model.
+ */
+export const PLAN_FLOOR_MODEL: BotAgentModel = "gemini-3.6-flash"
+
+/** Rank of a plan in `BILLING_PLAN_KEYS`; unknown/missing → the lowest plan. */
+function planRankOrLowest(planKey: string | null | undefined): number {
+  const rank = BILLING_PLAN_KEYS.indexOf(planKey as BillingPlanKey)
+  return rank < 0 ? 0 : rank
+}
+
+/** Whether `model` is included in `planKey` (missing/unknown plan → lowest). */
+export function isModelAllowedOnPlan(
+  model: BotAgentModel,
+  planKey: string | null | undefined
+): boolean {
+  return planRankOrLowest(MODEL_MIN_PLAN[model]) <= planRankOrLowest(planKey)
+}
+
+/** Models a plan includes, in catalog order. */
+export function modelsForPlan(
+  planKey: string | null | undefined
+): BotAgentModel[] {
+  return BOT_AGENT_MODELS.filter((m) => isModelAllowedOnPlan(m, planKey))
+}
+
+/** Models a plan adds over the plan directly below it (all of them for the lowest). */
+export function modelsAddedByPlan(planKey: BillingPlanKey): BotAgentModel[] {
+  return BOT_AGENT_MODELS.filter((m) => MODEL_MIN_PLAN[m] === planKey)
+}
+
+/**
+ * Effective monthly allowance = the plan allowance, lowered by the team's own
+ * cap when one is set. A team cap can never RAISE the plan allowance. `-1`
+ * (unlimited) only survives when no team cap is set.
+ */
+export function resolveEffectiveTokenAllowance(
+  planAllowance: number,
+  teamCap: unknown
+): number {
+  const cap =
+    typeof teamCap === "number" && Number.isFinite(teamCap) && teamCap > 0
+      ? Math.floor(teamCap)
+      : null
+  if (cap === null) return planAllowance
+  if (planAllowance < 0) return cap
+  return Math.min(planAllowance, cap)
+}

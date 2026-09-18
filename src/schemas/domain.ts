@@ -559,6 +559,11 @@ export const botAgentConfigSchema = z.object({
   tools: botAgentToolTogglesSchema,
   titleMaxLength: z.number().int().min(20).max(200),
   previewMaxLength: z.number().int().min(50).max(500),
+  // Team-set monthly token cap (Settings → Usage); `null` = plan allowance
+  // alone. `.catch(null)` keeps a pre-field response resilient (deploy order).
+  monthlyTokenCap: z.number().int().nullable().catch(null),
+  // Estimated monthly cost cap in USD cents; null = no cost cap.
+  monthlyCostCapCents: z.number().int().nullable().catch(null),
 })
 
 // ─── Team-scoped custom agents (multi-agent network) ────────────────────────

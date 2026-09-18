@@ -3513,7 +3513,12 @@ async function prepareChatTurn(opts: {
     use: aiMiddlewares({
       onUsage: ({ inputTokens, outputTokens }) => {
         // Team-monthly hard-cap counter (interactive + headless alike)…
-        void incrementTeamTokenUsage(teamId, inputTokens, outputTokens)
+        void incrementTeamTokenUsage(
+          teamId,
+          effectiveModel,
+          inputTokens,
+          outputTokens
+        )
         // …and, for a Workflows run, the per-run accumulator the worker
         // persists as `usage` + estimated cost.
         onUsage?.({ model: effectiveModel, inputTokens, outputTokens })
@@ -3779,7 +3784,12 @@ async function runAgentTurn(
         userMessage: opts.message,
         assistantReply: final.text,
         onUsage: ({ inputTokens, outputTokens }) =>
-          void incrementTeamTokenUsage(opts.teamId, inputTokens, outputTokens),
+          void incrementTeamTokenUsage(
+            opts.teamId,
+            effectiveModel,
+            inputTokens,
+            outputTokens
+          ),
       })
     }
 

@@ -25,6 +25,7 @@ import {
   mapPriceIdToPlan,
   resolveBillingCatalogFromStripe,
 } from "./billingConfig.js"
+import { getPlanFitBlockers, type PlanFitBlocker } from "./domain.js"
 import { db } from "./firebase.js"
 import { makeEventIdempotencyKey } from "./idempotency.js"
 import { can } from "./permissions.js"
@@ -749,6 +750,42 @@ async function resolveTeamSubscription(
     context.teamId,
     billing,
     customerId
+  )
+}
+
+/**
+ * Refuse a plan the team doesn't fit yet (shared `getPlanFitBlockers`). Runs
+ * before any Stripe call on both plan-change paths (checkout + change). Reads
+ * the live workspace count and the security doc's `sso.enabled`.
+ * ponytail: a workspace created between a scheduled period-end downgrade and
+ * its activation isn't re-checked — createWorkspace then blocks further ones.
+ */
+async function assertTeamFitsPlan(
+  teamId: string,
+  targetPlanKey: PlanKey
+): Promise<void> {
+  const [countSnap, securitySnap] = await Promise.all([
+    db.collection(`teams/${teamId}/workspaces`).count().get(),
+    db.doc(`teams/${teamId}/settings/security`).get(),
+  ])
+  const sso = securitySnap.data()?.sso as { enabled?: unknown } | undefined
+  const blockers = getPlanFitBlockers(targetPlanKey, {
+    workspaceCount: countSnap.data().count,
+    ssoEnabled: sso?.enabled === true,
+  })
+  if (blockers.length === 0) return
+  const describe = (b: PlanFitBlocker): string =>
+    b.kind === "workspaces"
+      ? `the ${targetPlanKey} plan includes ${b.allowance} workspace` +
+        `${b.allowance === 1 ? "" : "s"} and this team has ${b.count} ` +
+        `(delete ${b.count - b.allowance} first)`
+      : "single sign-on is enabled and is only available on Enterprise " +
+        "(turn it off first)"
+  throw new HttpsError(
+    "failed-precondition",
+    `This team can't move to the ${targetPlanKey} plan yet: ` +
+      blockers.map(describe).join("; ") +
+      "."
   )
 }
 
@@ -1763,6 +1800,7 @@ export const createCheckoutSession = onCall(
     const context = await getTeamBillingContext(request, teamId, {
       requireBillingPermission: true,
     })
+    await assertTeamFitsPlan(teamId, planKey)
     const stripe = getStripeClient()
     const customerId = await ensureStripeCustomer(
       stripe,
@@ -1936,6 +1974,7 @@ export const changeSubscriptionPlan = onCall(
     const context = await getTeamBillingContext(request, teamId, {
       requireBillingPermission: true,
     })
+    await assertTeamFitsPlan(teamId, targetPlanKey)
     const stripe = getStripeClient()
     const customerId = await ensureStripeCustomer(
       stripe,

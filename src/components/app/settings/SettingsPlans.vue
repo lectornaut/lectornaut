@@ -7,6 +7,14 @@ import {
   type BillingPlanKey,
 } from "@/composables/useFunctions"
 import { useTeamActions } from "@/composables/useTeamActions"
+import { useSsoConfig } from "@/composables/useSsoConfig"
+import { useTeamUsage } from "@/composables/useTeamUsage"
+import { useAuthStore } from "@/stores/authStore"
+import {
+  PLAN_AUDIT_LOG_RETENTION_DAYS,
+  getPlanFitBlockers,
+  type PlanFitBlocker,
+} from "@lectornaut/shared/domain"
 import {
   IconBadgeDollarSign,
   IconCheck,
@@ -28,10 +36,41 @@ import { useBillingStore } from "@/stores/billingStore"
 import { storeToRefs } from "pinia"
 import { toast } from "vue-sonner"
 
-const { t } = useI18n()
+const { t, n } = useI18n()
 
 const { canViewTeamSettings } = useCanViewTeamSettings()
 const { canManageBilling, currentTeam, teamMembers } = useTeamActions()
+// Same source as Settings → Usage: a plan whose allowance is below this
+// month's usage would stop agents the moment it takes effect.
+const {
+  used: usedThisMonth,
+  exceedsPlan,
+  workspaceCount,
+  shortensAuditLogRetention,
+} = useTeamUsage()
+// Plan fit (shared `getPlanFitBlockers`, the same check the server runs on
+// checkout + plan change). A plan the team exceeds CAN be selected — so the
+// card, the compare table and the bottom bar all explain what to fix — but
+// it can't be applied until the excess is removed. Warnings stay informational.
+const { currentTeamId } = storeToRefs(useAuthStore())
+const { hasSso } = useSsoConfig(currentTeamId)
+const planBlockers = (planId: BillingPlanKey): PlanFitBlocker[] =>
+  getPlanFitBlockers(planId, {
+    workspaceCount: workspaceCount.value,
+    ssoEnabled: hasSso.value,
+  })
+const describeBlocker = (b: PlanFitBlocker): string =>
+  b.kind === "workspaces"
+    ? t(
+        "settings.plans.blockers.workspaces",
+        {
+          excess: b.count - b.allowance,
+          allowance: b.allowance,
+          count: b.count,
+        },
+        b.count - b.allowance
+      )
+    : t("settings.plans.blockers.sso")
 const billingStore = useBillingStore()
 void billingStore.ensureCatalogLoaded()
 const {
@@ -117,19 +156,26 @@ const currentPlanSummary = computed(() => {
   return `Current: ${capitalize(activePlanId.value)} (${cycleLabel}) • Status: ${status.value ?? "active"}`
 })
 
-const canSave = computed(() => {
-  if (
-    !canManageBilling.value ||
-    !currentTeam.value?.id ||
-    isSaving.value ||
-    !selectedPlanId.value ||
-    !billingCycle.value
-  ) {
-    return false
+// Why the bottom bar's action is off, in the order a user can fix it. Mirrors
+// `canSave` exactly — one source, so the bar never says "ready" while disabled.
+const saveDisabledReason = computed<string | null>(() => {
+  if (!canManageBilling.value) return t("settings.plans.saveBlocked.permission")
+  if (!currentTeam.value?.id) return t("settings.plans.saveBlocked.noTeam")
+  if (!selectedPlanId.value) return t("settings.plans.saveBlocked.noPlan")
+  if (!billingCycle.value) return t("settings.plans.saveBlocked.noTerm")
+  const blockers = planBlockers(selectedPlanId.value)
+  if (blockers.length > 0) {
+    return blockers.map(describeBlocker).join(" ")
   }
-  if (!hasActiveSubscription.value) return true
-  return hasPendingChanges.value
+  if (hasActiveSubscription.value && !hasPendingChanges.value) {
+    return t("settings.plans.saveBlocked.noChange")
+  }
+  return null
 })
+
+const canSave = computed(
+  () => !isSaving.value && saveDisabledReason.value === null
+)
 
 const seatCount = computed(() => {
   const subscriptionQuantity = billing.value?.quantity
@@ -374,7 +420,7 @@ const getButtonLabel = (planId: BillingPlanKey) => {
               class="grid grid-cols-2 gap-2"
               :disabled="!canManageBilling"
               @update:model-value="
-                (val) => val && (selectedPlanId = val as BillingPlanKey)
+                (val) => val && selectPlan(val as BillingPlanKey)
               "
             >
               <FieldLabel
@@ -398,6 +444,26 @@ const getButtonLabel = (planId: BillingPlanKey) => {
                       {{ highlight }}
                     </li>
                   </ul>
+                  <FieldError v-if="exceedsPlan(plan.id)">
+                    {{
+                      t("settings.plans.usageAbovePlan", {
+                        used: n(usedThisMonth),
+                      })
+                    }}
+                  </FieldError>
+                  <FieldError
+                    v-for="blocker in planBlockers(plan.id)"
+                    :key="`${plan.id}-${blocker.kind}`"
+                  >
+                    {{ describeBlocker(blocker) }}
+                  </FieldError>
+                  <FieldError v-if="shortensAuditLogRetention(plan.id)">
+                    {{
+                      t("settings.plans.auditLogsShorter", {
+                        days: PLAN_AUDIT_LOG_RETENTION_DAYS[plan.id],
+                      })
+                    }}
+                  </FieldError>
                   <RadioGroupItem
                     :id="plan.id"
                     :value="plan.id"
@@ -621,6 +687,7 @@ const getButtonLabel = (planId: BillingPlanKey) => {
         v-if="canManageBilling && hasPendingChanges"
         :saving="isSaving"
         :save-disabled="!canSave"
+        :save-disabled-reason="saveDisabledReason"
         :save-label="saveButtonLabel"
         @discard="discardChanges"
         @save="saveChanges"

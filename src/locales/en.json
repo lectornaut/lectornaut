@@ -770,6 +770,7 @@
       "logs": "Logs",
       "administration": "Administration",
       "billing": "Billing",
+      "usage": "Usage",
       "plans": "Plans"
     },
     "descriptions": {
@@ -797,6 +798,7 @@
       "integrations": "Add or remove pre-built agents, tools, and workflows for your team.",
       "logs": "Activity and system history.",
       "billing": "Plans, invoices, and billing status.",
+      "usage": "AI token spend this month, and the team's own spending limit.",
       "plans": "Compare plans and update subscription."
     },
     "viewRestricted": {
@@ -1159,6 +1161,73 @@
         "test": "Send test {channel}"
       }
     },
+    "usage": {
+      "noPermissionTitle": "Admins only",
+      "noPermissionDescription": "Only team owners and admins can view usage and set spending limits.",
+      "thisMonth": {
+        "label": "This month",
+        "description": "Tokens used by every chat turn and workflow run in this team since the start of the month (UTC). Resets on the 1st.",
+        "ofLimit": "{used} of {limit} tokens",
+        "unlimited": "{used} tokens, no limit",
+        "stats": {
+          "available": "Total available",
+          "used": "Used tokens",
+          "turns": "Turns",
+          "average": "Avg. tokens / turn",
+          "remaining": "Remaining"
+        },
+        "progress": {
+          "label": "Monthly usage",
+          "description": "{used} of {limit} tokens used"
+        },
+        "remainingUnlimited": "No limit",
+        "exhausted": "Limit reached. Agents will refuse new turns until next month, until the team limit is raised, or until the plan is upgraded."
+      },
+      "costUsage": {
+        "label": "Estimated cost this month",
+        "description": "Based on model input and output pricing; this is an estimate, not an invoice.",
+        "ofLimit": "{used} of {limit}",
+        "noLimit": "{used} estimated usage, no cost limit"
+      },
+      "history": {
+        "label": "History",
+        "description": "Input tokens are what agents read (prompts, context, tool results). Output tokens are what they wrote.",
+        "input": "Input",
+        "output": "Output",
+        "empty": "No usage recorded in the last twelve months."
+      },
+      "planAllowance": {
+        "label": "Plan allowance",
+        "description": "The {plan} plan includes {limit} tokens per month. Upgrading takes effect immediately; a downgrade applies at the end of the billing period.",
+        "unlimited": "unlimited",
+        "upgrade": "Upgrade plan"
+      },
+      "teamCap": {
+        "label": "Team spending limit",
+        "description": "Optional. Stops all agent turns and workflow runs once this many tokens are used in a month. Can only lower the plan allowance, never raise it.",
+        "placeholder": "No team limit",
+        "hint": "Minimum {min} tokens. Leave empty to use the plan allowance.",
+        "belowUsage": "This limit is below what the team has already used this month. Agents will stop immediately.",
+        "abovePlan": "Above the plan allowance of {limit} tokens, so the plan allowance applies.",
+        "atPlan": "No team limit. The plan allowance of {limit} tokens applies.",
+        "share": "{percent}% of the plan allowance ({limit} tokens).",
+        "noCeiling": "This plan has no token ceiling, so the team limit is the only cap.",
+        "usedSoFar": "Used so far this month: {used}.",
+        "saveSuccess": "Spending limit saved",
+        "saveError": "Couldn't save the spending limit",
+        "loadError": "Couldn't load usage settings",
+        "permissionRequired": "Only team owners and admins can change spending limits."
+      },
+      "costCap": {
+        "label": "Monthly cost limit",
+        "description": "Optional estimated USD limit for this team's AI usage. The token plan limit still applies.",
+        "placeholder": "No cost limit",
+        "hint": "Minimum {min}.",
+        "belowUsage": "This limit is below the team's estimated cost already used this month.",
+        "usedSoFar": "Estimated used: {used}. Remaining: {remaining}.",
+        "noLimit": "No limit"
+      }
+    },
     "billing": {
       "currentPlan": {
         "label": "Current plan",
@@ -1267,6 +1336,19 @@
         "monthly": "Monthly"
       },
       "features": "Features",
+      "usageAbovePlan": "This month's usage ({used} tokens) is already above this plan's allowance. Agents would stop as soon as it takes effect.",
+      "saveBlocked": {
+        "permission": "Only billing managers can change the plan.",
+        "noTeam": "Select a team first.",
+        "noPlan": "Choose a plan to continue.",
+        "noTerm": "Choose monthly or annual billing to continue.",
+        "noChange": "Nothing to apply yet: pick a different plan or billing term."
+      },
+      "blockers": {
+        "workspaces": "Delete {excess} workspace first: this plan includes {allowance} and the team has {count}. | Delete {excess} workspaces first: this plan includes {allowance} and the team has {count}.",
+        "sso": "Turn off single sign-on first: it is only available on Enterprise."
+      },
+      "auditLogsShorter": "This plan keeps audit logs for {days} days. Older entries will be removed within a day of the change.",
       "seatCount": "{count} seat | {count} seats",
       "perSeatMonthly": "{price} per seat per month",
       "totalForSeats": "{total} total for {seats}",
@@ -1289,7 +1371,17 @@
       "columnResource": "Resource",
       "filterDate": "Date",
       "filterActor": "Actor",
-      "refresh": "Refresh"
+      "refresh": "Refresh",
+      "retention": {
+        "days": "Entries are kept for {days} days on the {plan} plan; older entries are removed daily.",
+        "unlimited": "Entries are kept indefinitely on the {plan} plan."
+      },
+      "export": {
+        "button": "Export JSON",
+        "upgrade": "Upgrade for export",
+        "success": "Audit logs exported",
+        "error": "Couldn't export audit logs"
+      }
     },
     "sessions": {
       "sessionsLabel": "Workspace chat sessions",
@@ -1815,6 +1907,9 @@
         "modelsLabel": "Models",
         "modelsMinimum": "At least one model must stay enabled.",
         "modelsEnabledCount": "{enabled} of {total} enabled",
+        "planNotice": "{included} of {total} models are included in the {plan} plan.",
+        "requiresPlan": "Requires {plan}",
+        "upgrade": "Upgrade plan",
         "google": {
           "description": "{count} Gemini models available for team AI features."
         },
@@ -2313,6 +2408,9 @@
       "label": "Workspaces",
       "description": "Manage workspaces in your current team.",
       "createWorkspace": "Create workspace",
+      "limit": "{count} of {allowance} included in the plan.",
+      "limitUnlimited": "{count} workspaces. No plan limit.",
+      "upgrade": "Upgrade plan",
       "columnName": "Name",
       "columnDescription": "Description",
       "columnCreated": "Created",
@@ -2760,7 +2858,7 @@
     },
     "pricing": {
       "title": "Pricing",
-      "subtitle": "Choose a plan. 14-day trial. Cancel anytime.",
+      "subtitle": "Choose a plan. Cancel anytime.",
       "feature": "Feature",
       "billing": {
         "monthly": "Monthly",
@@ -2774,107 +2872,44 @@
         "planUpdated": "Plan updated successfully."
       },
       "plans": {
-        "personal": {
-          "title": "Personal",
-          "price": "Free for everyone"
-        },
-        "professional": {
-          "title": "Professional",
-          "monthly": "$10/month",
-          "annual": "$8/month"
-        },
-        "business": {
-          "title": "Business",
-          "monthly": "$16/user/month",
-          "annual": "$14/user/month"
-        },
-        "enterprise": {
-          "title": "Enterprise",
-          "price": "Contact us"
-        },
+        "personal": { "title": "Personal" },
+        "professional": { "title": "Professional" },
+        "business": { "title": "Business" },
+        "enterprise": { "title": "Enterprise" },
         "cta": {
           "getStarted": "Get Started",
           "contactSales": "Contact Sales"
         }
       },
       "features": {
+        "aiTokens": "{tokens} AI tokens per month",
+        "aiTokensUnlimited": "Unlimited AI tokens",
+        "models": "{models} models",
+        "modelsAdded": "Adds {models}",
+        "workspaces": "{count} workspace | {count} workspaces",
+        "workspacesUnlimited": "Unlimited workspaces",
+        "auditLogs": "{retention} of audit logs",
+        "auditLogsExport": "Unlimited audit logs, with export",
+        "agentsToolsWorkflows": "Custom agents, tools, and workflows",
+        "connections": "Calendar, Drive, Gmail, and GitHub connections",
         "everythingInPersonal": "Everything in Personal",
         "everythingInProfessional": "Everything in Professional",
         "everythingInBusiness": "Everything in Business",
-        "unlimitedConnections": "Unlimited connections",
-        "professionalFeatures": "Professional features",
-        "communitySupport": "Community support",
-        "advancedFeatures": "Advanced features",
-        "prioritySupport": "Priority support",
-        "teamManagement": "Team management",
-        "enhancedSecurity": "Enhanced security",
-        "customizableWorkflows": "Customizable workflows",
-        "analyticsAndReporting": "Analytics and reporting",
-        "dedicatedSupport": "Dedicated support",
-        "customSLAs": "Custom SLAs",
-        "dedicatedAccountManager": "Dedicated account manager",
-        "integrationSupport": "Integration support",
-        "complianceAndAudits": "Compliance and audits"
+        "sso": "SAML and OIDC single sign-on"
       },
       "comparison": {
-        "agents": {
-          "5": "5 agents",
-          "10": "10 agents",
-          "unlimited": "Unlimited agents"
-        },
-        "members": {
-          "1": "1 member",
-          "unlimited": "Unlimited members"
-        },
-        "teams": {
-          "2": "2 teams",
-          "5": "5 teams",
-          "unlimited": "Unlimited teams"
-        },
-        "storage": {
-          "10mb": "10 MB/month",
-          "100mb": "100 MB/month",
-          "1gb": "1 GB/month",
-          "unlimited": "Unlimited storage"
-        },
-        "runs": {
-          "10": "10 runs/month",
-          "100": "100 runs/month",
-          "500": "500 runs/month",
-          "unlimited": "Unlimited runs"
-        },
-        "auth": {
-          "basic": "OAuth and SFA",
-          "mfa": "OAuth, SFA, and MFA",
-          "sso": "OAuth, SFA, MFA, and SSO",
-          "oidc": "OAuth, SFA, MFA, SSO, and OIDC"
-        },
-        "support": {
-          "community": "Community support",
-          "email": "Email support",
-          "priority": "Priority support",
-          "dedicated": "Dedicated support"
-        },
+        "unlimited": "Unlimited",
         "common": {
           "yes": "Yes",
           "no": "No"
         },
         "features": {
-          "agents": "Agents",
-          "members": "Members",
-          "teams": "Teams",
-          "storage": "Storage",
-          "workflows": "Workflows",
-          "authentication": "Authentication",
-          "support": "Support",
-          "integrations": "Integrations",
-          "apiAccess": "API Access",
-          "accountManager": "Account Manager",
-          "analytics": "Analytics and Reporting",
-          "auditLog": "Audit Log",
-          "scim": "SCIM Provisioning",
-          "compliance": "Compliance and Audits",
-          "uptime": "Uptime SLA"
+          "aiTokens": "AI tokens per month",
+          "workspaces": "Workspaces",
+          "models": "Models",
+          "auditLogRetention": "Audit log retention",
+          "auditLogExport": "Audit log export",
+          "sso": "Single sign-on and sign-in controls"
         }
       }
     },

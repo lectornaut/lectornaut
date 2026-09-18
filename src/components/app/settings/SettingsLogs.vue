@@ -2,14 +2,64 @@
 import DataTableColumnHeader from "@/components/table/DataTableColumnHeader.vue"
 import { Badge } from "@/components/ui/badge"
 import { useAuditLogs } from "@/composables/useAuditLogs"
-import { IconAlertTriangle, IconRefreshCw } from "@/data/icons"
+import { useTeamActions } from "@/composables/useTeamActions"
+import { IconAlertTriangle, IconDownload, IconRefreshCw } from "@/data/icons"
+import { saveTextFile } from "@/helpers/saveTextFile"
+import { emitter } from "@/modules/mitt"
+import { useAuthStore } from "@/stores/authStore"
+import { useBillingStore } from "@/stores/billingStore"
+import { storeToRefs } from "pinia"
+import { toast } from "vue-sonner"
 import type { AppTableFeatures } from "@/components/table/features"
 import type { ILogEntry } from "@/types/logs"
 import type { Column, ColumnDef, RowData } from "@tanstack/vue-table"
-import { computed, h, onMounted } from "vue"
+import { computed, h, onMounted, ref } from "vue"
 
 const { t } = useI18n()
-const { logs, loading, error, hasMore, canViewLogs, fetchLogs } = useAuditLogs()
+const {
+  logs,
+  loading,
+  error,
+  hasMore,
+  canViewLogs,
+  fetchLogs,
+  auditLogRetentionDays,
+  canExportAuditLogs,
+} = useAuditLogs()
+const { canManageBilling } = useTeamActions()
+const { currentTeamId } = storeToRefs(useAuthStore())
+const { planKey } = storeToRefs(useBillingStore())
+const planTitle = computed(() =>
+  t(`settings.plans.subscriptionPlan.${planKey.value ?? "personal"}.title`)
+)
+const openPlans = (): void => {
+  emitter.emit("Dialog.Settings.Open", "plans")
+}
+
+// Export = the rows already loaded (the page loads every retained entry).
+// Plan-gated client-side; the data itself is admin-readable regardless.
+const isExporting = ref(false)
+const exportLogs = async (): Promise<void> => {
+  if (!canExportAuditLogs.value || isExporting.value) return
+  isExporting.value = true
+  try {
+    const rows = logs.value.map((entry) => ({
+      ...entry,
+      timestamp: entry.timestamp?.toDate?.()?.toISOString() ?? null,
+    }))
+    const stamp = new Date().toISOString().slice(0, 10)
+    const saved = await saveTextFile(
+      `audit-logs-${currentTeamId.value ?? "team"}-${stamp}.json`,
+      JSON.stringify(rows, null, 2)
+    )
+    if (saved) toast.success(t("settings.logs.export.success"))
+  } catch (err) {
+    console.error("[SettingsLogs] export failed:", err)
+    toast.error(t("settings.logs.export.error"))
+  } finally {
+    isExporting.value = false
+  }
+}
 
 const fetchAllLogs = async (reset = true) => {
   await fetchLogs(reset)
@@ -179,12 +229,40 @@ onMounted(() => {
               <FieldLabel>{{ $t("settings.logs.auditLogs.label") }}</FieldLabel>
               <FieldDescription>
                 {{ $t("settings.logs.auditLogs.description") }}
+                {{
+                  auditLogRetentionDays < 0
+                    ? t("settings.logs.retention.unlimited", {
+                        plan: planTitle,
+                      })
+                    : t("settings.logs.retention.days", {
+                        days: auditLogRetentionDays,
+                        plan: planTitle,
+                      })
+                }}
               </FieldDescription>
             </FieldContent>
-            <Button variant="secondary" @click="refreshLogs">
-              <IconRefreshCw />
-              {{ t("settings.logs.refresh") }}
-            </Button>
+            <div class="flex items-center gap-2">
+              <Button
+                v-if="!canExportAuditLogs && canManageBilling"
+                variant="outline"
+                @click="openPlans"
+              >
+                {{ t("settings.logs.export.upgrade") }}
+              </Button>
+              <Button
+                v-if="canExportAuditLogs"
+                variant="outline"
+                :disabled="loading || isExporting || logs.length === 0"
+                @click="exportLogs"
+              >
+                <IconDownload />
+                {{ t("settings.logs.export.button") }}
+              </Button>
+              <Button variant="secondary" @click="refreshLogs">
+                <IconRefreshCw />
+                {{ t("settings.logs.refresh") }}
+              </Button>
+            </div>
           </Field>
           <Field orientation="horizontal">
             <FieldContent>

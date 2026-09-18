@@ -218,12 +218,11 @@ watch(copied, (isCopied) => {
         >
           <HoverCard
             v-if="!isMobile && !open && !sidebarPinned"
-            v-motion-fade-visible
             :open-delay="500"
             :close-delay="0"
           >
             <HoverCardTrigger as-child>
-              <SidebarTrigger />
+              <SidebarTrigger v-motion-fade />
             </HoverCardTrigger>
             <HoverCardContent
               side="bottom"
@@ -237,7 +236,7 @@ watch(copied, (isCopied) => {
           <TooltipProvider v-else-if="isMobile || (!open && sidebarPinned)">
             <Tooltip>
               <TooltipTrigger as-child>
-                <SidebarTrigger v-motion-fade-visible />
+                <SidebarTrigger v-motion-fade />
               </TooltipTrigger>
               <TooltipContent class="flex items-center gap-2 pr-2">
                 {{ t("components.ui.toggleSidebar") }}
@@ -248,9 +247,10 @@ watch(copied, (isCopied) => {
               </TooltipContent>
             </Tooltip>
           </TooltipProvider>
+          <Notifications v-if="!isMobile && !open" v-motion-fade />
           <span
             v-if="!open || isMobile"
-            v-motion-fade-visible
+            v-motion-fade
             class="inline-flex items-center"
           >
             <BackForth />
@@ -516,6 +516,7 @@ watch(copied, (isCopied) => {
               </Tooltip>
             </TooltipProvider>
             <div class="flex items-stretch justify-center gap-2">
+              <CommandKTrigger />
               <TooltipProvider>
                 <Tooltip>
                   <DropdownMenu>

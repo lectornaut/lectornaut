@@ -22,6 +22,7 @@ import {
   IconFontMono,
   IconFontSans,
   IconFontSansSerif,
+  IconGauge,
   IconHardDrive,
   IconHome,
   IconJapan,
@@ -61,6 +62,13 @@ import {
   type BaseId,
 } from "@/utils/theme/families"
 import { paletteHex } from "@/utils/theme/tokens"
+import {
+  canExportAuditLogsOnPlan,
+  modelsAddedByPlan,
+  PLAN_AUDIT_LOG_RETENTION_DAYS,
+  PLAN_TOKEN_ALLOWANCES,
+  PLAN_WORKSPACE_ALLOWANCES,
+} from "@lectornaut/shared/domain"
 
 // Re-exported so existing `@/helpers/defaults` importers keep their `AccentId`
 // / `BaseId` source; the canonical declaration lives in `@/utils/theme/families`.
@@ -663,6 +671,8 @@ export const defaultBotAgentConfig: IBotAgentConfig = {
   },
   titleMaxLength: 80,
   previewMaxLength: 200,
+  monthlyTokenCap: null,
+  monthlyCostCapCents: null,
 }
 
 /**
@@ -1311,117 +1321,167 @@ export type SettingsPlanFeature = {
   values: Record<BillingPlanKey, string | boolean>
 }
 
+/**
+ * Plan token allowance as display copy. `PLAN_TOKEN_ALLOWANCES`
+ * (shared/domain.ts) is the single source: the server enforces it, Settings →
+ * Usage meters against it, and the Plans + pricing pages advertise it through
+ * this helper. Change the number there and every surface moves together.
+ */
+const compactTokens = new Intl.NumberFormat("en", { notation: "compact" })
+export const formatPlanTokenAllowance = (plan: BillingPlanKey): string => {
+  const allowance = PLAN_TOKEN_ALLOWANCES[plan]
+  return allowance < 0 ? "Unlimited" : compactTokens.format(allowance)
+}
+/**
+ * Models a plan ADDS over the one below it, as display names — from the shared
+ * `MODEL_MIN_PLAN` table, so the plan copy can't drift from what the server
+ * enforces. The lowest plan lists its own models; higher plans read "+ …".
+ */
+export const formatPlanModelsAdded = (plan: BillingPlanKey): string => {
+  const names = modelsAddedByPlan(plan).map(
+    (id) => botModels.find((m) => m.id === id)?.name ?? id
+  )
+  if (names.length === 0) return "—"
+  return plan === "personal" ? names.join(", ") : `+ ${names.join(", ")}`
+}
+const planModelsHighlight = (plan: BillingPlanKey): string =>
+  plan === "personal"
+    ? `${formatPlanModelsAdded(plan)} models`
+    : `Adds ${formatPlanModelsAdded(plan).slice(2)}`
+
+export const formatPlanWorkspaces = (plan: BillingPlanKey): string => {
+  const n = PLAN_WORKSPACE_ALLOWANCES[plan]
+  return n < 0 ? "Unlimited" : String(n)
+}
+const planWorkspacesHighlight = (plan: BillingPlanKey): string => {
+  const n = PLAN_WORKSPACE_ALLOWANCES[plan]
+  if (n < 0) return "Unlimited workspaces"
+  return `${n} workspace${n === 1 ? "" : "s"}`
+}
+
+export const formatPlanAuditLogRetention = (plan: BillingPlanKey): string => {
+  const days = PLAN_AUDIT_LOG_RETENTION_DAYS[plan]
+  if (days < 0) return "Unlimited"
+  if (days % 365 === 0) return days === 365 ? "1 year" : `${days / 365} years`
+  return `${days} days`
+}
+const planAuditLogsHighlight = (plan: BillingPlanKey): string =>
+  canExportAuditLogsOnPlan(plan)
+    ? "Unlimited audit logs, with export"
+    : `${formatPlanAuditLogRetention(plan)} of audit logs`
+
+const planTokenHighlight = (plan: BillingPlanKey): string =>
+  PLAN_TOKEN_ALLOWANCES[plan] < 0
+    ? "Unlimited AI tokens"
+    : `${formatPlanTokenAllowance(plan)} AI tokens / month`
+
 export const settingsPlans = [
   {
     id: "personal",
     titleKey: "settings.plans.subscriptionPlan.personal.title",
     descriptionKey: "settings.plans.subscriptionPlan.personal.description",
-    highlights: ["Personal Workspaces", "10 Agents", "100 Monthly Tasks"],
+    highlights: [
+      planTokenHighlight("personal"),
+      planModelsHighlight("personal"),
+      planWorkspacesHighlight("personal"),
+      planAuditLogsHighlight("personal"),
+      "Custom agents, tools, and workflows",
+      "Calendar, Drive, Gmail, and GitHub connections",
+    ],
   },
   {
     id: "professional",
     titleKey: "settings.plans.subscriptionPlan.professional.title",
     descriptionKey: "settings.plans.subscriptionPlan.professional.description",
-    highlights: ["Team Workspaces", "100 Agents", "1000 Monthly Tasks"],
+    highlights: [
+      planTokenHighlight("professional"),
+      planModelsHighlight("professional"),
+      planWorkspacesHighlight("professional"),
+      planAuditLogsHighlight("professional"),
+      "Everything in Personal",
+    ],
   },
   {
     id: "business",
     titleKey: "settings.plans.subscriptionPlan.business.title",
     descriptionKey: "settings.plans.subscriptionPlan.business.description",
-    highlights: ["Team Workspaces", "500 Agents", "5000 Monthly Tasks"],
+    highlights: [
+      planTokenHighlight("business"),
+      planModelsHighlight("business"),
+      planWorkspacesHighlight("business"),
+      planAuditLogsHighlight("business"),
+      "Everything in Professional",
+    ],
   },
   {
     id: "enterprise",
     titleKey: "settings.plans.subscriptionPlan.enterprise.title",
     descriptionKey: "settings.plans.subscriptionPlan.enterprise.description",
-    highlights: ["Team Workspaces", "1000 Agents", "10000 Monthly Tasks"],
+    highlights: [
+      planTokenHighlight("enterprise"),
+      planModelsHighlight("enterprise"),
+      planWorkspacesHighlight("enterprise"),
+      planAuditLogsHighlight("enterprise"),
+      "Everything in Business",
+      "SAML and OIDC single sign-on",
+    ],
   },
 ] as const satisfies readonly SettingsPlan[]
 
+/**
+ * Only rows the product actually enforces per plan. Token allowance is the
+ * hard cap in usageMetering.ts; SSO + sign-in method controls are gated to
+ * Enterprise in functions/sso.ts. Everything else ships on every plan, so a
+ * row for it would be a column of identical checkmarks — omitted on purpose.
+ */
 export const settingsPlanFeatures = [
+  {
+    name: "AI tokens / month",
+    values: {
+      personal: formatPlanTokenAllowance("personal"),
+      professional: formatPlanTokenAllowance("professional"),
+      business: formatPlanTokenAllowance("business"),
+      enterprise: formatPlanTokenAllowance("enterprise"),
+    },
+  },
   {
     name: "Workspaces",
     values: {
-      personal: "1",
-      professional: "5",
-      business: "20",
-      enterprise: "Unlimited",
+      personal: formatPlanWorkspaces("personal"),
+      professional: formatPlanWorkspaces("professional"),
+      business: formatPlanWorkspaces("business"),
+      enterprise: formatPlanWorkspaces("enterprise"),
     },
   },
   {
-    name: "Storage",
+    name: "Models",
     values: {
-      personal: "5 GB",
-      professional: "50 GB",
-      business: "200 GB",
-      enterprise: "1 TB",
+      personal: formatPlanModelsAdded("personal"),
+      professional: formatPlanModelsAdded("professional"),
+      business: formatPlanModelsAdded("business"),
+      enterprise: formatPlanModelsAdded("enterprise"),
     },
   },
   {
-    name: "Support",
+    name: "Audit log retention",
     values: {
-      personal: false,
-      professional: true,
-      business: true,
-      enterprise: true,
+      personal: formatPlanAuditLogRetention("personal"),
+      professional: formatPlanAuditLogRetention("professional"),
+      business: formatPlanAuditLogRetention("business"),
+      enterprise: formatPlanAuditLogRetention("enterprise"),
     },
   },
   {
-    name: "Custom Domain",
+    name: "Audit log export",
     values: {
-      personal: false,
-      professional: false,
-      business: true,
-      enterprise: true,
+      personal: canExportAuditLogsOnPlan("personal"),
+      professional: canExportAuditLogsOnPlan("professional"),
+      business: canExportAuditLogsOnPlan("business"),
+      enterprise: canExportAuditLogsOnPlan("enterprise"),
     },
   },
   {
-    name: "Team Members",
-    values: {
-      personal: false,
-      professional: false,
-      business: true,
-      enterprise: true,
-    },
-  },
-  {
-    name: "Advanced Analytics",
-    values: {
-      personal: false,
-      professional: false,
-      business: true,
-      enterprise: true,
-    },
-  },
-  {
-    name: "Priority Support",
-    values: {
-      personal: false,
-      professional: false,
-      business: false,
-      enterprise: true,
-    },
-  },
-  {
-    name: "Account Manager",
-    values: {
-      personal: false,
-      professional: false,
-      business: false,
-      enterprise: true,
-    },
-  },
-  {
-    name: "Custom SLAs",
-    values: {
-      personal: false,
-      professional: false,
-      business: false,
-      enterprise: true,
-    },
-  },
-  {
-    name: "Onboarding Assistance",
+    name: "Single sign-on (SAML, OIDC) and sign-in controls",
     values: {
       personal: false,
       professional: false,
@@ -1569,16 +1629,16 @@ export const defaultSettingsTabs = [
         description: "settings.descriptions.integrations",
       },
       {
-        name: "settings.titles.tools",
-        icon: IconWrench,
-        id: "tools",
-        description: "settings.descriptions.tools",
-      },
-      {
         name: "settings.titles.agents",
         icon: IconBot,
         id: "agents",
         description: "settings.descriptions.agents",
+      },
+      {
+        name: "settings.titles.tools",
+        icon: IconWrench,
+        id: "tools",
+        description: "settings.descriptions.tools",
       },
       {
         name: "settings.titles.workflows",
@@ -1597,6 +1657,12 @@ export const defaultSettingsTabs = [
         icon: IconBuilding,
         id: "teams",
         description: "settings.descriptions.teams",
+      },
+      {
+        name: "settings.titles.usage",
+        icon: IconGauge,
+        id: "usage",
+        description: "settings.descriptions.usage",
       },
       {
         name: "settings.titles.billing",

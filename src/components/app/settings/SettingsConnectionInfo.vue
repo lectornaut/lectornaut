@@ -318,7 +318,7 @@ const handleToggleEnabled = async (enabled: boolean): Promise<void> => {
           <!-- ── Accounts — every member binding (metadata only) ────── -->
           <TabsContent value="accounts" class="min-h-0">
             <ScrollContainer class="h-full">
-              <div class="flex flex-col gap-2 py-1">
+              <div class="flex flex-col gap-2">
                 <Empty
                   v-if="accountRows.length === 0"
                   class="border border-dashed"

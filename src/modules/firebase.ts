@@ -20,12 +20,16 @@ import { getStorage } from "firebase/storage"
 // and transitions the tab to secondary mode — it never reaches app code. All
 // other Firestore errors pass through untouched. Must run before any
 // `firebase/firestore` SDK code executes.
+//
+// @firebase/logger calls `console.error("[<iso>]  @firebase/firestore:", msg)`
+// — the prefix and the message are SEPARATE arguments — so the pattern is
+// tested against every string argument joined, not just the first.
 const LEASE_LOG_PATTERN =
   /@firebase\/firestore:.*Failed to obtain primary lease for action '[^']*'\.?/
 const originalConsoleError = console.error.bind(console)
 console.error = (...data: unknown[]): void => {
-  const first = data[0]
-  if (typeof first === "string" && LEASE_LOG_PATTERN.test(first)) return
+  const text = data.filter((d) => typeof d === "string").join(" ")
+  if (LEASE_LOG_PATTERN.test(text)) return
   originalConsoleError(...data)
 }
 

@@ -109,7 +109,7 @@ useInfiniteScroll(
         </Badge>
       </Button>
     </PopoverTrigger>
-    <PopoverContent class="mx-2 w-auto p-2">
+    <PopoverContent class="mx-2 w-lg p-2">
       <Tabs v-model="activeTab" default-value="inbox">
         <div class="flex items-center justify-between gap-2">
           <div class="flex items-center gap-2">

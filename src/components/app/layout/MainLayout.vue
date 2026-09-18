@@ -325,9 +325,9 @@ const closeTab = (id: string) => {
     <ResizablePanel
       ref="sidebarPanel"
       collapsible
-      :min-size="15"
+      :min-size="16"
       :default-size="20"
-      :max-size="25"
+      :max-size="24"
       :collapsed-size="sidebarPanelCollapsedSize"
       :inert="sidebarPanel?.isCollapsed && (!sidebarPinned || isMobile)"
       @collapse="onSidebarPanelCollapse"
@@ -339,7 +339,7 @@ const closeTab = (id: string) => {
       <Tooltip>
         <TooltipTrigger as-child>
           <ResizableHandle
-            v-motion-fade-visible
+            v-motion-fade
             class="data-[resize-handle-state=drag]:after:bg-foreground data-[resize-handle-state=hover]:after:bg-muted focus-visible:after:bg-muted! z-30 bg-transparent transition before:pointer-events-auto before:absolute before:inset-y-0 before:left-1/2 before:w-3 before:-translate-x-1/2 after:rounded-3xl focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:outline-none focus-visible:after:inset-y-6 data-resize-handle:after:w-1 data-[resize-handle-state=drag]:after:inset-y-6 data-[resize-handle-state=hover]:after:inset-y-6"
             :class="{
               'bg-muted': !sidebarPanel?.isCollapsed,
@@ -407,9 +407,9 @@ const closeTab = (id: string) => {
                     ref="leftPanel"
                     class="rounded-3xl"
                     collapsible
-                    :min-size="15"
-                    :default-size="20"
-                    :max-size="25"
+                    :min-size="18"
+                    :default-size="22"
+                    :max-size="30"
                     :collapsed-size="0"
                     as-child
                     :inert="leftPanel?.isCollapsed"
@@ -496,7 +496,7 @@ const closeTab = (id: string) => {
                         class="rounded-3xl"
                         collapsible
                         :min-size="15"
-                        :default-size="80"
+                        :default-size="78"
                         :max-size="100"
                         :collapsed-size="0"
                         as-child
@@ -587,7 +587,7 @@ const closeTab = (id: string) => {
                         class="rounded-3xl"
                         collapsible
                         :min-size="15"
-                        :default-size="20"
+                        :default-size="22"
                         :max-size="100"
                         :collapsed-size="0"
                         as-child
@@ -834,9 +834,9 @@ const closeTab = (id: string) => {
                     ref="rightPanel"
                     class="rounded-3xl"
                     collapsible
-                    :min-size="25"
-                    :default-size="30"
-                    :max-size="40"
+                    :min-size="22"
+                    :default-size="28"
+                    :max-size="38"
                     :collapsed-size="0"
                     as-child
                     :inert="rightPanel?.isCollapsed"

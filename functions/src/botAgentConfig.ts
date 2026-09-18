@@ -37,7 +37,16 @@ import { buildContext, logEvent } from "./audit.js"
 import { requireVerifiedAuth } from "./auth.js"
 import { getMembershipRole } from "./bot.js"
 import { BOT_CHAT_MODES, type BotChatMode } from "./botBuiltinTools.js"
-import { AI_PROVIDERS, BOT_AGENT_MODELS, type BotAgentModel } from "./domain.js"
+import {
+  AI_PROVIDERS,
+  BOT_AGENT_MODELS,
+  MONTHLY_COST_CAP_MIN_CENTS,
+  MONTHLY_TOKEN_CAP_MIN,
+  PLAN_FLOOR_MODEL,
+  isModelAllowedOnPlan,
+  type BillingPlanKey,
+  type BotAgentModel,
+} from "./domain.js"
 import { db } from "./firebase.js"
 import { assertAiModelProviderConfigured } from "./genkitClient.js"
 import { isAdminRole } from "./permissions.js"
@@ -322,6 +331,15 @@ export interface BotAgentConfig {
   titleMaxLength: number
   /** Truncation length for the sidebar preview (re-derived every save). */
   previewMaxLength: number
+  /**
+   * Team-set monthly token cap (Settings → Usage). `null` = no team cap, the
+   * plan allowance alone applies. Only ever LOWERS the plan allowance — see
+   * `resolveEffectiveTokenAllowance` (shared/domain.ts). Read raw by
+   * usageMetering.ts to avoid an import cycle, so keep the field name stable.
+   */
+  monthlyTokenCap: number | null
+  /** Team-set monthly estimated-cost cap in USD cents; null = no cost cap. */
+  monthlyCostCapCents: number | null
 }
 
 const DEFAULT_BOT_AGENT_CONFIG: BotAgentConfig = {
@@ -381,6 +399,8 @@ const DEFAULT_BOT_AGENT_CONFIG: BotAgentConfig = {
   },
   titleMaxLength: TITLE_MAX_LENGTH,
   previewMaxLength: PREVIEW_MAX_LENGTH,
+  monthlyTokenCap: null,
+  monthlyCostCapCents: null,
 }
 
 const cloneDefaultBotAgentConfig = (): BotAgentConfig => ({
@@ -490,6 +510,18 @@ const botAgentConfigUpdateSchema = z.object({
     .min(BOT_AGENT_BOUNDS.previewMaxLength.min)
     .max(BOT_AGENT_BOUNDS.previewMaxLength.max)
     .optional(),
+  monthlyTokenCap: z
+    .number()
+    .int()
+    .min(MONTHLY_TOKEN_CAP_MIN)
+    .nullable()
+    .optional(),
+  monthlyCostCapCents: z
+    .number()
+    .int()
+    .min(MONTHLY_COST_CAP_MIN_CENTS)
+    .nullable()
+    .optional(),
 })
 
 type BotAgentConfigUpdate = z.infer<typeof botAgentConfigUpdateSchema>
@@ -525,32 +557,48 @@ function normalizeProviderToggles(
     : { ...DEFAULT_BOT_AGENT_PROVIDERS }
 }
 
-function firstModelForEnabledProviders(
-  providers: Record<BotModelProvider, boolean>
-): BotAgentModel {
-  return (
-    BOT_AGENT_MODELS.find(
-      (model) => providers[BOT_MODEL_PROVIDER_BY_MODEL[model]]
-    ) ?? DEFAULT_BOT_AGENT_CONFIG.model
-  )
-}
-
 /**
- * Pick the first model that's available under BOTH the provider toggles
- * and the per-model toggles. Falls back to the first model whose
- * provider is enabled (ignoring the per-model toggle) so an
- * over-restrictive `models` map can never strand the team with no
- * resolvable model — chat would otherwise fail at dispatch time.
+ * Pick the first model that's available under the provider toggles, the
+ * per-model toggles AND the plan. Falls back to the first plan-allowed
+ * model whose provider is enabled (ignoring the per-model toggle), and
+ * finally to `PLAN_FLOOR_MODEL`, so no combination of over-restrictive
+ * toggles or a downgraded plan can strand the team with no resolvable
+ * model — chat would otherwise fail at dispatch time.
  */
 function firstAvailableModel(
   providers: Record<BotModelProvider, boolean>,
-  models: BotAgentModelToggles
+  models: BotAgentModelToggles,
+  planKey: BillingPlanKey | null
 ): BotAgentModel {
+  const onPlan = (model: BotAgentModel) => isModelAllowedOnPlan(model, planKey)
+  const providerOn = (model: BotAgentModel) =>
+    providers[BOT_MODEL_PROVIDER_BY_MODEL[model]]
   return (
-    BOT_AGENT_MODELS.find(
-      (model) => providers[BOT_MODEL_PROVIDER_BY_MODEL[model]] && models[model]
-    ) ?? firstModelForEnabledProviders(providers)
+    BOT_AGENT_MODELS.find((m) => onPlan(m) && providerOn(m) && models[m]) ??
+    BOT_AGENT_MODELS.find((m) => onPlan(m) && providerOn(m)) ??
+    PLAN_FLOOR_MODEL
   )
+}
+
+/** Per-model toggles with every model outside the plan forced off. */
+function applyPlanToModelToggles(
+  models: BotAgentModelToggles,
+  planKey: BillingPlanKey | null
+): BotAgentModelToggles {
+  const out = { ...models }
+  for (const model of BOT_AGENT_MODELS) {
+    out[model] = models[model] && isModelAllowedOnPlan(model, planKey)
+  }
+  return out
+}
+
+/** `teams/{teamId}.billing.planKey`, or null when the team has no plan. */
+async function loadTeamPlanKey(teamId: string): Promise<BillingPlanKey | null> {
+  const snap = await db.doc(`teams/${teamId}`).get()
+  const billing = (snap.data()?.billing ?? {}) as { planKey?: unknown }
+  return typeof billing.planKey === "string"
+    ? (billing.planKey as BillingPlanKey)
+    : null
 }
 
 function hasEnabledModel(
@@ -736,16 +784,44 @@ const botAgentConfigDocSchema = z
       BOT_AGENT_BOUNDS.previewMaxLength.max,
       DEFAULT_BOT_AGENT_CONFIG.previewMaxLength
     ),
+    monthlyTokenCap: z
+      .number()
+      .int()
+      .min(MONTHLY_TOKEN_CAP_MIN)
+      .nullable()
+      .catch(null),
   })
   .passthrough()
 
+/**
+ * Stored overrides → the EFFECTIVE config. `planKey` is applied last and
+ * wins: models outside the plan are forced off in `models`, and `model`
+ * falls back to a plan-allowed one. Because every consumer (chat turns,
+ * Workflows, summarize/compare, the per-turn `resolveEffectiveModel`
+ * clamp) reads this effective config, a locked model can never be
+ * dispatched — including after a downgrade, since the plan is read live.
+ * The stored doc is left untouched, so toggles for locked models survive
+ * an upgrade.
+ */
 function applyAgentConfigOverrides(
-  raw: Record<string, unknown> | undefined
+  raw: Record<string, unknown> | undefined,
+  planKey: BillingPlanKey | null
 ): BotAgentConfig {
-  if (!raw) return cloneDefaultBotAgentConfig()
+  if (!raw) {
+    const defaults = cloneDefaultBotAgentConfig()
+    const models = applyPlanToModelToggles(defaults.models, planKey)
+    return {
+      ...defaults,
+      models,
+      model: firstAvailableModel(defaults.providers, models, planKey),
+    }
+  }
 
   const providers = normalizeProviderToggles(raw.providers)
-  const models = normalizeModelToggles(raw.models)
+  const models = applyPlanToModelToggles(
+    normalizeModelToggles(raw.models),
+    planKey
+  )
   const configuredModel =
     typeof raw.model === "string" &&
     (BOT_AGENT_MODELS as readonly string[]).includes(raw.model)
@@ -756,7 +832,7 @@ function applyAgentConfigOverrides(
     models[configuredModel]
   const model = isConfiguredModelAvailable
     ? configuredModel
-    : firstAvailableModel(providers, models)
+    : firstAvailableModel(providers, models, planKey)
 
   const parsed = botAgentConfigDocSchema.parse(raw)
 
@@ -777,6 +853,11 @@ function applyAgentConfigOverrides(
     tools: parsed.tools,
     titleMaxLength: parsed.titleMaxLength,
     previewMaxLength: parsed.previewMaxLength,
+    monthlyTokenCap: parsed.monthlyTokenCap ?? null,
+    monthlyCostCapCents:
+      typeof parsed.monthlyCostCapCents === "number"
+        ? parsed.monthlyCostCapCents
+        : null,
   }
 }
 
@@ -789,9 +870,11 @@ function applyAgentConfigOverrides(
 export async function loadTeamAgentConfig(
   teamId: string
 ): Promise<BotAgentConfig> {
-  const snap = await db.doc(agentConfigDocPath(teamId)).get()
-  if (!snap.exists) return cloneDefaultBotAgentConfig()
-  return applyAgentConfigOverrides(snap.data())
+  const [snap, planKey] = await Promise.all([
+    db.doc(agentConfigDocPath(teamId)).get(),
+    loadTeamPlanKey(teamId),
+  ])
+  return applyAgentConfigOverrides(snap.data(), planKey)
 }
 
 // ===========================================================================
@@ -828,8 +911,11 @@ export const getTeamAgentConfig = onCall<GetTeamAgentConfigRequest>(
 
     await getMembershipRole(teamId, auth.uid)
 
-    const snap = await db.doc(agentConfigDocPath(teamId)).get()
-    const config = applyAgentConfigOverrides(snap.data())
+    const [snap, planKey] = await Promise.all([
+      db.doc(agentConfigDocPath(teamId)).get(),
+      loadTeamPlanKey(teamId),
+    ])
+    const config = applyAgentConfigOverrides(snap.data(), planKey)
 
     return { config, hasOverrides: snap.exists }
   }
@@ -876,16 +962,25 @@ export const updateTeamAgentConfig = onCall<UpdateTeamAgentConfigRequest>(
     }
 
     const ref = db.doc(agentConfigDocPath(teamId))
-    const existingSnap = await ref.get()
-    const currentConfig = applyAgentConfigOverrides(existingSnap.data())
+    const [existingSnap, planKey] = await Promise.all([
+      ref.get(),
+      loadTeamPlanKey(teamId),
+    ])
+    const currentConfig = applyAgentConfigOverrides(
+      existingSnap.data(),
+      planKey
+    )
     const nextProviders = {
       ...currentConfig.providers,
       ...(parsed.data.providers ?? {}),
     }
+    // Stored toggles (what gets written); the plan-filtered view is what
+    // the validation below and the effective config reason about.
     const nextModels: BotAgentModelToggles = {
       ...currentConfig.models,
       ...(parsed.data.models ?? {}),
     }
+    const nextModelsOnPlan = applyPlanToModelToggles(nextModels, planKey)
 
     if (!hasEnabledProvider(nextProviders)) {
       throw new HttpsError(
@@ -893,18 +988,28 @@ export const updateTeamAgentConfig = onCall<UpdateTeamAgentConfigRequest>(
         "At least one AI provider must stay enabled."
       )
     }
-    if (!hasEnabledModel(nextProviders, nextModels)) {
+    if (!hasEnabledModel(nextProviders, nextModelsOnPlan)) {
       throw new HttpsError(
         "invalid-argument",
-        "At least one model must stay available."
+        "At least one model included in the team's plan must stay available."
       )
     }
     assertEnabledProvidersConfigured(nextProviders)
 
     let nextModel = parsed.data.model ?? currentConfig.model
+    if (
+      parsed.data.model &&
+      !isModelAllowedOnPlan(parsed.data.model, planKey)
+    ) {
+      throw new HttpsError(
+        "failed-precondition",
+        `${parsed.data.model} isn't included in the team's current plan. ` +
+          "Upgrade the plan in Settings → Plans to use it."
+      )
+    }
     const isNextModelAvailable =
       nextProviders[BOT_MODEL_PROVIDER_BY_MODEL[nextModel]] &&
-      nextModels[nextModel]
+      nextModelsOnPlan[nextModel]
     if (!isNextModelAvailable) {
       if (parsed.data.model) {
         throw new HttpsError(
@@ -912,7 +1017,7 @@ export const updateTeamAgentConfig = onCall<UpdateTeamAgentConfigRequest>(
           "Selected model is unavailable — provider disabled or model toggled off."
         )
       }
-      nextModel = firstAvailableModel(nextProviders, nextModels)
+      nextModel = firstAvailableModel(nextProviders, nextModelsOnPlan, planKey)
     }
 
     const updatesToWrite: Record<string, unknown> = { ...parsed.data }
@@ -935,7 +1040,7 @@ export const updateTeamAgentConfig = onCall<UpdateTeamAgentConfigRequest>(
     )
 
     const snap = await ref.get()
-    const nextConfig = applyAgentConfigOverrides(snap.data())
+    const nextConfig = applyAgentConfigOverrides(snap.data(), planKey)
 
     // Admin-only, and it rewrites the system prompt, the model, and which
     // side-effecting tools the bot may call for EVERY member of the team — the

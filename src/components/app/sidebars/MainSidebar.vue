@@ -11,6 +11,7 @@ import {
   IconPlus,
   IconX,
 } from "@/data/icons"
+import { getPlatformSpecialKey } from "@/helpers/shortcuts"
 import { useAuthStore } from "@/stores/authStore"
 import { useUiPreferencesStore } from "@/stores/uiPreferencesStore"
 import { storeToRefs } from "pinia"
@@ -73,14 +74,27 @@ function togglePinned() {
         /> -->
         <div
           v-if="open || props.preview"
-          v-motion-fade-visible
+          v-motion-fade
           class="flex items-center justify-between gap-2 px-2 pt-2"
           :class="[{ 'pl-22': !props.preview && isTauri && !isFullscreen }]"
         >
           <!-- <Separator class="absolute -translate-x-full bg-red-400" /> -->
           <div class="flex items-center gap-2">
-            <Notifications />
-            <CommandKTrigger class="hidden @min-[256px]/sidebar:inline" />
+            <TooltipProvider v-if="!props.preview">
+              <Tooltip>
+                <TooltipTrigger as-child>
+                  <SidebarTrigger />
+                </TooltipTrigger>
+                <TooltipContent class="flex items-center gap-2 pr-2">
+                  {{ t("components.ui.toggleSidebar") }}
+                  <KbdGroup>
+                    <Kbd>{{ getPlatformSpecialKey() }}</Kbd>
+                    <Kbd>B</Kbd>
+                  </KbdGroup>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+            <Notifications class="hidden @min-[192px]/sidebar:inline" />
           </div>
           <BackForth />
         </div>

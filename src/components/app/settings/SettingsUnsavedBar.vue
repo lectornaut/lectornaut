@@ -7,11 +7,17 @@ withDefaults(
     saveDisabled?: boolean
     /** Overrides the default "Save" label for contextual CTAs (e.g. billing). */
     saveLabel?: string
+    /**
+     * Why save is disabled right now. Replaces the generic "unsaved changes"
+     * line so the blocker is read where the disabled button is.
+     */
+    saveDisabledReason?: string | null
   }>(),
   {
     saving: false,
     saveDisabled: false,
     saveLabel: undefined,
+    saveDisabledReason: null,
   }
 )
 
@@ -27,8 +33,20 @@ const { t } = useI18n()
   <DialogFooter
     class="bg-popover sticky bottom-3 z-10 m-3 flex items-center gap-2 rounded-4xl border p-2 shadow-xl"
   >
-    <p class="text-muted-foreground mr-auto ml-1 text-xs">
-      {{ t("settings.unsavedChanges") }}
+    <p
+      class="mr-auto ml-1 text-xs"
+      :class="
+        saveDisabled && saveDisabledReason
+          ? 'text-destructive'
+          : 'text-muted-foreground'
+      "
+      :aria-live="saveDisabled && saveDisabledReason ? 'polite' : undefined"
+    >
+      {{
+        saveDisabled && saveDisabledReason
+          ? saveDisabledReason
+          : t("settings.unsavedChanges")
+      }}
     </p>
     <Button variant="outline" :disabled="saving" @click="$emit('discard')">
       {{ t("common.discard") }}

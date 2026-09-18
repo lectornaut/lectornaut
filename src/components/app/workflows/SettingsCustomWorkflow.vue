@@ -974,7 +974,7 @@ const handleSave = async (): Promise<void> => {
 
               <div
                 v-if="draft.triggerType === 'schedule'"
-                class="flex flex-col gap-3 rounded-4xl border p-3"
+                class="flex flex-col gap-2 rounded-4xl border p-3"
               >
                 <Select v-model="draft.scheduleType">
                   <SelectTrigger>
@@ -1049,7 +1049,7 @@ const handleSave = async (): Promise<void> => {
 
               <div
                 v-if="draft.triggerType === 'event'"
-                class="flex flex-col gap-3 rounded-4xl border p-3"
+                class="flex flex-col gap-2 rounded-4xl border p-3"
               >
                 <Field>
                   <FieldLabel>{{

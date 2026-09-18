@@ -237,6 +237,11 @@ const tabContentClass = "overflow-auto overscroll-none scroll-smooth h-full"
                 <SettingsBilling />
               </ScrollContainer>
             </TabsContent>
+            <TabsContent :class="tabContentClass" value="usage">
+              <ScrollContainer>
+                <SettingsUsage />
+              </ScrollContainer>
+            </TabsContent>
             <TabsContent :class="tabContentClass" value="plans">
               <ScrollContainer>
                 <SettingsPlans />

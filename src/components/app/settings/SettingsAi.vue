@@ -5,7 +5,12 @@ import {
   pickAiAgentConfig,
   useAgentConfig,
 } from "@/composables/useAgentConfig"
+import { useTeamActions } from "@/composables/useTeamActions"
 import { IconRotateCcw, IconSettings } from "@/data/icons"
+import { emitter } from "@/modules/mitt"
+import { useBillingStore } from "@/stores/billingStore"
+import { storeToRefs } from "pinia"
+import { MODEL_MIN_PLAN, isModelAllowedOnPlan } from "@lectornaut/shared/domain"
 import {
   botAgentBounds,
   botChatModes,
@@ -62,6 +67,24 @@ const messagesGetter = () => ({
 const { config, isLoading, isSaving, canEdit, cannotEditReason, save } =
   useAgentConfig(messagesGetter)
 
+// ── Plan tier ────────────────────────────────────────────────────────────────
+// `MODEL_MIN_PLAN` (shared) decides which models the team's plan includes.
+// The server forces locked models off in the effective config and refuses a
+// locked default; here they render disabled with the plan they need.
+const { planKey } = storeToRefs(useBillingStore())
+const { canManageBilling } = useTeamActions()
+const isModelLocked = (modelId: IBotAgentModel): boolean =>
+  !isModelAllowedOnPlan(modelId, planKey.value)
+const lockedModelCount = computed(
+  () => botModels.filter((model) => isModelLocked(model.id)).length
+)
+const planTitle = computed(() =>
+  t(`settings.plans.subscriptionPlan.${planKey.value ?? "personal"}.title`)
+)
+const openPlans = (): void => {
+  emitter.emit("Dialog.Settings.Open", "plans")
+}
+
 const draft = ref<IBotAgentConfig>(cloneAgentConfig(config.value))
 
 const isDirty = computed(
@@ -88,7 +111,7 @@ watch(
 // treated as `true` so a brand-new model id (catalog ahead of saved doc)
 // starts available without requiring an explicit save.
 const isModelEnabled = (modelId: IBotAgentModel): boolean =>
-  draft.value.models[modelId] !== false
+  draft.value.models[modelId] !== false && !isModelLocked(modelId)
 
 // A model is *available* when both its provider AND its per-model
 // toggle are on — the picker only ever surfaces models matching both.
@@ -210,6 +233,7 @@ const setProviderEnabled = (
 }
 
 const setModelEnabled = (modelId: IBotAgentModel, enabled: boolean) => {
+  if (isModelLocked(modelId)) return
   if (!enabled && isLastEnabledModel(modelId)) return
   draft.value.models[modelId] = enabled
   ensureSelectedModelIsAvailable()
@@ -312,8 +336,23 @@ const keepMenuOpen = (event: Event) => {
               </FieldLabel>
               <FieldDescription>
                 {{ t("settings.agents.providers.description") }}
+                {{
+                  t("settings.agents.providers.planNotice", {
+                    included: botModels.length - lockedModelCount,
+                    total: botModels.length,
+                    plan: planTitle,
+                  })
+                }}
               </FieldDescription>
             </FieldContent>
+            <Button
+              v-if="lockedModelCount > 0 && canManageBilling"
+              variant="outline"
+              size="sm"
+              @click="openPlans"
+            >
+              {{ t("settings.agents.providers.upgrade") }}
+            </Button>
           </Field>
 
           <TooltipProvider>
@@ -370,6 +409,7 @@ const keepMenuOpen = (event: Event) => {
                       :model-value="isModelEnabled(model.id)"
                       :disabled="
                         !canEdit ||
+                        isModelLocked(model.id) ||
                         (isModelEnabled(model.id) &&
                           isLastEnabledModel(model.id))
                       "
@@ -387,6 +427,19 @@ const keepMenuOpen = (event: Event) => {
                             class="text-xs"
                           >
                             {{ model.badge }}
+                          </Badge>
+                          <Badge
+                            v-if="isModelLocked(model.id)"
+                            variant="outline"
+                            class="text-xs"
+                          >
+                            {{
+                              t("settings.agents.providers.requiresPlan", {
+                                plan: t(
+                                  `settings.plans.subscriptionPlan.${MODEL_MIN_PLAN[model.id]}.title`
+                                ),
+                              })
+                            }}
                           </Badge>
                         </span>
                         <span class="text-muted-foreground text-xs">

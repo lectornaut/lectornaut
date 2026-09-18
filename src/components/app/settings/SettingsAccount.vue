@@ -813,7 +813,7 @@ const {
 } = useDeviceSessions()
 
 const { isLoading: isRevoking, withLoadingResult } = useLoadingState<string>()
-const sessionNow = useNow({ interval: 60_000 })
+const sessionNow = useNow({ scheduler: (cb) => useIntervalFn(cb, 60_000) })
 const sessionTimeAgoOptions = computed(() => ({
   locale: locale.value,
   relativeTimeFormatOptions: {

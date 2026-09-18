@@ -2,7 +2,10 @@
 import { useCanViewTeamSettings } from "@/composables/useCanViewTeamSettings"
 import { useConfirmationDialog } from "@/composables/useConfirmationDialog"
 import { usePhotoUpload } from "@/composables/usePhotoUpload"
+import { useTeamActions } from "@/composables/useTeamActions"
+import { useTeamUsage } from "@/composables/useTeamUsage"
 import { useWorkspaceActions } from "@/composables/useWorkspaceActions"
+import { emitter } from "@/modules/mitt"
 import {
   IconArrowDown,
   IconArrowUp,
@@ -21,6 +24,12 @@ import type { IWorkspace } from "@/types/domain"
 const { t } = useI18n()
 
 const { canViewTeamSettings } = useCanViewTeamSettings()
+const { canManageBilling } = useTeamActions()
+const { workspaceCount, planWorkspaceAllowance, isAtWorkspaceLimit } =
+  useTeamUsage()
+const openPlans = (): void => {
+  emitter.emit("Dialog.Settings.Open", "plans")
+}
 
 // Use workspace actions composable - all logic is now self-contained
 const {
@@ -141,12 +150,29 @@ const formatCreatedAt = (value: IWorkspace["createdAt"] | null | undefined) => {
             <FieldLabel>{{ t("settings.workspacesList.label") }}</FieldLabel>
             <FieldDescription>
               {{ t("settings.workspacesList.description") }}
+              {{
+                planWorkspaceAllowance < 0
+                  ? t("settings.workspacesList.limitUnlimited", {
+                      count: workspaceCount,
+                    })
+                  : t("settings.workspacesList.limit", {
+                      count: workspaceCount,
+                      allowance: planWorkspaceAllowance,
+                    })
+              }}
             </FieldDescription>
           </FieldContent>
           <TooltipProvider>
             <Tooltip>
               <TooltipTrigger as-child>
-                <div>
+                <div class="flex items-center gap-2">
+                  <Button
+                    v-if="isAtWorkspaceLimit && canManageBilling"
+                    variant="outline"
+                    @click="openPlans"
+                  >
+                    {{ t("settings.workspacesList.upgrade") }}
+                  </Button>
                   <Button
                     :disabled="!canCreateWorkspace"
                     @click="openWorkspaceDialog('create')"

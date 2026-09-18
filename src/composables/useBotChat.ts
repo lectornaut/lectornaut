@@ -52,6 +52,7 @@ import {
 } from "@/helpers/defaults"
 import { useAgentConfigStore } from "@/stores/agentConfigStore"
 import { useAuthStore } from "@/stores/authStore"
+import { useBillingStore } from "@/stores/billingStore"
 import { useTeamAgentsStore } from "@/stores/teamAgentsStore"
 import type {
   IBotAgentModel,
@@ -71,6 +72,7 @@ import {
   useCollectionQuery,
   useDocumentQuery,
 } from "@/utils/firebase/firebase-query"
+import { isModelAllowedOnPlan } from "@lectornaut/shared/domain"
 import { until } from "@vueuse/core"
 import { storeToRefs } from "pinia"
 import { computed, ref, watch, type InjectionKey, type Ref } from "vue"
@@ -490,6 +492,10 @@ export function useBotChat(options?: BotChatOptions): BotChatContext {
   // owns the writes.
   const agentConfigStore = useAgentConfigStore()
   const { config: teamAgentConfig } = storeToRefs(agentConfigStore)
+  // Plan tier (shared MODEL_MIN_PLAN). The server's effective config already
+  // forces locked models off; this keeps the picker honest before that
+  // config has loaded and mirrors the server's per-turn clamp.
+  const { planKey } = storeToRefs(useBillingStore())
   const teamDefaultMode = computed<BotChatMode>(
     () => teamAgentConfig.value.defaultMode ?? DEFAULT_BOT_CHAT_MODE
   )
@@ -563,7 +569,9 @@ export function useBotChat(options?: BotChatOptions): BotChatContext {
         name: provider.name,
         models: botModels.filter(
           (model) =>
-            model.provider === provider.id && cfg.models[model.id] !== false
+            model.provider === provider.id &&
+            cfg.models[model.id] !== false &&
+            isModelAllowedOnPlan(model.id, planKey.value)
         ) as BotModelEntry[],
       }))
       .filter((group) => group.models.length > 0)

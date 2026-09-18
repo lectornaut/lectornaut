@@ -1,6 +1,10 @@
 import Stripe from "stripe"
 
-import { BILLING_INTERVALS, BILLING_PLAN_KEYS } from "./domain.js"
+import {
+  BILLING_INTERVALS,
+  BILLING_PLAN_KEYS,
+  PLAN_TOKEN_ALLOWANCES,
+} from "./domain.js"
 
 const PLAN_ORDER = BILLING_PLAN_KEYS
 
@@ -289,28 +293,6 @@ export async function mapPriceIdToPlan(
 
 export function getPlanRank(planKey: PlanKey): number {
   return PLAN_ORDER.indexOf(planKey)
-}
-
-/**
- * Monthly LLM token allowance per plan, in TOTAL tokens (input + output)
- * summed across every agent turn a team runs in a calendar month —
- * interactive chat AND autonomous Workflows runs draw from the same pool.
- * Enforced as a HARD CAP by `assertWithinBudget` (usageMetering.ts): once a
- * team's `teams/{teamId}/usage/{YYYY-MM}.totalTokens` reaches its allowance,
- * further turns throw `resource-exhausted` until the month rolls over (or the
- * team upgrades). `-1` means unlimited.
- *
- * Default allowances below — calibrate to your unit economics (cross-check
- * against `estimateTokenCostUsd` and each plan's price). `-1` = unlimited;
- * enterprise stays uncapped here but automatic Workflows runs additionally
- * require entitlement (`assertWorkflowAutomaticEntitled`) and are bounded
- * per-run by the turn caps, so "unlimited" still can't run away unattended.
- */
-export const PLAN_TOKEN_ALLOWANCES: Record<PlanKey, number> = {
-  personal: 1_500_000,
-  professional: 25_000_000,
-  business: 150_000_000,
-  enterprise: -1,
 }
 
 /**

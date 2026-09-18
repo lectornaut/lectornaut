@@ -143,6 +143,7 @@ fn create_app_menu<R: tauri::Runtime>(handle: &tauri::AppHandle<R>) -> tauri::Re
 pub fn run() {
     let ctx = tauri::generate_context!();
     let builder = tauri::Builder::default()
+        .runtime(tauri_runtime_wry::Wry::default())
         // Registered first so every later plugin's log output is captured.
         // Webview console output is forwarded here too (src/modules/log.ts),
         // so release builds leave a support trail in the platform log dir.
