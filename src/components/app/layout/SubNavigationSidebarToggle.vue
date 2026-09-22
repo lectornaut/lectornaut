@@ -1,7 +1,10 @@
 <script lang="ts" setup>
 import { useSidebar } from "@/components/ui/sidebar"
 import { useShortcutKeys } from "@/composables/useShortcutKeys"
-import { useSidebarPreview } from "@/composables/useSidebarSlots"
+import {
+  sidebarPreviewTargetId,
+  useSidebarPreview,
+} from "@/composables/useSidebarSlots"
 import {
   IconPanelLeft,
   IconPanelLeftClose,
@@ -52,7 +55,7 @@ const toggle = () => {
 // peek. The page's content lives in a <SidebarSlot> whose teleport target we
 // repoint at the popover's `#{side}-sidebar-preview` div; Vue moves the live
 // content there natively (see useSidebarSlots), so no DOM is relocated by hand.
-const previewTargetId = `${props.side}-sidebar-preview`
+const previewTargetId = sidebarPreviewTargetId(props.side)
 const { setPreviewing } = useSidebarPreview(props.side)
 const previewOpen = ref(false)
 const previewEl = useTemplateRef<HTMLElement>("previewEl")

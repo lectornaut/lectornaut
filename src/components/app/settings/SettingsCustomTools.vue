@@ -545,7 +545,7 @@ const handleEditorSave = async (): Promise<void> => {
                 v-if="generateError"
                 class="text-destructive flex items-center gap-1.5 text-xs"
               >
-                <IconAlertTriangle class="size-3.5 shrink-0" />
+                <IconAlertTriangle />
                 {{ generateError }}
               </p>
             </div>

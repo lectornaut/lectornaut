@@ -1458,7 +1458,7 @@ const onToolMenuCloseAutoFocus = (event: Event) => {
             </DropdownMenu>
           </Tooltip>
         </TooltipProvider>
-        <!-- <InputGroupText class="ml-auto"> 52% used </InputGroupText> -->
+        <BotUsageCounter />
         <!--
           Agent selector — one menu consolidating the chat's per-send
           knobs. The trigger reflects the active persona (avatar, or the
@@ -1488,7 +1488,6 @@ const onToolMenuCloseAutoFocus = (event: Event) => {
                   <InputGroupButton
                     variant="ghost"
                     size="icon-xs"
-                    class="ml-auto"
                     :disabled="isReadOnly"
                   >
                     <!-- Icon/avatar only — name hidden. -->

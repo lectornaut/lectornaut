@@ -143,7 +143,6 @@ export type BotModelProvider = (typeof BOT_MODEL_PROVIDERS)[number]
  */
 const BOT_AGENT_MODEL_REGISTRY = [
   // Google Gemini
-  { id: "gemini-2.5-flash", provider: "google" },
   { id: "gemini-2.5-flash-lite", provider: "google" },
   { id: "gemini-2.5-pro", provider: "google" },
   { id: "gemini-3.6-flash", provider: "google" },

@@ -20,6 +20,7 @@ import {
   IconX,
 } from "@/data/icons"
 import { usePopout } from "@/composables/usePopout"
+import { sidebarTargetId } from "@/composables/useSidebarSlots"
 import { generateId } from "@/helpers/utilities"
 import { emitter } from "@/modules/mitt"
 import { useUiPreferencesStore } from "@/stores/uiPreferencesStore"
@@ -199,6 +200,18 @@ const handlePanelBottomToggle = () => {
   }
 }
 
+// Single list drives both the mount and unmount wiring below, so adding a
+// handler can't accidentally skip its matching `.off`.
+const panelEventHandlers = [
+  ["Sidebar.Left.Toggle", handleSidebarLeftToggle],
+  ["Sidebar.Left.Collapse", handleSidebarLeftCollapse],
+  ["Sidebar.Left.Expand", handleSidebarLeftExpand],
+  ["Sidebar.Right.Toggle", handleSidebarRightToggle],
+  ["Sidebar.Right.Collapse", handleSidebarRightCollapse],
+  ["Sidebar.Right.Expand", handleSidebarRightExpand],
+  ["Panel.Bottom.Toggle", handlePanelBottomToggle],
+] as const
+
 onMounted(async () => {
   await nextTick()
   applyPersistedPanelState()
@@ -206,23 +219,15 @@ onMounted(async () => {
     animatePanels.value = true
   })
 
-  emitter.on("Sidebar.Left.Toggle", handleSidebarLeftToggle)
-  emitter.on("Sidebar.Left.Collapse", handleSidebarLeftCollapse)
-  emitter.on("Sidebar.Left.Expand", handleSidebarLeftExpand)
-  emitter.on("Sidebar.Right.Toggle", handleSidebarRightToggle)
-  emitter.on("Sidebar.Right.Collapse", handleSidebarRightCollapse)
-  emitter.on("Sidebar.Right.Expand", handleSidebarRightExpand)
-  emitter.on("Panel.Bottom.Toggle", handlePanelBottomToggle)
+  for (const [event, handler] of panelEventHandlers) {
+    emitter.on(event, handler)
+  }
 })
 
 onUnmounted(() => {
-  emitter.off("Sidebar.Left.Toggle", handleSidebarLeftToggle)
-  emitter.off("Sidebar.Left.Collapse", handleSidebarLeftCollapse)
-  emitter.off("Sidebar.Left.Expand", handleSidebarLeftExpand)
-  emitter.off("Sidebar.Right.Toggle", handleSidebarRightToggle)
-  emitter.off("Sidebar.Right.Collapse", handleSidebarRightCollapse)
-  emitter.off("Sidebar.Right.Expand", handleSidebarRightExpand)
-  emitter.off("Panel.Bottom.Toggle", handlePanelBottomToggle)
+  for (const [event, handler] of panelEventHandlers) {
+    emitter.off(event, handler)
+  }
 })
 
 watch(
@@ -420,8 +425,7 @@ const closeTab = (id: string) => {
                       <div class="mr-0 min-h-0 min-w-0">
                         <!-- overflow-clip rounded-3xl border -->
                         <div
-                          id="left-sidebar"
-                          ref="leftSidebarEl"
+                          :id="sidebarTargetId('left')"
                           class="h-full grow overflow-clip"
                         ></div>
                       </div>
@@ -847,8 +851,7 @@ const closeTab = (id: string) => {
                       <div class="ml-0 min-h-0 min-w-0">
                         <!-- overflow-clip rounded-3xl border -->
                         <div
-                          id="right-sidebar"
-                          ref="rightSidebarEl"
+                          :id="sidebarTargetId('right')"
                           class="h-full grow overflow-clip"
                         ></div>
                       </div>

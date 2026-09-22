@@ -69,6 +69,7 @@ declare module 'vue' {
     BotInspectorSidebar: typeof import('./src/components/app/sidebars/BotInspectorSidebar.vue')['default']
     BotSessionFilterMenu: typeof import('./src/components/app/bot/BotSessionFilterMenu.vue')['default']
     BotThinkingBlock: typeof import('./src/components/app/bot/BotThinkingBlock.vue')['default']
+    BotUsageCounter: typeof import('./src/components/app/bot/BotUsageCounter.vue')['default']
     Breadcrumb: typeof import('./src/components/ui/breadcrumb/Breadcrumb.vue')['default']
     BreadcrumbEllipsis: typeof import('./src/components/ui/breadcrumb/BreadcrumbEllipsis.vue')['default']
     BreadcrumbItem: typeof import('./src/components/ui/breadcrumb/BreadcrumbItem.vue')['default']

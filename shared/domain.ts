@@ -436,7 +436,6 @@ export type AiProvider = (typeof AI_PROVIDERS)[number]
  */
 export const BOT_AGENT_MODELS = [
   // Google Gemini
-  "gemini-2.5-flash",
   "gemini-2.5-flash-lite",
   "gemini-2.5-pro",
   "gemini-3.6-flash",
@@ -961,7 +960,6 @@ export const MONTHLY_COST_CAP_MIN_CENTS = 100
  * `BOT_AGENT_MODELS` must have an entry (the Record type enforces it).
  */
 export const MODEL_MIN_PLAN: Record<BotAgentModel, BillingPlanKey> = {
-  "gemini-2.5-flash": "personal",
   "gemini-2.5-flash-lite": "personal",
   "gemini-2.5-pro": "professional",
   "gemini-3.6-flash": "personal",

@@ -18,10 +18,16 @@ const previewing = reactive<Record<Side, boolean>>({
   right: false,
 })
 
+// Single source of truth for the two DOM ids per side (no leading `#`), so
+// MainLayout, SidebarSlot and the sub-nav toggle can't drift apart on a rename.
+export const sidebarTargetId = (side: Side) => `${side}-sidebar`
+export const sidebarPreviewTargetId = (side: Side) => `${side}-sidebar-preview`
+
 /** Used by `<SidebarSlot>`: the dynamic teleport target for this side. */
 export function useSidebarSlot(side: Side) {
-  const target = computed(() =>
-    previewing[side] ? `#${side}-sidebar-preview` : `#${side}-sidebar`
+  const target = computed(
+    () =>
+      `#${previewing[side] ? sidebarPreviewTargetId(side) : sidebarTargetId(side)}`
   )
   return { target }
 }

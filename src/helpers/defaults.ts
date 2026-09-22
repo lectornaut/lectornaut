@@ -435,14 +435,6 @@ export const defaultBotModelProviderToggles: Record<
 export const botModels = [
   // Google Gemini
   {
-    id: "gemini-2.5-flash",
-    provider: "google",
-    name: "Gemini 2.5 Flash",
-    description: "Fast multimodal reasoning for everyday work.",
-    badge: "Flash",
-    supportsEffort: false,
-  },
-  {
     id: "gemini-2.5-flash-lite",
     provider: "google",
     name: "Gemini 2.5 Flash-Lite",
@@ -721,7 +713,7 @@ export const defaultBotModelToggles: IBotAgentModelToggles = Object.fromEntries(
 export const defaultBotAgentConfig: IBotAgentConfig = {
   providers: { ...defaultBotModelProviderToggles },
   models: { ...defaultBotModelToggles },
-  model: "gemini-2.5-flash",
+  model: "gemini-3.6-flash",
   temperature: 0.7,
   topP: 0.95,
   topK: 40,
