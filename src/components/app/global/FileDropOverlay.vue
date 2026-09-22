@@ -12,6 +12,7 @@ import {
   isTauri,
   platform,
   useIsFullscreen,
+  useMacOSTrafficLightsVisible,
 } from "@/composables/usePlatform"
 import { useTeamActions } from "@/composables/useTeamActions"
 import { useWorkspaceActions } from "@/composables/useWorkspaceActions"
@@ -1014,6 +1015,7 @@ onBeforeUnmount(() => {
 })
 
 const isFullscreen = useIsFullscreen()
+const macOSTrafficLightsVisible = useMacOSTrafficLightsVisible()
 </script>
 
 <template>
@@ -1029,7 +1031,10 @@ const isFullscreen = useIsFullscreen()
     >
       <div
         data-tauri-drag-region="deep"
-        :class="{ 'pl-22': isTauri && !isFullscreen }"
+        :class="{
+          'pl-[calc(var(--spacing-macos-window-controls)-(--spacing(2)))]':
+            macOSTrafficLightsVisible,
+        }"
         class="flex items-start justify-between gap-2"
       >
         <TooltipProvider>

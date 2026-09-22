@@ -1,6 +1,6 @@
 <script lang="ts" setup>
 import { useSidebar } from "@/components/ui/sidebar"
-import { isTauri, useIsFullscreen } from "@/composables/usePlatform"
+import { useMacOSTrafficLightsVisible } from "@/composables/usePlatform"
 import {
   IconChevronRight,
   IconGift,
@@ -32,7 +32,7 @@ const { onboarding } = storeToRefs(authStore)
 const uiPreferencesStore = useUiPreferencesStore()
 const { agentsSidebarVisible, sidebarPinned } = storeToRefs(uiPreferencesStore)
 
-const isFullscreen = useIsFullscreen()
+const macOSTrafficLightsVisible = useMacOSTrafficLightsVisible()
 
 // Navigation owns the edit sheet's state; the context menu below opens it via
 // this exposed handle. (Not named `navigation` — that would shadow the
@@ -76,7 +76,10 @@ function togglePinned() {
           v-if="open || props.preview"
           v-motion-fade
           class="flex items-center justify-between gap-2 px-2 pt-2"
-          :class="[{ 'pl-22': !props.preview && isTauri && !isFullscreen }]"
+          :class="{
+            'pl-[calc(var(--spacing-macos-window-controls)-(--spacing(1.25)))]':
+              !props.preview && macOSTrafficLightsVisible,
+          }"
         >
           <!-- <Separator class="absolute -translate-x-full bg-red-400" /> -->
           <div class="flex items-center gap-2">
@@ -94,9 +97,8 @@ function togglePinned() {
                 </TooltipContent>
               </Tooltip>
             </TooltipProvider>
-            <Notifications class="hidden @min-[192px]/sidebar:inline" />
           </div>
-          <BackForth />
+          <BackForth class="hidden @min-[192px]/sidebar:inline" />
         </div>
         <SidebarHeader :class="[{ 'mt-10': !open && !props.preview }]">
           <TeamSwitcher />

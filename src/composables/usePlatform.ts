@@ -109,6 +109,15 @@ export function useIsFullscreen(): Readonly<Ref<boolean>> {
   return readonly(isFullscreenState)
 }
 
+/** Whether macOS overlay traffic lights currently occupy the window content. */
+export function useMacOSTrafficLightsVisible(): Readonly<Ref<boolean>> {
+  const isFullscreen = useIsFullscreen()
+
+  return computed(
+    () => isTauri.value && platform.value === "macos" && !isFullscreen.value
+  )
+}
+
 /**
  * Toggle fullscreen mode in Tauri.
  * No-op in browser environment.

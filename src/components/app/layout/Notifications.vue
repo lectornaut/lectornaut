@@ -96,7 +96,7 @@ useInfiniteScroll(
     <PopoverTrigger as-child>
       <Button
         id="tour-tasks-notifications"
-        variant="ghost"
+        variant="outline"
         :size="unreadCount > 0 ? 'sm' : 'icon-sm'"
       >
         <IconBell />

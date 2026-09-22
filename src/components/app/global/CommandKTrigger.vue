@@ -17,7 +17,7 @@ const openCommandDialog = () => {
         <TooltipTrigger as-child>
           <Button
             id="tour-search-bar"
-            variant="ghost"
+            variant="outline"
             size="icon-sm"
             @click="openCommandDialog"
           >

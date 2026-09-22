@@ -1,6 +1,9 @@
 <script lang="ts" setup>
 import { BotChatContextKey, useBotChat } from "@/composables/useBotChat"
-import { isTauri, platform } from "@/composables/usePlatform"
+import {
+  isTauri,
+  useMacOSTrafficLightsVisible,
+} from "@/composables/usePlatform"
 import { IconX } from "@/data/icons"
 import { useTeamAgentsStore } from "@/stores/teamAgentsStore"
 import { getCurrentWindow } from "@tauri-apps/api/window"
@@ -18,6 +21,7 @@ definePage({
 })
 
 const { t } = useI18n()
+const macOSTrafficLightsVisible = useMacOSTrafficLightsVisible()
 
 const route = useRoute()
 
@@ -97,7 +101,7 @@ const closeWindow = () => {
     <header
       data-tauri-drag-region
       class="flex items-center justify-between gap-2 p-2"
-      :class="{ 'pl-22': isTauri && platform === 'macos' }"
+      :class="{ 'pl-macos-window-controls': macOSTrafficLightsVisible }"
     >
       <h2
         data-tauri-drag-region

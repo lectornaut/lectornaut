@@ -1,7 +1,7 @@
 <script lang="ts" setup>
 import { useSidebar } from "@/components/ui/sidebar"
 import { useCopy } from "@/composables/useCopy"
-import { isTauri, useIsFullscreen } from "@/composables/usePlatform"
+import { useMacOSTrafficLightsVisible } from "@/composables/usePlatform"
 import { useShortcutKeys } from "@/composables/useShortcutKeys"
 import { useTabRouterSync } from "@/composables/useTabRouterSync"
 import { useTabs } from "@/composables/useTabs"
@@ -37,7 +37,7 @@ import { storeToRefs } from "pinia"
 // ----------------------------------------------------------------------------
 // Environment / shell context
 // ----------------------------------------------------------------------------
-const isFullscreen = useIsFullscreen()
+const macOSTrafficLightsVisible = useMacOSTrafficLightsVisible()
 const { open, isMobile } = useSidebar()
 
 const el = ref<HTMLElement>()
@@ -208,12 +208,11 @@ watch(copied, (isCopied) => {
           data-tauri-drag-region="deep"
           class="flex min-w-0 items-center gap-2 px-2 pt-2 transition-all"
           :class="{
-            'pl-22':
-              isTauri &&
-              !isFullscreen &&
+            'pl-macos-window-controls':
+              macOSTrafficLightsVisible &&
               (isMobile || (!open && !sidebarPinned)),
-            'pl-12':
-              isTauri && !isFullscreen && !isMobile && !open && sidebarPinned,
+            'pl-[calc(var(--spacing-macos-window-controls)-var(--sidebar-width-icon))]':
+              macOSTrafficLightsVisible && !isMobile && !open && sidebarPinned,
           }"
         >
           <HoverCard
@@ -247,7 +246,6 @@ watch(copied, (isCopied) => {
               </TooltipContent>
             </Tooltip>
           </TooltipProvider>
-          <Notifications v-if="!isMobile && !open" v-motion-fade />
           <span
             v-if="!open || isMobile"
             v-motion-fade
@@ -517,6 +515,7 @@ watch(copied, (isCopied) => {
             </TooltipProvider>
             <div class="flex items-stretch justify-center gap-2">
               <CommandKTrigger />
+              <Notifications />
               <TooltipProvider>
                 <Tooltip>
                   <DropdownMenu>

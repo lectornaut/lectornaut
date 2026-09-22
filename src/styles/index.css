@@ -222,6 +222,7 @@
   --spacing-titlebar-bottom: env(titlebar-area-y);
   --spacing-titlebar-left: env(titlebar-area-x);
   --spacing-titlebar-right: env(titlebar-area-x);
+  --spacing-macos-window-controls: 6rem;
   --font-sans: "Geist Variable", "sans-serif";
   --font-serif: "Bricolage Grotesque Variable", "serif";
   --font-mono: "Geist Mono Variable", "monospace";

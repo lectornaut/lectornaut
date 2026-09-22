@@ -1,10 +1,10 @@
 <script lang="ts" setup>
-import { isTauri, useIsFullscreen } from "@/composables/usePlatform"
+import { useMacOSTrafficLightsVisible } from "@/composables/usePlatform"
 import { IconArrowLeft, IconLogOut } from "@/data/icons"
 import { emitter } from "@/modules/mitt"
 import { useCurrentUser } from "vuefire"
 
-const isFullscreen = useIsFullscreen()
+const macOSTrafficLightsVisible = useMacOSTrafficLightsVisible()
 const currentUser = useCurrentUser()
 </script>
 
@@ -12,7 +12,7 @@ const currentUser = useCurrentUser()
   <div
     data-tauri-drag-region="deep"
     class="grid grid-cols-2 gap-2 self-stretch p-2"
-    :class="{ 'pl-22': isTauri && !isFullscreen }"
+    :class="{ 'pl-macos-window-controls': macOSTrafficLightsVisible }"
   >
     <div class="flex items-center justify-start gap-2">
       <Button variant="ghost" size="icon-sm" as-child>
