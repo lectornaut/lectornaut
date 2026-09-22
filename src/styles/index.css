@@ -816,13 +816,14 @@
 }
 
 /* [data-tauri-drag-region] {
-  @apply border;
-  @apply border-red-500;
-} */
-
-/* [data-slot="context-menu-trigger"] {
-  @apply border;
-  @apply border-red-500;
+  background-image: repeating-linear-gradient(
+    45deg,
+    var(--color-muted) 0,
+    var(--color-muted) 1px,
+    transparent 0,
+    transparent 50%
+  ) !important;
+  background-size: 8px 8px !important;
 } */
 
 /* :where(button, [role="button"]):not([disabled]) {

@@ -278,11 +278,7 @@ const formatInvitationTimestamp = (
             </EmptyHeader>
             <EmptyContent>
               <div class="flex gap-2">
-                <Button
-                  v-if="isEmailMismatch"
-                  variant="default"
-                  @click="handleLogout"
-                >
+                <Button v-if="isEmailMismatch" @click="handleLogout">
                   {{ $t("actions.logout") }}
                 </Button>
                 <Button variant="outline" @click="handleIgnore">{{

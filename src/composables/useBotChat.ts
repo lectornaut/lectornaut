@@ -21,14 +21,11 @@
  * are scoped to one (team, workspace) pair.
  */
 
+import { useBotSessionActions } from "@/composables/useBotSessionActions"
 import { useCurrentTeamRole } from "@/composables/useCurrentTeamRole"
 import {
-  archiveBotSession,
-  deleteBotSession,
   findBotSessionByPinnedNode,
   loadBotSession,
-  pinBotSession,
-  renameBotSession,
   respondToBotInterrupt,
   sendBotMessage,
   updateBotSessionVisibility,
@@ -382,6 +379,13 @@ export interface BotChatOptions {
    * pick, messages, attachments).
    */
   pinnedContext?: boolean
+
+  /**
+   * Pin every session this instance creates as soon as the server mints
+   * its id. Used by `AiAsk`: a quick-ask chat is meant to stick around
+   * in the pinned bar rather than get lost in the unpinned history list.
+   */
+  autoPin?: boolean
 }
 
 export function useBotChat(options?: BotChatOptions): BotChatContext {
@@ -400,7 +404,8 @@ export function useBotChat(options?: BotChatOptions): BotChatContext {
   const isSending = ref(false)
   const isLoadingSession = ref(false)
   const isUpdatingVisibility = ref(false)
-  const isMutatingSession = ref(false)
+  const sessionActions = useBotSessionActions()
+  const { isMutating: isMutatingSession } = sessionActions
 
   // ── Attached node context ─────────────────────────────────────────────
   //
@@ -1210,6 +1215,7 @@ export function useBotChat(options?: BotChatOptions): BotChatContext {
       !sessionId.value && pendingPinnedNode.value
         ? { ...pendingPinnedNode.value }
         : undefined
+    const isNewSession = !sessionId.value
 
     try {
       const result = await sendBotMessage.stream(
@@ -1270,6 +1276,10 @@ export function useBotChat(options?: BotChatOptions): BotChatContext {
       // Pin persisted server-side as part of session creation; clear the
       // local pending state so a subsequent send doesn't try to re-pin.
       if (pinnedNode) pendingPinnedNode.value = null
+      // Fire-and-forget: pinning is a nicety, not something a failed
+      // call should surface as a send error.
+      if (isNewSession && options?.autoPin)
+        void pinSession(final.sessionId, true)
     } catch (error) {
       // A user-driven cancel (session switch / unmount) lands here as an
       // AbortError — silent rollback, no toast.
@@ -1504,78 +1514,29 @@ export function useBotChat(options?: BotChatOptions): BotChatContext {
     }
   }
 
-  const renameSession = async (id: string, title: string) => {
-    const trimmed = title.trim()
-    if (!trimmed) {
-      toast.error("Chat title cannot be empty.")
-      return
-    }
-    const teamId = currentTeamId.value
-    const workspaceId = currentWorkspaceId.value
-    if (!teamId || !workspaceId) return
-    if (isMutatingSession.value) return
-
-    isMutatingSession.value = true
-    try {
-      await renameBotSession({
-        teamId,
-        workspaceId,
-        sessionId: id,
-        title: trimmed,
-      })
-    } catch (error) {
-      console.error("[useBotChat] renameBotSession failed:", error)
-      toast.error("Failed to rename chat.")
-    } finally {
-      isMutatingSession.value = false
-    }
+  const renameSession = async (id: string, title: string): Promise<void> => {
+    await sessionActions.renameSession(id, title)
   }
 
-  const archiveSession = async (id: string, archived: boolean) => {
-    const teamId = currentTeamId.value
-    const workspaceId = currentWorkspaceId.value
-    if (!teamId || !workspaceId) return
-    if (isMutatingSession.value) return
-
-    isMutatingSession.value = true
-    try {
-      await archiveBotSession({
-        teamId,
-        workspaceId,
-        sessionId: id,
-        archived,
-      })
-      toast.success(archived ? "Chat archived." : "Chat restored.")
-    } catch (error) {
-      console.error("[useBotChat] archiveBotSession failed:", error)
-      toast.error("Failed to update chat.")
-    } finally {
-      isMutatingSession.value = false
-    }
+  const archiveSession = async (
+    id: string,
+    archived: boolean
+  ): Promise<void> => {
+    await sessionActions.archiveSession(id, archived)
   }
 
-  const pinSession = async (id: string, pinned: boolean) => {
-    const teamId = currentTeamId.value
-    const workspaceId = currentWorkspaceId.value
-    if (!teamId || !workspaceId) return
-    if (isMutatingSession.value) return
-
-    isMutatingSession.value = true
-    try {
-      await pinBotSession({ teamId, workspaceId, sessionId: id, pinned })
-    } catch (error) {
-      console.error("[useBotChat] pinBotSession failed:", error)
-      toast.error("Failed to update chat.")
-    } finally {
-      isMutatingSession.value = false
-    }
+  const pinSession = async (id: string, pinned: boolean): Promise<void> => {
+    await sessionActions.pinSession(id, pinned)
   }
 
   const removeSession = async (id: string) => {
-    const teamId = currentTeamId.value
-    const workspaceId = currentWorkspaceId.value
-    if (!teamId || !workspaceId) return
-    if (isMutatingSession.value) return
+    if (
+      !currentTeamId.value ||
+      !currentWorkspaceId.value ||
+      isMutatingSession.value
+    ) {
+      return
+    }
 
     // Optimistic local reset BEFORE the await: when we're deleting the
     // active session, we drop sessionId/messages immediately so the
@@ -1589,17 +1550,7 @@ export function useBotChat(options?: BotChatOptions): BotChatContext {
     // longer exists), leaving the UI showing a stale "Failed to open
     // chat" toast for the session we just deleted.
     if (sessionId.value === id) startNewSession()
-
-    isMutatingSession.value = true
-    try {
-      await deleteBotSession({ teamId, workspaceId, sessionId: id })
-      toast.success("Chat deleted.")
-    } catch (error) {
-      console.error("[useBotChat] deleteBotSession failed:", error)
-      toast.error("Failed to delete chat.")
-    } finally {
-      isMutatingSession.value = false
-    }
+    await sessionActions.removeSession(id)
   }
 
   const setActiveVisibility = async (visibility: IBotSessionVisibility) => {

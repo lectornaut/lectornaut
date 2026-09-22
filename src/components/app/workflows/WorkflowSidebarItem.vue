@@ -145,11 +145,7 @@ const toggleIcon = computed(() =>
               <IconArchive />
               {{ t("settings.workflows.archive") }}
             </ContextMenuItem>
-            <ContextMenuItem
-              variant="destructive"
-              :disabled="!canManage"
-              @click="emit('remove')"
-            >
+            <ContextMenuItem :disabled="!canManage" @click="emit('remove')">
               <IconTrash2 />
               {{ t("settings.workflows.delete") }}
             </ContextMenuItem>
@@ -160,11 +156,7 @@ const toggleIcon = computed(() =>
             <IconRotateCcw />
             {{ t("settings.workflows.restore") }}
           </ContextMenuItem>
-          <ContextMenuItem
-            variant="destructive"
-            :disabled="!canManage"
-            @click="emit('remove')"
-          >
+          <ContextMenuItem :disabled="!canManage" @click="emit('remove')">
             <IconTrash2 />
             {{ t("settings.workflows.delete") }}
           </ContextMenuItem>
@@ -231,7 +223,6 @@ const toggleIcon = computed(() =>
                   <DropdownMenuShortcut>A</DropdownMenuShortcut>
                 </DropdownMenuItem>
                 <DropdownMenuItem
-                  variant="destructive"
                   :disabled="!canManage"
                   data-hotkey="backspace delete"
                   @click="emit('remove')"
@@ -253,7 +244,6 @@ const toggleIcon = computed(() =>
                 <DropdownMenuShortcut>A</DropdownMenuShortcut>
               </DropdownMenuItem>
               <DropdownMenuItem
-                variant="destructive"
                 :disabled="!canManage"
                 data-hotkey="backspace delete"
                 @click="emit('remove')"

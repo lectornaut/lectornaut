@@ -383,7 +383,6 @@ const submitDeleteMemories = async () => {
               </FieldDescription>
             </FieldContent>
             <Button
-              variant="destructive"
               :disabled="isDisabled || writeRootCount === 0"
               @click="openDeleteDialog('write')"
             >
@@ -439,7 +438,6 @@ const submitDeleteMemories = async () => {
               </FieldDescription>
             </FieldContent>
             <Button
-              variant="destructive"
               :disabled="isDisabled || codeRootCount === 0"
               @click="openDeleteDialog('code')"
             >
@@ -495,7 +493,6 @@ const submitDeleteMemories = async () => {
               </FieldDescription>
             </FieldContent>
             <Button
-              variant="destructive"
               :disabled="isMutatingMemories || memoryTotalCount === 0"
               @click="deleteMemoriesDialogOpen = true"
             >

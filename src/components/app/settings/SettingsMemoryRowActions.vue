@@ -95,7 +95,6 @@ const shared = computed(() => props.memory.visibility === "shared")
           </DropdownMenuItem>
           <DropdownMenuSeparator />
           <DropdownMenuItem
-            variant="destructive"
             data-hotkey="backspace delete"
             @click="emit('delete', memory)"
           >

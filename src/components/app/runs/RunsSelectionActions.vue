@@ -114,7 +114,6 @@ const onDelete = (): void => {
   </template>
 
   <DropdownMenuItem
-    variant="destructive"
     :disabled="!canManage || busy"
     data-hotkey="backspace delete"
     @click="onDelete"

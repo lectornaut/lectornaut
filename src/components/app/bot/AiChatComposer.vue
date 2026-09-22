@@ -1774,7 +1774,6 @@ const onToolMenuCloseAutoFocus = (event: Event) => {
           <Tooltip>
             <TooltipTrigger as-child>
               <InputGroupButton
-                variant="default"
                 size="icon-xs"
                 :disabled="isDisabled"
                 @click="handleSend"

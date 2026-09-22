@@ -153,7 +153,6 @@ const isDisabled = computed(() => bulkBusy.value || isMutating.value)
               </FieldDescription>
             </FieldContent>
             <Button
-              variant="destructive"
               :disabled="isDisabled || isLoading || totalCount === 0"
               @click="openDeleteDialog"
             >

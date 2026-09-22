@@ -307,8 +307,7 @@ const submitDelete = async () => {
               }}
             </Button>
             <Button
-              variant="destructive"
-              class="justify-start text-current"
+              class="justify-start"
               :disabled="!canManage || isMutating"
               @click="openDelete"
             >

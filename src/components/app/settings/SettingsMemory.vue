@@ -709,7 +709,6 @@ const submitBulkDelete = async () => {
                     {{ t("settings.memory.bulkRestore") }}
                   </DropdownMenuItem>
                   <DropdownMenuItem
-                    variant="destructive"
                     :disabled="bulkBusy || isMutating"
                     @click="openBulkDelete"
                   >

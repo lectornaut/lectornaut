@@ -31,7 +31,7 @@ const { t } = useI18n()
 // Sessions still persist server-side under teams/{teamId}/workspaces/
 // {workspaceId}/botSessions and remain accessible from the bot page's
 // history sidebar — the reset only affects what AiAsk's UI shows.
-const aiAskBotChat = useBotChat()
+const aiAskBotChat = useBotChat({ autoPin: true })
 provide(BotChatContextKey, aiAskBotChat)
 
 watch(openAiAsk, (isOpen) => {

@@ -143,17 +143,30 @@ export type BotModelProvider = (typeof BOT_MODEL_PROVIDERS)[number]
  */
 const BOT_AGENT_MODEL_REGISTRY = [
   // Google Gemini
+  { id: "gemini-2.5-flash", provider: "google" },
+  { id: "gemini-2.5-flash-lite", provider: "google" },
+  { id: "gemini-2.5-pro", provider: "google" },
   { id: "gemini-3.6-flash", provider: "google" },
   { id: "gemini-3.1-pro-preview", provider: "google" },
   // Anthropic Claude
+  { id: "claude-haiku-4-5", provider: "anthropic" },
+  { id: "claude-opus-4-1", provider: "anthropic" },
+  { id: "claude-sonnet-4-5", provider: "anthropic" },
   { id: "claude-fable-5", provider: "anthropic" },
   { id: "claude-opus-5", provider: "anthropic" },
   { id: "claude-sonnet-5", provider: "anthropic" },
   // OpenAI
+  { id: "gpt-5", provider: "openai" },
+  { id: "gpt-5-mini", provider: "openai" },
+  { id: "gpt-5-nano", provider: "openai" },
   { id: "gpt-5.6", provider: "openai" },
   // xAI Grok
+  { id: "grok-4", provider: "xai" },
+  { id: "grok-4-fast-reasoning", provider: "xai" },
   { id: "grok-4.5", provider: "xai" },
-  // DeepSeek (legacy deepseek-chat/-reasoner aliases retired 2026-07-24)
+  // DeepSeek
+  { id: "deepseek-chat", provider: "deepseek" },
+  { id: "deepseek-reasoner", provider: "deepseek" },
   { id: "deepseek-v4-flash", provider: "deepseek" },
   { id: "deepseek-v4-pro", provider: "deepseek" },
 ] as const satisfies ReadonlyArray<{

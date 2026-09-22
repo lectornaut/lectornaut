@@ -1896,7 +1896,7 @@ const getDeviceIcon = (deviceType: string) => {
             </FieldContent>
             <AlertDialog>
               <AlertDialogTrigger as-child>
-                <Button variant="destructive">
+                <Button>
                   <Spinner v-if="deletingAccount" />
                   {{ t("settings.account.deleteAccount.title") }}
                 </Button>

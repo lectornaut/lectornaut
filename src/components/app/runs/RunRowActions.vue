@@ -105,7 +105,6 @@ const onDelete = (): Promise<void> => wrap(() => removeRun(props.run.id))
             <DropdownMenuSeparator />
 
             <DropdownMenuItem
-              variant="destructive"
               :disabled="!canManage || busy"
               data-hotkey="backspace delete"
               @click="confirmOpen = true"

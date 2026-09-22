@@ -150,7 +150,6 @@ const onToggleEnabled = (value: boolean | string): void => {
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem
-                variant="destructive"
                 data-hotkey="backspace delete"
                 @select="deleteConfirmOpen = true"
               >

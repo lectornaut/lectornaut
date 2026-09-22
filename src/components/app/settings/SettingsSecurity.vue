@@ -700,7 +700,6 @@ const handleDeleteSso = () => deleteSsoDialog.confirm(() => deleteSsoConfig())
                       </FieldDescription>
                     </FieldContent>
                     <Button
-                      variant="destructive"
                       :disabled="deleting"
                       @click="deleteSsoDialog.open(null)"
                     >

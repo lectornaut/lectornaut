@@ -319,16 +319,26 @@ const MODEL_PRICE_PER_MTOK: {
   input: number
   output: number
 }[] = [
+  { match: "claude-haiku-4-5", input: 1, output: 5 },
+  { match: "claude-opus-4-1", input: 15, output: 75 },
+  { match: "claude-sonnet-4-5", input: 3, output: 15 },
   { match: "fable", input: 10, output: 50 },
   { match: "opus", input: 5, output: 25 },
   { match: "sonnet", input: 3, output: 15 },
   { match: "haiku", input: 1, output: 5 },
+  { match: "gemini-2.5-pro", input: 1.25, output: 10 },
   { match: "gemini-3.1-pro", input: 2, output: 12 },
   { match: "gemini", input: 0.3, output: 2.5 },
+  { match: "gpt-5-nano", input: 0.05, output: 0.4 },
+  { match: "gpt-5-mini", input: 0.25, output: 2 },
   { match: "gpt-5.6", input: 5, output: 30 },
+  { match: "gpt-5", input: 1.25, output: 10 },
   { match: "gpt", input: 2.5, output: 10 },
+  { match: "grok-4-fast", input: 0.2, output: 0.5 },
   { match: "grok-4.5", input: 2, output: 6 },
+  { match: "grok-4", input: 3, output: 15 },
   { match: "grok", input: 3, output: 15 },
+  { match: "deepseek-chat", input: 0.27, output: 1.1 },
   { match: "deepseek-reasoner", input: 0.55, output: 2.19 },
   { match: "deepseek", input: 0.27, output: 1.1 },
 ]

@@ -162,7 +162,6 @@ const onToggleEnabled = (value: boolean | string): void => {
                 </DropdownMenuItem>
                 <DropdownMenuItem
                   v-if="canDelete"
-                  variant="destructive"
                   data-hotkey="backspace delete"
                   @select="deleteConfirmOpen = true"
                 >

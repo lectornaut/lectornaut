@@ -436,17 +436,30 @@ export type AiProvider = (typeof AI_PROVIDERS)[number]
  */
 export const BOT_AGENT_MODELS = [
   // Google Gemini
+  "gemini-2.5-flash",
+  "gemini-2.5-flash-lite",
+  "gemini-2.5-pro",
   "gemini-3.6-flash",
   "gemini-3.1-pro-preview",
   // Anthropic Claude
+  "claude-haiku-4-5",
+  "claude-opus-4-1",
+  "claude-sonnet-4-5",
   "claude-fable-5",
   "claude-opus-5",
   "claude-sonnet-5",
   // OpenAI
+  "gpt-5",
+  "gpt-5-mini",
+  "gpt-5-nano",
   "gpt-5.6",
   // xAI Grok
+  "grok-4",
+  "grok-4-fast-reasoning",
   "grok-4.5",
-  // DeepSeek (legacy deepseek-chat/-reasoner aliases retired 2026-07-24)
+  // DeepSeek
+  "deepseek-chat",
+  "deepseek-reasoner",
   "deepseek-v4-flash",
   "deepseek-v4-pro",
 ] as const
@@ -948,13 +961,26 @@ export const MONTHLY_COST_CAP_MIN_CENTS = 100
  * `BOT_AGENT_MODELS` must have an entry (the Record type enforces it).
  */
 export const MODEL_MIN_PLAN: Record<BotAgentModel, BillingPlanKey> = {
+  "gemini-2.5-flash": "personal",
+  "gemini-2.5-flash-lite": "personal",
+  "gemini-2.5-pro": "professional",
   "gemini-3.6-flash": "personal",
   "deepseek-v4-flash": "personal",
+  "deepseek-chat": "personal",
+  "deepseek-reasoner": "professional",
   "gemini-3.1-pro-preview": "professional",
+  "claude-haiku-4-5": "personal",
+  "claude-opus-4-1": "business",
+  "claude-sonnet-4-5": "professional",
   "claude-sonnet-5": "professional",
   "deepseek-v4-pro": "professional",
   "claude-opus-5": "business",
+  "gpt-5-nano": "personal",
+  "gpt-5-mini": "professional",
+  "gpt-5": "business",
   "gpt-5.6": "business",
+  "grok-4": "business",
+  "grok-4-fast-reasoning": "professional",
   "grok-4.5": "business",
   "claude-fable-5": "enterprise",
 }

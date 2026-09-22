@@ -435,6 +435,30 @@ export const defaultBotModelProviderToggles: Record<
 export const botModels = [
   // Google Gemini
   {
+    id: "gemini-2.5-flash",
+    provider: "google",
+    name: "Gemini 2.5 Flash",
+    description: "Fast multimodal reasoning for everyday work.",
+    badge: "Flash",
+    supportsEffort: false,
+  },
+  {
+    id: "gemini-2.5-flash-lite",
+    provider: "google",
+    name: "Gemini 2.5 Flash-Lite",
+    description: "The fastest, most efficient Gemini 2.5 model.",
+    badge: "Fast",
+    supportsEffort: false,
+  },
+  {
+    id: "gemini-2.5-pro",
+    provider: "google",
+    name: "Gemini 2.5 Pro",
+    description: "Advanced reasoning for complex tasks and coding.",
+    badge: "Pro",
+    supportsEffort: false,
+  },
+  {
     id: "gemini-3.6-flash",
     provider: "google",
     name: "Gemini 3.6 Flash",
@@ -451,6 +475,30 @@ export const botModels = [
     supportsEffort: true,
   },
   // Anthropic Claude
+  {
+    id: "claude-haiku-4-5",
+    provider: "anthropic",
+    name: "Claude Haiku 4.5",
+    description: "Fast, efficient Claude for high-volume work.",
+    badge: "Fast",
+    supportsEffort: false,
+  },
+  {
+    id: "claude-opus-4-1",
+    provider: "anthropic",
+    name: "Claude Opus 4.1",
+    description: "Anthropic's strongest model for difficult reasoning.",
+    badge: "Opus",
+    supportsEffort: false,
+  },
+  {
+    id: "claude-sonnet-4-5",
+    provider: "anthropic",
+    name: "Claude Sonnet 4.5",
+    description: "Balanced coding, reasoning, and writing quality.",
+    badge: "Sonnet",
+    supportsEffort: false,
+  },
   {
     id: "claude-fable-5",
     provider: "anthropic",
@@ -477,6 +525,30 @@ export const botModels = [
   },
   // OpenAI
   {
+    id: "gpt-5",
+    provider: "openai",
+    name: "GPT-5",
+    description: "OpenAI's flagship model for reasoning and generation.",
+    badge: "Flagship",
+    supportsEffort: false,
+  },
+  {
+    id: "gpt-5-mini",
+    provider: "openai",
+    name: "GPT-5 Mini",
+    description: "A smaller GPT-5 model for fast, capable responses.",
+    badge: "Fast",
+    supportsEffort: false,
+  },
+  {
+    id: "gpt-5-nano",
+    provider: "openai",
+    name: "GPT-5 Nano",
+    description: "The fastest and most economical GPT-5 model.",
+    badge: "Value",
+    supportsEffort: false,
+  },
+  {
     id: "gpt-5.6",
     provider: "openai",
     name: "GPT-5.6",
@@ -489,6 +561,22 @@ export const botModels = [
   },
   // xAI Grok
   {
+    id: "grok-4",
+    provider: "xai",
+    name: "Grok 4",
+    description: "xAI's flagship model for reasoning and analysis.",
+    badge: "Flagship",
+    supportsEffort: false,
+  },
+  {
+    id: "grok-4-fast-reasoning",
+    provider: "xai",
+    name: "Grok 4 Fast Reasoning",
+    description: "Fast Grok reasoning for interactive workflows.",
+    badge: "Fast",
+    supportsEffort: false,
+  },
+  {
     id: "grok-4.5",
     provider: "xai",
     name: "Grok 4.5",
@@ -499,6 +587,22 @@ export const botModels = [
     supportsEffort: false,
   },
   // DeepSeek
+  {
+    id: "deepseek-chat",
+    provider: "deepseek",
+    name: "DeepSeek Chat",
+    description: "General-purpose DeepSeek for fast conversations.",
+    badge: null,
+    supportsEffort: false,
+  },
+  {
+    id: "deepseek-reasoner",
+    provider: "deepseek",
+    name: "DeepSeek Reasoner",
+    description: "Deep reasoning for difficult technical problems.",
+    badge: "Reasoning",
+    supportsEffort: false,
+  },
   {
     id: "deepseek-v4-flash",
     provider: "deepseek",
@@ -617,7 +721,7 @@ export const defaultBotModelToggles: IBotAgentModelToggles = Object.fromEntries(
 export const defaultBotAgentConfig: IBotAgentConfig = {
   providers: { ...defaultBotModelProviderToggles },
   models: { ...defaultBotModelToggles },
-  model: "gemini-3.6-flash",
+  model: "gemini-2.5-flash",
   temperature: 0.7,
   topP: 0.95,
   topK: 40,
