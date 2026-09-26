@@ -42,8 +42,8 @@
     @apply h-dvh;
     @apply w-dvw;
     @apply bg-linear-to-b;
-    @apply from-card/90;
-    @apply to-card/85;
+    @apply from-muted/95;
+    @apply to-card/90;
     @apply text-foreground;
     @apply text-base;
     @apply font-flex;
@@ -222,7 +222,7 @@
   --spacing-titlebar-bottom: env(titlebar-area-y);
   --spacing-titlebar-left: env(titlebar-area-x);
   --spacing-titlebar-right: env(titlebar-area-x);
-  --spacing-macos-window-controls: 6rem;
+  --spacing-macos-window-controls: 5.5rem;
   --font-sans: "Geist Variable", "sans-serif";
   --font-serif: "Bricolage Grotesque Variable", "serif";
   --font-mono: "Geist Mono Variable", "monospace";

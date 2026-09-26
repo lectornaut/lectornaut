@@ -80,9 +80,7 @@ const statusLabel = computed(
   () => props.billingStatus ?? t("pages.welcome.plans.notAvailable")
 )
 
-const disableInputs = computed(
-  () => props.hasActivePlan || !props.canManageBilling
-)
+const disableInputs = computed(() => !props.canManageBilling)
 
 const normalizedSeatCount = computed(() => Math.max(1, props.seatCount || 1))
 const seatCountLabel = computed(() =>

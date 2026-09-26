@@ -2872,10 +2872,18 @@
         "planUpdated": "Plan updated successfully."
       },
       "plans": {
-        "personal": { "title": "Personal" },
-        "professional": { "title": "Professional" },
-        "business": { "title": "Business" },
-        "enterprise": { "title": "Enterprise" },
+        "personal": {
+          "title": "Personal"
+        },
+        "professional": {
+          "title": "Professional"
+        },
+        "business": {
+          "title": "Business"
+        },
+        "enterprise": {
+          "title": "Enterprise"
+        },
         "cta": {
           "getStarted": "Get Started",
           "contactSales": "Contact Sales"
@@ -3059,7 +3067,7 @@
         "allSetDescription": "You're ready to start."
       },
       "actions": {
-        "continue": "Continue",
+        "continue": "Finish",
         "continueToCheckout": "Checkout"
       },
       "plans": {
@@ -3751,9 +3759,9 @@
       "removeColor": "Remove Color",
       "highlightColor": "Highlight Color",
       "removeHighlight": "Remove Highlight",
-      "fontSize": "Font Size",
+      "fontSize": "Font size",
       "removeFontSize": "Remove Font Size",
-      "fontFamily": "Font Family",
+      "fontFamily": "Font family",
       "removeFontFamily": "Remove Font Family",
       "comicSans": "Comic Sans",
       "cursive": "Cursive",
@@ -3864,8 +3872,6 @@
       "blockLinkCopied": "Link copied",
       "blockLinkCopyFailed": "Couldn't copy link",
       "backgroundColorTitle": "Background color",
-      "fontSize": "Font size",
-      "fontFamily": "Font family",
       "lineHeight": "Line height",
       "fontDefault": "Default",
       "fontSans": "Sans",

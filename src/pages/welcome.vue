@@ -1,5 +1,6 @@
 <script lang="ts" setup>
 import {
+  changeSubscriptionPlan as changeSubscriptionPlanFn,
   createCheckoutSession as createCheckoutSessionFn,
   type BillingInterval,
   type BillingPlanKey,
@@ -52,6 +53,7 @@ const {
   interval: activeInterval,
   status: billingStatus,
 } = storeToRefs(billingStore)
+const { refreshBilling } = billingStore
 
 const { t } = useI18n()
 
@@ -72,7 +74,6 @@ const onboardingSeatCount = computed(() => {
 })
 
 const canCheckout = computed(() => {
-  if (hasActiveTeamPlan.value) return false
   if (
     !canManageBilling.value ||
     !currentTeam.value?.id ||
@@ -117,17 +118,33 @@ const startStepFiveCheckout = async () => {
   }
 
   isCheckingOut.value = true
-  const pendingTab = createPendingExternalTab()
 
   try {
-    const { data } = await createCheckoutSessionFn({
-      teamId: currentTeam.value.id,
-      planKey: selectedPlanKey.value,
-      interval: selectedInterval.value,
-    })
-    await openExternalUrl(data.url, pendingTab)
+    if (hasActiveTeamPlan.value) {
+      await changeSubscriptionPlanFn({
+        teamId: currentTeam.value.id,
+        targetPlanKey: selectedPlanKey.value,
+        targetInterval: selectedInterval.value,
+      })
+      await refreshBilling()
+      toast.success(t("pages.pricing.toasts.planUpdated"))
+      completeOnboarding()
+      return
+    }
+
+    const pendingTab = createPendingExternalTab()
+    try {
+      const { data } = await createCheckoutSessionFn({
+        teamId: currentTeam.value.id,
+        planKey: selectedPlanKey.value,
+        interval: selectedInterval.value,
+      })
+      await openExternalUrl(data.url, pendingTab)
+    } catch (error) {
+      closePendingExternalTab(pendingTab)
+      throw error
+    }
   } catch (error) {
-    closePendingExternalTab(pendingTab)
     toast.error("Unable to continue to checkout.", {
       description: error instanceof Error ? error.message : String(error),
     })
@@ -219,21 +236,35 @@ const handleNextStep = () => {
 }
 
 const finalStepActionLabel = computed(() =>
-  hasActiveTeamPlan.value
+  hasActiveTeamPlan.value &&
+  selectedPlanKey.value === activePlanKey.value &&
+  selectedInterval.value === activeInterval.value
     ? t("pages.welcome.actions.continue")
-    : t("pages.welcome.actions.continueToCheckout")
+    : hasActiveTeamPlan.value
+      ? t("settings.billing.changePlan.button")
+      : t("pages.welcome.actions.continueToCheckout")
 )
 
 const finalStepActionDisabled = computed(() => {
   if (isCheckingOut.value) return true
-  if (hasActiveTeamPlan.value) return false
+  if (
+    hasActiveTeamPlan.value &&
+    selectedPlanKey.value === activePlanKey.value &&
+    selectedInterval.value === activeInterval.value
+  ) {
+    return false
+  }
   return !canCheckout.value
 })
 
 const handleFinalStepAction = async () => {
   if (currentStep.value !== totalSteps.value) return
 
-  if (hasActiveTeamPlan.value) {
+  if (
+    hasActiveTeamPlan.value &&
+    selectedPlanKey.value === activePlanKey.value &&
+    selectedInterval.value === activeInterval.value
+  ) {
     completeOnboarding()
     return
   }
@@ -247,10 +278,10 @@ const handleFinalStepAction = async () => {
     <PageHeader />
     <Separator />
     <SidebarProvider
-      class="h-full min-h-auto overflow-auto overscroll-none scroll-smooth"
+      class="min-h-auto min-w-auto grow overflow-auto overscroll-none scroll-smooth"
       :default-open="true"
     >
-      <Sidebar collapsible="none" class="w-full">
+      <Sidebar collapsible="none">
         <SidebarContent>
           <SidebarGroup>
             <SidebarGroupLabel>
@@ -281,15 +312,19 @@ const handleFinalStepAction = async () => {
                         />
                         <template v-else-if="state === 'active'">
                           <span
-                            class="relative flex size-4 items-center justify-center"
+                            class="relative flex size-4 items-center justify-center rounded-full"
                           >
-                            <span class="bg-primary/25 absolute size-4" />
-                            <span class="bg-primary relative block size-2" />
+                            <span
+                              class="bg-primary/25 absolute size-4 rounded-full"
+                            />
+                            <span
+                              class="bg-primary relative block size-2 rounded-full"
+                            />
                           </span>
                         </template>
                         <template v-else>
                           <span
-                            class="bg-muted-foreground/25 group-hover:bg-muted-foreground/50 block size-2"
+                            class="bg-muted-foreground/25 group-hover:bg-muted-foreground/50 block size-2 rounded-full"
                           />
                         </template>
                       </StepperIndicator>
@@ -308,7 +343,7 @@ const handleFinalStepAction = async () => {
                   </SidebarMenuButton>
                   <StepperSeparator
                     v-if="step.step < steps.length"
-                    class="bg-muted group-data-[state=completed]:bg-primary/50 absolute top-7 left-4 h-4 w-px"
+                    class="bg-muted group-data-[state=completed]:bg-primary/50 absolute top-7 left-5 h-4 w-px"
                   />
                 </StepperItem>
               </Stepper>

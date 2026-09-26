@@ -316,13 +316,14 @@ watch(copied, (isCopied) => {
                       <ContextMenuTrigger as-child class="context-trigger">
                         <Button
                           :variant="
-                            tab.id === activeTabId ? 'outline' : 'secondary'
+                            tab.id === activeTabId ? 'default' : 'secondary'
                           "
                           class="group w-[-webkit-fill-available] min-w-0 gap-2"
                           :class="[
-                            tab.id === activeTabId
-                              ? 'hover:bg-background'
-                              : 'bg-accent/25 text-accent-foreground/25 hover:text-accent-foreground/50 hover:bg-accent/50',
+                            {
+                              'bg-accent/25 text-accent-foreground/25 hover:text-accent-foreground/50 hover:bg-accent/50':
+                                tab.id !== activeTabId,
+                            },
                             isPinnedTab(tab) ? 'justify-center px-0!' : 'pr-1!',
                           ]"
                           size="sm"
