@@ -1,6 +1,9 @@
 <script lang="ts" setup>
 import { useSidebar } from "@/components/ui/sidebar"
-import { useMacOSTrafficLightsVisible } from "@/composables/usePlatform"
+import {
+  useIsFullscreen,
+  useMacOSTrafficLightsVisible,
+} from "@/composables/usePlatform"
 import {
   IconChevronRight,
   IconGift,
@@ -33,6 +36,11 @@ const uiPreferencesStore = useUiPreferencesStore()
 const { agentsSidebarVisible, sidebarPinned } = storeToRefs(uiPreferencesStore)
 
 const macOSTrafficLightsVisible = useMacOSTrafficLightsVisible()
+const isFullscreen = useIsFullscreen()
+const showCollapsedTrigger = computed(
+  () =>
+    !isMobile.value && sidebarPinned.value && !open.value && isFullscreen.value
+)
 
 // Navigation owns the edit sheet's state; the context menu below opens it via
 // this exposed handle. (Not named `navigation` — that would shadow the
@@ -73,7 +81,7 @@ function togglePinned() {
           class="absolute right-3 h-full bg-red-400"
         /> -->
         <div
-          v-if="open || props.preview"
+          v-if="open || props.preview || showCollapsedTrigger"
           v-motion-fade
           class="flex items-center justify-between gap-2 px-2 pt-2"
           :class="{
@@ -86,7 +94,7 @@ function togglePinned() {
             <TooltipProvider v-if="!props.preview">
               <Tooltip>
                 <TooltipTrigger as-child>
-                  <SidebarTrigger />
+                  <SidebarTrigger v-motion-fade />
                 </TooltipTrigger>
                 <TooltipContent class="flex items-center gap-2 pr-2">
                   {{ t("components.ui.toggleSidebar") }}
@@ -98,9 +106,16 @@ function togglePinned() {
               </Tooltip>
             </TooltipProvider>
           </div>
-          <BackForth class="hidden @min-[192px]/sidebar:inline" />
+          <BackForth
+            v-if="!props.preview"
+            class="hidden @min-[192px]/sidebar:inline"
+          />
         </div>
-        <SidebarHeader :class="[{ 'mt-10': !open && !props.preview }]">
+        <SidebarHeader
+          :class="[
+            { 'mt-10': !open && !props.preview && !showCollapsedTrigger },
+          ]"
+        >
           <TeamSwitcher />
           <WorkspaceSwitcher />
         </SidebarHeader>
