@@ -501,6 +501,7 @@ declare module 'vue' {
     TooltipTrigger: typeof import('./src/components/ui/tooltip/TooltipTrigger.vue')['default']
     Tree: typeof import('./src/components/smart/Tree.vue')['default']
     TreeNode: typeof import('./src/components/filetree/TreeNode.vue')['default']
+    UpdateButton: typeof import('./src/components/app/layout/UpdateButton.vue')['default']
     Users: typeof import('./src/components/landing/Users.vue')['default']
     WallOfLove: typeof import('./src/components/landing/WallOfLove.vue')['default']
     WorkflowFilterMenu: typeof import('./src/components/app/workflows/WorkflowFilterMenu.vue')['default']

@@ -42,6 +42,10 @@ export const isTauri = computed(() =>
   )
 )
 
+export const isMainTauriWindow = computed(
+  () => getTauriInternals()?.metadata?.currentWindow?.label === "main"
+)
+
 /**
  * Whether the app is running in a browser environment.
  */

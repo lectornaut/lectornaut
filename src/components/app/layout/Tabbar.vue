@@ -315,13 +315,11 @@ watch(copied, (isCopied) => {
                     <ContextMenu>
                       <ContextMenuTrigger as-child class="context-trigger">
                         <Button
-                          :variant="
-                            tab.id === activeTabId ? 'default' : 'secondary'
-                          "
+                          variant="secondary"
                           class="group w-[-webkit-fill-available] min-w-0 gap-2"
                           :class="[
                             {
-                              'bg-accent/25 text-accent-foreground/25 hover:text-accent-foreground/50 hover:bg-accent/50':
+                              'bg-secondary/50 text-secondary-foreground/50 hover:bg-secondary/75 hover:text-secondary-foreground/75':
                                 tab.id !== activeTabId,
                             },
                             isPinnedTab(tab) ? 'justify-center px-0!' : 'pr-1!',
@@ -521,6 +519,7 @@ watch(copied, (isCopied) => {
               </Tooltip>
             </TooltipProvider>
             <div class="flex items-stretch justify-center gap-2">
+              <UpdateButton />
               <CommandKTrigger />
               <Notifications />
               <TooltipProvider>

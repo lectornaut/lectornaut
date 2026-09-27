@@ -1,6 +1,6 @@
 import App from "@/App.vue"
 import { preloadActiveCodeTheme } from "@/components/editors/text/shiki"
-import { isTauri } from "@/composables/usePlatform"
+import { isMainTauriWindow } from "@/composables/usePlatform"
 import { createAppCheckModule } from "@/modules/appCheck"
 import "@/modules/connectionCallbackRelay"
 import { initDeepLink } from "@/modules/deepLink"
@@ -123,7 +123,7 @@ setSchemaViolationSink((violation) => {
   }
 })
 
-if (isTauri.value) {
+if (isMainTauriWindow.value) {
   const automaticUpdates = useStorage<boolean>("automaticUpdates", true)
   if (automaticUpdates.value) {
     const lastUpdateCheck = useStorage<number>("lastUpdateCheck", 0)

@@ -16,6 +16,9 @@ import {
   downloadAndInstallUpdate,
   isCheckingForUpdates,
   lastCheckResult,
+  restartToApplyUpdate,
+  updateDownloadPercent,
+  updateStage,
 } from "@/modules/updater"
 import { useAppPreferencesStore } from "@/stores/appPreferencesStore"
 import { storeToRefs } from "pinia"
@@ -85,8 +88,12 @@ const handleCheckForUpdates = async () => {
 }
 
 const handleUpdateNow = async () => {
-  if (lastCheckResult.value?.update) {
+  if (!lastCheckResult.value?.update) return
+
+  try {
     await downloadAndInstallUpdate(lastCheckResult.value.update)
+  } catch (error) {
+    console.error("Error downloading update:", error)
   }
 }
 
@@ -485,7 +492,10 @@ const restoreDefaultShortcut = () => {
           <Field orientation="horizontal">
             <FieldContent>
               <FieldLabel>
-                <template v-if="lastCheckResult?.status === 'available'">
+                <template v-if="updateStage === 'ready'">
+                  {{ t("updater.downloaded") }}
+                </template>
+                <template v-else-if="lastCheckResult?.status === 'available'">
                   {{
                     t(
                       "settings.preferences.checkForUpdates.labelUpdateAvailable"
@@ -500,7 +510,10 @@ const restoreDefaultShortcut = () => {
                 </template>
               </FieldLabel>
               <FieldDescription>
-                <template v-if="lastCheckResult?.status === 'available'">
+                <template v-if="updateStage === 'ready'">
+                  {{ t("updater.restartToApply") }}
+                </template>
+                <template v-else-if="lastCheckResult?.status === 'available'">
                   {{
                     t(
                       "settings.preferences.checkForUpdates.descriptionAvailable",
@@ -518,7 +531,21 @@ const restoreDefaultShortcut = () => {
               </FieldDescription>
             </FieldContent>
             <Button
-              v-if="lastCheckResult?.status === 'available'"
+              v-if="updateStage === 'ready'"
+              @click="restartToApplyUpdate"
+            >
+              {{ t("updater.restart") }}
+            </Button>
+            <Button v-else-if="updateStage === 'downloading'" disabled>
+              <Spinner />
+              {{
+                t("updater.downloadingPercent", {
+                  percent: updateDownloadPercent,
+                })
+              }}
+            </Button>
+            <Button
+              v-else-if="lastCheckResult?.status === 'available'"
               @click="handleUpdateNow"
             >
               {{ t("settings.preferences.checkForUpdates.actionUpdate") }}

@@ -32,7 +32,7 @@
  * `badgeCount` — sharing state through the localStorage key, not this store.)
  */
 
-import { isTauri } from "@/composables/usePlatform"
+import { isMainTauriWindow } from "@/composables/usePlatform"
 import { defaultFileDropOverlayShortcutKeys } from "@/helpers/defaults"
 import { firestore } from "@/modules/firebase"
 import { getErrorMessage } from "@/utils/firebase/firebase-errors"
@@ -149,7 +149,7 @@ export const useAppPreferencesStore = defineStore("appPreferences", () => {
     key: "runOnStartup" | "menuBar",
     value: boolean
   ): Promise<void> {
-    if (!isTauri.value) return
+    if (!isMainTauriWindow.value) return
 
     try {
       if (key === "runOnStartup") {
@@ -177,7 +177,7 @@ export const useAppPreferencesStore = defineStore("appPreferences", () => {
   watch(
     fileDropOverlayDragDrop,
     (enabled) => {
-      if (!isTauri.value) return
+      if (!isMainTauriWindow.value) return
       void invoke("set_file_capture_drag_enabled", { enabled }).catch(
         (error: unknown) => {
           console.error(
@@ -265,7 +265,7 @@ export const useAppPreferencesStore = defineStore("appPreferences", () => {
   }
 
   const syncGlobalShortcut = async (enabled: boolean, keys: string) => {
-    if (!isTauri.value) return
+    if (!isMainTauriWindow.value) return
 
     await cleanupGlobalShortcut()
 
@@ -310,6 +310,7 @@ export const useAppPreferencesStore = defineStore("appPreferences", () => {
   // disposed (e.g. HMR reload). unregisterAll is safer than tracking
   // individual shortcuts across hot-reloads.
   onScopeDispose(() => {
+    if (!isMainTauriWindow.value) return
     void unregisterAllGlobalShortcuts().catch(() => {})
     currentGlobalShortcut = null
   })

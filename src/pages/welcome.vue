@@ -128,7 +128,7 @@ const startStepFiveCheckout = async () => {
       })
       await refreshBilling()
       toast.success(t("pages.pricing.toasts.planUpdated"))
-      completeOnboarding()
+      await completeOnboarding()
       return
     }
 
@@ -212,15 +212,23 @@ watch(
   }
 )
 
-const completeOnboarding = () => {
+const completeOnboarding = async () => {
   if (currentStep.value !== totalSteps.value || !hasActiveTeamPlan.value) {
     return
   }
 
-  void setCurrentUserOnboardingState(false).catch((error) => {
+  isCheckingOut.value = true
+  try {
+    await setCurrentUserOnboardingState(false)
+    await router.push("/start")
+  } catch (error) {
     console.error("[welcome] Failed to persist onboarding completion:", error)
-  })
-  router.push("/start")
+    toast.error("Unable to finish onboarding.", {
+      description: error instanceof Error ? error.message : String(error),
+    })
+  } finally {
+    isCheckingOut.value = false
+  }
 }
 
 const handlePreviousStep = () => {
@@ -265,7 +273,7 @@ const handleFinalStepAction = async () => {
     selectedPlanKey.value === activePlanKey.value &&
     selectedInterval.value === activeInterval.value
   ) {
-    completeOnboarding()
+    await completeOnboarding()
     return
   }
 

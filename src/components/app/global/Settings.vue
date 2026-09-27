@@ -1,6 +1,6 @@
 <script lang="ts" setup>
 import { defaultSettingsTab, defaultSettingsTabs } from "@/helpers/defaults"
-import { emitter } from "@/modules/mitt"
+import { emitter, listenForMainWindowIntents } from "@/modules/mitt"
 
 const { t } = useI18n()
 
@@ -27,6 +27,11 @@ const normalizeSettingsTab = (raw?: string | null): string => {
 // Dialog state
 const openSettings = ref(false)
 const activeTab = ref(normalizeSettingsTab(defaultSettingsTab))
+
+const unlistenMainWindowIntents = listenForMainWindowIntents()
+onBeforeUnmount(() => {
+  void unlistenMainWindowIntents.then((unlisten) => unlisten())
+})
 
 emitter.on("Dialog.Settings.Open", (event) => {
   activeTab.value = normalizeSettingsTab(event as string)

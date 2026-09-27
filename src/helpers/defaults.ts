@@ -814,7 +814,7 @@ export const botAgentBounds = {
 export const defaultMenu = [
   {
     title: "Home",
-    action: "Open your workspace dashboard",
+    action: "Open dashboard",
     description: "Get a snapshot of activity across your workspace.",
     url: "/home",
     id: "home",
@@ -828,7 +828,7 @@ export const defaultMenu = [
   },
   {
     title: "Bot",
-    action: "Chat with your AI assistant",
+    action: "Start chat",
     description:
       "Chat with AI and use side panels for context, history, and actions.",
     url: "/bot",
@@ -843,7 +843,7 @@ export const defaultMenu = [
   },
   {
     title: "Agents",
-    action: "Create and manage AI agents",
+    action: "Manage agents",
     description: "Build, test, and organize your AI agents.",
     url: "/agents",
     id: "agents",
@@ -857,7 +857,7 @@ export const defaultMenu = [
   },
   {
     title: "Workflows",
-    action: "Create and manage automations",
+    action: "View workflows",
     description: "Automate an agent on a schedule, on changes, or on demand.",
     url: "/workflows",
     id: "workflows",
@@ -871,7 +871,7 @@ export const defaultMenu = [
   },
   {
     title: "Runs",
-    action: "Monitor run status and history",
+    action: "View runs",
     description: "Track jobs across queues, states, and execution history.",
     url: "/runs",
     id: "runs",
@@ -885,7 +885,7 @@ export const defaultMenu = [
   },
   {
     title: "Write",
-    action: "Draft and organize documents",
+    action: "Write documents",
     description: "Capture notes, drafts, and long-form documents.",
     url: "/write",
     id: "write",
@@ -899,7 +899,7 @@ export const defaultMenu = [
   },
   {
     title: "Code",
-    action: "Build and review code projects",
+    action: "Open code",
     description: "Work with repositories, files, and coding tasks.",
     url: "/code",
     id: "code",
@@ -913,7 +913,7 @@ export const defaultMenu = [
   },
   {
     title: "Teams",
-    action: "Manage teams and collaborators",
+    action: "Manage teams",
     description: "Organize members, roles, and shared workspaces.",
     url: "/teams",
     id: "teams",
@@ -927,7 +927,7 @@ export const defaultMenu = [
   },
   {
     title: "Profile",
-    action: "View and update your profile",
+    action: "Edit profile",
     description: "Manage your personal information and settings.",
     url: "/profile",
     id: "profile",

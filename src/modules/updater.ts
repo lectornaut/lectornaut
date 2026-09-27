@@ -11,10 +11,27 @@ export type UpdateCheckResult = {
   update?: Update
 }
 
+/** Lifecycle of the update the UI can act on, shared across every surface. */
+export type UpdateStage = "idle" | "available" | "downloading" | "ready"
+
 const lastCheckResult = shallowRef<UpdateCheckResult | null>(null)
 const isCheckingForUpdates = ref(false)
+const updateStage = ref<UpdateStage>("idle")
+const updateDownloadPercent = ref(0)
 
-export { isCheckingForUpdates, lastCheckResult }
+export {
+  isCheckingForUpdates,
+  lastCheckResult,
+  updateDownloadPercent,
+  updateStage,
+}
+
+/**
+ * Restarts the app so a downloaded update takes effect
+ */
+export const restartToApplyUpdate = async () => {
+  await relaunch()
+}
 
 /**
  * Downloads and installs the given update with progress toasts
@@ -24,45 +41,54 @@ export const downloadAndInstallUpdate = async (update: Update) => {
   let contentLength = 0
 
   const toastId = toast.loading(t("updater.preparing"))
+  updateStage.value = "downloading"
+  updateDownloadPercent.value = 0
 
-  await update.downloadAndInstall((event) => {
-    switch (event.event) {
-      case "Started":
-        contentLength = event.data.contentLength ?? 0
-        toast.loading(t("updater.downloading"), {
-          id: toastId,
-          description: t("updater.startedDownloading", {
-            bytes: contentLength,
-          }),
-        })
-        break
-      case "Progress":
-        downloaded += event.data.chunkLength
-        if (contentLength > 0) {
-          const percent = Math.round((downloaded / contentLength) * 100)
-          toast.loading(t("updater.downloadingProgress", { percent }), {
+  try {
+    await update.downloadAndInstall((event) => {
+      switch (event.event) {
+        case "Started":
+          contentLength = event.data.contentLength ?? 0
+          toast.loading(t("updater.downloading"), {
             id: toastId,
-            description: t("updater.downloadProgress", {
-              downloaded: (downloaded / 1024 / 1024).toFixed(2),
-              total: (contentLength / 1024 / 1024).toFixed(2),
+            description: t("updater.startedDownloading", {
+              bytes: contentLength,
             }),
           })
-        }
-        break
-      case "Finished":
-        toast.success(t("updater.downloaded"), {
-          id: toastId,
-          description: t("updater.restartToApply"),
-          action: {
-            label: t("updater.restart"),
-            onClick: async () => {
-              await relaunch()
+          break
+        case "Progress":
+          downloaded += event.data.chunkLength
+          if (contentLength > 0) {
+            const percent = Math.round((downloaded / contentLength) * 100)
+            updateDownloadPercent.value = percent
+            toast.loading(t("updater.downloadingProgress", { percent }), {
+              id: toastId,
+              description: t("updater.downloadProgress", {
+                downloaded: (downloaded / 1024 / 1024).toFixed(2),
+                total: (contentLength / 1024 / 1024).toFixed(2),
+              }),
+            })
+          }
+          break
+        case "Finished":
+          updateDownloadPercent.value = 100
+          updateStage.value = "ready"
+          toast.success(t("updater.downloaded"), {
+            id: toastId,
+            description: t("updater.restartToApply"),
+            action: {
+              label: t("updater.restart"),
+              onClick: restartToApplyUpdate,
             },
-          },
-        })
-        break
-    }
-  })
+          })
+          break
+      }
+    })
+  } catch (error) {
+    updateStage.value = "available"
+    toast.error(t("updater.failed"), { id: toastId })
+    throw error
+  }
 }
 
 /**
@@ -82,11 +108,14 @@ export const checkForUpdates = async (): Promise<UpdateCheckResult> => {
       }
 
       lastCheckResult.value = result
+      // A download already in flight (or finished) outranks a fresh check.
+      if (updateStage.value === "idle") updateStage.value = "available"
       return result
     }
 
     const result: UpdateCheckResult = { status: "up-to-date" }
     lastCheckResult.value = result
+    if (updateStage.value === "available") updateStage.value = "idle"
     return result
   } finally {
     isCheckingForUpdates.value = false

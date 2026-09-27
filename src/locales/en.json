@@ -4276,6 +4276,7 @@
     "preparing": "Preparing update...",
     "downloading": "Downloading update...",
     "downloadingProgress": "Downloading update... {percent}%",
+    "downloadingPercent": "Downloading {percent}%",
     "startedDownloading": "Started downloading {bytes} bytes",
     "downloadProgress": "{downloaded} MB / {total} MB",
     "downloaded": "Update downloaded",
@@ -4283,6 +4284,8 @@
     "restart": "Restart",
     "versionAvailable": "v{version} is available",
     "newVersionAvailable": "A new version is available.",
+    "updateAvailable": "Update available",
+    "failed": "Update failed",
     "update": "Update"
   }
 }

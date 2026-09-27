@@ -12,7 +12,7 @@ name = "template_app_lib"
 crate-type = ["lib", "cdylib", "staticlib"]
 
 [build-dependencies]
-tauri-build = { version = "3.0.0-alpha.0", features = [] }
+tauri-build = { version = "3.0.0-alpha.2", features = [] }
 dotenvy = "0.15"
 
 [dependencies]
@@ -21,10 +21,10 @@ dotenvy = "0.15"
 # - macos-private-api: Required for advanced transparency and vibrancy effects on macOS.
 # - tray-icon: Enables system tray functionality.
 # - image-png: Required for processing PNG icons (like the tray icon).
-tauri = { version = "3.0.0-alpha.0", features = ["protocol-asset", "macos-private-api", "tray-icon", "image-png"] }
+tauri = { version = "=3.0.0-alpha.2", features = ["protocol-asset", "macos-private-api", "tray-icon", "image-png"] }
 # https://crates.io/crates/tauri-runtime-wry/versions
 # tauri v3 selects the webview runtime explicitly (Builder::runtime); runtime-only features live here.
-tauri-runtime-wry = { version = "3.0.0-alpha.0", features = ["macos-private-api"] }
+tauri-runtime-wry = { version = "=3.0.0-alpha.2", features = ["macos-private-api"] }
 # https://crates.io/crates/serde/versions
 serde = { version = "1", features = ["derive"] }
 # https://crates.io/crates/serde_json/versions
@@ -36,41 +36,40 @@ window-vibrancy = "0.6.0"
 # https://crates.io/crates/log/versions
 log = "0.4"
 # https://crates.io/crates/tauri-plugin-log/versions
-tauri-plugin-log = "3.0.0-alpha.0"
+tauri-plugin-log = "3.0.0-alpha.1"
 # https://crates.io/crates/tauri-plugin-clipboard-manager/versions
-tauri-plugin-clipboard-manager = "3.0.0-alpha.0"
+tauri-plugin-clipboard-manager = "3.0.0-alpha.1"
 # https://crates.io/crates/tauri-plugin-shell/versions
-tauri-plugin-shell = "3.0.0-alpha.0"
+tauri-plugin-shell = "3.0.0-alpha.1"
 # https://crates.io/crates/tauri-plugin-opener/versions
-tauri-plugin-opener = "3.0.0-alpha.0"
+tauri-plugin-opener = "3.0.0-alpha.1"
 # https://crates.io/crates/tauri-plugin-deep-link/versions
-tauri-plugin-deep-link = "3.0.0-alpha.0"
+tauri-plugin-deep-link = "3.0.0-alpha.1"
 # https://crates.io/crates/tauri-plugin-process/versions
-tauri-plugin-process = "3.0.0-alpha.0"
+tauri-plugin-process = "3.0.0-alpha.1"
 # https://crates.io/crates/tauri-plugin-dialog/versions
-tauri-plugin-dialog = "3.0.0-alpha.0"
+tauri-plugin-dialog = "3.0.0-alpha.1"
 # https://crates.io/crates/tauri-plugin-fs/versions
-tauri-plugin-fs = "3.0.0-alpha.0"
+tauri-plugin-fs = "3.0.0-alpha.1"
 # https://crates.io/crates/tauri-plugin-single-instance/versions
-tauri-plugin-single-instance = "3.0.0-alpha.0"
+tauri-plugin-single-instance = "3.0.0-alpha.1"
 # https://crates.io/crates/tauri-plugin-notification/versions
-tauri-plugin-notification = "3.0.0-alpha.0"
+tauri-plugin-notification = "3.0.0-alpha.1"
 # https://crates.io/crates/tauri-plugin-os/versions
-tauri-plugin-os = "3.0.0-alpha.0"
+tauri-plugin-os = "3.0.0-alpha.1"
 
 [target.'cfg(not(any(target_os = "android", target_os = "ios")))'.dependencies]
 # https://crates.io/crates/tauri-plugin-global-shortcut/versions
-tauri-plugin-global-shortcut = "3.0.0-alpha.0"
+tauri-plugin-global-shortcut = "3.0.0-alpha.1"
 # https://crates.io/crates/tauri-plugin-positioner/versions
-tauri-plugin-positioner = "3.0.0-alpha.0"
-# https://crates.io/crates/tauri-plugin-updater/versions
-tauri-plugin-updater = "3.0.0-alpha.0"
+tauri-plugin-positioner = "3.0.0-alpha.1"
+tauri-plugin-updater = "3.0.0-alpha.1"
 # https://crates.io/crates/tauri-plugin-window-state/versions
-tauri-plugin-window-state = "3.0.0-alpha.0"
+tauri-plugin-window-state = "3.0.0-alpha.1"
 # https://crates.io/crates/tauri-plugin-autostart/versions
-tauri-plugin-autostart = "3.0.0-alpha.0"
+tauri-plugin-autostart = "3.0.0-alpha.1"
 # https://crates.io/crates/tauri-plugin-http/versions
-tauri-plugin-http = { version = "3.0.0-alpha.0", features = ["json"] }
+tauri-plugin-http = { version = "3.0.0-alpha.1", features = ["json"] }
 
 # URL parsing
 url = "2.5"

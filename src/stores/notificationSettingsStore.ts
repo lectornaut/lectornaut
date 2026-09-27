@@ -23,7 +23,7 @@
  */
 
 import { sendTestNotification as sendTestNotificationCallable } from "@/composables/useFunctions"
-import { isTauri } from "@/composables/usePlatform"
+import { isMainTauriWindow, isTauri } from "@/composables/usePlatform"
 import { firestore } from "@/modules/firebase"
 import { queryClient } from "@/modules/queryClient"
 import {
@@ -206,6 +206,12 @@ export const useNotificationSettingsStore = defineStore(
       channel: "email" | "inApp" | "native"
     ): Promise<boolean> {
       if (isSendingTestNotification.value) return false
+      if (channel === "native" && isTauri.value && !isMainTauriWindow.value) {
+        toast.error(
+          "Native notifications can only be tested from the main window"
+        )
+        return false
+      }
 
       isSendingTestNotification.value = channel
 

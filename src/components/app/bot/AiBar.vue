@@ -137,9 +137,15 @@ const submitDelete = async () => {
               <ContextMenuTrigger as-child>
                 <TooltipTrigger as-child>
                   <Button
-                    :variant="isOpenInPopout(session) ? 'default' : 'outline'"
+                    :variant="
+                      isOpenInPopout(session) ? 'destructive' : 'secondary'
+                    "
                     size="sm"
-                    class="shadow-none"
+                    :class="[
+                      isOpenInPopout(session)
+                        ? ''
+                        : 'bg-secondary/50 text-secondary-foreground/50 hover:bg-secondary/75 hover:text-secondary-foreground/75',
+                    ]"
                     @click="openChat(session)"
                   >
                     <span class="max-w-32 truncate">{{

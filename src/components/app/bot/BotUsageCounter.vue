@@ -2,7 +2,7 @@
 import type { ChartConfig } from "@/components/ui/chart"
 import { ChartContainer } from "@/components/ui/chart"
 import { useTeamUsage } from "@/composables/useTeamUsage"
-import { emitter } from "@/modules/mitt"
+import { emitMainWindowIntent } from "@/modules/mitt"
 import { VisDonut, VisSingleContainer } from "@unovis/vue"
 
 const { t, n } = useI18n()
@@ -74,8 +74,12 @@ const usageButtonVariant = computed(() =>
   isExhausted.value ? "destructive" : "ghost"
 )
 
-const openUsageSettings = (): void => {
-  emitter.emit("Dialog.Settings.Open", "usage")
+const openUsageSettings = async (): Promise<void> => {
+  try {
+    await emitMainWindowIntent("Dialog.Settings.Open", "usage")
+  } catch (error) {
+    console.error("[BotUsageCounter] Failed to open usage settings:", error)
+  }
 }
 </script>
 

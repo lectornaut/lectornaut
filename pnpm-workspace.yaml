@@ -59,3 +59,16 @@ minimumReleaseAgeExclude:
   - firebase-functions@7.3.0
   - tailwindcss@4.3.3
   - vite@8.1.5
+  - '@tauri-apps/cli-darwin-arm64@3.0.0-alpha.3'
+  - '@tauri-apps/cli-darwin-x64@3.0.0-alpha.3'
+  - '@tauri-apps/cli-linux-arm-gnueabihf@3.0.0-alpha.3'
+  - '@tauri-apps/cli-linux-arm64-gnu@3.0.0-alpha.3'
+  - '@tauri-apps/cli-linux-arm64-musl@3.0.0-alpha.3'
+  - '@tauri-apps/cli-linux-riscv64-gnu@3.0.0-alpha.3'
+  - '@tauri-apps/cli-linux-x64-gnu@3.0.0-alpha.3'
+  - '@tauri-apps/cli-linux-x64-musl@3.0.0-alpha.3'
+  - '@tauri-apps/cli-win32-arm64-msvc@3.0.0-alpha.3'
+  - '@tauri-apps/cli-win32-ia32-msvc@3.0.0-alpha.3'
+  - '@tauri-apps/cli-win32-x64-msvc@3.0.0-alpha.3'
+  - '@tauri-apps/cli@3.0.0-alpha.3'
+  - '@tauri-apps/api@3.0.0-alpha.2'
