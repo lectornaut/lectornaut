@@ -91,8 +91,10 @@ export const normalizeNotificationSettings = (
         categories.marketing,
         DEFAULT_NOTIFICATION_SETTINGS.categories.marketing
       ),
-      // Security notifications are always enabled.
-      security: true,
+      security: normalizeBoolean(
+        categories.security,
+        DEFAULT_NOTIFICATION_SETTINGS.categories.security
+      ),
     },
     frequency: normalizeNotificationFrequency(input.frequency),
     channels: {

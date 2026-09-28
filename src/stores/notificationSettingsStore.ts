@@ -14,8 +14,8 @@
  * single-flight `isUpdatingNotifications` guard serializes toggles.
  *
  * Also owns `sendTestNotification`, which fires a server-side test through the
- * callable and, for the native channel on Tauri, additionally requests OS
- * permission and posts a local desktop notification.
+ * callable. The native test lands in `users/{uid}/nativeNotifications`, so it
+ * exercises the same path real alerts take (`useNativeNotificationDelivery`).
  *
  * Distinct from `useNotifications` (the in-app notification *feed*): this store
  * is the *settings*. Extracted from the former `settingsStore` monolith as
@@ -39,13 +39,6 @@ import { useRunWrite } from "@/utils/firebase/firebase-mutation"
 import { useDocumentQuery } from "@/utils/firebase/firebase-query"
 import { queryKeys } from "@/utils/firebase/firebase-query-keys"
 import { mutateSetDocument } from "@/utils/firebase/firebase-sync-engine"
-import { convertFileSrc } from "@tauri-apps/api/core"
-import { resolveResource } from "@tauri-apps/api/path"
-import {
-  isPermissionGranted,
-  requestPermission,
-  sendNotification as sendNativeNotification,
-} from "@tauri-apps/plugin-notification"
 import { doc } from "firebase/firestore"
 import { defineStore } from "pinia"
 import { toast } from "vue-sonner"
@@ -139,7 +132,7 @@ export const useNotificationSettingsStore = defineStore(
     }
 
     async function updateNotificationCategory(
-      category: "communication" | "marketing",
+      category: "communication" | "marketing" | "security",
       value: boolean
     ): Promise<boolean> {
       return persistNotificationSettings(
@@ -206,7 +199,11 @@ export const useNotificationSettingsStore = defineStore(
       channel: "email" | "inApp" | "native"
     ): Promise<boolean> {
       if (isSendingTestNotification.value) return false
-      if (channel === "native" && isTauri.value && !isMainTauriWindow.value) {
+      if (channel === "native" && !isTauri.value) {
+        toast.error("App notifications are only available in the desktop app")
+        return false
+      }
+      if (channel === "native" && !isMainTauriWindow.value) {
         toast.error(
           "Native notifications can only be tested from the main window"
         )
@@ -216,44 +213,12 @@ export const useNotificationSettingsStore = defineStore(
       isSendingTestNotification.value = channel
 
       try {
-        await sendTestNotificationCallable({ channel })
-
-        if (channel === "native" && isTauri.value) {
-          let granted = await isPermissionGranted()
-          if (!granted) {
-            const permission = await requestPermission()
-            granted = permission === "granted"
-          }
-
-          if (granted) {
-            let iconPath: string | undefined
-            try {
-              iconPath = await resolveResource("icons/icon.png")
-            } catch {
-              // Resource not available in dev mode
-            }
-
-            sendNativeNotification({
-              title: "Test notification",
-              body: "This is a test desktop notification. Everything is working!",
-              sound: "default",
-              ...(iconPath && {
-                icon: iconPath,
-                attachments: [
-                  {
-                    id: "icon",
-                    url: convertFileSrc(iconPath),
-                  },
-                ],
-              }),
-            })
-          } else {
-            toast.error("Desktop notification permission denied")
-            return false
-          }
-        }
-
-        toast.success("Test notification sent")
+        const response = await sendTestNotificationCallable({ channel })
+        toast.success(
+          response.data.queued
+            ? "Test notification queued for your digest"
+            : "Test notification sent"
+        )
         return true
       } catch (error) {
         toast.error("Failed to send test notification", {

@@ -60,6 +60,7 @@ export type NotificationStatus = (typeof NOTIFICATION_STATUSES)[number]
 export const NOTIFICATION_TYPES = [
   "user.welcome",
   "notification.test",
+  "notification.digest",
   "invitation.received",
   "invitation.declined",
   "member.joined",
@@ -124,6 +125,12 @@ export const NotificationTypeConfig = {
   "notification.test": {
     inApp: true,
     email: true,
+    native: true,
+    category: "communication",
+  },
+  "notification.digest": {
+    inApp: true,
+    email: false,
     native: true,
     category: "communication",
   },

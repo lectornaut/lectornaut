@@ -19,6 +19,11 @@ const {
 } = notificationSettingsStore
 
 const toBoolean = (value: unknown): boolean => value === true
+const canSendTestNotification = computed(
+  () =>
+    notificationSettings.value.categories.communication &&
+    notificationSettings.value.frequency !== "none"
+)
 
 const frequencyOptions = computed(() => [
   {
@@ -108,10 +113,21 @@ const frequencyOptions = computed(() => [
               {{ t("settings.notifications.categories.security.description") }}
             </FieldDescription>
           </FieldContent>
+          <InputGroupButton
+            v-if="isUpdatingNotifications === 'security'"
+            variant="ghost"
+            size="icon-xs"
+            disabled
+          >
+            <Spinner />
+          </InputGroupButton>
           <Switch
             id="security-notifications"
+            :disabled="isUpdatingNotifications !== null"
             :model-value="notificationSettings.categories.security"
-            disabled
+            @update:model-value="
+              updateNotificationCategory('security', toBoolean($event))
+            "
           />
         </Field>
       </FieldSet>
@@ -177,6 +193,7 @@ const frequencyOptions = computed(() => [
                   size="icon-xs"
                   :disabled="
                     isUpdatingNotifications ||
+                    !canSendTestNotification ||
                     !notificationSettings.channels.email ||
                     isSendingTestNotification !== null
                   "
@@ -226,6 +243,7 @@ const frequencyOptions = computed(() => [
                   size="icon-xs"
                   :disabled="
                     isUpdatingNotifications ||
+                    !canSendTestNotification ||
                     !notificationSettings.channels.inApp ||
                     isSendingTestNotification !== null
                   "
@@ -275,6 +293,7 @@ const frequencyOptions = computed(() => [
                   size="icon-xs"
                   :disabled="
                     isUpdatingNotifications ||
+                    !canSendTestNotification ||
                     !notificationSettings.channels.native ||
                     isSendingTestNotification !== null
                   "

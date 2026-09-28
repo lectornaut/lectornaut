@@ -4,6 +4,7 @@ import { useDialogActionHotkey } from "@/composables/useDialogActionHotkey"
 import { useGlobalHotkeys } from "@/composables/useGlobalHotkeys"
 import { useGlobalHotkeySequences } from "@/composables/useGlobalHotkeySequences"
 import { useMenuActionHotkey } from "@/composables/useMenuActionHotkey"
+import { useNativeNotificationDelivery } from "@/composables/useNativeNotificationDelivery"
 import { useCurrentUser } from "vuefire"
 
 const user = useCurrentUser()
@@ -24,6 +25,9 @@ useDialogActionHotkey()
 // Bare keys fire the [data-hotkey] item of whichever open menu the
 // keystroke originates in (the menu-item counterpart of the above).
 useMenuActionHotkey()
+
+// Desktop main window only: surface server-routed alerts as OS notifications.
+useNativeNotificationDelivery()
 
 // Only handle redirecting logged-in users away from guest-only pages.
 // Logout redirects are NOT handled here - the router beforeEach guard

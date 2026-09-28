@@ -1,9 +1,6 @@
 <script lang="ts" setup>
 import { useSidebar } from "@/components/ui/sidebar"
-import {
-  useIsFullscreen,
-  useMacOSTrafficLightsVisible,
-} from "@/composables/usePlatform"
+import { useMacOSTrafficLightsVisible } from "@/composables/usePlatform"
 import {
   IconChevronRight,
   IconGift,
@@ -36,10 +33,12 @@ const uiPreferencesStore = useUiPreferencesStore()
 const { agentsSidebarVisible, sidebarPinned } = storeToRefs(uiPreferencesStore)
 
 const macOSTrafficLightsVisible = useMacOSTrafficLightsVisible()
-const isFullscreen = useIsFullscreen()
 const showCollapsedTrigger = computed(
   () =>
-    !isMobile.value && sidebarPinned.value && !open.value && isFullscreen.value
+    !isMobile.value &&
+    sidebarPinned.value &&
+    !open.value &&
+    !macOSTrafficLightsVisible.value
 )
 
 // Navigation owns the edit sheet's state; the context menu below opens it via
@@ -106,10 +105,13 @@ function togglePinned() {
               </Tooltip>
             </TooltipProvider>
           </div>
-          <BackForth
-            v-if="!props.preview"
-            class="hidden @min-[192px]/sidebar:inline"
-          />
+          <span
+            v-if="!props.preview && open"
+            v-motion-fade
+            class="hidden items-center @min-[192px]/sidebar:inline-flex"
+          >
+            <BackForth />
+          </span>
         </div>
         <SidebarHeader
           :class="[

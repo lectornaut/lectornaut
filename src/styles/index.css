@@ -43,7 +43,7 @@
     @apply w-dvw;
     @apply bg-linear-to-b;
     @apply from-muted/95;
-    @apply to-card/90;
+    @apply to-secondary/90;
     @apply text-foreground;
     @apply text-base;
     @apply font-flex;

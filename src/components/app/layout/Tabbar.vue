@@ -1,10 +1,7 @@
 <script lang="ts" setup>
 import { useSidebar } from "@/components/ui/sidebar"
 import { useCopy } from "@/composables/useCopy"
-import {
-  useIsFullscreen,
-  useMacOSTrafficLightsVisible,
-} from "@/composables/usePlatform"
+import { useMacOSTrafficLightsVisible } from "@/composables/usePlatform"
 import { useShortcutKeys } from "@/composables/useShortcutKeys"
 import { useTabRouterSync } from "@/composables/useTabRouterSync"
 import { useTabs } from "@/composables/useTabs"
@@ -41,7 +38,6 @@ import { storeToRefs } from "pinia"
 // Environment / shell context
 // ----------------------------------------------------------------------------
 const macOSTrafficLightsVisible = useMacOSTrafficLightsVisible()
-const isFullscreen = useIsFullscreen()
 const { open, isMobile } = useSidebar()
 
 const el = ref<HTMLElement>()
@@ -237,7 +233,9 @@ watch(copied, (isCopied) => {
             </HoverCardContent>
           </HoverCard>
           <TooltipProvider
-            v-else-if="isMobile || (!open && sidebarPinned && !isFullscreen)"
+            v-else-if="
+              isMobile || (!open && sidebarPinned && macOSTrafficLightsVisible)
+            "
           >
             <Tooltip>
               <TooltipTrigger as-child>

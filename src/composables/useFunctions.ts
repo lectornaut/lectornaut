@@ -650,6 +650,7 @@ export interface SendTestNotificationRequest {
 export interface SendTestNotificationResponse {
   success: boolean
   channel: string
+  queued: boolean
 }
 
 // =============================================================================

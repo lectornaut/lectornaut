@@ -9,8 +9,8 @@ import {
 import { buildContext, logEvent } from "./audit.js"
 import { BUILT_IN_AGENTS_BY_ID, isBuiltInAgentId } from "./builtInAgents.js"
 import { COST_BUDGET } from "./costBudget.js"
-import { sendEmailInternal } from "./email.js"
 import { db } from "./firebase.js"
+import { sendNotification } from "./notifier.js"
 import { CALLABLE_OPTS } from "./runtimeConfig.js"
 import { postmarkApiKey } from "./secrets.js"
 import {
@@ -209,42 +209,43 @@ export const sendTestNotification = onCall(
     const uid = request.auth.uid
     const userEmail = request.auth.token.email
 
-    if (channel === "email") {
-      if (!userEmail) {
-        throw new HttpsError(
-          "failed-precondition",
-          "No email address associated with this account."
-        )
-      }
-
-      await sendEmailInternal({
-        email: userEmail,
-        subject: "Test notification",
-        template: "notification.test",
-        data: {
-          title: "Test notification",
-          description:
-            "This is a test email notification. Everything is working!",
-          ctaUrl: "https://lectornaut.com/settings/notifications",
-        },
-      })
-    } else if (channel === "inApp") {
-      await db.collection(`users/${uid}/notifications`).add({
-        type: "notification.test",
-        title: "Test notification",
-        description:
-          "This is a test in-app notification. Everything is working!",
-        url: "/settings/notifications",
-        status: "inbox",
-        read: false,
-        createdAt: FieldValue.serverTimestamp(),
-      })
-    } else if (channel === "native") {
-      // Native notifications are triggered from the client side.
-      // Return success so the client knows it can fire the native notification.
+    const selectedChannel = channel as "email" | "inApp" | "native"
+    if (selectedChannel === "email" && !userEmail) {
+      throw new HttpsError(
+        "failed-precondition",
+        "No email address associated with this account."
+      )
     }
 
-    return { success: true, channel }
+    const result = await sendNotification(
+      {
+        userId: uid,
+        userEmail,
+        type: "notification.test",
+        title: "Test notification",
+        description: `This is a test ${selectedChannel} notification. Everything is working!`,
+        url: "/settings/notifications",
+        emailData: {
+          subject: "Test notification",
+          templateData: {
+            ctaUrl: "https://lectornaut.com/settings/notifications",
+          },
+        },
+      },
+      { onlyChannels: [selectedChannel] }
+    )
+
+    if (result.suppressed) {
+      throw new HttpsError(
+        "failed-precondition",
+        "Notification settings currently prevent delivery on this channel."
+      )
+    }
+    if (!result[selectedChannel] && !result.digest) {
+      throw new HttpsError("internal", "Failed to deliver test notification.")
+    }
+
+    return { success: true, channel, queued: result.digest }
   }
 )
 

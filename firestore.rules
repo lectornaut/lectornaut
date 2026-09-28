@@ -243,6 +243,12 @@ service cloud.firestore {
         allow delete: if false;
       }
 
+      // Server-written feed the desktop app turns into OS notifications.
+      match /nativeNotifications/{notificationId} {
+        allow read: if isSelf(userId);
+        allow write: if false;
+      }
+
       match /layout/{layoutId} {
         allow read: if isSelf(userId)
           && layoutId == "navigation";

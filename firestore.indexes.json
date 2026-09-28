@@ -340,6 +340,12 @@
   ],
   "fieldOverrides": [
     {
+      "collectionGroup": "nativeNotifications",
+      "fieldPath": "expireAt",
+      "ttl": true,
+      "indexes": []
+    },
+    {
       "collectionGroup": "memberships",
       "fieldPath": "teamId",
       "indexes": [
