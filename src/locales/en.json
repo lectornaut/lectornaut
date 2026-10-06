@@ -35,6 +35,8 @@
     "botHistoryHint": "Previous chats about this item",
     "botHistoryEmpty": "No chats about this item yet.",
     "newChat": "New chat",
+    "zenMode": "Zen mode",
+    "exitZenMode": "Exit zen mode",
     "newChatHint": "Start a fresh chat with this item attached",
     "searchChats": "Search chats",
     "searchClear": "Clear search",

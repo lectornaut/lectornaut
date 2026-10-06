@@ -49,9 +49,7 @@ export default defineConfig({
         enabled: true,
         type: "module",
       },
-      pwaAssets: {
-        overrideManifestIcons: true,
-      },
+      pwaAssets: {},
       manifest: {
         name: "Lectornaut",
         short_name: "Lectornaut",

@@ -7,7 +7,11 @@ import {
   IconSparkles,
   IconTrash,
 } from "@/data/icons"
-import { botAgentBounds, botModels } from "@/helpers/defaults"
+import {
+  botAgentBounds,
+  botModels,
+  type BotModelEntry,
+} from "@/helpers/defaults"
 import { emitter } from "@/modules/mitt"
 import { useAuthStore } from "@/stores/authStore"
 import type {
@@ -1351,7 +1355,7 @@ const handleEditorSave = async (): Promise<void> => {
                           draft.action.model =
                             value === '__follow__' || !value
                               ? null
-                              : (value as (typeof botModels)[number]['id'])
+                              : (value as BotModelEntry['id'])
                         }
                       "
                     >

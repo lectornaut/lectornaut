@@ -883,6 +883,8 @@ const expandedCard = ref<number | null>(null)
                           },
                         })
                       "
+                      :x="(d: Data) => d.date"
+                      :y="[(d: Data) => d.desktop, (d: Data) => d.mobile]"
                       :color="[
                         chartConfig.desktop.color,
                         chartConfig.mobile.color,

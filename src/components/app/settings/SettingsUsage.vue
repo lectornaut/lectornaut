@@ -664,6 +664,11 @@ const handleDiscard = (): void => {
                               }
                             )
                           "
+                          :x="(d: UsageRow) => d.date"
+                          :y="[
+                            (d: UsageRow) => d.input,
+                            (d: UsageRow) => d.output,
+                          ]"
                           :color="[
                             chartConfig.input.color,
                             chartConfig.output.color,

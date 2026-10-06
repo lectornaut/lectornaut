@@ -236,6 +236,13 @@ declare module 'vue-router/auto-routes' {
       { nodeId?: ParamValueZeroOrOne<false> },
       | never
     >,
+    '/zen': RouteRecordInfo<
+      '/zen',
+      '/zen',
+      Record<never, never>,
+      Record<never, never>,
+      | never
+    >,
   }
 
   /**
@@ -480,6 +487,14 @@ declare module 'vue-router/auto-routes' {
     'src/pages/write.vue': {
       routes:
         | '/write'
+      views:
+        | never
+      pathParamNames:
+        | never
+    }
+    'src/pages/zen.vue': {
+      routes:
+        | '/zen'
       views:
         | never
       pathParamNames:

@@ -103,8 +103,8 @@ onBeforeUnmount(() => {
 
 <style>
 :root {
-  --xt-bg: var(--color-background);
-  --xt-fg: var(--color-foreground);
+  --xt-bg: var(--background);
+  --xt-fg: var(--foreground);
   --xt-font-size: calc(var(--size) - 3px);
   --xt-font-family: var(--font-mono);
 }
@@ -118,6 +118,16 @@ onBeforeUnmount(() => {
   100% {
     opacity: 0;
   }
+}
+
+.xt > .xt-stdin > :is(input, textarea) {
+  background-color: transparent;
+  opacity: 0;
+}
+
+.xt > .xt-stdin > :is(input, textarea):focus {
+  outline: none;
+  box-shadow: none;
 }
 
 .xt-cursor {

@@ -39,6 +39,12 @@ const runCommand = (command: PaletteCommand) => {
 <template>
   <Dialog v-model:open="openCommand">
     <DialogContent class="bg-secondary min-w-lg p-1" :show-close-button="false">
+      <DialogTitle class="sr-only">{{
+        t("components.global.commandK.tooltip")
+      }}</DialogTitle>
+      <DialogDescription class="sr-only">{{
+        t("components.global.commandK.placeholder")
+      }}</DialogDescription>
       <Command highlight-on-hover class="border">
         <CommandKBridge v-model:query="query" />
         <CommandInput

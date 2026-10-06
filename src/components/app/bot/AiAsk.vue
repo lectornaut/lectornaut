@@ -115,6 +115,9 @@ const popOut = () => {
                 </Button>
               </div>
             </div>
+            <SheetDescription class="sr-only">{{
+              t("pages.start.getInstantAnswersDescription")
+            }}</SheetDescription>
           </SheetHeader>
           <AiChatShell />
         </SheetContent>

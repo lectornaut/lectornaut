@@ -21,7 +21,7 @@ useHotkey("Enter", () => {
     class="before:from-background fixed inset-x-0 bottom-0 z-20 flex flex-col items-center justify-center gap-6 p-4 before:absolute before:inset-0 before:bg-linear-to-t before:backdrop-blur-lg before:[mask:linear-gradient(transparent,black_95%)]"
   >
     <div
-      class="bg-background/5 flex items-center gap-1.5 border p-1.5 shadow-xl backdrop-blur-lg"
+      class="bg-background/5 flex items-center gap-1.5 rounded-lg border p-1.5 shadow-xl backdrop-blur-lg"
     >
       <TooltipProvider>
         <Tooltip>

@@ -1018,7 +1018,7 @@ dependencies = [
  "libc",
  "option-ext",
  "redox_users 0.5.3",
- "windows-sys 0.61.2",
+ "windows-sys 0.60.2",
 ]
 
 [[package]]
@@ -1243,7 +1243,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "39cab71617ae0d63f51a36d69f866391735b51691dbda63cf6f96d042b63efeb"
 dependencies = [
  "libc",
- "windows-sys 0.61.2",
+ "windows-sys 0.59.0",
 ]
 
 [[package]]
@@ -2012,7 +2012,7 @@ dependencies = [
  "tokio",
  "tower-service",
  "tracing",
- "windows-registry 0.6.1",
+ "windows-registry",
 ]
 
 [[package]]
@@ -2642,7 +2642,7 @@ dependencies = [
  "png 0.18.1",
  "serde",
  "thiserror 2.0.21",
- "windows-sys 0.61.2",
+ "windows-sys 0.60.2",
 ]
 
 [[package]]
@@ -3093,7 +3093,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7d8fae84b431384b68627d0f9b3b1245fcf9f46f6c0e3dc902e9dce64edd1967"
 dependencies = [
  "libc",
- "windows-sys 0.61.2",
+ "windows-sys 0.45.0",
 ]
 
 [[package]]
@@ -3491,9 +3491,9 @@ dependencies = [
 
 [[package]]
 name = "quinn-proto"
-version = "0.11.18"
+version = "0.11.19"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a9746dbde176634f4f2f1faf2404e30a31b2bc1e9cafb5329c95d8177a18c9fc"
+checksum = "0e750cca55fe4f0439a15d0bb529da9651e79993e8e72c61a899a36d462befbe"
 dependencies = [
  "bytes",
  "getrandom 0.4.3",
@@ -3513,16 +3513,16 @@ dependencies = [
 
 [[package]]
 name = "quinn-udp"
-version = "0.5.15"
+version = "0.5.16"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "35a133f956daabe89a61a685c2649f13d82d5aa4bd5d12d1277e1072a21c0694"
+checksum = "af66907df18639dcf4db56ca65490cabc4b27a97dbadd96f2926cca73298f016"
 dependencies = [
  "cfg_aliases",
  "libc",
  "once_cell",
  "socket2",
  "tracing",
- "windows-sys 0.61.2",
+ "windows-sys 0.59.0",
 ]
 
 [[package]]
@@ -3841,7 +3841,7 @@ dependencies = [
  "errno",
  "libc",
  "linux-raw-sys",
- "windows-sys 0.61.2",
+ "windows-sys 0.59.0",
 ]
 
 [[package]]
@@ -3898,7 +3898,7 @@ dependencies = [
  "security-framework",
  "security-framework-sys",
  "webpki-root-certs",
- "windows-sys 0.61.2",
+ "windows-sys 0.59.0",
 ]
 
 [[package]]
@@ -4323,7 +4323,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c3d1e2c7f27f8d4cb10542a02c49005dbd6e93095799d6f3be745fae9f8fedd4"
 dependencies = [
  "libc",
- "windows-sys 0.61.2",
+ "windows-sys 0.60.2",
 ]
 
 [[package]]
@@ -4735,9 +4735,9 @@ dependencies = [
 
 [[package]]
 name = "tauri-plugin-autostart"
-version = "3.0.0-alpha.1"
+version = "3.0.0-alpha.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "fa2c5053fe249d83bb5102d3cc00580264dc3ba52fd19878c9887e8ae5d624f4"
+checksum = "de99635faca421cbe5a351211b294f28f82ccb58f9af5832697ee82dbf384211"
 dependencies = [
  "auto-launch",
  "serde",
@@ -4749,9 +4749,9 @@ dependencies = [
 
 [[package]]
 name = "tauri-plugin-clipboard-manager"
-version = "3.0.0-alpha.1"
+version = "3.0.0-alpha.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "48e390b80cfad0a1fb810cc44ab9e9974fca74e9abb38b3f3edfc29568d4815e"
+checksum = "f49f7ff187bfff0f4dcbf28694aba032b64709d46b2505c0aad02838124c7947"
 dependencies = [
  "arboard",
  "log",
@@ -4764,9 +4764,9 @@ dependencies = [
 
 [[package]]
 name = "tauri-plugin-deep-link"
-version = "3.0.0-alpha.1"
+version = "3.0.0-alpha.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "06850b99d287a6f03170feca12810effe245aa4dec2827c18cca8876597882b3"
+checksum = "a440dd9591a0f6a0dc9ed41cefb3d011e99c272c8e5a6b46e8075b19d2933c35"
 dependencies = [
  "dunce",
  "plist",
@@ -4779,15 +4779,15 @@ dependencies = [
  "thiserror 2.0.21",
  "tracing",
  "url",
- "windows-registry 0.5.3",
+ "windows-registry",
  "windows-result 0.3.4",
 ]
 
 [[package]]
 name = "tauri-plugin-dialog"
-version = "3.0.0-alpha.1"
+version = "3.0.0-alpha.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c83b450aab99762914964c402b0bcb20529c910568ca920f9fd3924221bd6271"
+checksum = "b2e3971a4682128c4350c93778df86ef5d7b815ba9a1b6e17ddc9c68a3dd423b"
 dependencies = [
  "log",
  "raw-window-handle",
@@ -4803,9 +4803,9 @@ dependencies = [
 
 [[package]]
 name = "tauri-plugin-fs"
-version = "3.0.0-alpha.1"
+version = "3.0.0-alpha.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d34bf56dca84026ab06426da304a2c5dd862d3a6c0e52c7a139a5bb6cbabb409"
+checksum = "0a0a22d1a3c95618070afa2e543b6d48d41c6390bed6b5b9df12ef78e34a07fc"
 dependencies = [
  "anyhow",
  "dunce",
@@ -4825,9 +4825,9 @@ dependencies = [
 
 [[package]]
 name = "tauri-plugin-global-shortcut"
-version = "3.0.0-alpha.1"
+version = "3.0.0-alpha.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b281b04a7d835de9e33a95910f4d4b9093d80d0647f78cdea99c343ba1a1a0b8"
+checksum = "c06c638fca0049baa0b866318a38c27ca8dff2e1772b016576fef1f7c48699e0"
 dependencies = [
  "global-hotkey",
  "log",
@@ -4840,9 +4840,9 @@ dependencies = [
 
 [[package]]
 name = "tauri-plugin-http"
-version = "3.0.0-alpha.1"
+version = "3.0.0-alpha.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "fad9251d59623f27214697b25f121d7699ff38e0210f54d393aa70bc5e0b1257"
+checksum = "a36d2872d38ca15390604ef0ffcf35afd63e34246e58606a48350c30b162f71a"
 dependencies = [
  "bytes",
  "cookie_store",
@@ -4864,9 +4864,9 @@ dependencies = [
 
 [[package]]
 name = "tauri-plugin-log"
-version = "3.0.0-alpha.1"
+version = "3.0.0-alpha.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "890a8113418abe89b030216d76775d3da8a18149dbd7aadc93923ebe38de73ab"
+checksum = "401ac6b1bd4e8e925ec8230cc946a28523e4e2aa54171cadc9579ccfca4f910d"
 dependencies = [
  "android_logger",
  "fern",
@@ -4885,9 +4885,9 @@ dependencies = [
 
 [[package]]
 name = "tauri-plugin-notification"
-version = "3.0.0-alpha.1"
+version = "3.0.0-alpha.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "01ae3078eb6894af96337eb9e67f23a8c30007f84011db1b8e26ada7bc09284e"
+checksum = "6b4e7437c1789a16b3f6a39d20c1982c2955613181476160542a36bf3dd97103"
 dependencies = [
  "log",
  "notify-rust",
@@ -4904,9 +4904,9 @@ dependencies = [
 
 [[package]]
 name = "tauri-plugin-opener"
-version = "3.0.0-alpha.1"
+version = "3.0.0-alpha.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d3668bf643daec568093d6def82eb1e148dd320baa6a8639171ca0f36a4ebf63"
+checksum = "b6f813f2919dbc15d076143c2c4da163da83bb8c415994107e235920a304f9cf"
 dependencies = [
  "dunce",
  "glob",
@@ -4926,9 +4926,9 @@ dependencies = [
 
 [[package]]
 name = "tauri-plugin-os"
-version = "3.0.0-alpha.1"
+version = "3.0.0-alpha.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "afb7c8adcf2012c1ba6b3d3669b317a45809d3c4e93c1b853019e4a9fbf9ecc7"
+checksum = "2f007530874738d179d6305c08133e3db44900f230933ece5b1ce17241f5dbc2"
 dependencies = [
  "gethostname",
  "log",
@@ -4944,9 +4944,9 @@ dependencies = [
 
 [[package]]
 name = "tauri-plugin-positioner"
-version = "3.0.0-alpha.1"
+version = "3.0.0-alpha.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7dab3020036499b67a2c9fddc4df57e7082fe41547f13b66622756a417634ddb"
+checksum = "eec0f139fb273c797aeb8c30299c808bb2cee9b680535396e92443645b96e93d"
 dependencies = [
  "log",
  "serde",
@@ -4959,9 +4959,9 @@ dependencies = [
 
 [[package]]
 name = "tauri-plugin-process"
-version = "3.0.0-alpha.1"
+version = "3.0.0-alpha.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "53c12b1cb1c781e91259f523968c1a23fc276012b16f17560d81dfe5fc7a12eb"
+checksum = "bc39b6e8140b7e34ef7ba14b14ba1fccb79533bc67cbc6a99a27f89b7ab74bf5"
 dependencies = [
  "tauri",
  "tauri-plugin",
@@ -4969,13 +4969,12 @@ dependencies = [
 
 [[package]]
 name = "tauri-plugin-shell"
-version = "3.0.0-alpha.1"
+version = "3.0.0-alpha.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ce5bbb28f7aeb2c5263c9dcb58407bfedc5bc497af792d043466a163994ea849"
+checksum = "7b91c25f0954d844c2edec4cb5268eca66744be8c2ca3145a1417199a0d49e7c"
 dependencies = [
  "encoding_rs",
  "log",
- "open",
  "os_pipe",
  "regex",
  "schemars 1.2.2",
@@ -4990,9 +4989,9 @@ dependencies = [
 
 [[package]]
 name = "tauri-plugin-single-instance"
-version = "3.0.0-alpha.1"
+version = "3.0.0-alpha.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d81b6dd923078e85d5cfdabf1f4ac67b272f56daf342ee8547956a4487e0a01b"
+checksum = "61d053f4d1ed9a7674411b1fd478e609e2cde079d70c1a440504595d8db25433"
 dependencies = [
  "serde",
  "serde_json",
@@ -5006,9 +5005,9 @@ dependencies = [
 
 [[package]]
 name = "tauri-plugin-updater"
-version = "3.0.0-alpha.1"
+version = "3.0.0-alpha.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0ba0b95e3e2c17d5d92fe4bb88104f8b00edd489027925b03c9ebb3b42377ff8"
+checksum = "d1b0546247a57bc47e5c77ca7770f28d6782df506a2bdaa4ae2e7a9df0f2773c"
 dependencies = [
  "base64 0.22.1",
  "dirs 6.0.0",
@@ -5039,9 +5038,9 @@ dependencies = [
 
 [[package]]
 name = "tauri-plugin-window-state"
-version = "3.0.0-alpha.1"
+version = "3.0.0-alpha.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0bd2c91984b8049241fd6ffe43319977d105e7fe7d52beb0a83d52b884339ae4"
+checksum = "3b5d84fd244969b9f6c6a48de65cdcc4f9c82a055e00e7ff0c0e99ffb6a63d0a"
 dependencies = [
  "bitflags 2.13.2",
  "log",
@@ -5168,10 +5167,10 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "32497e9a4c7b38532efcdebeef879707aa9f794296a4f0244f6f69e9bc8574bd"
 dependencies = [
  "fastrand",
- "getrandom 0.4.3",
+ "getrandom 0.3.4",
  "once_cell",
  "rustix",
- "windows-sys 0.61.2",
+ "windows-sys 0.59.0",
 ]
 
 [[package]]
@@ -5350,9 +5349,9 @@ dependencies = [
 
 [[package]]
 name = "tokio-rustls"
-version = "0.26.5"
+version = "0.26.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b0c85f2c3ef0b1cd58b36682f4b17aaa995f0e5db534d85692b4903abce21f67"
+checksum = "c9cc2678c2cdd569ef8215e2afd7954ada2ae20b4fdd2c5fe6139a3b02d105db"
 dependencies = [
  "rustls",
  "tokio",
@@ -5562,7 +5561,7 @@ dependencies = [
  "png 0.18.1",
  "serde",
  "thiserror 2.0.21",
- "windows-sys 0.61.2",
+ "windows-sys 0.60.2",
 ]
 
 [[package]]
@@ -5602,7 +5601,7 @@ checksum = "f2f6fb2847f6742cd76af783a2a2c49e9375d0a111c7bef6f71cd9e738c72d6e"
 dependencies = [
  "memoffset",
  "tempfile",
- "windows-sys 0.61.2",
+ "windows-sys 0.60.2",
 ]
 
 [[package]]
@@ -6080,7 +6079,7 @@ version = "0.1.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c2a7b1c03c876122aa43f3020e6c3c3ee5c05081c9a00739faf7503aeba10d22"
 dependencies = [
- "windows-sys 0.61.2",
+ "windows-sys 0.59.0",
 ]
 
 [[package]]
@@ -6258,17 +6257,6 @@ dependencies = [
  "windows-link 0.1.3",
  "windows-result 0.3.4",
  "windows-strings 0.4.2",
-]
-
-[[package]]
-name = "windows-registry"
-version = "0.6.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "02752bf7fbdcce7f2a27a742f798510f3e5ad88dbe84871e5168e2120c3d5720"
-dependencies = [
- "windows-link 0.2.1",
- "windows-result 0.4.1",
- "windows-strings 0.5.1",
 ]
 
 [[package]]
@@ -6610,9 +6598,9 @@ checksum = "1ebf944e87a7c253233ad6766e082e3cd714b5d03812acc24c318f549614536e"
 
 [[package]]
 name = "wl-clipboard-rs"
-version = "0.9.3"
+version = "0.9.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e9651471a32e87d96ef3a127715382b2d11cc7c8bb9822ded8a7cc94072eb0a3"
+checksum = "4d7888ccd4896447b2d14d3a9350a85df2aeb6f181e2e7a31349d104ac46cac1"
 dependencies = [
  "libc",
  "log",
@@ -6743,9 +6731,9 @@ dependencies = [
 
 [[package]]
 name = "yoke-derive"
-version = "0.8.3"
+version = "0.8.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "33811428bee40dbceb6d545e95754741d17a6aef9a4849f0fd62e2ba4f412a78"
+checksum = "ec8ebde2db3681e8c9980cc27822030e68752690ddfa9473e739aeb4dbde6d71"
 dependencies = [
  "proc-macro2",
  "quote",

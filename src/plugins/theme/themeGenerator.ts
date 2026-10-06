@@ -10,6 +10,7 @@ import {
   buildBaseTokens,
   paletteColor,
   pickContrastVar,
+  THEME_COLOR_ALPHA_TOKENS,
   type BaseSourceToken,
 } from "../../utils/theme/tokens.ts"
 
@@ -46,6 +47,41 @@ const DARK_ACCENT_SHADES = {
 } as const
 
 type ThemeTokens = Record<string, string>
+
+export const BACKGROUND_ALPHA_DEFAULTS = {
+  "--bg-alpha": "50%",
+  "--card-alpha": "50%",
+  "--popover-alpha": "100%",
+  "--secondary-alpha": "100%",
+  "--muted-alpha": "100%",
+  "--accent-alpha": "100%",
+  "--sidebar-alpha": "50%",
+  "--sidebar-primary-alpha": "100%",
+  "--sidebar-accent-alpha": "100%",
+  "--primary-alpha": "100%",
+  "--destructive-alpha": "100%",
+  "--foreground-alpha": "100%",
+  "--card-foreground-alpha": "100%",
+  "--popover-foreground-alpha": "100%",
+  "--secondary-foreground-alpha": "100%",
+  "--muted-foreground-alpha": "100%",
+  "--accent-foreground-alpha": "100%",
+  "--border-alpha": "100%",
+  "--input-alpha": "100%",
+  "--sidebar-foreground-alpha": "100%",
+  "--sidebar-primary-foreground-alpha": "100%",
+  "--sidebar-accent-foreground-alpha": "100%",
+  "--sidebar-border-alpha": "100%",
+  "--primary-foreground-alpha": "100%",
+  "--destructive-foreground-alpha": "100%",
+  "--ring-alpha": "100%",
+  "--sidebar-ring-alpha": "100%",
+  "--chart-1-alpha": "100%",
+  "--chart-2-alpha": "100%",
+  "--chart-3-alpha": "100%",
+  "--chart-4-alpha": "100%",
+  "--chart-5-alpha": "100%",
+} satisfies ThemeTokens
 
 // Per-source-token palette shades for the two base renderers. Both expand
 // through the shared `buildBaseTokens` graph, so only the source values (and,
@@ -254,6 +290,7 @@ function buildRootFallbackTokens(): ThemeTokens {
     "--flex": FONT_TOKENS.sans,
     "--size": SIZE_TOKENS.base,
     "color-scheme": "light",
+    ...BACKGROUND_ALPHA_DEFAULTS,
     ...buildPresetBaseTokens(ANCHOR_FAMILY, LIGHT_MODE),
     ...buildAccentTokens(ANCHOR_FAMILY, LIGHT_MODE),
   }
@@ -277,7 +314,27 @@ function serializeBlock(selector: string, declarations: ThemeTokens) {
       lines.push("")
     }
 
-    lines.push(`  ${name}: ${value};`)
+    const alias = /^var\((--[\w-]+)\)$/.exec(value)?.[1]
+    const color =
+      alias &&
+      (THEME_COLOR_ALPHA_TOKENS.has(name) ||
+        THEME_COLOR_ALPHA_TOKENS.has(alias))
+        ? (declarations[alias] ?? value)
+        : value
+    const serializedValue = THEME_COLOR_ALPHA_TOKENS.has(name)
+      ? `--alpha(${color} / var(${THEME_COLOR_ALPHA_TOKENS.get(name)}))`
+      : color
+
+    const declaration = `  ${name}: ${serializedValue};`
+    if (THEME_COLOR_ALPHA_TOKENS.has(name) && declaration.length + 2 > 80) {
+      lines.push(
+        `  ${name}: --alpha(`,
+        `    ${color} / var(${THEME_COLOR_ALPHA_TOKENS.get(name)})`,
+        "  );"
+      )
+    } else {
+      lines.push(declaration)
+    }
     previousWasCustomProperty = isCustomProperty
   }
 

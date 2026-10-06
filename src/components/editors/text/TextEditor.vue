@@ -1792,16 +1792,16 @@ const scrollToTableOfContentsItem = (item: TableOfContentDataItem) => {
         > span {
           width: 1rem;
           height: 1rem;
-          border: 1px solid var(--color-input);
+          border: 1px solid var(--input);
           border-radius: 4px;
           box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
-          color: var(--color-primary-foreground);
+          color: var(--primary-foreground);
           transition: box-shadow 0.15s ease;
 
           :where(.dark, [data-theme="dark"]) & {
             background-color: color-mix(
               in oklab,
-              var(--color-input) 30%,
+              var(--input) 30%,
               transparent
             );
           }
@@ -1819,14 +1819,14 @@ const scrollToTableOfContentsItem = (item: TableOfContentDataItem) => {
         }
 
         input[type="checkbox"]:focus-visible + span {
-          border-color: var(--color-ring);
+          border-color: var(--ring);
           box-shadow: 0 0 0 3px
-            color-mix(in oklab, var(--color-ring) 50%, transparent);
+            color-mix(in oklab, var(--ring) 50%, transparent);
         }
 
         input[type="checkbox"]:checked + span {
-          border-color: var(--color-primary);
-          background-color: var(--color-primary);
+          border-color: var(--primary);
+          background-color: var(--primary);
 
           &::after {
             transform: scale(1);
@@ -1848,7 +1848,7 @@ const scrollToTableOfContentsItem = (item: TableOfContentDataItem) => {
       }
 
       &[data-checked="true"] > div {
-        color: var(--color-muted-foreground);
+        color: var(--muted-foreground);
         text-decoration: line-through;
         text-decoration-thickness: 1px;
       }
@@ -1870,7 +1870,7 @@ const scrollToTableOfContentsItem = (item: TableOfContentDataItem) => {
     display: flex;
     gap: 0.25rem;
     margin: 1.25rem 0;
-    border: 1px solid var(--color-border);
+    border: 1px solid var(--border);
     border-radius: 0.5rem;
     padding: 0.5rem;
 
@@ -1892,7 +1892,7 @@ const scrollToTableOfContentsItem = (item: TableOfContentDataItem) => {
       width: 1.25rem;
 
       &:hover {
-        background-color: var(--color-muted);
+        background-color: var(--muted);
       }
 
       &::before {
@@ -1920,7 +1920,7 @@ const scrollToTableOfContentsItem = (item: TableOfContentDataItem) => {
 
   th,
   td {
-    border: 1px solid var(--color-border);
+    border: 1px solid var(--border);
     box-sizing: border-box;
     min-width: 1em;
     padding: 0.5rem 0.625rem;
@@ -1929,7 +1929,7 @@ const scrollToTableOfContentsItem = (item: TableOfContentDataItem) => {
   }
 
   th {
-    background: color-mix(in oklab, var(--color-muted) 80%, transparent);
+    background: color-mix(in oklab, var(--muted) 80%, transparent);
     font-weight: 600;
     text-align: left;
   }
@@ -1940,7 +1940,7 @@ const scrollToTableOfContentsItem = (item: TableOfContentDataItem) => {
   }
 
   .selectedCell::after {
-    background: color-mix(in oklab, var(--color-accent) 24%, transparent);
+    background: color-mix(in oklab, var(--accent) 24%, transparent);
     content: "";
     inset: 0;
     pointer-events: none;
@@ -1949,7 +1949,7 @@ const scrollToTableOfContentsItem = (item: TableOfContentDataItem) => {
   }
 
   .column-resize-handle {
-    background: var(--color-ring);
+    background: var(--ring);
     bottom: -2px;
     pointer-events: none;
     position: absolute;
@@ -1959,9 +1959,9 @@ const scrollToTableOfContentsItem = (item: TableOfContentDataItem) => {
   }
 
   pre {
-    background: color-mix(in oklab, var(--color-muted) 70%, transparent);
+    background: color-mix(in oklab, var(--muted) 70%, transparent);
     border-radius: 0.5rem;
-    color: var(--color-foreground);
+    color: var(--foreground);
     font-family: var(--font-mono);
     margin: 1rem 0;
     overflow-x: auto;
@@ -1976,7 +1976,7 @@ const scrollToTableOfContentsItem = (item: TableOfContentDataItem) => {
   }
 
   code {
-    background: color-mix(in oklab, var(--color-muted) 70%, transparent);
+    background: color-mix(in oklab, var(--muted) 70%, transparent);
     border-radius: 0.25rem;
     font-size: 0.85em;
     padding: 0.1rem 0.35rem;
@@ -1988,7 +1988,7 @@ const scrollToTableOfContentsItem = (item: TableOfContentDataItem) => {
   }
 
   .editor-image-node {
-    border: 1px solid var(--color-border);
+    border: 1px solid var(--border);
     border-radius: 0.5rem;
     margin: 1rem 0;
     max-width: 100%;
@@ -1997,7 +1997,7 @@ const scrollToTableOfContentsItem = (item: TableOfContentDataItem) => {
   /* Selection extension decoration: keeps the selection visible while focus
      is in the bubble menu or a dialog (native ::selection clears on blur). */
   .selection {
-    background: color-mix(in oklab, var(--color-primary) 18%, transparent);
+    background: color-mix(in oklab, var(--primary) 18%, transparent);
   }
 
   /* Deep-link landing offset for UniqueID hash targets. */

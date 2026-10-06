@@ -6,6 +6,7 @@ import {
   DARK_SURFACE_COLOR,
   LIGHT_SURFACE_COLOR,
   pickContrastVar,
+  THEME_COLOR_ALPHA_TOKENS,
   type BaseSourceToken,
 } from "@/utils/theme/tokens"
 
@@ -51,7 +52,7 @@ export function buildCustomAccentTokens(
   const destructive = mix(primary, surfaceTarget, ACCENT_STEP)
   const ring = mix(primary, contrastTarget, ACCENT_STEP)
 
-  return {
+  return applyThemeAlpha({
     "--primary": primary,
     "--primary-foreground": pickContrastVar(primary, LIGHT_FG_BIAS),
     "--destructive": destructive,
@@ -63,7 +64,7 @@ export function buildCustomAccentTokens(
     "--chart-3": mix(primary, contrastTarget, CHART_SPREAD[1]),
     "--chart-4": mix(primary, contrastTarget, CHART_SPREAD[2]),
     "--chart-5": mix(primary, contrastTarget, CHART_SPREAD[3]),
-  }
+  })
 }
 
 // Per-source-token blend recipe: how far to mix the user's color toward the
@@ -115,8 +116,24 @@ export function buildCustomBaseTokens(
     )
   }
 
-  return buildBaseTokens(
-    (token) => sources[token],
-    (target) => sources[target]
+  return applyThemeAlpha(
+    buildBaseTokens(
+      (token) => sources[token],
+      (target) => sources[target]
+    )
+  )
+}
+
+function applyThemeAlpha(tokens: Record<string, string>) {
+  return Object.fromEntries(
+    Object.entries(tokens).map(([name, color]) => {
+      const alpha = THEME_COLOR_ALPHA_TOKENS.get(name)
+      return [
+        name,
+        alpha
+          ? `color-mix(in oklab, ${color} var(${alpha}), transparent)`
+          : color,
+      ]
+    })
   )
 }

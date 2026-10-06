@@ -192,6 +192,12 @@ const openShortcutsDemo = () => {
                 </Button>
               </DialogTrigger>
               <DialogContent class="bg-secondary p-1.5">
+                <DialogTitle class="sr-only">{{
+                  t("pages.welcome.onboarding.appFlow.sampleCommandsHeading")
+                }}</DialogTitle>
+                <DialogDescription class="sr-only">{{
+                  t("pages.welcome.onboarding.appFlow.commandPlaceholder")
+                }}</DialogDescription>
                 <Command class="border">
                   <CommandInput
                     :placeholder="

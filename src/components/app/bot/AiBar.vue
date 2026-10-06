@@ -3,6 +3,7 @@ import { useBotSessionActions } from "@/composables/useBotSessionActions"
 import { usePopout } from "@/composables/usePopout"
 import {
   IconArchive,
+  IconLeaf,
   IconPencil,
   IconPinOff,
   IconPlus,
@@ -132,6 +133,21 @@ const submitDelete = async () => {
         class="no-scrollbar flex min-w-0 shrink-0 items-center justify-end gap-2 overflow-x-auto px-2 pb-2"
       >
         <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger as-child>
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                class="mr-auto shrink-0"
+                as-child
+              >
+                <RouterLink to="/zen" :aria-label="t('ai.zenMode')">
+                  <IconLeaf />
+                </RouterLink>
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>{{ t("ai.zenMode") }}</TooltipContent>
+          </Tooltip>
           <Tooltip v-for="session in pinnedSessions" :key="session.id">
             <ContextMenu>
               <ContextMenuTrigger as-child>

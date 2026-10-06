@@ -25,6 +25,9 @@ emitter.on("Dialog.Changelog.Open", (id) => {
     >
       <SheetHeader>
         <SheetTitle>{{ t("pages.changelog.title") }}</SheetTitle>
+        <SheetDescription class="sr-only">{{
+          t("pages.changelog.subtitle")
+        }}</SheetDescription>
       </SheetHeader>
       <ScrollContainer>
         <div class="flex grow flex-col px-4">

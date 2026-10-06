@@ -359,7 +359,7 @@ const closeTab = (id: string) => {
         </TooltipTrigger>
         <TooltipContent side="right" class="p-1!">
           <div class="flex flex-col gap-1">
-            <div class="bg-accent/5 flex flex-col gap-2 p-2">
+            <div class="bg-accent/5 flex flex-col gap-2 rounded-lg p-2">
               <span class="flex items-center gap-2">
                 <IconHand /> {{ t("tooltips.dragToResize") }}
               </span>
@@ -368,7 +368,7 @@ const closeTab = (id: string) => {
                 {{ t("tooltips.doubleClickToggle") }}
               </span>
             </div>
-            <div class="bg-accent/5 flex flex-col gap-2 p-2">
+            <div class="bg-accent/5 flex flex-col gap-2 rounded-lg p-2">
               <span class="flex items-center gap-2">
                 <IconArrowRight />
                 {{ t("tooltips.rightArrowExpand") }}
@@ -456,7 +456,9 @@ const closeTab = (id: string) => {
                   </TooltipTrigger>
                   <TooltipContent side="right" class="p-1!">
                     <div class="flex flex-col gap-1">
-                      <div class="bg-accent/5 flex flex-col gap-2 p-2">
+                      <div
+                        class="bg-accent/5 flex flex-col gap-2 rounded-lg p-2"
+                      >
                         <span class="flex items-center gap-2">
                           <IconHand /> {{ t("tooltips.dragToResize") }}
                         </span>
@@ -465,7 +467,9 @@ const closeTab = (id: string) => {
                           {{ t("tooltips.doubleClickToggle") }}
                         </span>
                       </div>
-                      <div class="bg-accent/5 flex flex-col gap-2 p-2">
+                      <div
+                        class="bg-accent/5 flex flex-col gap-2 rounded-lg p-2"
+                      >
                         <span class="flex items-center gap-2">
                           <IconArrowRight />
                           {{ t("tooltips.rightArrowExpand") }}
@@ -557,7 +561,9 @@ const closeTab = (id: string) => {
                       </TooltipTrigger>
                       <TooltipContent class="p-1!">
                         <div class="flex flex-col gap-1">
-                          <div class="bg-accent/5 flex flex-col gap-2 p-2">
+                          <div
+                            class="bg-accent/5 flex flex-col gap-2 rounded-lg p-2"
+                          >
                             <span class="flex items-center gap-2">
                               <IconHand /> {{ t("tooltips.dragToResize") }}
                             </span>
@@ -566,7 +572,9 @@ const closeTab = (id: string) => {
                               {{ t("tooltips.doubleClickToggle") }}
                             </span>
                           </div>
-                          <div class="bg-accent/5 flex flex-col gap-2 p-2">
+                          <div
+                            class="bg-accent/5 flex flex-col gap-2 rounded-lg p-2"
+                          >
                             <span class="flex items-center gap-2">
                               <IconArrowUp />
                               {{ t("tooltips.upArrowExpand") }}
@@ -657,7 +665,7 @@ const closeTab = (id: string) => {
                                     </TabsTrigger>
                                   </TabsList>
                                   <div
-                                    class="bg-background sticky right-0 z-30 flex shrink-0 items-center"
+                                    class="sticky right-0 z-30 flex shrink-0 items-center"
                                   >
                                     <TooltipProvider>
                                       <Tooltip>
@@ -805,7 +813,9 @@ const closeTab = (id: string) => {
                   </TooltipTrigger>
                   <TooltipContent side="left" class="p-1!">
                     <div class="flex flex-col gap-1">
-                      <div class="bg-accent/5 flex flex-col gap-2 p-2">
+                      <div
+                        class="bg-accent/5 flex flex-col gap-2 rounded-lg p-2"
+                      >
                         <span class="flex items-center gap-2">
                           <IconHand /> {{ t("tooltips.dragToResize") }}
                         </span>
@@ -814,7 +824,9 @@ const closeTab = (id: string) => {
                           {{ t("tooltips.doubleClickToggle") }}
                         </span>
                       </div>
-                      <div class="bg-accent/5 flex flex-col gap-2 p-2">
+                      <div
+                        class="bg-accent/5 flex flex-col gap-2 rounded-lg p-2"
+                      >
                         <span class="flex items-center gap-2">
                           <IconArrowLeft />
                           {{ t("tooltips.leftArrowExpand") }}
@@ -904,7 +916,7 @@ const closeTab = (id: string) => {
                               height: `${observedSize.height}px`,
                             }
                       "
-                      class="bg-background pointer-events-auto absolute flex min-w-64 flex-col overflow-clip rounded-3xl border will-change-transform"
+                      class="bg-background pointer-events-auto absolute flex min-w-64 flex-col overflow-clip rounded-3xl border backdrop-blur-lg will-change-transform"
                       :class="
                         isPoppedOutMinimized
                           ? 'border-foreground ring-1'

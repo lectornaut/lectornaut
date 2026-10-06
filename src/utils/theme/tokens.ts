@@ -114,6 +114,20 @@ export const BASE_TOKEN_NAMES = BASE_TOKEN_GRAPH.map(
   (entry) => `--${entry.token}`
 )
 
+export const BACKGROUND_TOKENS = new Map([
+  ["--background", "--bg-alpha"],
+  ["--card", "--card-alpha"],
+  ["--popover", "--popover-alpha"],
+  ["--secondary", "--secondary-alpha"],
+  ["--muted", "--muted-alpha"],
+  ["--accent", "--accent-alpha"],
+  ["--sidebar", "--sidebar-alpha"],
+  ["--sidebar-primary", "--sidebar-primary-alpha"],
+  ["--sidebar-accent", "--sidebar-accent-alpha"],
+  ["--primary", "--primary-alpha"],
+  ["--destructive", "--destructive-alpha"],
+])
+
 // The 11 accent tokens, in emission order. Accents don't form a clean
 // source/alias graph (presets pick discrete shades, custom blends derived
 // steps), so this is just the shared name list for the runtime clear-list.
@@ -130,6 +144,13 @@ export const ACCENT_TOKEN_NAMES = [
   "--chart-4",
   "--chart-5",
 ] as const
+
+export const THEME_COLOR_ALPHA_TOKENS = new Map(
+  [...BASE_TOKEN_NAMES, ...ACCENT_TOKEN_NAMES].map((name) => [
+    name,
+    BACKGROUND_TOKENS.get(name) ?? `${name}-alpha`,
+  ])
+)
 
 // Expand the base graph into a full token record. `source(token)` supplies the
 // value for source tokens; `alias(target)` supplies the value an alias takes —
