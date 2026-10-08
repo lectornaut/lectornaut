@@ -21,7 +21,7 @@ dotenvy = "0.15"
 # - macos-private-api: Required for advanced transparency and vibrancy effects on macOS.
 # - tray-icon: Enables system tray functionality.
 # - image-png: Required for processing PNG icons (like the tray icon).
-tauri = { version = "=3.0.0-alpha.2", features = ["protocol-asset", "macos-private-api", "tray-icon", "image-png"] }
+tauri = { version = "=3.0.0-alpha.2", features = ["protocol-asset", "tray-icon", "image-png"] }
 # https://crates.io/crates/tauri-runtime-wry/versions
 # tauri v3 selects the webview runtime explicitly (Builder::runtime); runtime-only features live here.
 tauri-runtime-wry = { version = "=3.0.0-alpha.2", features = ["macos-private-api"] }

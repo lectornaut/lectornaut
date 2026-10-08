@@ -39,7 +39,10 @@ defineExpose({ openEdit: () => (editOpen.value = true) })
 
 <template>
   <SidebarGroup>
-    <SidebarGroupContent id="tour-primary-navigation">
+    <SidebarGroupContent
+      id="tour-primary-navigation"
+      class="group-data-[collapsible=icon]:w-8"
+    >
       <SidebarMenu ref="el">
         <template v-if="isLoading">
           <SidebarMenuItem v-for="n in 5" :key="n">

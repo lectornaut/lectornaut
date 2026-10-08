@@ -1706,12 +1706,12 @@
         "description": "Adjust theme, colors, fonts, and display preferences."
       },
       "translucentSidebar": {
-        "label": "Translucent sidebar",
-        "description": "Let the window background show through the sidebar instead of a solid surface."
+        "label": "Disable translucency",
+        "description": "Use a solid sidebar background. Leave off for the default translucent appearance."
       },
       "reducedMotion": {
-        "label": "Reduced motion",
-        "description": "Minimize animations and transitions across the app."
+        "label": "Reduce motion",
+        "description": "Minimize animations and transitions across the app. Leave off for default animations."
       }
     },
     "workflows": {

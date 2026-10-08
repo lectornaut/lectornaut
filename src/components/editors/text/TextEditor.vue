@@ -1248,7 +1248,7 @@ const scrollToTableOfContentsItem = (item: TableOfContentDataItem) => {
     }"
   >
     <div
-      class="bg-background/50 flex items-center gap-1 overflow-x-auto border p-1 shadow-xl backdrop-blur-lg"
+      class="bg-background/50 flex items-center gap-1 overflow-x-auto border p-1 shadow-xl backdrop-blur-2xl"
     >
       <DropdownMenu>
         <DropdownMenuTrigger as-child>

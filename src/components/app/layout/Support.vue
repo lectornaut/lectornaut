@@ -14,7 +14,6 @@ import {
   IconMessageCircle,
 } from "@/data/icons"
 import { emitter } from "@/modules/mitt"
-import { state } from "@/modules/theme"
 import { setCurrentUserOnboardingState } from "@/queries/userSettings"
 import confetti from "canvas-confetti"
 import { driver } from "driver.js"
@@ -63,10 +62,10 @@ const productTour = driver({
   onDestroyed: (_element, _step, { state, config }) => {
     if (state.activeIndex === (config.steps?.length ?? 0) - 1) handleClick()
   },
-  overlayColor: state.value === "light" ? "black" : "white",
+  overlayColor: "var(--foreground)",
   smoothScroll: true,
   stagePadding: 4,
-  stageRadius: 12,
+  stageRadius: 32,
   popoverClass: "driverjs-theme",
   popoverOffset: 8,
   showProgress: true,
@@ -93,7 +92,7 @@ const productTour = driver({
       },
     },
     {
-      element: "#tour-workspace-switcher",
+      element: '#tour-workspace-switcher [data-sidebar="menu-button"]',
       popover: {
         title: "Switch workspaces",
         description:
@@ -123,7 +122,7 @@ const productTour = driver({
       },
     },
     {
-      element: "#tour-team-switcher",
+      element: '#tour-team-switcher [data-sidebar="menu-button"]',
       popover: {
         title: "Select your team",
         description:
@@ -153,7 +152,7 @@ const productTour = driver({
       },
     },
     {
-      element: "#tour-help-support",
+      element: '#tour-help-support [data-sidebar="menu-button"]',
       popover: {
         title: "Help and support",
         description:
@@ -163,7 +162,7 @@ const productTour = driver({
       },
     },
     {
-      element: "#tour-account-menu",
+      element: '#tour-account-menu [data-sidebar="menu-button"]',
       popover: {
         title: "Account menu",
         description:

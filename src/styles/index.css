@@ -635,12 +635,12 @@
   - Styling overrides for driver.js popovers used in guided tours.
 */
 .driver-popover.driverjs-theme {
-  @apply bg-background;
+  @apply bg-popover/75 backdrop-blur-2xl;
   @apply text-foreground;
   @apply border-border;
-  @apply p-4;
+  @apply p-6;
   @apply shadow-lg;
-  @apply rounded-sm;
+  @apply rounded-2xl;
   @apply min-w-sm;
 }
 
@@ -677,7 +677,7 @@
   @apply flex;
   @apply items-center;
   @apply justify-center;
-  @apply rounded-sm;
+  @apply rounded-2xl;
   @apply px-3;
   @apply py-2;
   @apply text-sm;

@@ -5,7 +5,7 @@ import { emitter } from "@/modules/mitt"
 
 <template>
   <SidebarMenu>
-    <SidebarMenuItem id="tour-help-support">
+    <SidebarMenuItem>
       <SidebarMenuButton
         tooltip="Settings"
         @click="emitter.emit('Dialog.Settings.Open', 'preferences')"

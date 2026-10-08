@@ -98,12 +98,12 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <div ref="terminalEl" class="size-full pl-2" />
+  <div ref="terminalEl" class="terminal min-h-full w-full pl-2" />
 </template>
 
 <style>
 :root {
-  --xt-bg: var(--background);
+  --xt-bg: transparent;
   --xt-fg: var(--foreground);
   --xt-font-size: calc(var(--size) - 3px);
   --xt-font-family: var(--font-mono);
@@ -128,6 +128,13 @@ onBeforeUnmount(() => {
 .xt > .xt-stdin > :is(input, textarea):focus {
   outline: none;
   box-shadow: none;
+}
+
+.terminal > .xt {
+  height: auto;
+  min-height: 100%;
+  max-height: none;
+  overflow: visible;
 }
 
 .xt-cursor {

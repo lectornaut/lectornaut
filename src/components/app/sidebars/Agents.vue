@@ -116,7 +116,7 @@ const popOutAgent = (agent: { id: string; name: string }): void => {
 </script>
 
 <template>
-  <SidebarMenu id="tour-team-members">
+  <SidebarMenu id="tour-team-members" class="group-data-[collapsible=icon]:w-8">
     <!--
       "New agent" entry — visible only when:
         - The team-wide customAgents toggle is on (otherwise the

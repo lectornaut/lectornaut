@@ -108,10 +108,10 @@ const selectedSize = computed({
   },
 })
 
-const selectedTranslucentSidebar = computed({
-  get: () => themeSettings.value.translucentSidebar,
+const selectedDisableTranslucency = computed({
+  get: () => !themeSettings.value.translucentSidebar,
   set: (value: boolean) => {
-    themeSettings.value.translucentSidebar = value
+    themeSettings.value.translucentSidebar = !value
   },
 })
 
@@ -123,8 +123,8 @@ const selectedReducedMotion = computed({
 })
 
 // Boolean prefs persist immediately (no unsaved bar) — confirm with a toast.
-const handleToggleTranslucentSidebar = (value: unknown) => {
-  selectedTranslucentSidebar.value = value === true
+const handleToggleDisableTranslucency = (value: unknown) => {
+  selectedDisableTranslucency.value = value === true
   toast.success(t("settings.appearance.updateSuccess"))
 }
 
@@ -462,7 +462,7 @@ const accentSwatchStyle = (option: ColorSwatch<AccentId>) => ({
       <FieldSet>
         <Field orientation="horizontal">
           <FieldContent>
-            <FieldLabel for="translucent-sidebar">
+            <FieldLabel for="disable-translucency">
               {{ t("settings.appearance.translucentSidebar.label") }}
             </FieldLabel>
             <FieldDescription>
@@ -470,9 +470,9 @@ const accentSwatchStyle = (option: ColorSwatch<AccentId>) => ({
             </FieldDescription>
           </FieldContent>
           <Switch
-            id="translucent-sidebar"
-            :model-value="selectedTranslucentSidebar"
-            @update:model-value="handleToggleTranslucentSidebar"
+            id="disable-translucency"
+            :model-value="selectedDisableTranslucency"
+            @update:model-value="handleToggleDisableTranslucency"
           />
         </Field>
         <Field orientation="horizontal">
