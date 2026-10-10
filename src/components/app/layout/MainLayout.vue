@@ -1,5 +1,4 @@
 <script lang="ts" setup>
-import AiChatWindow from "@/components/app/bot/AiChatWindow.vue"
 import { useSidebar } from "@/components/ui/sidebar"
 import { SIDEBAR_WIDTH_ICON } from "@/components/ui/sidebar/utils"
 import {
@@ -19,6 +18,7 @@ import {
   IconX,
 } from "@/data/icons"
 import { sidebarTargetId } from "@/composables/useSidebarSlots"
+import { usePopout } from "@/composables/usePopout"
 import { generateId } from "@/helpers/utilities"
 import { emitter } from "@/modules/mitt"
 import { useUiPreferencesStore } from "@/stores/uiPreferencesStore"
@@ -43,6 +43,14 @@ const leftPanel = ref<InstanceType<typeof SplitterPanel>>()
 const rightPanel = ref<InstanceType<typeof SplitterPanel>>()
 const topPanel = ref<InstanceType<typeof SplitterPanel>>()
 const bottomPanel = ref<InstanceType<typeof SplitterPanel>>()
+const leftDockPanel = ref<InstanceType<typeof SplitterPanel>>()
+const leftDockEl = ref<HTMLElement | null>(null)
+const hasLeftDockContent = ref(false)
+const rightDockPanel = ref<InstanceType<typeof SplitterPanel>>()
+const { isDocked, isChatWindowOpen, closeChatWindow } = usePopout()
+const hasRightDockContent = computed(
+  () => isDocked.value && isChatWindowOpen.value
+)
 
 // Enables the flex-grow transition on every collapsible panel (see index.css).
 // Kept off until the persisted layout is applied so first paint doesn't animate.
@@ -117,6 +125,25 @@ const syncPanelCollapsed = (
   }
 }
 
+const syncRightDockPanel = () => {
+  syncPanelCollapsed(rightDockPanel.value, !hasRightDockContent.value)
+}
+
+const syncLeftDockPanel = () => {
+  syncPanelCollapsed(leftDockPanel.value, !hasLeftDockContent.value)
+}
+
+// Teleported content owns the left dock's visibility; keep its saved width
+// separate from the chat dock and restore it whenever content returns.
+const refreshLeftDockContent = () => {
+  hasLeftDockContent.value = !!leftDockEl.value?.firstElementChild
+}
+
+useMutationObserver(leftDockEl, refreshLeftDockContent, { childList: true })
+watch(hasLeftDockContent, () => void nextTick(syncLeftDockPanel))
+
+watch(hasRightDockContent, () => void nextTick(syncRightDockPanel))
+
 const applyPersistedPanelState = () => {
   syncPanelCollapsed(
     sidebarPanel.value,
@@ -126,6 +153,9 @@ const applyPersistedPanelState = () => {
   syncPanelCollapsed(leftPanel.value, leftPanelCollapsed.value)
   syncPanelCollapsed(rightPanel.value, rightPanelCollapsed.value)
   syncPanelCollapsed(bottomPanel.value, bottomPanelCollapsed.value)
+  refreshLeftDockContent()
+  syncLeftDockPanel()
+  syncRightDockPanel()
 }
 
 // True while reka-ui is processing a constraint change (viewport resize or
@@ -197,6 +227,14 @@ const handlePanelBottomToggle = () => {
   }
 }
 
+const handleLeftDockToggle = () => {
+  if (leftDockPanel.value?.isCollapsed) {
+    leftDockPanel.value.expand()
+  } else {
+    leftDockPanel.value?.collapse()
+  }
+}
+
 // Single list drives both the mount and unmount wiring below, so adding a
 // handler can't accidentally skip its matching `.off`.
 const panelEventHandlers = [
@@ -207,6 +245,7 @@ const panelEventHandlers = [
   ["Sidebar.Right.Collapse", handleSidebarRightCollapse],
   ["Sidebar.Right.Expand", handleSidebarRightExpand],
   ["Panel.Bottom.Toggle", handlePanelBottomToggle],
+  ["Dock.Left.Toggle", handleLeftDockToggle],
 ] as const
 
 onMounted(async () => {
@@ -361,64 +400,41 @@ const closeTab = (id: string) => {
           <div
             class="flex min-h-0 min-w-0 grow gap-2 self-stretch overscroll-none scroll-smooth p-2"
           >
-            <div
-              id="left-dock"
-              class="bg-background flex max-w-80 shrink-0 flex-col overflow-clip rounded-3xl empty:hidden"
-            ></div>
             <ResizablePanelGroup
-              :style="{ overflow: 'clip' }"
-              :class="[
-                'size-full min-h-0 min-w-0 rounded-3xl',
-                { 'animate-layout-panels': animatePanels },
-              ]"
               direction="horizontal"
-              auto-save-id="app-horizontal-layout"
+              auto-save-id="app-left-dock-layout"
+              class="min-h-0 min-w-0"
+              :class="{ 'animate-layout-panels': animatePanels }"
             >
-              <ContextMenu>
-                <ContextMenuTrigger as-child>
-                  <ResizablePanel
-                    ref="leftPanel"
-                    class="rounded-3xl"
-                    collapsible
-                    :min-size="18"
-                    :default-size="22"
-                    :max-size="30"
-                    :collapsed-size="0"
-                    as-child
-                    :inert="leftPanel?.isCollapsed"
-                    @collapse="leftPanelCollapsed = true"
-                    @expand="leftPanelCollapsed = false"
-                  >
-                    <div class="grid size-full min-h-0 min-w-0">
-                      <div class="mr-0 min-h-0 min-w-0">
-                        <!-- overflow-clip rounded-3xl border -->
-                        <div
-                          :id="sidebarTargetId('left')"
-                          class="h-full grow overflow-clip"
-                        ></div>
-                      </div>
-                    </div>
-                  </ResizablePanel>
-                </ContextMenuTrigger>
-                <ContextMenuContent>
-                  <ContextMenuItem @click="leftPanel?.collapse()">
-                    <IconX /> {{ t("tooltips.closePanel") }}
-                  </ContextMenuItem>
-                </ContextMenuContent>
-              </ContextMenu>
-              <TooltipProvider>
+              <ResizablePanel
+                id="app-left-dock"
+                ref="leftDockPanel"
+                collapsible
+                :default-size="24"
+                :min-size="18"
+                :max-size="40"
+                :collapsed-size="0"
+                class="min-h-0 min-w-0"
+              >
+                <div
+                  id="left-dock"
+                  ref="leftDockEl"
+                  class="bg-background flex size-full min-h-0 min-w-0 flex-col overflow-clip rounded-3xl"
+                ></div>
+              </ResizablePanel>
+              <TooltipProvider v-if="hasLeftDockContent">
                 <Tooltip>
                   <TooltipTrigger as-child>
                     <ResizableHandle
                       class="data-[resize-handle-state=drag]:after:bg-foreground data-[resize-handle-state=hover]:after:bg-muted focus-visible:after:bg-muted! z-20 bg-transparent transition before:pointer-events-auto before:absolute before:inset-y-0 before:left-1/2 before:w-3 before:-translate-x-1/2 after:rounded-3xl focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:outline-none focus-visible:after:inset-y-6 data-resize-handle:bg-transparent data-resize-handle:after:w-1 data-[resize-handle-state=drag]:after:inset-y-6 data-[resize-handle-state=hover]:after:inset-y-6"
                       :class="{
-                        'bg-muted': !leftPanel?.isCollapsed,
-                        'w-0!': leftPanel?.isCollapsed,
+                        'bg-muted': !leftDockPanel?.isCollapsed,
+                        'w-0!': leftDockPanel?.isCollapsed,
                       }"
                       @dblclick="
-                        leftPanel?.isCollapsed
-                          ? leftPanel?.expand()
-                          : leftPanel?.collapse()
+                        leftDockPanel?.isCollapsed
+                          ? leftDockPanel?.expand()
+                          : leftDockPanel?.collapse()
                       "
                     />
                   </TooltipTrigger>
@@ -447,87 +463,559 @@ const closeTab = (id: string) => {
                           {{ t("tooltips.leftArrowCollapse") }}
                         </span>
                         <span class="flex items-center gap-2">
-                          <IconArrowBigUp />
-                          {{ t("tooltips.shiftLargeSteps") }}
+                          <IconArrowBigUp /> {{ t("tooltips.shiftLargeSteps") }}
                         </span>
                       </div>
                     </div>
                   </TooltipContent>
                 </Tooltip>
               </TooltipProvider>
-              <ResizablePanel>
+              <ResizablePanel
+                id="app-left-dock-content"
+                :default-size="76"
+                :min-size="60"
+                :max-size="100"
+                class="min-h-0 min-w-0"
+              >
                 <ResizablePanelGroup
-                  :style="{ overflow: 'clip' }"
-                  :class="[
-                    'size-full min-h-0 min-w-0 rounded-3xl',
-                    { 'animate-layout-panels': animatePanels },
-                  ]"
-                  direction="vertical"
-                  auto-save-id="app-vertical-layout"
+                  direction="horizontal"
+                  auto-save-id="app-right-dock-layout"
+                  class="min-h-0 min-w-0"
+                  :class="{ 'animate-layout-panels': animatePanels }"
                 >
-                  <ContextMenu>
-                    <ContextMenuTrigger as-child>
-                      <ResizablePanel
-                        ref="topPanel"
-                        class="rounded-3xl"
-                        collapsible
-                        :min-size="15"
-                        :default-size="78"
-                        :max-size="100"
-                        :collapsed-size="0"
-                        as-child
-                        :inert="topPanel?.isCollapsed"
-                      >
-                        <div
-                          class="bg-background flex min-h-0 min-w-0 grow flex-col"
-                        >
-                          <!-- overflow-clip rounded-3xl border -->
-                          <!-- Non-scrollable sub-header with backdrop blur -->
-                          <SubNavigation />
-                          <!-- Scrollable content area -->
-                          <div
-                            class="flex min-h-0 min-w-0 grow flex-col overflow-clip"
+                  <ResizablePanel
+                    id="app-right-dock-content"
+                    :default-size="76"
+                    :min-size="60"
+                    :max-size="100"
+                    class="min-h-0 min-w-0"
+                  >
+                    <ResizablePanelGroup
+                      :style="{ overflow: 'clip' }"
+                      :class="[
+                        'size-full min-h-0 min-w-0 rounded-3xl',
+                        { 'animate-layout-panels': animatePanels },
+                      ]"
+                      direction="horizontal"
+                      auto-save-id="app-horizontal-layout"
+                    >
+                      <ContextMenu>
+                        <ContextMenuTrigger as-child>
+                          <ResizablePanel
+                            ref="leftPanel"
+                            class="rounded-3xl"
+                            collapsible
+                            :min-size="18"
+                            :default-size="22"
+                            :max-size="30"
+                            :collapsed-size="0"
+                            as-child
+                            :inert="leftPanel?.isCollapsed"
+                            @collapse="leftPanelCollapsed = true"
+                            @expand="leftPanelCollapsed = false"
                           >
-                            <ScrollContainer>
-                              <RouterView />
-                            </ScrollContainer>
-                          </div>
-                        </div>
+                            <div class="grid size-full min-h-0 min-w-0">
+                              <div class="mr-0 min-h-0 min-w-0">
+                                <!-- overflow-clip rounded-3xl border -->
+                                <div
+                                  :id="sidebarTargetId('left')"
+                                  class="h-full grow overflow-clip"
+                                ></div>
+                              </div>
+                            </div>
+                          </ResizablePanel>
+                        </ContextMenuTrigger>
+                        <ContextMenuContent>
+                          <ContextMenuItem @click="leftPanel?.collapse()">
+                            <IconX /> {{ t("tooltips.closePanel") }}
+                          </ContextMenuItem>
+                        </ContextMenuContent>
+                      </ContextMenu>
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger as-child>
+                            <ResizableHandle
+                              class="data-[resize-handle-state=drag]:after:bg-foreground data-[resize-handle-state=hover]:after:bg-muted focus-visible:after:bg-muted! z-20 bg-transparent transition before:pointer-events-auto before:absolute before:inset-y-0 before:left-1/2 before:w-3 before:-translate-x-1/2 after:rounded-3xl focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:outline-none focus-visible:after:inset-y-6 data-resize-handle:bg-transparent data-resize-handle:after:w-1 data-[resize-handle-state=drag]:after:inset-y-6 data-[resize-handle-state=hover]:after:inset-y-6"
+                              :class="{
+                                'bg-muted': !leftPanel?.isCollapsed,
+                                'w-0!': leftPanel?.isCollapsed,
+                              }"
+                              @dblclick="
+                                leftPanel?.isCollapsed
+                                  ? leftPanel?.expand()
+                                  : leftPanel?.collapse()
+                              "
+                            />
+                          </TooltipTrigger>
+                          <TooltipContent side="right" class="p-1!">
+                            <div class="flex flex-col gap-1">
+                              <div
+                                class="bg-accent/5 flex flex-col gap-2 rounded-lg p-2"
+                              >
+                                <span class="flex items-center gap-2">
+                                  <IconHand /> {{ t("tooltips.dragToResize") }}
+                                </span>
+                                <span class="flex items-center gap-2">
+                                  <IconPointerClick />
+                                  {{ t("tooltips.doubleClickToggle") }}
+                                </span>
+                              </div>
+                              <div
+                                class="bg-accent/5 flex flex-col gap-2 rounded-lg p-2"
+                              >
+                                <span class="flex items-center gap-2">
+                                  <IconArrowRight />
+                                  {{ t("tooltips.rightArrowExpand") }}
+                                </span>
+                                <span class="flex items-center gap-2">
+                                  <IconArrowLeft />
+                                  {{ t("tooltips.leftArrowCollapse") }}
+                                </span>
+                                <span class="flex items-center gap-2">
+                                  <IconArrowBigUp />
+                                  {{ t("tooltips.shiftLargeSteps") }}
+                                </span>
+                              </div>
+                            </div>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                      <ResizablePanel>
+                        <ResizablePanelGroup
+                          :style="{ overflow: 'clip' }"
+                          :class="[
+                            'size-full min-h-0 min-w-0 rounded-3xl',
+                            { 'animate-layout-panels': animatePanels },
+                          ]"
+                          direction="vertical"
+                          auto-save-id="app-vertical-layout"
+                        >
+                          <ContextMenu>
+                            <ContextMenuTrigger as-child>
+                              <ResizablePanel
+                                ref="topPanel"
+                                class="rounded-3xl"
+                                collapsible
+                                :min-size="15"
+                                :default-size="78"
+                                :max-size="100"
+                                :collapsed-size="0"
+                                as-child
+                                :inert="topPanel?.isCollapsed"
+                              >
+                                <div
+                                  class="bg-background flex min-h-0 min-w-0 grow flex-col"
+                                >
+                                  <!-- overflow-clip rounded-3xl border -->
+                                  <!-- Non-scrollable sub-header with backdrop blur -->
+                                  <SubNavigation />
+                                  <!-- Scrollable content area -->
+                                  <div
+                                    class="flex min-h-0 min-w-0 grow flex-col overflow-clip"
+                                  >
+                                    <ScrollContainer>
+                                      <RouterView />
+                                    </ScrollContainer>
+                                  </div>
+                                </div>
+                              </ResizablePanel>
+                            </ContextMenuTrigger>
+                            <ContextMenuContent>
+                              <ContextMenuItem @click="router.go(0)">
+                                <IconRefreshCcw /> {{ t("actions.refresh") }}
+                              </ContextMenuItem>
+                              <ContextMenuSeparator />
+                              <ContextMenuItem @click="router.go(-1)">
+                                <IconArrowLeft /> {{ t("actions.goBack") }}
+                              </ContextMenuItem>
+                              <ContextMenuItem @click="router.go(1)">
+                                <IconArrowRight /> {{ t("actions.goForward") }}
+                              </ContextMenuItem>
+                            </ContextMenuContent>
+                          </ContextMenu>
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger as-child>
+                                <ResizableHandle
+                                  class="data-[resize-handle-state=drag]:after:bg-foreground data-[resize-handle-state=hover]:after:bg-muted focus-visible:after:bg-muted! z-10 h-px! w-full! bg-transparent transition before:pointer-events-auto before:absolute before:inset-x-0 before:top-1/2 before:h-3 before:-translate-y-1/2 after:top-1/2! after:bottom-auto! after:left-0! after:w-full! after:translate-x-0! after:-translate-y-1/2! after:rounded-3xl focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:outline-none focus-visible:after:inset-x-6! focus-visible:after:w-auto! data-resize-handle:bg-transparent data-resize-handle:after:h-1! data-[resize-handle-state=drag]:after:inset-x-6! data-[resize-handle-state=drag]:after:w-auto! data-[resize-handle-state=hover]:after:inset-x-6! data-[resize-handle-state=hover]:after:w-auto!"
+                                  :class="{
+                                    'bg-muted':
+                                      !bottomPanel?.isCollapsed &&
+                                      !topPanel?.isCollapsed,
+                                    'h-0!':
+                                      bottomPanel?.isCollapsed ||
+                                      topPanel?.isCollapsed,
+                                  }"
+                                  @dblclick="
+                                    bottomPanel?.isCollapsed
+                                      ? bottomPanel?.expand()
+                                      : bottomPanel?.collapse()
+                                  "
+                                />
+                              </TooltipTrigger>
+                              <TooltipContent class="p-1!">
+                                <div class="flex flex-col gap-1">
+                                  <div
+                                    class="bg-accent/5 flex flex-col gap-2 rounded-lg p-2"
+                                  >
+                                    <span class="flex items-center gap-2">
+                                      <IconHand />
+                                      {{ t("tooltips.dragToResize") }}
+                                    </span>
+                                    <span class="flex items-center gap-2">
+                                      <IconPointerClick />
+                                      {{ t("tooltips.doubleClickToggle") }}
+                                    </span>
+                                  </div>
+                                  <div
+                                    class="bg-accent/5 flex flex-col gap-2 rounded-lg p-2"
+                                  >
+                                    <span class="flex items-center gap-2">
+                                      <IconArrowUp />
+                                      {{ t("tooltips.upArrowExpand") }}
+                                    </span>
+                                    <span class="flex items-center gap-2">
+                                      <IconArrowDown />
+                                      {{ t("tooltips.downArrowCollapse") }}
+                                    </span>
+                                    <span class="flex items-center gap-2">
+                                      <IconArrowBigUp />
+                                      {{ t("tooltips.shiftLargeSteps") }}
+                                    </span>
+                                  </div>
+                                </div>
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                          <ContextMenu>
+                            <ContextMenuTrigger as-child>
+                              <ResizablePanel
+                                ref="bottomPanel"
+                                class="rounded-3xl"
+                                collapsible
+                                :min-size="15"
+                                :default-size="22"
+                                :max-size="100"
+                                :collapsed-size="0"
+                                as-child
+                                :inert="bottomPanel?.isCollapsed"
+                                @collapse="bottomPanelCollapsed = true"
+                                @expand="bottomPanelCollapsed = false"
+                              >
+                                <Tabs
+                                  v-model="activeTab"
+                                  class="size-full min-h-0 min-w-0"
+                                >
+                                  <div class="size-full min-h-0 min-w-0">
+                                    <!-- overflow-clip rounded-3xl border -->
+                                    <div
+                                      id="bottom-sidebar"
+                                      class="bg-background flex size-full min-h-0 min-w-0 flex-col overflow-clip overscroll-none"
+                                    >
+                                      <div class="flex items-stretch gap-2 p-2">
+                                        <div
+                                          class="relative flex min-w-0 grow items-stretch justify-start gap-2"
+                                        >
+                                          <TabsList
+                                            v-if="source.length > 0"
+                                            class="flex min-w-0 items-stretch gap-2 bg-transparent p-0"
+                                          >
+                                            <TabsTrigger
+                                              v-for="tab in source"
+                                              :key="tab.id"
+                                              :value="tab.id"
+                                              class="hover:bg-secondary/50 data-[state=inactive]:text-secondary-foreground/50 data-[state=inactive]:bg-secondary/50 group size-full w-60 max-w-60 min-w-0 border-0 pr-1!"
+                                              :class="{
+                                                'min-w-40':
+                                                  tab.id === activeTab,
+                                                'bg-secondary! shadow-none!':
+                                                  tab.id === activeTab,
+                                              }"
+                                              @click="setActiveTab(tab.id)"
+                                            >
+                                              <IconTerminal />
+                                              <span
+                                                class="flex grow items-center justify-start truncate"
+                                              >
+                                                {{ tab.label }}
+                                              </span>
+                                              <TooltipProvider>
+                                                <Tooltip>
+                                                  <TooltipTrigger as-child>
+                                                    <InputGroupButton
+                                                      variant="ghost"
+                                                      size="icon-xs"
+                                                      class="invisible group-hover:visible"
+                                                      @click.stop.prevent="
+                                                        closeTab(tab.id)
+                                                      "
+                                                    >
+                                                      <IconX />
+                                                    </InputGroupButton>
+                                                  </TooltipTrigger>
+                                                  <TooltipContent>
+                                                    {{
+                                                      t(
+                                                        "layouts.app.tabs.close"
+                                                      )
+                                                    }}
+                                                  </TooltipContent>
+                                                </Tooltip>
+                                              </TooltipProvider>
+                                            </TabsTrigger>
+                                          </TabsList>
+                                          <div
+                                            class="sticky right-0 z-30 flex shrink-0 items-center"
+                                          >
+                                            <TooltipProvider>
+                                              <Tooltip>
+                                                <TooltipTrigger as-child>
+                                                  <Button
+                                                    variant="ghost"
+                                                    size="icon"
+                                                    @click="newTab()"
+                                                  >
+                                                    <IconPlus />
+                                                  </Button>
+                                                </TooltipTrigger>
+                                                <TooltipContent>
+                                                  {{
+                                                    t("layouts.app.tabs.new")
+                                                  }}
+                                                </TooltipContent>
+                                              </Tooltip>
+                                            </TooltipProvider>
+                                          </div>
+                                        </div>
+                                        <div
+                                          class="flex shrink-0 items-center justify-end gap-2"
+                                        >
+                                          <ButtonGroup>
+                                            <TooltipProvider>
+                                              <Tooltip>
+                                                <TooltipTrigger as-child>
+                                                  <Button
+                                                    variant="secondary"
+                                                    size="icon"
+                                                    @click="
+                                                      topPanel?.isCollapsed
+                                                        ? topPanel?.expand()
+                                                        : topPanel?.collapse()
+                                                    "
+                                                  >
+                                                    <IconMinimize
+                                                      v-if="
+                                                        topPanel?.isCollapsed
+                                                      "
+                                                    />
+                                                    <IconMaximize v-else />
+                                                  </Button>
+                                                </TooltipTrigger>
+                                                <TooltipContent>
+                                                  {{
+                                                    topPanel?.isCollapsed
+                                                      ? t(
+                                                          "layouts.app.panel.minimize"
+                                                        )
+                                                      : t(
+                                                          "layouts.app.panel.maximize"
+                                                        )
+                                                  }}
+                                                </TooltipContent>
+                                              </Tooltip>
+                                              <ButtonGroupSeparator />
+                                              <Tooltip>
+                                                <TooltipTrigger as-child>
+                                                  <Button
+                                                    variant="secondary"
+                                                    size="icon"
+                                                    @click="
+                                                      bottomPanel?.collapse()
+                                                    "
+                                                  >
+                                                    <IconX />
+                                                  </Button>
+                                                </TooltipTrigger>
+                                                <TooltipContent>
+                                                  {{
+                                                    t("layouts.app.panel.close")
+                                                  }}
+                                                </TooltipContent>
+                                              </Tooltip>
+                                            </TooltipProvider>
+                                          </ButtonGroup>
+                                        </div>
+                                      </div>
+                                      <ScrollContainer>
+                                        <TabsContent
+                                          v-for="tab in source"
+                                          :key="tab.id"
+                                          :value="tab.id"
+                                        >
+                                          <Terminal />
+                                        </TabsContent>
+                                        <Empty v-if="source.length === 0">
+                                          <EmptyHeader>
+                                            <EmptyMedia variant="icon">
+                                              <IconLayers />
+                                            </EmptyMedia>
+                                            <EmptyTitle>
+                                              {{
+                                                t(
+                                                  "layouts.app.empty.console.title"
+                                                )
+                                              }}
+                                            </EmptyTitle>
+                                            <EmptyDescription>
+                                              {{
+                                                t(
+                                                  "layouts.app.empty.console.description"
+                                                )
+                                              }}
+                                            </EmptyDescription>
+                                          </EmptyHeader>
+                                          <EmptyContent>
+                                            <Button
+                                              variant="outline"
+                                              @click="newTab()"
+                                            >
+                                              {{
+                                                t(
+                                                  "layouts.app.empty.console.action"
+                                                )
+                                              }}
+                                            </Button>
+                                          </EmptyContent>
+                                        </Empty>
+                                      </ScrollContainer>
+                                    </div>
+                                  </div>
+                                </Tabs>
+                              </ResizablePanel>
+                            </ContextMenuTrigger>
+                            <ContextMenuContent>
+                              <ContextMenuItem
+                                @click="
+                                  topPanel?.isCollapsed
+                                    ? topPanel?.expand()
+                                    : topPanel?.collapse()
+                                "
+                              >
+                                <IconMinimize v-if="topPanel?.isCollapsed" />
+                                <IconMaximize v-else />
+                                {{
+                                  topPanel?.isCollapsed
+                                    ? t("layouts.app.panel.collapse")
+                                    : t("layouts.app.panel.expand")
+                                }}
+                              </ContextMenuItem>
+                              <ContextMenuItem @click="bottomPanel?.collapse()">
+                                <IconX /> {{ t("layouts.app.panel.close") }}
+                              </ContextMenuItem>
+                            </ContextMenuContent>
+                          </ContextMenu>
+                        </ResizablePanelGroup>
                       </ResizablePanel>
-                    </ContextMenuTrigger>
-                    <ContextMenuContent>
-                      <ContextMenuItem @click="router.go(0)">
-                        <IconRefreshCcw /> {{ t("actions.refresh") }}
-                      </ContextMenuItem>
-                      <ContextMenuSeparator />
-                      <ContextMenuItem @click="router.go(-1)">
-                        <IconArrowLeft /> {{ t("actions.goBack") }}
-                      </ContextMenuItem>
-                      <ContextMenuItem @click="router.go(1)">
-                        <IconArrowRight /> {{ t("actions.goForward") }}
-                      </ContextMenuItem>
-                    </ContextMenuContent>
-                  </ContextMenu>
-                  <TooltipProvider>
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger as-child>
+                            <ResizableHandle
+                              class="data-[resize-handle-state=drag]:after:bg-foreground data-[resize-handle-state=hover]:after:bg-muted focus-visible:after:bg-muted! z-20 bg-transparent transition before:pointer-events-auto before:absolute before:inset-y-0 before:left-1/2 before:w-3 before:-translate-x-1/2 after:rounded-3xl focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:outline-none focus-visible:after:inset-y-6 data-resize-handle:bg-transparent data-resize-handle:after:w-1 data-[resize-handle-state=drag]:after:inset-y-6 data-[resize-handle-state=hover]:after:inset-y-6"
+                              :class="{
+                                'bg-muted': !rightPanel?.isCollapsed,
+                                'w-0!': rightPanel?.isCollapsed,
+                              }"
+                              @dblclick="
+                                rightPanel?.isCollapsed
+                                  ? rightPanel?.expand()
+                                  : rightPanel?.collapse()
+                              "
+                            />
+                          </TooltipTrigger>
+                          <TooltipContent side="left" class="p-1!">
+                            <div class="flex flex-col gap-1">
+                              <div
+                                class="bg-accent/5 flex flex-col gap-2 rounded-lg p-2"
+                              >
+                                <span class="flex items-center gap-2">
+                                  <IconHand /> {{ t("tooltips.dragToResize") }}
+                                </span>
+                                <span class="flex items-center gap-2">
+                                  <IconPointerClick />
+                                  {{ t("tooltips.doubleClickToggle") }}
+                                </span>
+                              </div>
+                              <div
+                                class="bg-accent/5 flex flex-col gap-2 rounded-lg p-2"
+                              >
+                                <span class="flex items-center gap-2">
+                                  <IconArrowLeft />
+                                  {{ t("tooltips.leftArrowExpand") }}
+                                </span>
+                                <span class="flex items-center gap-2">
+                                  <IconArrowRight />
+                                  {{ t("tooltips.rightArrowCollapse") }}
+                                </span>
+                                <span class="flex items-center gap-2">
+                                  <IconArrowBigUp />
+                                  {{ t("tooltips.shiftLargeSteps") }}
+                                </span>
+                              </div>
+                            </div>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                      <ContextMenu>
+                        <ContextMenuTrigger as-child>
+                          <ResizablePanel
+                            ref="rightPanel"
+                            class="rounded-3xl"
+                            collapsible
+                            :min-size="22"
+                            :default-size="28"
+                            :max-size="38"
+                            :collapsed-size="0"
+                            as-child
+                            :inert="rightPanel?.isCollapsed"
+                            @collapse="rightPanelCollapsed = true"
+                            @expand="rightPanelCollapsed = false"
+                          >
+                            <div class="grid size-full min-h-0 min-w-0">
+                              <div class="ml-0 min-h-0 min-w-0">
+                                <!-- overflow-clip rounded-3xl border -->
+                                <div
+                                  :id="sidebarTargetId('right')"
+                                  class="h-full grow overflow-clip"
+                                ></div>
+                              </div>
+                            </div>
+                          </ResizablePanel>
+                        </ContextMenuTrigger>
+                        <ContextMenuContent>
+                          <ContextMenuItem @click="rightPanel?.collapse()">
+                            <IconX /> {{ t("layouts.app.panel.close") }}
+                          </ContextMenuItem>
+                        </ContextMenuContent>
+                      </ContextMenu>
+                    </ResizablePanelGroup>
+                  </ResizablePanel>
+                  <TooltipProvider v-if="hasRightDockContent">
                     <Tooltip>
                       <TooltipTrigger as-child>
                         <ResizableHandle
-                          class="data-[resize-handle-state=drag]:after:bg-foreground data-[resize-handle-state=hover]:after:bg-muted focus-visible:after:bg-muted! z-10 h-px! w-full! bg-transparent transition before:pointer-events-auto before:absolute before:inset-x-0 before:top-1/2 before:h-3 before:-translate-y-1/2 after:top-1/2! after:bottom-auto! after:left-0! after:w-full! after:translate-x-0! after:-translate-y-1/2! after:rounded-3xl focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:outline-none focus-visible:after:inset-x-6! focus-visible:after:w-auto! data-resize-handle:bg-transparent data-resize-handle:after:h-1! data-[resize-handle-state=drag]:after:inset-x-6! data-[resize-handle-state=drag]:after:w-auto! data-[resize-handle-state=hover]:after:inset-x-6! data-[resize-handle-state=hover]:after:w-auto!"
+                          class="data-[resize-handle-state=drag]:after:bg-foreground data-[resize-handle-state=hover]:after:bg-muted focus-visible:after:bg-muted! z-20 bg-transparent transition before:pointer-events-auto before:absolute before:inset-y-0 before:left-1/2 before:w-3 before:-translate-x-1/2 after:rounded-3xl focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:outline-none focus-visible:after:inset-y-6 data-resize-handle:bg-transparent data-resize-handle:after:w-1 data-[resize-handle-state=drag]:after:inset-y-6 data-[resize-handle-state=hover]:after:inset-y-6"
                           :class="{
-                            'bg-muted':
-                              !bottomPanel?.isCollapsed &&
-                              !topPanel?.isCollapsed,
-                            'h-0!':
-                              bottomPanel?.isCollapsed || topPanel?.isCollapsed,
+                            'bg-muted': !rightDockPanel?.isCollapsed,
+                            'w-0!': rightDockPanel?.isCollapsed,
                           }"
                           @dblclick="
-                            bottomPanel?.isCollapsed
-                              ? bottomPanel?.expand()
-                              : bottomPanel?.collapse()
+                            rightDockPanel?.isCollapsed
+                              ? rightDockPanel?.expand()
+                              : rightDockPanel?.collapse()
                           "
                         />
                       </TooltipTrigger>
-                      <TooltipContent class="p-1!">
+                      <TooltipContent side="left" class="p-1!">
                         <div class="flex flex-col gap-1">
                           <div
                             class="bg-accent/5 flex flex-col gap-2 rounded-lg p-2"
@@ -544,12 +1032,12 @@ const closeTab = (id: string) => {
                             class="bg-accent/5 flex flex-col gap-2 rounded-lg p-2"
                           >
                             <span class="flex items-center gap-2">
-                              <IconArrowUp />
-                              {{ t("tooltips.upArrowExpand") }}
+                              <IconArrowLeft />
+                              {{ t("tooltips.leftArrowExpand") }}
                             </span>
                             <span class="flex items-center gap-2">
-                              <IconArrowDown />
-                              {{ t("tooltips.downArrowCollapse") }}
+                              <IconArrowRight />
+                              {{ t("tooltips.rightArrowCollapse") }}
                             </span>
                             <span class="flex items-center gap-2">
                               <IconArrowBigUp />
@@ -560,292 +1048,24 @@ const closeTab = (id: string) => {
                       </TooltipContent>
                     </Tooltip>
                   </TooltipProvider>
-                  <ContextMenu>
-                    <ContextMenuTrigger as-child>
-                      <ResizablePanel
-                        ref="bottomPanel"
-                        class="rounded-3xl"
-                        collapsible
-                        :min-size="15"
-                        :default-size="22"
-                        :max-size="100"
-                        :collapsed-size="0"
-                        as-child
-                        :inert="bottomPanel?.isCollapsed"
-                        @collapse="bottomPanelCollapsed = true"
-                        @expand="bottomPanelCollapsed = false"
-                      >
-                        <Tabs
-                          v-model="activeTab"
-                          class="size-full min-h-0 min-w-0"
-                        >
-                          <div class="size-full min-h-0 min-w-0">
-                            <!-- overflow-clip rounded-3xl border -->
-                            <div
-                              id="bottom-sidebar"
-                              class="bg-background flex size-full min-h-0 min-w-0 flex-col overflow-clip overscroll-none"
-                            >
-                              <div class="flex items-stretch gap-2 p-2">
-                                <div
-                                  class="relative flex min-w-0 grow items-stretch justify-start gap-2"
-                                >
-                                  <TabsList
-                                    v-if="source.length > 0"
-                                    class="flex min-w-0 items-stretch gap-2 bg-transparent p-0"
-                                  >
-                                    <TabsTrigger
-                                      v-for="tab in source"
-                                      :key="tab.id"
-                                      :value="tab.id"
-                                      class="hover:bg-secondary/50 data-[state=inactive]:text-secondary-foreground/50 data-[state=inactive]:bg-secondary/50 group size-full w-60 max-w-60 min-w-0 border-0 pr-1!"
-                                      :class="{
-                                        'min-w-40': tab.id === activeTab,
-                                        'bg-secondary! shadow-none!':
-                                          tab.id === activeTab,
-                                      }"
-                                      @click="setActiveTab(tab.id)"
-                                    >
-                                      <IconTerminal />
-                                      <span
-                                        class="flex grow items-center justify-start truncate"
-                                      >
-                                        {{ tab.label }}
-                                      </span>
-                                      <TooltipProvider>
-                                        <Tooltip>
-                                          <TooltipTrigger as-child>
-                                            <InputGroupButton
-                                              variant="ghost"
-                                              size="icon-xs"
-                                              class="invisible group-hover:visible"
-                                              @click.stop.prevent="
-                                                closeTab(tab.id)
-                                              "
-                                            >
-                                              <IconX />
-                                            </InputGroupButton>
-                                          </TooltipTrigger>
-                                          <TooltipContent>
-                                            {{ t("layouts.app.tabs.close") }}
-                                          </TooltipContent>
-                                        </Tooltip>
-                                      </TooltipProvider>
-                                    </TabsTrigger>
-                                  </TabsList>
-                                  <div
-                                    class="sticky right-0 z-30 flex shrink-0 items-center"
-                                  >
-                                    <TooltipProvider>
-                                      <Tooltip>
-                                        <TooltipTrigger as-child>
-                                          <Button
-                                            variant="ghost"
-                                            size="icon"
-                                            @click="newTab()"
-                                          >
-                                            <IconPlus />
-                                          </Button>
-                                        </TooltipTrigger>
-                                        <TooltipContent>
-                                          {{ t("layouts.app.tabs.new") }}
-                                        </TooltipContent>
-                                      </Tooltip>
-                                    </TooltipProvider>
-                                  </div>
-                                </div>
-                                <div
-                                  class="flex shrink-0 items-center justify-end gap-2"
-                                >
-                                  <ButtonGroup>
-                                    <TooltipProvider>
-                                      <Tooltip>
-                                        <TooltipTrigger as-child>
-                                          <Button
-                                            variant="secondary"
-                                            size="icon"
-                                            @click="
-                                              topPanel?.isCollapsed
-                                                ? topPanel?.expand()
-                                                : topPanel?.collapse()
-                                            "
-                                          >
-                                            <IconMinimize
-                                              v-if="topPanel?.isCollapsed"
-                                            />
-                                            <IconMaximize v-else />
-                                          </Button>
-                                        </TooltipTrigger>
-                                        <TooltipContent>
-                                          {{
-                                            topPanel?.isCollapsed
-                                              ? t("layouts.app.panel.minimize")
-                                              : t("layouts.app.panel.maximize")
-                                          }}
-                                        </TooltipContent>
-                                      </Tooltip>
-                                      <ButtonGroupSeparator />
-                                      <Tooltip>
-                                        <TooltipTrigger as-child>
-                                          <Button
-                                            variant="secondary"
-                                            size="icon"
-                                            @click="bottomPanel?.collapse()"
-                                          >
-                                            <IconX />
-                                          </Button>
-                                        </TooltipTrigger>
-                                        <TooltipContent>
-                                          {{ t("layouts.app.panel.close") }}
-                                        </TooltipContent>
-                                      </Tooltip>
-                                    </TooltipProvider>
-                                  </ButtonGroup>
-                                </div>
-                              </div>
-                              <ScrollContainer>
-                                <TabsContent
-                                  v-for="tab in source"
-                                  :key="tab.id"
-                                  :value="tab.id"
-                                >
-                                  <Terminal />
-                                </TabsContent>
-                                <Empty v-if="source.length === 0">
-                                  <EmptyHeader>
-                                    <EmptyMedia variant="icon">
-                                      <IconLayers />
-                                    </EmptyMedia>
-                                    <EmptyTitle>
-                                      {{ t("layouts.app.empty.console.title") }}
-                                    </EmptyTitle>
-                                    <EmptyDescription>
-                                      {{
-                                        t(
-                                          "layouts.app.empty.console.description"
-                                        )
-                                      }}
-                                    </EmptyDescription>
-                                  </EmptyHeader>
-                                  <EmptyContent>
-                                    <Button variant="outline" @click="newTab()">
-                                      {{
-                                        t("layouts.app.empty.console.action")
-                                      }}
-                                    </Button>
-                                  </EmptyContent>
-                                </Empty>
-                              </ScrollContainer>
-                            </div>
-                          </div>
-                        </Tabs>
-                      </ResizablePanel>
-                    </ContextMenuTrigger>
-                    <ContextMenuContent>
-                      <ContextMenuItem
-                        @click="
-                          topPanel?.isCollapsed
-                            ? topPanel?.expand()
-                            : topPanel?.collapse()
-                        "
-                      >
-                        <IconMinimize v-if="topPanel?.isCollapsed" />
-                        <IconMaximize v-else />
-                        {{
-                          topPanel?.isCollapsed
-                            ? t("layouts.app.panel.collapse")
-                            : t("layouts.app.panel.expand")
-                        }}
-                      </ContextMenuItem>
-                      <ContextMenuItem @click="bottomPanel?.collapse()">
-                        <IconX /> {{ t("layouts.app.panel.close") }}
-                      </ContextMenuItem>
-                    </ContextMenuContent>
-                  </ContextMenu>
+                  <ResizablePanel
+                    id="app-right-dock"
+                    ref="rightDockPanel"
+                    collapsible
+                    :default-size="24"
+                    :min-size="18"
+                    :max-size="40"
+                    :collapsed-size="0"
+                    class="min-h-0 min-w-0"
+                    @collapse="
+                      animatePanels && hasRightDockContent && closeChatWindow()
+                    "
+                  >
+                    <AiChatWindow />
+                  </ResizablePanel>
                 </ResizablePanelGroup>
               </ResizablePanel>
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger as-child>
-                    <ResizableHandle
-                      class="data-[resize-handle-state=drag]:after:bg-foreground data-[resize-handle-state=hover]:after:bg-muted focus-visible:after:bg-muted! z-20 bg-transparent transition before:pointer-events-auto before:absolute before:inset-y-0 before:left-1/2 before:w-3 before:-translate-x-1/2 after:rounded-3xl focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:outline-none focus-visible:after:inset-y-6 data-resize-handle:bg-transparent data-resize-handle:after:w-1 data-[resize-handle-state=drag]:after:inset-y-6 data-[resize-handle-state=hover]:after:inset-y-6"
-                      :class="{
-                        'bg-muted': !rightPanel?.isCollapsed,
-                        'w-0!': rightPanel?.isCollapsed,
-                      }"
-                      @dblclick="
-                        rightPanel?.isCollapsed
-                          ? rightPanel?.expand()
-                          : rightPanel?.collapse()
-                      "
-                    />
-                  </TooltipTrigger>
-                  <TooltipContent side="left" class="p-1!">
-                    <div class="flex flex-col gap-1">
-                      <div
-                        class="bg-accent/5 flex flex-col gap-2 rounded-lg p-2"
-                      >
-                        <span class="flex items-center gap-2">
-                          <IconHand /> {{ t("tooltips.dragToResize") }}
-                        </span>
-                        <span class="flex items-center gap-2">
-                          <IconPointerClick />
-                          {{ t("tooltips.doubleClickToggle") }}
-                        </span>
-                      </div>
-                      <div
-                        class="bg-accent/5 flex flex-col gap-2 rounded-lg p-2"
-                      >
-                        <span class="flex items-center gap-2">
-                          <IconArrowLeft />
-                          {{ t("tooltips.leftArrowExpand") }}
-                        </span>
-                        <span class="flex items-center gap-2">
-                          <IconArrowRight />
-                          {{ t("tooltips.rightArrowCollapse") }}
-                        </span>
-                        <span class="flex items-center gap-2">
-                          <IconArrowBigUp />
-                          {{ t("tooltips.shiftLargeSteps") }}
-                        </span>
-                      </div>
-                    </div>
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-              <ContextMenu>
-                <ContextMenuTrigger as-child>
-                  <ResizablePanel
-                    ref="rightPanel"
-                    class="rounded-3xl"
-                    collapsible
-                    :min-size="22"
-                    :default-size="28"
-                    :max-size="38"
-                    :collapsed-size="0"
-                    as-child
-                    :inert="rightPanel?.isCollapsed"
-                    @collapse="rightPanelCollapsed = true"
-                    @expand="rightPanelCollapsed = false"
-                  >
-                    <div class="grid size-full min-h-0 min-w-0">
-                      <div class="ml-0 min-h-0 min-w-0">
-                        <!-- overflow-clip rounded-3xl border -->
-                        <div
-                          :id="sidebarTargetId('right')"
-                          class="h-full grow overflow-clip"
-                        ></div>
-                      </div>
-                    </div>
-                  </ResizablePanel>
-                </ContextMenuTrigger>
-                <ContextMenuContent>
-                  <ContextMenuItem @click="rightPanel?.collapse()">
-                    <IconX /> {{ t("layouts.app.panel.close") }}
-                  </ContextMenuItem>
-                </ContextMenuContent>
-              </ContextMenu>
             </ResizablePanelGroup>
-            <AiChatWindow />
           </div>
           <BottomBar />
         </div>

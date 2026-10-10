@@ -9,12 +9,7 @@ import {
   IconX,
 } from "@/data/icons"
 import { UseDraggable as Draggable } from "@vueuse/components"
-import {
-  unrefElement,
-  useElementBounding,
-  useElementSize,
-  usePreferredReducedMotion,
-} from "@vueuse/core"
+import { unrefElement, usePreferredReducedMotion } from "@vueuse/core"
 import { Motion, MotionConfig, motion } from "motion-v"
 import type { ComponentPublicInstance } from "vue"
 
@@ -41,29 +36,8 @@ const observedSize = useLocalStorage("popout-size", { width: 300, height: 400 })
 const observedPosition = useLocalStorage("popout-position", { x: 0.5, y: 0.5 })
 const reducedMotion = usePreferredReducedMotion()
 const isChatWindowMorphing = ref(false)
-const rightDockEl = ref<ComponentPublicInstance | null>(null)
-const {
-  right: dockRight,
-  top: dockTop,
-  height: dockHeight,
-} = useElementBounding(rightDockEl)
-const { width: dockContainerWidth } = useElementSize(
-  computed(() => unrefElement(rightDockEl)?.parentElement)
-)
-const dockWidth = computed(() => Math.min(320, dockContainerWidth.value))
 const layoutDependency = computed(() =>
-  [
-    isDocked.value,
-    isPoppedOutMinimized.value,
-    reducedMotion.value,
-    dockRight.value,
-    dockTop.value,
-    dockHeight.value,
-    dockWidth.value,
-  ].join(":")
-)
-const hasRightDockContent = computed(
-  () => isDocked.value && isChatWindowOpen.value
+  [isDocked.value, isPoppedOutMinimized.value, reducedMotion.value].join(":")
 )
 const windowTransition = computed(() => ({
   type: "spring" as const,
@@ -80,6 +54,19 @@ watch([isChatWindowOpen, reducedMotion], () => {
 watch([isPoppedOut, openAiAsk], ([pinnedOpen, askOpen]) => {
   if (pinnedOpen || askOpen) {
     isPoppedOutMinimized.value = false
+  }
+})
+
+watch(isDocked, async () => {
+  const focusedElement = document.activeElement
+  const restoreFocus =
+    focusedElement instanceof HTMLElement &&
+    unrefElement(draggableEl)?.contains(focusedElement)
+
+  isChatWindowMorphing.value = false
+  await nextTick()
+  if (restoreFocus && focusedElement.isConnected) {
+    focusedElement.focus({ preventScroll: true })
   }
 })
 
@@ -104,242 +91,243 @@ useResizeObserver(draggableEl, (entries) => {
 <template>
   <!-- Apply reduced motion via the reactive duration, including mid-animation changes. -->
   <MotionConfig reduced-motion="never">
-    <!-- Keep the frame under one parent so layout snapshots survive docking. -->
-    <Transition
-      :css="!isDocked && reducedMotion !== 'reduce'"
-      enter-active-class="transition-opacity duration-200 ease-in-out"
-      leave-active-class="transition-opacity duration-200 ease-in-out"
-      enter-from-class="opacity-0"
-      leave-to-class="opacity-0"
-    >
-      <div
-        v-if="isChatWindowOpen"
-        ref="draggableContainer"
-        class="pointer-events-none fixed top-12 right-2 bottom-12 left-14 z-50"
+    <div
+      id="right-dock"
+      class="bg-background flex size-full min-h-0 min-w-0 flex-col overflow-clip rounded-3xl"
+    ></div>
+    <!-- Teleport moves the existing frame without remounting its chat content. -->
+    <Teleport defer to="#right-dock" :disabled="!isDocked">
+      <Transition
+        :css="!isDocked && reducedMotion !== 'reduce'"
+        enter-active-class="transition-opacity duration-200 ease-in-out"
+        leave-active-class="transition-opacity duration-200 ease-in-out"
+        enter-from-class="opacity-0"
+        leave-to-class="opacity-0"
       >
-        <ContextMenu>
-          <ContextMenuTrigger as-child>
-            <Motion
-              ref="draggableEl"
-              as-child
-              layout
-              :layout-dependency="layoutDependency"
-              :initial="false"
-              :transition="windowTransition"
-              :style="{ borderRadius: '24px' }"
-              @layout-animation-start="isChatWindowMorphing = true"
-              @layout-animation-complete="isChatWindowMorphing = false"
-            >
-              <Draggable
-                prevent-default
-                :disabled="isDocked || isChatWindowMorphing"
-                :handle="draggableHandle"
-                :initial-value="{
-                  x: observedPosition.x * (innerWidth - observedSize.width),
-                  y: observedPosition.y * (innerHeight - observedSize.height),
-                }"
-                storage-key="popout-position"
-                storage-type="local"
-                :container-element="draggableContainer"
-                :style="
-                  isDocked
-                    ? {
-                        position: 'fixed',
-                        left: `${dockRight - dockWidth}px`,
-                        top: `${dockTop}px`,
-                        width: `${dockWidth}px`,
-                        height: `${dockHeight}px`,
-                        touchAction: 'auto',
-                      }
-                    : isPoppedOutMinimized
-                      ? {
-                          width: 'auto',
-                          height: 'auto',
-                        }
-                      : {
-                          width: `${observedSize.width}px`,
-                          height: `${observedSize.height}px`,
-                        }
-                "
-                class="bg-background pointer-events-auto flex min-w-0 flex-col overflow-clip rounded-3xl"
-                :class="
-                  isDocked
-                    ? 'size-full'
-                    : [
-                        'absolute min-w-64 border backdrop-blur-2xl will-change-transform',
-                        isPoppedOutMinimized
-                          ? 'border-foreground ring-1'
-                          : 'min-h-64 resize shadow-lg',
-                      ]
-                "
+        <div
+          v-if="isChatWindowOpen"
+          ref="draggableContainer"
+          class="min-h-0 min-w-0"
+          :class="
+            isDocked
+              ? 'size-full'
+              : 'pointer-events-none fixed top-12 right-2 bottom-12 left-14 z-50'
+          "
+        >
+          <ContextMenu>
+            <ContextMenuTrigger as-child>
+              <Motion
+                ref="draggableEl"
+                as-child
+                :layout="!isDocked"
+                :layout-dependency="layoutDependency"
+                :initial="false"
+                :transition="windowTransition"
+                :style="{ borderRadius: '24px' }"
+                @layout-animation-start="isChatWindowMorphing = true"
+                @layout-animation-complete="isChatWindowMorphing = false"
               >
-                <motion.div
-                  ref="draggableHandleEl"
-                  layout="position"
-                  :layout-dependency="layoutDependency"
-                  :transition="windowTransition"
-                  class="flex shrink-0 items-center justify-between gap-2 p-2"
-                  :class="{
-                    'cursor-move': !isDocked,
-                    'bg-sidebar': !isDocked && isPoppedOutMinimized,
+                <Draggable
+                  prevent-default
+                  :disabled="isDocked || isChatWindowMorphing"
+                  :handle="draggableHandle"
+                  :initial-value="{
+                    x: observedPosition.x * (innerWidth - observedSize.width),
+                    y: observedPosition.y * (innerHeight - observedSize.height),
                   }"
-                  @dblclick="
-                    !isDocked && (isPoppedOutMinimized = !isPoppedOutMinimized)
+                  storage-key="popout-position"
+                  storage-type="local"
+                  :container-element="draggableContainer"
+                  :style="
+                    isDocked
+                      ? {
+                          position: 'relative',
+                          left: '0px',
+                          top: '0px',
+                          width: '100%',
+                          height: '100%',
+                          touchAction: 'auto',
+                        }
+                      : isPoppedOutMinimized
+                        ? {
+                            width: 'auto',
+                            height: 'auto',
+                          }
+                        : {
+                            width: `${observedSize.width}px`,
+                            height: `${observedSize.height}px`,
+                          }
+                  "
+                  class="bg-background pointer-events-auto flex min-w-0 flex-col overflow-clip rounded-3xl"
+                  :class="
+                    isDocked
+                      ? 'size-full'
+                      : [
+                          'absolute min-w-64 border backdrop-blur-2xl will-change-transform',
+                          isPoppedOutMinimized
+                            ? 'border-foreground ring-1'
+                            : 'min-h-64 resize shadow-lg',
+                        ]
                   "
                 >
-                  <span
-                    class="ml-2 flex min-w-0 flex-1 items-center gap-2 font-medium"
+                  <motion.div
+                    ref="draggableHandleEl"
+                    :layout="isDocked ? false : 'position'"
+                    :layout-dependency="layoutDependency"
+                    :transition="windowTransition"
+                    class="flex shrink-0 items-center justify-between gap-2 p-2"
+                    :class="{
+                      'cursor-move': !isDocked,
+                      'bg-sidebar': !isDocked && isPoppedOutMinimized,
+                    }"
+                    @dblclick="
+                      !isDocked &&
+                      (isPoppedOutMinimized = !isPoppedOutMinimized)
+                    "
                   >
-                    <IconGripHorizontal v-if="!isDocked" class="shrink-0" />
                     <span
-                      class="min-w-0 truncate"
-                      :title="
-                        isPoppedOut
-                          ? poppedOutTitle || t('layouts.app.popout.title')
-                          : t('pages.start.askAi')
-                      "
+                      class="ml-2 flex min-w-0 flex-1 items-center gap-2 font-medium"
                     >
-                      {{
-                        isPoppedOut
-                          ? poppedOutTitle || t("layouts.app.popout.title")
-                          : t("pages.start.askAi")
-                      }}
+                      <IconGripHorizontal v-if="!isDocked" class="shrink-0" />
+                      <span
+                        class="min-w-0 truncate"
+                        :title="
+                          isPoppedOut
+                            ? poppedOutTitle || t('layouts.app.popout.title')
+                            : t('pages.start.askAi')
+                        "
+                      >
+                        {{
+                          isPoppedOut
+                            ? poppedOutTitle || t("layouts.app.popout.title")
+                            : t("pages.start.askAi")
+                        }}
+                      </span>
                     </span>
-                  </span>
-                  <span class="flex shrink-0 items-center gap-2">
-                    <!-- Actions belonging to whatever is docked -->
-                    <!-- inside (e.g. PoppedOutChat's "open in a -->
-                    <!-- native window"), teleported in beside -->
-                    <!-- the window controls. -->
-                    <span
-                      id="popout-actions"
-                      class="flex items-center empty:hidden"
-                    ></span>
-                    <!-- <ButtonGroup> -->
-                    <TooltipProvider>
-                      <Tooltip>
-                        <TooltipTrigger as-child>
-                          <InputGroupButton
-                            variant="ghost"
-                            size="icon-sm"
-                            @click="isDocked = !isDocked"
-                          >
-                            <IconPictureInPicture2 v-if="isDocked" />
-                            <IconPanelRight v-else />
-                          </InputGroupButton>
-                        </TooltipTrigger>
-                        <TooltipContent>{{
-                          t(
-                            isDocked
-                              ? "layouts.app.popout.undock"
-                              : "layouts.app.popout.dock"
-                          )
-                        }}</TooltipContent>
-                      </Tooltip>
-                      <Tooltip v-if="!isDocked">
-                        <TooltipTrigger as-child>
-                          <InputGroupButton
-                            variant="ghost"
-                            size="icon-sm"
-                            @click="
-                              isPoppedOutMinimized = !isPoppedOutMinimized
-                            "
-                          >
-                            <IconPlus v-if="isPoppedOutMinimized" />
-                            <IconMinus v-else />
-                          </InputGroupButton>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          {{
-                            isPoppedOutMinimized
-                              ? t("layouts.app.popout.expand")
-                              : t("layouts.app.popout.minimize")
-                          }}
-                        </TooltipContent>
-                      </Tooltip>
-                      <Tooltip>
-                        <TooltipTrigger as-child>
-                          <InputGroupButton
-                            variant="ghost"
-                            size="icon-sm"
-                            @click="closeChatWindow"
-                          >
-                            <IconX />
-                          </InputGroupButton>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          {{
+                    <span class="flex shrink-0 items-center gap-2">
+                      <!-- Actions belonging to whatever is docked -->
+                      <!-- inside (e.g. PoppedOutChat's "open in a -->
+                      <!-- native window"), teleported in beside -->
+                      <!-- the window controls. -->
+                      <span
+                        id="popout-actions"
+                        class="flex items-center empty:hidden"
+                      ></span>
+                      <!-- <ButtonGroup> -->
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger as-child>
+                            <InputGroupButton
+                              variant="ghost"
+                              size="icon-sm"
+                              @click="isDocked = !isDocked"
+                            >
+                              <IconPictureInPicture2 v-if="isDocked" />
+                              <IconPanelRight v-else />
+                            </InputGroupButton>
+                          </TooltipTrigger>
+                          <TooltipContent>{{
                             t(
                               isDocked
-                                ? "layouts.app.sidebar.close"
-                                : "layouts.app.popout.close"
+                                ? "layouts.app.popout.undock"
+                                : "layouts.app.popout.dock"
                             )
-                          }}
-                        </TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
-                    <!-- </ButtonGroup> -->
-                  </span>
-                </motion.div>
-                <motion.div
-                  v-show="isDocked || !isPoppedOutMinimized"
-                  id="popout-dock"
-                  layout="position"
-                  :layout-dependency="layoutDependency"
-                  :transition="windowTransition"
-                  class="flex min-h-0 min-w-0 grow flex-col overflow-clip"
-                ></motion.div>
-              </Draggable>
-            </Motion>
-          </ContextMenuTrigger>
-          <ContextMenuContent>
-            <ContextMenuItem @click="isDocked = !isDocked">
-              <IconPictureInPicture2 v-if="isDocked" />
-              <IconPanelRight v-else />
-              {{
-                t(
-                  isDocked
-                    ? "layouts.app.popout.undock"
-                    : "layouts.app.popout.dock"
-                )
-              }}
-            </ContextMenuItem>
-            <ContextMenuItem
-              v-if="!isDocked"
-              @click="isPoppedOutMinimized = !isPoppedOutMinimized"
-            >
-              <IconMinus v-if="!isPoppedOutMinimized" />
-              <IconPlus v-else />
-              {{
-                isPoppedOutMinimized
-                  ? t("layouts.app.popout.expand")
-                  : t("layouts.app.popout.minimize")
-              }}
-            </ContextMenuItem>
-            <ContextMenuItem @click="closeChatWindow">
-              <IconX />
-              {{
-                t(
-                  isDocked
-                    ? "layouts.app.sidebar.close"
-                    : "layouts.app.popout.close"
-                )
-              }}
-            </ContextMenuItem>
-          </ContextMenuContent>
-        </ContextMenu>
-      </div>
-    </Transition>
-    <motion.div
-      id="right-dock"
-      ref="rightDockEl"
-      :initial="false"
-      :animate="{
-        width: hasRightDockContent ? `${dockWidth}px` : '0px',
-        marginLeft: hasRightDockContent ? '0px' : 'calc(var(--spacing) * -2)',
-      }"
-      :transition="windowTransition"
-      class="bg-background flex min-h-0 max-w-full shrink-0 flex-col overflow-clip rounded-3xl"
-    ></motion.div>
+                          }}</TooltipContent>
+                        </Tooltip>
+                        <Tooltip v-if="!isDocked">
+                          <TooltipTrigger as-child>
+                            <InputGroupButton
+                              variant="ghost"
+                              size="icon-sm"
+                              @click="
+                                isPoppedOutMinimized = !isPoppedOutMinimized
+                              "
+                            >
+                              <IconPlus v-if="isPoppedOutMinimized" />
+                              <IconMinus v-else />
+                            </InputGroupButton>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            {{
+                              isPoppedOutMinimized
+                                ? t("layouts.app.popout.expand")
+                                : t("layouts.app.popout.minimize")
+                            }}
+                          </TooltipContent>
+                        </Tooltip>
+                        <Tooltip>
+                          <TooltipTrigger as-child>
+                            <InputGroupButton
+                              variant="ghost"
+                              size="icon-sm"
+                              @click="closeChatWindow"
+                            >
+                              <IconX />
+                            </InputGroupButton>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            {{
+                              t(
+                                isDocked
+                                  ? "layouts.app.sidebar.close"
+                                  : "layouts.app.popout.close"
+                              )
+                            }}
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                      <!-- </ButtonGroup> -->
+                    </span>
+                  </motion.div>
+                  <motion.div
+                    v-show="isDocked || !isPoppedOutMinimized"
+                    id="popout-dock"
+                    :layout="isDocked ? false : 'position'"
+                    :layout-dependency="layoutDependency"
+                    :transition="windowTransition"
+                    class="flex min-h-0 min-w-0 grow flex-col overflow-clip"
+                  ></motion.div>
+                </Draggable>
+              </Motion>
+            </ContextMenuTrigger>
+            <ContextMenuContent>
+              <ContextMenuItem @click="isDocked = !isDocked">
+                <IconPictureInPicture2 v-if="isDocked" />
+                <IconPanelRight v-else />
+                {{
+                  t(
+                    isDocked
+                      ? "layouts.app.popout.undock"
+                      : "layouts.app.popout.dock"
+                  )
+                }}
+              </ContextMenuItem>
+              <ContextMenuItem
+                v-if="!isDocked"
+                @click="isPoppedOutMinimized = !isPoppedOutMinimized"
+              >
+                <IconMinus v-if="!isPoppedOutMinimized" />
+                <IconPlus v-else />
+                {{
+                  isPoppedOutMinimized
+                    ? t("layouts.app.popout.expand")
+                    : t("layouts.app.popout.minimize")
+                }}
+              </ContextMenuItem>
+              <ContextMenuItem @click="closeChatWindow">
+                <IconX />
+                {{
+                  t(
+                    isDocked
+                      ? "layouts.app.sidebar.close"
+                      : "layouts.app.popout.close"
+                  )
+                }}
+              </ContextMenuItem>
+            </ContextMenuContent>
+          </ContextMenu>
+        </div>
+      </Transition>
+    </Teleport>
   </MotionConfig>
 </template>

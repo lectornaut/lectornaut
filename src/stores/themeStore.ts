@@ -4,7 +4,8 @@
  *
  * Owns the per-user appearance/theme settings: color mode, base/accent palettes
  * (incl. custom hex), font, size, language, editor theme + font size, and the
- * translucent-sidebar and reduced-motion flags, and chat window mode.
+ * translucent-sidebar and reduced-motion flags, chat window mode, and left
+ * and right dock visibility.
  * Exposed as a single `reactive()` `themeSettings` bundle that consumers read
  * AND write two-way (notably
  * `modules/theme.ts`, which mirrors it into the live CSS / `useColorMode` state).
@@ -112,6 +113,8 @@ export const useThemeStore = defineStore("theme", () => {
     "chatWindowMode",
     "floating"
   )
+  const leftDockVisible = useStorage<boolean>("leftDockVisible", false)
+  const rightDockVisible = useStorage<boolean>("rightDockVisible", false)
 
   const themeSettings = reactive({
     mode,
@@ -127,6 +130,8 @@ export const useThemeStore = defineStore("theme", () => {
     translucentSidebar,
     reducedMotion,
     chatWindowMode,
+    leftDockVisible,
+    rightDockVisible,
   })
 
   const themeDocRef = computed(() => {
@@ -160,6 +165,8 @@ export const useThemeStore = defineStore("theme", () => {
         translucentSidebar: translucentSidebar.value,
         reducedMotion: reducedMotion.value,
         chatWindowMode: chatWindowMode.value,
+        leftDockVisible: leftDockVisible.value,
+        rightDockVisible: rightDockVisible.value,
       },
       "settings.themes.persist"
     )
@@ -192,6 +199,18 @@ export const useThemeStore = defineStore("theme", () => {
         themeDoc.chatWindowMode !== chatWindowMode.value
       ) {
         chatWindowMode.value = themeDoc.chatWindowMode
+      }
+      if (
+        typeof themeDoc.leftDockVisible === "boolean" &&
+        themeDoc.leftDockVisible !== leftDockVisible.value
+      ) {
+        leftDockVisible.value = themeDoc.leftDockVisible
+      }
+      if (
+        typeof themeDoc.rightDockVisible === "boolean" &&
+        themeDoc.rightDockVisible !== rightDockVisible.value
+      ) {
+        rightDockVisible.value = themeDoc.rightDockVisible
       }
 
       if ("mode" in themeDoc && themeDoc.mode && themeDoc.mode !== mode.value) {
@@ -333,6 +352,8 @@ export const useThemeStore = defineStore("theme", () => {
       translucentSidebar,
       reducedMotion,
       chatWindowMode,
+      leftDockVisible,
+      rightDockVisible,
     ],
     () => {
       void persistThemeWithSync()

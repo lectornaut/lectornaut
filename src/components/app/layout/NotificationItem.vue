@@ -69,7 +69,12 @@ const handleClick = () => {
 <template>
   <ContextMenu>
     <ContextMenuTrigger as-child>
-      <Item class="group" size="xs" as-child @click.prevent.stop="handleClick">
+      <Item
+        class="group @container/notification-item"
+        size="xs"
+        as-child
+        @click.prevent.stop="handleClick"
+      >
         <RouterLink :to="notification.url">
           <ItemMedia variant="icon" class="text-muted-foreground relative">
             <Component :is="typeIcon" />
@@ -78,23 +83,37 @@ const handleClick = () => {
               class="bg-primary ring-sidebar absolute -top-1 -left-1 flex size-2 rounded-full ring-2"
             ></span>
           </ItemMedia>
-          <ItemContent>
-            <ItemTitle class="line-clamp-1 truncate">
+          <ItemContent
+            class="min-w-0 basis-[calc(100%-2rem)] @min-[360px]/notification-item:basis-0"
+          >
+            <ItemTitle
+              class="block w-full truncate"
+              :title="notification.title"
+            >
               {{ notification.title }}
             </ItemTitle>
             <ItemDescription class="text-xs">
               {{ notification.description }}
             </ItemDescription>
           </ItemContent>
-          <ItemActions>
-            <ButtonGroup class="hidden group-hover:flex">
+          <ItemActions class="ml-auto grid shrink-0">
+            <ButtonGroup
+              class="pointer-events-none col-start-1 row-start-1 justify-self-end opacity-0 transition-opacity duration-150 group-focus-within:pointer-events-auto group-focus-within:opacity-100 group-hover:pointer-events-auto group-hover:opacity-100 motion-reduce:transition-none [@media(hover:none)]:pointer-events-auto [@media(hover:none)]:opacity-100"
+            >
               <TooltipProvider>
                 <ButtonGroup>
                   <Tooltip>
                     <TooltipTrigger as-child>
                       <Button
                         variant="secondary"
-                        size="icon"
+                        size="icon-lg"
+                        :aria-label="
+                          $t(
+                            notification.read
+                              ? 'components.notificationItem.tooltips.markUnread'
+                              : 'components.notificationItem.contextMenu.read'
+                          )
+                        "
                         @click.prevent.stop="
                           notification.read
                             ? emit('mark-unread', notification.id)
@@ -107,7 +126,11 @@ const handleClick = () => {
                     </TooltipTrigger>
                     <TooltipContent>
                       {{
-                        $t("components.notificationItem.tooltips.markUnread")
+                        $t(
+                          notification.read
+                            ? "components.notificationItem.tooltips.markUnread"
+                            : "components.notificationItem.contextMenu.read"
+                        )
                       }}
                     </TooltipContent>
                   </Tooltip>
@@ -115,7 +138,10 @@ const handleClick = () => {
                     <TooltipTrigger as-child>
                       <Button
                         variant="secondary"
-                        size="icon"
+                        size="icon-lg"
+                        :aria-label="
+                          $t('components.notificationItem.tooltips.moveToInbox')
+                        "
                         @click.prevent.stop="
                           emit('mark-inbox', notification.id)
                         "
@@ -133,7 +159,10 @@ const handleClick = () => {
                     <TooltipTrigger as-child>
                       <Button
                         variant="secondary"
-                        size="icon"
+                        size="icon-lg"
+                        :aria-label="
+                          $t('components.notificationItem.tooltips.save')
+                        "
                         @click.prevent.stop="
                           emit('mark-saved', notification.id)
                         "
@@ -149,7 +178,10 @@ const handleClick = () => {
                     <TooltipTrigger as-child>
                       <Button
                         variant="secondary"
-                        size="icon"
+                        size="icon-lg"
+                        :aria-label="
+                          $t('components.notificationItem.tooltips.markDone')
+                        "
                         @click.prevent.stop="emit('mark-done', notification.id)"
                       >
                         <IconCheck />
@@ -163,7 +195,7 @@ const handleClick = () => {
               </TooltipProvider>
             </ButtonGroup>
             <span
-              class="text-muted-foreground/50 block min-w-28 truncate text-right text-xs group-hover:hidden"
+              class="text-muted-foreground/50 pointer-events-none col-start-1 row-start-1 min-w-28 truncate text-right text-xs transition-opacity duration-150 group-focus-within:opacity-0 group-hover:opacity-0 motion-reduce:transition-none [@media(hover:none)]:opacity-0"
             >
               {{ timeAgo }}
             </span>

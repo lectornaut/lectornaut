@@ -14,19 +14,25 @@
  * (`openAiAskPopoutWindow`), which already exists and handles focus,
  * z-order and placement properly.
  *
- * `isDocked` is shared with Ask AI: the same mounted chat frame aligns
- * with `#right-dock` without resetting its session or floating geometry.
- * Its mode is backed by the account-synced appearance preference.
+ * `isDocked` is shared with Ask AI: Teleport moves the same mounted chat frame
+ * inside `#right-dock` without resetting its session or floating geometry.
+ * Dock sizing follows normal layout; floating minimize/expand retains motion,
+ * but docking does not project an animation across the two DOM parents.
+ * MainLayout owns the resizable dock panel and persists its layout separately
+ * from the floating window's size and position.
+ * Its mode and open/closed state are separate account-synced preferences.
+ * `rightDockVisible` is the sole persisted visibility flag. Pinned-chat
+ * selection is runtime-only; an open window restores Ask AI after a reload.
  * Pinned chats cover Ask AI without unmounting it. Closing the frame
  * dismisses both surfaces; a native handoff can reveal Ask AI instead.
  */
 import { useThemeStore } from "@/stores/themeStore"
-import { useLocalStorage } from "@vueuse/core"
+import { createSharedComposable, useLocalStorage } from "@vueuse/core"
 import { computed, ref, watch } from "vue"
 
 // Shared by Ask AI and pinned chats; only one is visible at a time.
 const openAiAsk = ref(false)
-const isPoppedOut = useLocalStorage("popout-state", false)
+const isPoppedOut = ref(false)
 const isChatWindowOpen = computed(() => isPoppedOut.value || openAiAsk.value)
 watch(
   openAiAsk,
@@ -47,8 +53,27 @@ const poppedOutSessionId = useLocalStorage<string | null>(
  */
 const poppedOutTitle = useLocalStorage("popout-title", "")
 
-export function usePopout() {
+export const usePopout = createSharedComposable(() => {
   const themeStore = useThemeStore()
+  watch(
+    () => themeStore.themeSettings.rightDockVisible,
+    (visible) => {
+      if (visible) {
+        if (!isChatWindowOpen.value) openAiAsk.value = true
+      } else {
+        openAiAsk.value = false
+        isPoppedOut.value = false
+      }
+    },
+    { immediate: true, flush: "sync" }
+  )
+
+  // Batch surface handoffs so switching between Ask AI and a pinned chat
+  // doesn't persist an intermediate closed state.
+  watch(isChatWindowOpen, (visible) => {
+    themeStore.themeSettings.rightDockVisible = visible
+  })
+
   const isDocked = computed({
     get: () => themeStore.themeSettings.chatWindowMode === "sidebar",
     set: (value: boolean) => {
@@ -105,4 +130,4 @@ export function usePopout() {
     closeChatWindow,
     toggleChatWindow,
   }
-}
+})
