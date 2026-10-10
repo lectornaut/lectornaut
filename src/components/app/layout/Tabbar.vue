@@ -16,7 +16,6 @@ import {
   IconPanelLeft,
   IconPanelRight,
   IconPenLine,
-  IconPictureInPicture2,
   IconPin,
   IconPinOff,
   IconPlus,
@@ -30,7 +29,6 @@ import { isDefaultRoute } from "@/helpers/utilities"
 import { emitter } from "@/modules/mitt"
 import { useTabsStore } from "@/stores/tabsStore"
 import { useUiPreferencesStore } from "@/stores/uiPreferencesStore"
-import { useLocalStorage } from "@vueuse/core"
 import { useSortable } from "@vueuse/integrations/useSortable"
 import { storeToRefs } from "pinia"
 
@@ -86,8 +84,6 @@ const closeOtherTabsKeys = useShortcutKeys("Tabs.Close.Others")
 const duplicateTabKeys = useShortcutKeys("Tabs.Duplicate")
 const renameTabKeys = useShortcutKeys("Tabs.Rename")
 const reopenLastTabKeys = useShortcutKeys("Tabs.ReopenLast")
-
-const isPoppedOut = useLocalStorage("popout-state", false)
 
 // On mobile the side panels can't coexist with the tab strip, so collapse
 // both when entering mobile and restore them when leaving it.
@@ -697,15 +693,6 @@ watch(copied, (isCopied) => {
                       </DropdownMenuGroup>
                       <DropdownMenuSeparator />
                       <DropdownMenuGroup>
-                        <DropdownMenuCheckboxItem
-                          :model-value="isPoppedOut"
-                          @update:model-value="isPoppedOut = !isPoppedOut"
-                          @select.prevent
-                        >
-                          <IconPictureInPicture2 />
-                          {{ t("layouts.app.statusBar.popOut") }}
-                        </DropdownMenuCheckboxItem>
-                        <DropdownMenuSeparator />
                         <DropdownMenuCheckboxItem
                           :model-value="!leftPanelCollapsed"
                           @update:model-value="

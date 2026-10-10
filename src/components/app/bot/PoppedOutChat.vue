@@ -2,7 +2,7 @@
 import { BotChatContextKey, useBotChat } from "@/composables/useBotChat"
 import { isTauri } from "@/composables/usePlatform"
 import { usePopout } from "@/composables/usePopout"
-import { IconPictureInPicture } from "@/data/icons"
+import { IconSquareArrowOutUpRight } from "@/data/icons"
 import { openAiAskPopoutWindow } from "@/modules/aiAskPopout"
 
 const { t } = useI18n()
@@ -14,7 +14,8 @@ const { t } = useI18n()
 const botChat = useBotChat({ pinnedContext: true })
 provide(BotChatContextKey, botChat)
 
-const { isPoppedOut, poppedOutSessionId, poppedOutTitle } = usePopout()
+const { isDocked, openAiAsk, isPoppedOut, poppedOutSessionId, poppedOutTitle } =
+  usePopout()
 
 // `selectSession` waits for team/workspace internally, so firing it from
 // setup (immediate) is safe on a cold boot. Watching the id means
@@ -48,6 +49,7 @@ const popOutToWindow = () => {
     title: poppedOutTitle.value || t("pages.start.askAi"),
   })
   isPoppedOut.value = false
+  if (isDocked.value) openAiAsk.value = true
 }
 </script>
 
@@ -58,10 +60,10 @@ const popOutToWindow = () => {
         <TooltipTrigger as-child>
           <InputGroupButton
             variant="ghost"
-            size="icon-xs"
+            size="icon-sm"
             @click="popOutToWindow"
           >
-            <IconPictureInPicture />
+            <IconSquareArrowOutUpRight />
           </InputGroupButton>
         </TooltipTrigger>
         <TooltipContent>{{ t("ai.openInNewWindow") }}</TooltipContent>

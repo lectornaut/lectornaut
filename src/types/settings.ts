@@ -14,3 +14,5 @@ import type { z } from "zod"
 export type ThemeMode = ThemeId
 
 export type SettingsThemeDoc = z.infer<typeof settingsThemeDocSchema>
+
+export type ChatWindowMode = NonNullable<SettingsThemeDoc["chatWindowMode"]>

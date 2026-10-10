@@ -1,27 +1,23 @@
 <script lang="ts" setup>
 import { BotChatContextKey, useBotChat } from "@/composables/useBotChat"
-import { isTauri, useIsFullscreen } from "@/composables/usePlatform"
+import { isTauri } from "@/composables/usePlatform"
+import { usePopout } from "@/composables/usePopout"
 import {
   IconAi,
   IconHistory,
-  IconPictureInPicture,
-  IconPin,
-  IconPinOff,
+  IconPanelRight,
+  IconPictureInPicture2,
+  IconSquareArrowOutUpRight,
 } from "@/data/icons"
 import { getPlatformSpecialKey } from "@/helpers/shortcuts"
 import { openAiAskPopoutWindow } from "@/modules/aiAskPopout"
 import { emitter } from "@/modules/mitt"
 import { useRouter } from "vue-router"
 
-const isFullscreen = useIsFullscreen()
+const { isDocked, openAiAsk, isPoppedOut, toggleAiAsk } = usePopout()
 
-const isDocked = ref(false)
-
-const openAiAsk = ref(false)
-
-emitter.on("Dialog.AiAsk.Toggle", () => {
-  openAiAsk.value = !openAiAsk.value
-})
+emitter.on("Dialog.AiAsk.Toggle", toggleAiAsk)
+onUnmounted(() => emitter.off("Dialog.AiAsk.Toggle", toggleAiAsk))
 
 const { t } = useI18n()
 
@@ -31,12 +27,21 @@ const { t } = useI18n()
 // Sessions still persist server-side under teams/{teamId}/workspaces/
 // {workspaceId}/botSessions and remain accessible from the bot page's
 // history sidebar — the reset only affects what AiAsk's UI shows.
+// AiChatWindow owns the same floating/sidebar frame used by pinned chats.
+// A pinned chat only hides this surface: revealing it does not count as
+// a new opening, so its session and mounted composer's draft survive.
 const aiAskBotChat = useBotChat({ autoPin: true })
 provide(BotChatContextKey, aiAskBotChat)
 
-watch(openAiAsk, (isOpen) => {
-  if (isOpen) aiAskBotChat.startNewSession()
-})
+watch(
+  openAiAsk,
+  (isOpen) => {
+    if (isOpen) {
+      aiAskBotChat.startNewSession()
+    }
+  },
+  { flush: "sync" }
+)
 
 const router = useRouter()
 
@@ -45,10 +50,10 @@ const openHistory = () => {
   void router.push("/bot")
 }
 
-// Pop the current chat out into a detached PiP-style window. The sheet
+// Pop the current chat out into a detached PiP-style window. The frame
 // closes; the window resumes the session (or starts fresh if nothing was
 // sent yet). Repeatable — each click spawns another window. One-way:
-// closing a pop-out just closes it, nothing comes back to the sheet.
+// closing a pop-out just closes it, nothing comes back to the frame.
 const popOut = () => {
   openAiAsk.value = false
   openAiAskPopoutWindow({
@@ -59,69 +64,63 @@ const popOut = () => {
 </script>
 
 <template>
-  <Sheet v-model:open="openAiAsk">
-    <TooltipProvider>
-      <Tooltip>
-        <SheetTrigger as-child>
-          <TooltipTrigger as-child>
-            <Button
-              id="tour-ai-assistant"
-              variant="outline"
-              class="shadow-none"
-              size="sm"
-            >
-              <IconAi />
-              Agent
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent class="flex items-center gap-2 px-2">
-            <Badge
-              variant="ghost"
-              class="rounded-4xl"
-              @click="isDocked = !isDocked"
-            >
-              <IconPin v-if="!isDocked" />
-              <IconPinOff v-else />
-              {{ t("pages.start.askAi") }}
-            </Badge>
-            <KbdGroup>
-              <Kbd>{{ getPlatformSpecialKey() }}</Kbd>
-              <Kbd>↩</Kbd>
-            </KbdGroup>
-          </TooltipContent>
-        </SheetTrigger>
-        <Teleport v-if="isDocked" defer to="#right-dock" :disabled="!isDocked">
-          <AiChatShell />
-        </Teleport>
-        <SheetContent
-          class="m-2 mt-[calc(var(--spacing-titlebar-height,0px)+(--spacing(2)))] h-auto! gap-0 overflow-clip rounded-4xl border"
-          :class="{ 'mt-12': isTauri && !isFullscreen }"
-          :show-close-button="false"
+  <TooltipProvider>
+    <Tooltip>
+      <TooltipTrigger as-child>
+        <Button id="tour-ai-assistant" size="sm" @click="toggleAiAsk">
+          <IconAi />
+          Agent
+        </Button>
+      </TooltipTrigger>
+      <TooltipContent class="flex items-center gap-2 px-2">
+        <Badge
+          variant="ghost"
+          class="rounded-4xl"
+          @click="isDocked = !isDocked"
         >
-          <SheetHeader>
-            <div class="flex items-center justify-between gap-2">
-              <SheetTitle>{{ t("pages.start.askAi") }}</SheetTitle>
-              <div class="flex items-center gap-1">
-                <Button
-                  v-if="isTauri"
-                  variant="ghost"
-                  size="icon-sm"
-                  @click="popOut"
-                >
-                  <IconPictureInPicture />
-                </Button>
-                <Button variant="ghost" size="icon-sm" @click="openHistory">
-                  <IconHistory />
-                </Button>
-              </div>
-            </div>
-            <SheetDescription class="sr-only">{{
-              t("pages.start.getInstantAnswersDescription")
-            }}</SheetDescription>
-          </SheetHeader>
-          <AiChatShell />
-        </SheetContent>
-      </Tooltip>
-    </TooltipProvider>
-  </Sheet>
+          <IconPanelRight v-if="!isDocked" />
+          <IconPictureInPicture2 v-else />
+          {{ t("pages.start.askAi") }}
+        </Badge>
+        <KbdGroup>
+          <Kbd>{{ getPlatformSpecialKey() }}</Kbd>
+          <Kbd>↩</Kbd>
+        </KbdGroup>
+      </TooltipContent>
+    </Tooltip>
+  </TooltipProvider>
+  <Teleport v-if="openAiAsk" defer to="#popout-dock">
+    <div
+      v-show="!isPoppedOut"
+      class="flex size-full min-h-0 min-w-0 flex-col overflow-hidden"
+    >
+      <AiChatShell />
+    </div>
+  </Teleport>
+  <Teleport v-if="openAiAsk" defer to="#popout-actions">
+    <div v-show="!isPoppedOut" class="flex items-center gap-2">
+      <TooltipProvider>
+        <Tooltip>
+          <TooltipTrigger as-child>
+            <InputGroupButton
+              variant="ghost"
+              size="icon-sm"
+              @click="openHistory"
+            >
+              <IconHistory />
+            </InputGroupButton>
+          </TooltipTrigger>
+          <TooltipContent>{{ t("ai.botHistory") }}</TooltipContent>
+        </Tooltip>
+        <Tooltip v-if="isTauri">
+          <TooltipTrigger as-child>
+            <InputGroupButton variant="ghost" size="icon-sm" @click="popOut">
+              <IconSquareArrowOutUpRight />
+            </InputGroupButton>
+          </TooltipTrigger>
+          <TooltipContent>{{ t("ai.openInNewWindow") }}</TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
+    </div>
+  </Teleport>
 </template>

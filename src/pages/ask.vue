@@ -100,12 +100,13 @@ const closeWindow = () => {
   <div class="bg-background flex h-screen w-screen grow flex-col">
     <header
       data-tauri-drag-region
-      class="flex items-center justify-between gap-2 p-2"
+      class="flex shrink-0 items-center justify-between gap-2 p-2"
       :class="{ 'pl-macos-window-controls': macOSTrafficLightsVisible }"
     >
       <h2
         data-tauri-drag-region
-        class="text-foreground cn-font-heading text-base font-medium"
+        class="text-foreground cn-font-heading min-w-0 flex-1 truncate text-base font-medium"
+        :title="heading"
       >
         {{ heading }}
       </h2>
@@ -113,6 +114,7 @@ const closeWindow = () => {
         v-if="isTauri"
         variant="ghost"
         size="icon-sm"
+        class="shrink-0"
         @click="closeWindow"
       >
         <IconX />

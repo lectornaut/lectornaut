@@ -245,7 +245,7 @@ const emptyHint = computed(() =>
         <TooltipContent>{{ triggerLabel }}</TooltipContent>
       </Tooltip>
     </TooltipProvider>
-    <!-- House floating-sheet treatment (Agents.vue / AiAsk.vue): inset rounded
+    <!-- House floating-sheet treatment (Agents.vue): inset rounded
          panel, `h-auto!` so inset-y-0 + margins define a definite height — the
          files list scrolls via ScrollContainer, whose viewport resolves
          `height: 100%` against this flex column. -->

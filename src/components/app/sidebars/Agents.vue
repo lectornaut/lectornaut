@@ -5,7 +5,7 @@ import { isBuiltInAgentId } from "@/data/builtInAgents"
 import {
   IconBadgeCheck,
   IconCirclePlus,
-  IconPictureInPicture,
+  IconSquareArrowOutUpRight,
   IconSparkle,
   IconSparkles,
   IconX,
@@ -240,7 +240,7 @@ const popOutAgent = (agent: { id: string; name: string }): void => {
                       size="icon-sm"
                       @click="popOutAgent(agent)"
                     >
-                      <IconPictureInPicture />
+                      <IconSquareArrowOutUpRight />
                     </Button>
                   </TooltipTrigger>
                   <TooltipContent>

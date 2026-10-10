@@ -768,7 +768,7 @@ const expandedCard = ref<number | null>(null)
               v-for="card in group.cards"
               :key="card.id"
               :class="[
-                'col-span-1 shadow-none',
+                'col-span-1 shadow-none ring-0',
                 {
                   '@xl:col-span-2 @6xl:col-span-2': expandedCard === card.id,
                 },

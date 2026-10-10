@@ -1,4 +1,5 @@
 <script lang="ts" setup>
+import AiChatWindow from "@/components/app/bot/AiChatWindow.vue"
 import { useSidebar } from "@/components/ui/sidebar"
 import { SIDEBAR_WIDTH_ICON } from "@/components/ui/sidebar/utils"
 import {
@@ -7,24 +8,20 @@ import {
   IconArrowLeft,
   IconArrowRight,
   IconArrowUp,
-  IconGripHorizontal,
   IconHand,
   IconLayers,
   IconMaximize,
   IconMinimize,
-  IconMinus,
   IconPlus,
   IconPointerClick,
   IconRefreshCcw,
   IconTerminal,
   IconX,
 } from "@/data/icons"
-import { usePopout } from "@/composables/usePopout"
 import { sidebarTargetId } from "@/composables/useSidebarSlots"
 import { generateId } from "@/helpers/utilities"
 import { emitter } from "@/modules/mitt"
 import { useUiPreferencesStore } from "@/stores/uiPreferencesStore"
-import { UseDraggable as Draggable } from "@vueuse/components"
 import { storeToRefs } from "pinia"
 import { SplitterPanel } from "reka-ui"
 
@@ -257,35 +254,6 @@ watch(
     })
   }
 )
-
-const innerWidth = window.innerWidth
-const innerHeight = window.innerHeight
-const draggableContainer = ref<HTMLElement | null>(null)
-const draggableEl = ref<HTMLElement | null>(null)
-const draggableHandleEl = ref<HTMLElement | null>(null)
-// Window chrome lives here; the content is teleported into
-// `#popout-dock` by whoever opened it (see `usePopout`).
-const { isPoppedOut, isPoppedOutMinimized, poppedOutTitle } = usePopout()
-const observedSize = useLocalStorage("popout-size", { width: 300, height: 400 })
-const observedPosition = useLocalStorage("popout-position", { x: 0.5, y: 0.5 })
-
-watch(isPoppedOut, (val) => {
-  if (val) {
-    isPoppedOutMinimized.value = false
-  }
-})
-
-useResizeObserver(draggableEl, (entries) => {
-  const entry = entries[0]
-  if (!entry) return
-  if (isPoppedOutMinimized.value) return
-
-  const target = entry.target as HTMLElement
-  observedSize.value = {
-    width: target.offsetWidth,
-    height: target.offsetHeight,
-  }
-})
 
 const source = ref<{ id: string; label: string }[]>([])
 
@@ -877,146 +845,9 @@ const closeTab = (id: string) => {
                 </ContextMenuContent>
               </ContextMenu>
             </ResizablePanelGroup>
-            <Transition
-              enter-active-class="transition transform duration-200 ease-in-out"
-              leave-active-class="transition transform duration-200 ease-in-out"
-              enter-from-class="opacity-0 scale-95"
-              leave-to-class="opacity-0 scale-95"
-            >
-              <div
-                v-if="isPoppedOut"
-                ref="draggableContainer"
-                class="pointer-events-none fixed top-12 right-2 bottom-12 left-14 z-50"
-              >
-                <ContextMenu>
-                  <ContextMenuTrigger as-child>
-                    <Draggable
-                      ref="draggableEl"
-                      prevent-default
-                      :handle="draggableHandleEl"
-                      :initial-value="{
-                        x:
-                          observedPosition.x *
-                          (innerWidth - observedSize.width),
-                        y:
-                          observedPosition.y *
-                          (innerHeight - observedSize.height),
-                      }"
-                      storage-key="popout-position"
-                      storage-type="local"
-                      :container-element="draggableContainer"
-                      :style="
-                        isPoppedOutMinimized
-                          ? {
-                              width: 'auto',
-                              height: 'auto',
-                            }
-                          : {
-                              width: `${observedSize.width}px`,
-                              height: `${observedSize.height}px`,
-                            }
-                      "
-                      class="bg-background pointer-events-auto absolute flex min-w-64 flex-col overflow-clip rounded-3xl border backdrop-blur-2xl will-change-transform"
-                      :class="
-                        isPoppedOutMinimized
-                          ? 'border-foreground ring-1'
-                          : 'min-h-64 resize shadow-lg'
-                      "
-                    >
-                      <div
-                        ref="draggableHandleEl"
-                        class="flex cursor-move items-center justify-between gap-2 p-2"
-                        :class="
-                          isPoppedOutMinimized ? 'bg-sidebar' : 'bg-background'
-                        "
-                        @dblclick="isPoppedOutMinimized = !isPoppedOutMinimized"
-                      >
-                        <span class="ml-2 flex items-center gap-2 font-medium">
-                          <IconGripHorizontal />
-                          {{ poppedOutTitle || t("layouts.app.popout.title") }}
-                        </span>
-                        <span class="flex items-center gap-2">
-                          <!-- Actions belonging to whatever is docked -->
-                          <!-- inside (e.g. PoppedOutChat's "open in a -->
-                          <!-- native window"), teleported in beside -->
-                          <!-- the window controls. -->
-                          <span
-                            id="popout-actions"
-                            class="flex items-center empty:hidden"
-                          ></span>
-                          <!-- <ButtonGroup> -->
-                          <TooltipProvider>
-                            <Tooltip>
-                              <TooltipTrigger as-child>
-                                <InputGroupButton
-                                  variant="ghost"
-                                  size="icon-xs"
-                                  @click="
-                                    isPoppedOutMinimized = !isPoppedOutMinimized
-                                  "
-                                >
-                                  <IconPlus v-if="isPoppedOutMinimized" />
-                                  <IconMinus v-else />
-                                </InputGroupButton>
-                              </TooltipTrigger>
-                              <TooltipContent>
-                                {{
-                                  isPoppedOutMinimized
-                                    ? t("layouts.app.sidebar.expand")
-                                    : t("layouts.app.sidebar.minimize")
-                                }}
-                              </TooltipContent>
-                            </Tooltip>
-                            <Tooltip>
-                              <TooltipTrigger as-child>
-                                <InputGroupButton
-                                  variant="ghost"
-                                  size="icon-xs"
-                                  @click="isPoppedOut = false"
-                                >
-                                  <IconX />
-                                </InputGroupButton>
-                              </TooltipTrigger>
-                              <TooltipContent>
-                                {{ t("layouts.app.sidebar.close") }}
-                              </TooltipContent>
-                            </Tooltip>
-                          </TooltipProvider>
-                          <!-- </ButtonGroup> -->
-                        </span>
-                      </div>
-                      <div
-                        v-show="!isPoppedOutMinimized"
-                        id="popout-dock"
-                        class="flex min-h-0 min-w-0 grow flex-col overflow-clip"
-                      ></div>
-                    </Draggable>
-                  </ContextMenuTrigger>
-                  <ContextMenuContent>
-                    <ContextMenuItem
-                      @click="isPoppedOutMinimized = !isPoppedOutMinimized"
-                    >
-                      <IconMinus v-if="!isPoppedOutMinimized" />
-                      <IconPlus v-else />
-                      {{
-                        isPoppedOutMinimized
-                          ? t("layouts.app.sidebar.expand")
-                          : t("layouts.app.sidebar.minimize")
-                      }}
-                    </ContextMenuItem>
-                    <ContextMenuItem @click="isPoppedOut = false">
-                      <IconX /> {{ t("layouts.app.sidebar.close") }}
-                    </ContextMenuItem>
-                  </ContextMenuContent>
-                </ContextMenu>
-              </div>
-            </Transition>
-            <div
-              id="right-dock"
-              class="bg-background flex max-w-80 shrink-0 flex-col overflow-clip rounded-3xl empty:hidden"
-            ></div>
+            <AiChatWindow />
           </div>
-          <AiBar />
+          <BottomBar />
         </div>
       </SidebarInset>
     </ResizablePanel>

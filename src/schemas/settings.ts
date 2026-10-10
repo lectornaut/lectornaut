@@ -60,6 +60,7 @@ export const settingsThemeDocSchema = z.object({
   editorFontSize: editorFontSizeIdSchema.optional(),
   translucentSidebar: z.boolean().optional(),
   reducedMotion: z.boolean().optional(),
+  chatWindowMode: z.enum(["floating", "sidebar"]).optional(),
 })
 
 /**

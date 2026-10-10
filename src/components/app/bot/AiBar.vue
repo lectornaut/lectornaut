@@ -3,7 +3,6 @@ import { useBotSessionActions } from "@/composables/useBotSessionActions"
 import { usePopout } from "@/composables/usePopout"
 import {
   IconArchive,
-  IconLeaf,
   IconPencil,
   IconPinOff,
   IconPlus,
@@ -18,7 +17,8 @@ import { storeToRefs } from "pinia"
 
 const { t } = useI18n()
 
-const { isPoppedOut, poppedOutSessionId, openChatInPopout } = usePopout()
+const { isPoppedOut, poppedOutSessionId, openChatInPopout, closeChatWindow } =
+  usePopout()
 const { isMutating, renameSession, archiveSession, pinSession, removeSession } =
   useBotSessionActions()
 
@@ -51,17 +51,22 @@ const sessionTitle = (session: IBotSession) =>
   session.title || t("ai.untitledChat")
 
 // One window, swapped in place — clicking a different pinned chat
-// replaces what the pop-out holds rather than opening a second floating
+// replaces what the floating window holds rather than opening a second floating
 // window. A genuinely parallel chat is a real OS window (AiAsk's
 // pop-out), which handles focus and placement properly.
+// Clicking the active chat again closes the shared floating/sidebar frame.
 const openChat = (session: IBotSession) => {
-  openChatInPopout(session.id, sessionTitle(session))
+  if (isOpenInPopout(session)) {
+    closeChatWindow()
+  } else {
+    openChatInPopout(session.id, sessionTitle(session))
+  }
 }
 
 const isOpenInPopout = (session: IBotSession) =>
   isPoppedOut.value && poppedOutSessionId.value === session.id
 
-// Opens the AiAsk sheet, same as the sidebar's "Ask AI" trigger — it
+// Opens the AiAsk window, same as the sidebar's "Ask AI" trigger — it
 // always starts a fresh session on open, so this reads as "new chat".
 const onNewChat = () => {
   emitter.emit("Dialog.AiAsk.Toggle")
@@ -128,26 +133,8 @@ const submitDelete = async () => {
 <template>
   <ContextMenu>
     <ContextMenuTrigger as-child>
-      <div
-        data-tauri-drag-region="deep"
-        class="no-scrollbar flex min-w-0 shrink-0 items-center justify-end gap-2 overflow-x-auto px-2 pb-2"
-      >
+      <div class="flex shrink-0 items-center gap-2">
         <TooltipProvider>
-          <Tooltip>
-            <TooltipTrigger as-child>
-              <Button
-                variant="ghost"
-                size="icon-sm"
-                class="mr-auto shrink-0"
-                as-child
-              >
-                <RouterLink to="/zen" :aria-label="t('ai.zenMode')">
-                  <IconLeaf />
-                </RouterLink>
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>{{ t("ai.zenMode") }}</TooltipContent>
-          </Tooltip>
           <Tooltip v-for="session in pinnedSessions" :key="session.id">
             <ContextMenu>
               <ContextMenuTrigger as-child>
@@ -195,8 +182,8 @@ const submitDelete = async () => {
         </TooltipProvider>
         <AiAsk />
 
-        <!-- The pop-out frame (drag / resize / minimize) lives in
-             MainLayout; only its content is ours. `defer` waits for the
+        <!-- The floating window frame (drag / resize / minimize) lives in
+             AiChatWindow; only its content is ours. `defer` waits for the
              dock to mount, and the `v-if` keeps us from targeting an id
              that doesn't exist while the window is closed. -->
         <Teleport

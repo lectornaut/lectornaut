@@ -1,7 +1,7 @@
 <script lang="ts" setup>
 import { BotChatContextKey, useBotChat } from "@/composables/useBotChat"
 import { isTauri } from "@/composables/usePlatform"
-import { IconPictureInPicture } from "@/data/icons"
+import { IconSquareArrowOutUpRight } from "@/data/icons"
 import { openAiAskPopoutWindow } from "@/modules/aiAskPopout"
 import { useRoute, useRouter } from "vue-router"
 
@@ -83,7 +83,7 @@ const popOut = () => {
       <Tooltip>
         <TooltipTrigger as-child>
           <Button variant="outline" size="icon" @click="popOut">
-            <IconPictureInPicture />
+            <IconSquareArrowOutUpRight />
           </Button>
         </TooltipTrigger>
         <TooltipContent>{{ t("ai.openInNewWindow") }}</TooltipContent>

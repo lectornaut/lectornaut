@@ -97,7 +97,7 @@ const {
 //
 // Workspace nodes (files/folders) the user picked as ground-truth context
 // for this chat session. Sent on every send. Lives on the injected
-// BotChatContext, so the side-panel, AiAsk sheet, and Bot inspector tab
+// BotChatContext, so the side-panel, AiAsk window, and Bot inspector tab
 // all see the same set when bound to the same composable instance.
 
 const authStore = useAuthStore()

@@ -344,11 +344,7 @@ const formatInvitationTimestamp = (
               <Button size="lg" @click="handleAccept">
                 {{ $t("pages.join.buttons.accept") }}
               </Button>
-              <Button
-                variant="outline"
-                class="shadow-none"
-                @click="handleDecline"
-              >
+              <Button variant="outline" @click="handleDecline">
                 {{ $t("pages.join.buttons.decline") }}
               </Button>
             </template>

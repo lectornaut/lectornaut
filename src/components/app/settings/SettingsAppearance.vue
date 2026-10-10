@@ -22,7 +22,7 @@ import {
   themes,
 } from "@/helpers/defaults"
 import { useThemeStore } from "@/stores/themeStore"
-import type { ThemeMode } from "@/types/settings"
+import type { ChatWindowMode, ThemeMode } from "@/types/settings"
 import { normalizeHexColor } from "@/utils/theme/customTheme"
 import { storeToRefs } from "pinia"
 import { toast } from "vue-sonner"
@@ -119,6 +119,13 @@ const selectedReducedMotion = computed({
   get: () => themeSettings.value.reducedMotion,
   set: (value: boolean) => {
     themeSettings.value.reducedMotion = value
+  },
+})
+
+const selectedChatWindowMode = computed({
+  get: () => themeSettings.value.chatWindowMode,
+  set: (value: ChatWindowMode) => {
+    themeSettings.value.chatWindowMode = value
   },
 })
 
@@ -460,6 +467,31 @@ const accentSwatchStyle = (option: ColorSwatch<AccentId>) => ({
       </FieldSet>
       <FieldSeparator />
       <FieldSet>
+        <Field orientation="horizontal">
+          <FieldContent>
+            <FieldLabel for="chat-window-mode">
+              {{ t("settings.appearance.chatWindowMode.label") }}
+            </FieldLabel>
+            <FieldDescription>
+              {{ t("settings.appearance.chatWindowMode.description") }}
+            </FieldDescription>
+          </FieldContent>
+          <Select v-model="selectedChatWindowMode">
+            <SelectTrigger id="chat-window-mode">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectGroup>
+                <SelectItem value="floating">
+                  {{ t("settings.appearance.chatWindowMode.floating") }}
+                </SelectItem>
+                <SelectItem value="sidebar">
+                  {{ t("settings.appearance.chatWindowMode.sidebar") }}
+                </SelectItem>
+              </SelectGroup>
+            </SelectContent>
+          </Select>
+        </Field>
         <Field orientation="horizontal">
           <FieldContent>
             <FieldLabel for="disable-translucency">

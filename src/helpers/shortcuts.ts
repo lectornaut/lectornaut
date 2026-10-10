@@ -347,6 +347,13 @@ export const CREATE_SEQUENCE_PREFIX = "C"
 export const SEQUENCE_TIMEOUT = 1000
 
 /**
+ * Milliseconds modifiers must be held alone before `useKeyHints` reveals the
+ * chords they lead to. Long enough that an ordinary ⌘C / ⌘V never flashes the
+ * hint, short enough that a deliberate "what can ⌘ do?" pause gets an answer.
+ */
+export const MODIFIER_HINT_DELAY = 500
+
+/**
  * Convert a multi-key sequence (e.g. `["G", "H"]`) to platform display key
  * tokens for `<Kbd>` rendering. Each step is formatted independently — so a
  * modifier-bearing step like `"Shift+R"` still expands to its glyphs — then

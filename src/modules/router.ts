@@ -72,4 +72,9 @@ router.afterEach(() => {
   NProgress.done()
 })
 
+router.onError((error, to) => {
+  NProgress.done()
+  console.error(`[router] navigation to ${to.path} failed:`, error)
+})
+
 export { router }

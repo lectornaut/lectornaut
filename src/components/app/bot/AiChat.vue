@@ -30,6 +30,9 @@ const { t } = useI18n()
 const botChat = inject(BotChatContextKey)
 const messages = computed(() => botChat?.messages.value ?? [])
 const isSending = computed(() => botChat?.isSending.value ?? false)
+const isLoadingSession = computed(
+  () => botChat?.isLoadingSession.value ?? false
+)
 
 // Remount the scroller per session: `MessageScrollerProvider` applies
 // `defaultScrollPosition` (land at the end) and seeds its turn-anchor
@@ -361,7 +364,8 @@ const renderedMessages = computed(() =>
 </script>
 
 <template>
-  <Empty v-if="messages.length === 0 && !isSending" class="flex-1">
+  <LoadingState v-if="isLoadingSession" class="flex-1" />
+  <Empty v-else-if="messages.length === 0 && !isSending" class="flex-1">
     <EmptyHeader>
       <EmptyMedia variant="icon">
         <IconAi />

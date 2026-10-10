@@ -18,7 +18,7 @@ const { t } = useI18n()
 
 // Each inspector sidebar gets its own bot chat context so the Bot tab's
 // per-node session is independent from the page-level chat on /bot and
-// the quick-ask sheet in AiAsk. Provided to children only; the rest of
+// the quick-ask window in AiAsk. Provided to children only; the rest of
 // the app's BotChatContext injections are unaffected.
 const inspectorBotChat = useBotChat()
 provide(BotChatContextKey, inspectorBotChat)

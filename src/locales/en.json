@@ -1712,6 +1712,12 @@
       "reducedMotion": {
         "label": "Reduce motion",
         "description": "Minimize animations and transitions across the app. Leave off for default animations."
+      },
+      "chatWindowMode": {
+        "label": "Chat window mode",
+        "description": "Show Ask AI and pinned chats in a floating window or the right sidebar. This preference syncs with your account.",
+        "floating": "Floating window",
+        "sidebar": "Sidebar"
       }
     },
     "workflows": {
@@ -4079,7 +4085,10 @@
         "conflict": "Already used by \"{shortcut}\"",
         "customized": "Customized",
         "save": "Save",
-        "uneditable": "Disabled"
+        "uneditable": "Disabled",
+        "hints": "Available keyboard shortcuts",
+        "hintPressed": "Pressed {keys}",
+        "hintPressFor": "Press {keys} for {action}"
       },
       "commandK": {
         "placeholder": "Search or run a command",
@@ -4167,7 +4176,7 @@
         "expand": "Expand",
         "collapse": "Collapse",
         "dock": "Dock",
-        "popOut": "Pop out"
+        "popOut": "Floating window"
       },
       "emptyState": {
         "console": "Console",
@@ -4179,7 +4188,7 @@
         "sidebar": "Sidebar",
         "panel": "Panel",
         "dock": "Dock",
-        "popOut": "Pop out"
+        "popOut": "Floating window"
       },
       "status": {
         "offline": "You are offline",
@@ -4202,10 +4211,12 @@
         }
       },
       "popout": {
-        "title": "Popout",
-        "expand": "Expand sidebar",
-        "minimize": "Minimize sidebar",
-        "close": "Close sidebar"
+        "title": "Floating window",
+        "dock": "Dock in sidebar",
+        "undock": "Move to floating window",
+        "expand": "Expand floating window",
+        "minimize": "Minimize floating window",
+        "close": "Close floating window"
       },
       "tabs": {
         "close": "Close tab",
@@ -4243,7 +4254,7 @@
         "bottomPanel": "Bottom panel",
         "rightPanel": "Right panel",
         "dock": "Dock",
-        "popOut": "Pop out",
+        "popOut": "Floating window",
         "appearance": "Appearance",
         "iconsOnly": "Icons only",
         "iconsAndText": "Icons and text"

@@ -85,3 +85,4 @@ minimumReleaseAgeExclude:
   - "@firebase/storage-compat@0.4.6"
   - "@firebase/storage@0.14.6"
   - firebase@13.0.0
+  - unplugin-turbo-console@3.0.0

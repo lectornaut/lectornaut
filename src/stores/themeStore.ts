@@ -4,8 +4,9 @@
  *
  * Owns the per-user appearance/theme settings: color mode, base/accent palettes
  * (incl. custom hex), font, size, language, editor theme + font size, and the
- * translucent-sidebar and reduced-motion flags. Exposed as a single `reactive()`
- * `themeSettings` bundle that consumers read AND write two-way (notably
+ * translucent-sidebar and reduced-motion flags, and chat window mode.
+ * Exposed as a single `reactive()` `themeSettings` bundle that consumers read
+ * AND write two-way (notably
  * `modules/theme.ts`, which mirrors it into the live CSS / `useColorMode` state).
  *
  * Each field is a `useStorage` ref (localStorage-instant, offline-safe) mirrored
@@ -47,7 +48,11 @@ import {
 import { firestore } from "@/modules/firebase"
 import { parseSafe } from "@/schemas/_utils"
 import { settingsThemeDocSchema } from "@/schemas/settings"
-import type { SettingsThemeDoc, ThemeMode } from "@/types/settings"
+import type {
+  ChatWindowMode,
+  SettingsThemeDoc,
+  ThemeMode,
+} from "@/types/settings"
 import { createDebouncedCloudSync } from "@/utils/firebase/firebase-optimistic"
 import { useDocumentQuery } from "@/utils/firebase/firebase-query"
 import { safeSetDocument as safeSetDoc } from "@/utils/firebase/firebase-sync-engine"
@@ -103,6 +108,10 @@ export const useThemeStore = defineStore("theme", () => {
     "reducedMotion",
     defaultReducedMotion
   )
+  const chatWindowMode = useStorage<ChatWindowMode>(
+    "chatWindowMode",
+    "floating"
+  )
 
   const themeSettings = reactive({
     mode,
@@ -117,6 +126,7 @@ export const useThemeStore = defineStore("theme", () => {
     editorFontSize,
     translucentSidebar,
     reducedMotion,
+    chatWindowMode,
   })
 
   const themeDocRef = computed(() => {
@@ -149,6 +159,7 @@ export const useThemeStore = defineStore("theme", () => {
         editorFontSize: editorFontSize.value,
         translucentSidebar: translucentSidebar.value,
         reducedMotion: reducedMotion.value,
+        chatWindowMode: chatWindowMode.value,
       },
       "settings.themes.persist"
     )
@@ -175,6 +186,13 @@ export const useThemeStore = defineStore("theme", () => {
 
       const themeDoc = toSettingsThemeDoc(docData)
       if (!themeDoc) return
+
+      if (
+        themeDoc.chatWindowMode &&
+        themeDoc.chatWindowMode !== chatWindowMode.value
+      ) {
+        chatWindowMode.value = themeDoc.chatWindowMode
+      }
 
       if ("mode" in themeDoc && themeDoc.mode && themeDoc.mode !== mode.value) {
         mode.value = themeDoc.mode
@@ -314,6 +332,7 @@ export const useThemeStore = defineStore("theme", () => {
       editorFontSize,
       translucentSidebar,
       reducedMotion,
+      chatWindowMode,
     ],
     () => {
       void persistThemeWithSync()
