@@ -160,8 +160,8 @@ const stats = computed(() => {
         </ScrollContainer>
       </SidebarContent>
       <Separator />
-      <SidebarFooter>
-        <Button v-if="hasFilters" variant="ghost" @click="clearAll">
+      <SidebarFooter v-if="hasFilters">
+        <Button variant="ghost" @click="clearAll">
           {{ t("pages.runs.clearAll") }}
         </Button>
       </SidebarFooter>

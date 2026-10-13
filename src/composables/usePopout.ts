@@ -1,133 +1,189 @@
 /**
- * usePopout — shared state for the in-app floating window whose
- * chrome (drag, resize, minimize, close) lives in `AiChatWindow.vue`.
- *
- * Module-scope refs, so every caller gets the same instance: `AiBar`
- * opens content into the window, `AiChatWindow` renders the frame and the
- * `#popout-dock` teleport target it lands in. The three localStorage
- * keys are the ones MainLayout already used, so persisted position /
- * size / minimized state carries over unchanged.
- *
- * Deliberately holds ONE session at a time. Clicking a different pinned
- * chat swaps this window's content rather than spawning a second
- * floating window: a real second chat is a real OS window
- * (`openAiAskPopoutWindow`), which already exists and handles focus,
- * z-order and placement properly.
- *
- * `isDocked` is shared with Ask AI: Teleport moves the same mounted chat frame
- * inside `#right-dock` without resetting its session or floating geometry.
- * Dock sizing follows normal layout; floating minimize/expand retains motion,
- * but docking does not project an animation across the two DOM parents.
- * MainLayout owns the resizable dock panel and persists its layout separately
- * from the floating window's size and position.
- * Its mode and open/closed state are separate account-synced preferences.
- * `rightDockOpen` is the visibility preference (persisted as `rightDockVisible`).
- * `rightDockPinned` selects docking (persisted as `chatWindowMode`). Pinned-chat
- * selection is runtime-only; an open window restores Ask AI after a reload.
- * Pinned chats cover Ask AI without unmounting it. Closing the frame
- * dismisses both surfaces; a native handoff can reveal Ask AI instead.
+ * The shared chat panel remembers its conversation separately from visibility.
+ * Selection is local to the user/team/workspace; visibility and docking remain
+ * account-synced preferences. Hiding, minimizing or handing off a conversation
+ * never selects a different one. Only New chat explicitly resets the context.
  */
+import { useAuthStore } from "@/stores/authStore"
 import { useThemeStore } from "@/stores/themeStore"
 import { createSharedComposable, useLocalStorage } from "@vueuse/core"
+import { storeToRefs } from "pinia"
 import { computed, ref, watch } from "vue"
+import { toast } from "vue-sonner"
 
-// Shared by Ask AI and pinned chats; only one is visible at a time.
-const openAiAsk = ref(false)
-const isPoppedOut = ref(false)
-const isChatWindowOpen = computed(() => isPoppedOut.value || openAiAsk.value)
-watch(
-  openAiAsk,
-  (open) => {
-    if (open) isPoppedOut.value = false
-  },
-  { flush: "sync" }
-)
-const isPoppedOutMinimized = useLocalStorage("popout-minimized-state", false)
-/** Session currently mounted in the window; null = nothing opened yet. */
-const poppedOutSessionId = useLocalStorage<string | null>(
-  "popout-session-id",
-  null
-)
-/**
- * Title snapshot taken when the chat was opened. A later rename won't
- * update it — cheap, and the window is short-lived by nature.
- */
-const poppedOutTitle = useLocalStorage("popout-title", "")
+export type ChatPanelSelection =
+  | { kind: "ask" }
+  | { kind: "session"; sessionId: string; title: string; agentId?: string }
+  | { kind: "agent"; agentId: string; title: string }
 
 export const usePopout = createSharedComposable(() => {
   const themeStore = useThemeStore()
-  watch(
-    () => themeStore.themeSettings.rightDockOpen,
-    (visible) => {
-      if (visible) {
-        if (!isChatWindowOpen.value) openAiAsk.value = true
-      } else {
-        openAiAsk.value = false
-        isPoppedOut.value = false
-      }
-    },
-    { immediate: true, flush: "sync" }
-  )
-
-  // Batch surface handoffs so switching between Ask AI and a pinned chat
-  // doesn't persist an intermediate closed state.
-  watch(isChatWindowOpen, (visible) => {
-    themeStore.themeSettings.rightDockOpen = visible
+  const { currentUser, currentTeamId, currentWorkspaceId } =
+    storeToRefs(useAuthStore())
+  const scopeKey = computed(() => {
+    const uid = currentUser.value?.uid
+    const teamId = currentTeamId.value
+    const workspaceId = currentWorkspaceId.value
+    return uid && teamId && workspaceId
+      ? JSON.stringify([uid, teamId, workspaceId])
+      : null
   })
-
+  const selections = useLocalStorage<Record<string, ChatPanelSelection>>(
+    "chat-panel-selections",
+    {},
+    { listenToStorageChanges: false }
+  )
+  const selection = computed<ChatPanelSelection>(() =>
+    scopeKey.value
+      ? (selections.value[scopeKey.value] ?? { kind: "ask" })
+      : { kind: "ask" }
+  )
+  const isChatWindowOpen = computed(
+    () => !!scopeKey.value && themeStore.themeSettings.rightDockOpen
+  )
   const isDocked = computed({
     get: () => themeStore.themeSettings.rightDockPinned,
     set: (value: boolean) => {
       themeStore.themeSettings.rightDockPinned = value
     },
   })
+  const isPoppedOutMinimized = useLocalStorage("popout-minimized-state", false)
+  const openAiAsk = computed(
+    () => isChatWindowOpen.value && selection.value.kind === "ask"
+  )
+  const isPoppedOut = computed(
+    () => isChatWindowOpen.value && selection.value.kind !== "ask"
+  )
+  const poppedOutSessionId = computed(() =>
+    selection.value.kind === "session" ? selection.value.sessionId : null
+  )
+  const poppedOutAgentId = computed(() =>
+    selection.value.kind === "ask" ? null : (selection.value.agentId ?? null)
+  )
+  const poppedOutTitle = computed(() =>
+    selection.value.kind === "ask" ? "" : selection.value.title
+  )
 
-  /**
-   * Show `sessionId` in the floating window. Re-opening the session already
-   * mounted just restores the window (the id doesn't change, so the
-   * chat is never reloaded).
-   */
-  const openChatInPopout = (sessionId: string, title: string) => {
-    poppedOutSessionId.value = sessionId
-    poppedOutTitle.value = title
-    isPoppedOut.value = true
-    isPoppedOutMinimized.value = false
+  const revision = ref(0)
+  const chatContentKey = computed(() => `${scopeKey.value}:${revision.value}`)
+  const chatMounted = ref(false)
+  watch(
+    [scopeKey, isChatWindowOpen],
+    ([scope, visible], [previousScope]) => {
+      if (scope !== previousScope) chatMounted.value = visible
+      else if (visible) chatMounted.value = true
+    },
+    { immediate: true, flush: "sync" }
+  )
+
+  const setSelection = (next: ChatPanelSelection) => {
+    if (!scopeKey.value) {
+      toast.error("Select a team and workspace before opening a chat.")
+      return false
+    }
+    selections.value = { ...selections.value, [scopeKey.value]: next }
+    return true
   }
 
-  const toggleAiAsk = () => {
-    if (isPoppedOut.value) {
-      isPoppedOut.value = false
-      openAiAsk.value = true
-    } else {
-      openAiAsk.value = !openAiAsk.value
+  const showChatWindow = () => {
+    if (!scopeKey.value) {
+      toast.error("Select a team and workspace before opening a chat.")
+      return
     }
+    isPoppedOutMinimized.value = false
+    themeStore.themeSettings.rightDockOpen = true
+  }
+
+  const openChatInPopout = (sessionId: string, title: string) => {
+    const changed = poppedOutSessionId.value !== sessionId
+    if (!setSelection({ kind: "session", sessionId, title })) return
+    if (changed) revision.value++
+    showChatWindow()
+  }
+
+  const openAgentInPopout = (agentId: string, title: string) => {
+    if (poppedOutAgentId.value !== agentId || selection.value.kind === "ask") {
+      if (!setSelection({ kind: "agent", agentId, title })) return
+      revision.value++
+    }
+    showChatWindow()
+  }
+
+  const startNewChat = () => {
+    if (!setSelection({ kind: "ask" })) return
+    revision.value++
+    showChatWindow()
+  }
+
+  // Promoting a newly created chat must not remount its composer or stream.
+  const rememberSession = (
+    sessionId: string,
+    title: string,
+    agentId: string | null = poppedOutAgentId.value
+  ) => {
+    setSelection({
+      kind: "session",
+      sessionId,
+      title,
+      ...(agentId ? { agentId } : {}),
+    })
+  }
+
+  const rememberAgent = (agentId: string | null, title: string) => {
+    if (poppedOutSessionId.value) return
+    setSelection(agentId ? { kind: "agent", agentId, title } : { kind: "ask" })
   }
 
   const closeChatWindow = () => {
-    openAiAsk.value = false
-    isPoppedOut.value = false
+    themeStore.themeSettings.rightDockOpen = false
+  }
+
+  const forgetSession = (sessionId: string) => {
+    if (poppedOutSessionId.value !== sessionId) return
+    closeChatWindow()
+    setSelection({ kind: "ask" })
+    revision.value++
+  }
+
+  const forgetAgent = (agentId: string) => {
+    if (selection.value.kind !== "agent" || selection.value.agentId !== agentId)
+      return
+    closeChatWindow()
+    setSelection({ kind: "ask" })
+    revision.value++
   }
 
   const toggleChatWindow = () => {
-    if (isChatWindowOpen.value) {
+    if (
+      isChatWindowOpen.value &&
+      (isDocked.value || !isPoppedOutMinimized.value)
+    ) {
       closeChatWindow()
-    } else if (poppedOutSessionId.value) {
-      openChatInPopout(poppedOutSessionId.value, poppedOutTitle.value)
     } else {
-      openAiAsk.value = true
+      showChatWindow()
     }
   }
 
   return {
+    selection,
+    scopeKey,
+    chatContentKey,
+    chatMounted,
     isDocked,
     openAiAsk,
     isPoppedOut,
     isChatWindowOpen,
     isPoppedOutMinimized,
     poppedOutSessionId,
+    poppedOutAgentId,
     poppedOutTitle,
     openChatInPopout,
-    toggleAiAsk,
+    openAgentInPopout,
+    startNewChat,
+    rememberSession,
+    rememberAgent,
+    forgetSession,
+    forgetAgent,
     closeChatWindow,
     toggleChatWindow,
   }

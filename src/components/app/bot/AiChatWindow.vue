@@ -2,6 +2,7 @@
 import { usePopout } from "@/composables/usePopout"
 import {
   IconGripHorizontal,
+  IconMaximize,
   IconMinus,
   IconPanelRight,
   IconPictureInPicture2,
@@ -12,8 +13,10 @@ import { UseDraggable as Draggable } from "@vueuse/components"
 import { unrefElement, usePreferredReducedMotion } from "@vueuse/core"
 import { Motion, MotionConfig, motion } from "motion-v"
 import type { ComponentPublicInstance } from "vue"
+import { useRouter } from "vue-router"
 
 const { t } = useI18n()
+const router = useRouter()
 
 const innerWidth = window.innerWidth
 const innerHeight = window.innerHeight
@@ -25,13 +28,25 @@ const draggableHandle = computed(() => unrefElement(draggableHandleEl))
 // `#popout-dock` by whoever opened it (see `usePopout`).
 const {
   isDocked,
-  openAiAsk,
   isPoppedOut,
   isChatWindowOpen,
   isPoppedOutMinimized,
+  poppedOutSessionId,
+  poppedOutAgentId,
   poppedOutTitle,
   closeChatWindow,
 } = usePopout()
+
+const openFullscreen = () => {
+  const id = poppedOutSessionId.value
+  const agentId = poppedOutAgentId.value
+  closeChatWindow()
+  void router.push({
+    path: id ? `/bot/${encodeURIComponent(id)}` : "/bot",
+    query: agentId ? { agentId } : {},
+  })
+}
+
 const observedSize = useLocalStorage("popout-size", { width: 300, height: 400 })
 const observedPosition = useLocalStorage("popout-position", { x: 0.5, y: 0.5 })
 const reducedMotion = usePreferredReducedMotion()
@@ -48,12 +63,6 @@ const windowTransition = computed(() => ({
 watch([isChatWindowOpen, reducedMotion], () => {
   if (!isChatWindowOpen.value || reducedMotion.value === "reduce") {
     isChatWindowMorphing.value = false
-  }
-})
-
-watch([isPoppedOut, openAiAsk], ([pinnedOpen, askOpen]) => {
-  if (pinnedOpen || askOpen) {
-    isPoppedOutMinimized.value = false
   }
 })
 
@@ -74,6 +83,7 @@ useResizeObserver(draggableEl, (entries) => {
   const entry = entries[0]
   if (!entry) return
   if (
+    !isChatWindowOpen.value ||
     isDocked.value ||
     isPoppedOutMinimized.value ||
     isChatWindowMorphing.value
@@ -105,7 +115,7 @@ useResizeObserver(draggableEl, (entries) => {
         leave-to-class="opacity-0"
       >
         <div
-          v-if="isChatWindowOpen"
+          v-show="isChatWindowOpen"
           ref="draggableContainer"
           class="min-h-0 min-w-0"
           :class="
@@ -206,7 +216,7 @@ useResizeObserver(draggableEl, (entries) => {
                     </span>
                     <span class="flex shrink-0 items-center gap-2">
                       <!-- Actions belonging to whatever is docked -->
-                      <!-- inside (e.g. PoppedOutChat's "open in a -->
+                      <!-- inside (e.g. ChatPanelContent's "open in a -->
                       <!-- native window"), teleported in beside -->
                       <!-- the window controls. -->
                       <span
@@ -215,6 +225,21 @@ useResizeObserver(draggableEl, (entries) => {
                       ></span>
                       <!-- <ButtonGroup> -->
                       <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger as-child>
+                            <InputGroupButton
+                              variant="ghost"
+                              size="icon-sm"
+                              :aria-label="t('ai.openFullscreen')"
+                              @click="openFullscreen"
+                            >
+                              <IconMaximize />
+                            </InputGroupButton>
+                          </TooltipTrigger>
+                          <TooltipContent>{{
+                            t("ai.openFullscreen")
+                          }}</TooltipContent>
+                        </Tooltip>
                         <Tooltip>
                           <TooltipTrigger as-child>
                             <InputGroupButton

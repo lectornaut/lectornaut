@@ -3,9 +3,9 @@ import { LogicalPosition } from "@tauri-apps/api/dpi"
 import { WebviewWindow } from "@tauri-apps/api/webviewWindow"
 
 /**
- * Spawn a detached always-on-top PiP-style window hosting a single AiAsk
- * chat (the `/ask` page). Every call creates a new window — labels are
- * unique so any number of pop-outs can coexist, and the `ask-*` glob in
+ * Spawn a detached always-on-top PiP-style window hosting a single bot
+ * chat (`/bot/:id?` in standalone mode). Every call creates a new window;
+ * unique labels let pop-outs coexist, and the `ask-*` glob in
  * `src-tauri/capabilities/default.json` grants each one its permissions.
  */
 export const openAiAskPopoutWindow = (options: {
@@ -14,18 +14,20 @@ export const openAiAskPopoutWindow = (options: {
   agentId?: string | null
   title: string
 }): void => {
-  const params = new URLSearchParams()
-  if (options.sessionId) params.set("sessionId", options.sessionId)
+  const params = new URLSearchParams({ popout: "1" })
   if (options.agentId) params.set("agentId", options.agentId)
   // Handed over so the page can render the right heading on its first
-  // frame. Without it `/ask` shows its "Ask AI" fallback until the
+  // frame. Without it the bot page shows its "Ask AI" fallback until the
   // session doc loads, which reads as the window renaming itself.
   if (options.title) params.set("title", options.title)
   const search = params.toString()
   const query = search ? `?${search}` : ""
+  const path = options.sessionId
+    ? `/bot/${encodeURIComponent(options.sessionId)}`
+    : "/bot"
 
   const popout = new WebviewWindow(`ask-${crypto.randomUUID()}`, {
-    url: `/ask${query}`,
+    url: `${path}${query}`,
     title: options.title,
     width: 400,
     height: 640,

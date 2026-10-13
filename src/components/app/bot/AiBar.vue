@@ -8,7 +8,6 @@ import {
   IconPlus,
   IconTrash2,
 } from "@/data/icons"
-import { emitter } from "@/modules/mitt"
 import { useAuthStore } from "@/stores/authStore"
 import type { IBotSession } from "@/types/domain"
 import { createBotSessionsQuery } from "@/utils/firebase/firebase-helpers"
@@ -17,8 +16,14 @@ import { storeToRefs } from "pinia"
 
 const { t } = useI18n()
 
-const { isPoppedOut, poppedOutSessionId, openChatInPopout, closeChatWindow } =
-  usePopout()
+const {
+  isPoppedOut,
+  poppedOutSessionId,
+  openChatInPopout,
+  closeChatWindow,
+  startNewChat,
+  forgetSession,
+} = usePopout()
 const { isMutating, renameSession, archiveSession, pinSession, removeSession } =
   useBotSessionActions()
 
@@ -65,12 +70,6 @@ const openChat = (session: IBotSession) => {
 
 const isOpenInPopout = (session: IBotSession) =>
   isPoppedOut.value && poppedOutSessionId.value === session.id
-
-// Opens the AiAsk window, same as the sidebar's "Ask AI" trigger — it
-// always starts a fresh session on open, so this reads as "new chat".
-const onNewChat = () => {
-  emitter.emit("Dialog.AiAsk.Toggle")
-}
 
 const onUnpin = (session: IBotSession) => {
   void pinSession(session.id, false)
@@ -122,10 +121,7 @@ const submitDelete = async () => {
   if (await removeSession(target.id)) {
     deleteDialogOpen.value = false
     deleteTarget.value = null
-    if (poppedOutSessionId.value === target.id) {
-      isPoppedOut.value = false
-      poppedOutSessionId.value = null
-    }
+    forgetSession(target.id)
   }
 }
 </script>
@@ -181,22 +177,10 @@ const submitDelete = async () => {
           </Tooltip>
         </TooltipProvider>
         <AiAsk />
-
-        <!-- The floating window frame (drag / resize / minimize) lives in
-             AiChatWindow; only its content is ours. `defer` waits for the
-             dock to mount, and the `v-if` keeps us from targeting an id
-             that doesn't exist while the window is closed. -->
-        <Teleport
-          v-if="isPoppedOut && poppedOutSessionId"
-          defer
-          to="#popout-dock"
-        >
-          <PoppedOutChat />
-        </Teleport>
       </div>
     </ContextMenuTrigger>
     <ContextMenuContent>
-      <ContextMenuItem @click="onNewChat">
+      <ContextMenuItem @click="startNewChat">
         <IconPlus />
         {{ t("ai.newChat") }}
       </ContextMenuItem>

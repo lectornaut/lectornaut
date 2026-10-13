@@ -361,7 +361,7 @@ const closeTab = (id: string) => {
         <div class="flex min-h-0 min-w-0 grow flex-col">
           <Tabbar />
           <div
-            class="flex min-h-0 min-w-0 grow gap-2 self-stretch overscroll-none scroll-smooth px-2"
+            class="flex min-h-0 min-w-0 grow self-stretch overscroll-none scroll-smooth px-2"
           >
             <ResizablePanelGroup
               direction="horizontal"

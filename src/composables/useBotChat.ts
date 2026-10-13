@@ -369,7 +369,7 @@ export interface BotChatOptions {
   /**
    * Keep the chat bound across global team/workspace selection changes.
    *
-   * Detached surfaces (the `/ask` pop-out window) pin their context at
+   * Detached surfaces (standalone bot windows) pin their context at
    * open time: the selection refs they read are backed by SHARED
    * persistence (Firestore prefs docs + IndexedDB auth + localStorage
    * hydration caches), so another window rebooting can make them
@@ -382,10 +382,13 @@ export interface BotChatOptions {
 
   /**
    * Pin every session this instance creates as soon as the server mints
-   * its id. Used by `AiAsk`: a quick-ask chat is meant to stick around
+   * its id. Used by the chat panel: a quick-ask chat should stick around
    * in the pinned bar rather than get lost in the unpinned history list.
    */
   autoPin?: boolean
+
+  /** Let persistent surfaces discard a session confirmed gone or inaccessible. */
+  onSessionUnavailable?: (sessionId: string) => void
 }
 
 export function useBotChat(options?: BotChatOptions): BotChatContext {
@@ -840,13 +843,22 @@ export function useBotChat(options?: BotChatOptions): BotChatContext {
   watch(activeSession, (next, prev) => {
     // Scope mid-flicker: team/workspace can pass through null when
     // another window reboots shared persistence (main-window refresh
-    // vs. a pinned /ask pop-out). That re-keys the source lists to
+    // vs. a pinned bot pop-out). That re-keys the source lists to
     // empty without meaning "access revoked" — skip, and let the
     // lists repopulate when the scope settles. Real revocations
     // happen under a stable scope and still reset below.
-    if (!currentTeamId.value || !currentWorkspaceId.value) return
+    if (
+      !currentTeamId.value ||
+      !currentWorkspaceId.value ||
+      isLoadingSessions.value ||
+      isLoadingSession.value
+    )
+      return
     if (sessionId.value && prev && !next) {
+      const unavailableId = sessionId.value
       startNewSession()
+      toast.error("This chat is no longer available.")
+      options?.onSessionUnavailable?.(unavailableId)
     }
   })
 
@@ -1097,7 +1109,7 @@ export function useBotChat(options?: BotChatOptions): BotChatContext {
   // Only an ESTABLISHED id changing counts as a switch. Cold-boot
   // hydration (null → first value, possibly one field per tick) is not
   // one: state is still pristine, and standalone surfaces like the
-  // /ask pop-out eagerly `selectAgent()` before auth resolves —
+  // bot pop-out eagerly `selectAgent()` before auth resolves —
   // resetting on hydration ticks would clobber that pre-selection
   // back to the default persona.
   //
@@ -1489,7 +1501,7 @@ export function useBotChat(options?: BotChatOptions): BotChatContext {
       // unchanged so restoring the agent re-binds this session.
       // `matched` missing = cold-load race (the sessions list hasn't
       // landed in this fresh window yet), NOT "session has no agent" —
-      // keep the current selection (e.g. /ask's eager URL pick) and let
+      // keep the current selection (e.g. the pop-out's eager URL pick) and let
       // the doc-level resync watcher settle the canonical value once
       // the snapshot arrives.
       if (matched) activeAgentId.value = matched.activeAgentId ?? null
@@ -1503,9 +1515,15 @@ export function useBotChat(options?: BotChatOptions): BotChatContext {
       // on a chat we can't open. Drop to a fresh-session state so the
       // page-level `state → URL` watcher pushes off /bot/{id}.
       const code = (error as { code?: string })?.code
-      if (code === "functions/not-found" || code === "not-found") {
+      if (
+        code === "functions/not-found" ||
+        code === "not-found" ||
+        code === "functions/permission-denied" ||
+        code === "permission-denied"
+      ) {
         startNewSession()
         toast.error("This chat is no longer available.")
+        options?.onSessionUnavailable?.(id)
       } else {
         toast.error("Failed to open chat. Please try again.")
       }
@@ -1549,8 +1567,20 @@ export function useBotChat(options?: BotChatOptions): BotChatContext {
     // permission-denied error (rules need `resource.data` which no
     // longer exists), leaving the UI showing a stale "Failed to open
     // chat" toast for the session we just deleted.
-    if (sessionId.value === id) startNewSession()
-    await sessionActions.removeSession(id)
+    const wasActive = sessionId.value === id
+    const teamId = currentTeamId.value
+    const workspaceId = currentWorkspaceId.value
+    if (wasActive) startNewSession()
+    const removed = await sessionActions.removeSession(id)
+    if (wasActive && removed) options?.onSessionUnavailable?.(id)
+    else if (
+      wasActive &&
+      currentTeamId.value === teamId &&
+      currentWorkspaceId.value === workspaceId &&
+      !sessionId.value
+    ) {
+      await selectSession(id)
+    }
   }
 
   const setActiveVisibility = async (visibility: IBotSessionVisibility) => {
