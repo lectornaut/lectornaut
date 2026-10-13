@@ -62,6 +62,7 @@ export const settingsThemeDocSchema = z.object({
   reducedMotion: z.boolean().optional(),
   chatWindowMode: z.enum(["floating", "sidebar"]).optional(),
   leftDockVisible: z.boolean().optional(),
+  leftDockOpen: z.boolean().optional(),
   rightDockVisible: z.boolean().optional(),
 })
 

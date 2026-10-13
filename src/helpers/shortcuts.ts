@@ -1,4 +1,5 @@
 import {
+  IconBell,
   IconBuilding,
   IconCheckSquare2,
   IconCircleDotDashed,
@@ -84,7 +85,7 @@ export type ShortcutVisibility = {
 }
 
 export type Shortcut = {
-  /** Breadcrumb-style description path */
+  /** Breadcrumb-style description path, stored as i18n keys */
   description: string[]
   /**
    * Optional DISPLAY OVERRIDE for `<Kbd>` rendering (array of combos, each a
@@ -113,6 +114,7 @@ export type Shortcut = {
 }
 
 export type ShortcutCategory = {
+  /** i18n key for the category title */
   title: string
   id: string
   shortcuts: Shortcut[]
@@ -420,7 +422,7 @@ const generateTabSelectionShortcuts = (): Shortcut[] =>
   Array.from({ length: 9 }, (_, i) => {
     const num = i + 1
     return {
-      description: [`Select tab ${num}`],
+      description: [`components.global.shortcutDescriptions.selectTab${num}`],
       hotkeys: `Mod+${num}`,
       event: "Tabs.Select",
       parameters: num,
@@ -457,11 +459,11 @@ export const shortcuts: ShortcutCategory[] = [
   // General - Core actions available everywhere
   // ──────────────────────────────────────────────────────────────────────────
   {
-    title: "General",
+    title: "components.global.shortcutCategories.general",
     id: "general",
     shortcuts: [
       {
-        description: ["Commands"],
+        description: ["components.global.shortcutDescriptions.commands"],
         hotkeys: "Mod+K",
         event: "Dialog.Command.Open",
         icon: IconTerminal,
@@ -469,14 +471,21 @@ export const shortcuts: ShortcutCategory[] = [
         visibility: { hideFrom: ["commands"] }, // Don't show "open commands" in commands
       },
       {
-        description: ["Ask AI"],
+        description: ["components.global.shortcutDescriptions.askAi"],
         hotkeys: "Mod+Enter",
         event: "Dialog.AiAsk.Toggle",
         icon: IconSparkles,
         tags: ["ai", "ask", "assistant", "copilot"],
       },
       {
-        description: ["Settings"],
+        description: ["components.global.shortcutDescriptions.notifications"],
+        hotkeys: "Mod+Shift+Enter",
+        event: "Dialog.Notifications.Toggle",
+        icon: IconBell,
+        tags: ["notifications", "inbox", "dock", "left", "toggle"],
+      },
+      {
+        description: ["components.global.shortcutDescriptions.settings"],
         hotkeys: "Mod+,",
         event: "Dialog.Settings.Open",
         parameters: "preferences",
@@ -484,14 +493,19 @@ export const shortcuts: ShortcutCategory[] = [
         tags: ["settings", "preferences", "options"],
       },
       {
-        description: ["Keyboard shortcuts"],
+        description: [
+          "components.global.shortcutDescriptions.keyboardShortcuts",
+        ],
         hotkeys: "Mod+/",
         event: "Dialog.Shortcuts.Open",
         icon: IconKeyboard,
         tags: ["keyboard", "shortcuts", "help", "keys"],
       },
       {
-        description: ["Workspace", "Switch"],
+        description: [
+          "components.global.shortcutDescriptions.workspace",
+          "components.global.shortcutDescriptions.switch",
+        ],
         hotkeys: ["Mod+Shift+ArrowUp", "Mod+Shift+ArrowDown"],
         event: "Workspace.Switch",
         icon: IconLayoutGrid,
@@ -499,7 +513,7 @@ export const shortcuts: ShortcutCategory[] = [
         visibility: { hideFrom: ["commands", "shortcuts"] },
       },
       {
-        description: ["Help and support"],
+        description: ["components.global.shortcutDescriptions.helpAndSupport"],
         keys: [["?"]],
         hotkeys: "Shift+/",
         event: "Menu.Help.Toggle",
@@ -507,7 +521,7 @@ export const shortcuts: ShortcutCategory[] = [
         tags: ["help", "support", "documentation", "faq"],
       },
       {
-        description: ["What's new"],
+        description: ["components.global.shortcutDescriptions.whatsNew"],
         event: "Dialog.Changelog.Open",
         icon: IconCircleDotDashed,
         tags: [
@@ -526,61 +540,63 @@ export const shortcuts: ShortcutCategory[] = [
   // Tabs - Desktop-only tab management
   // ──────────────────────────────────────────────────────────────────────────
   {
-    title: "Tabs",
+    title: "components.global.shortcutCategories.tabs",
     id: "tabs",
     visibility: { platforms: ["desktop"], hideFrom: ["commands"] },
     shortcuts: [
       {
-        description: ["Open new tab"],
+        description: ["components.global.shortcutDescriptions.openNewTab"],
         hotkeys: "Mod+T",
         event: "Tabs.Add",
         icon: IconPlusSquare,
         tags: ["tab", "new", "add", "open", "create"],
       },
       {
-        description: ["Reopen last closed tab"],
+        description: [
+          "components.global.shortcutDescriptions.reopenLastClosedTab",
+        ],
         hotkeys: "Mod+Shift+T",
         event: "Tabs.ReopenLast",
         icon: IconHistory,
         tags: ["tab", "reopen", "history", "restore", "undo"],
       },
       {
-        description: ["Close current tab"],
+        description: ["components.global.shortcutDescriptions.closeCurrentTab"],
         hotkeys: "Mod+W",
         event: "Tabs.Close",
         icon: IconMinusSquare,
         tags: ["tab", "close", "remove"],
       },
       {
-        description: ["Close other tabs"],
+        description: ["components.global.shortcutDescriptions.closeOtherTabs"],
         hotkeys: "Mod+Shift+W",
         event: "Tabs.Close.Others",
         icon: IconXCircle,
         tags: ["tab", "close", "remove", "others"],
       },
       {
-        description: ["Close all tabs"],
+        description: ["components.global.shortcutDescriptions.closeAllTabs"],
         hotkeys: "Mod+Alt+W",
         event: "Tabs.Close.All",
         icon: IconXSquare,
         tags: ["tab", "close", "remove", "all", "clear"],
       },
       {
-        description: ["Duplicate tab"],
+        description: ["components.global.shortcutDescriptions.duplicateTab"],
         hotkeys: "Mod+D",
         event: "Tabs.Duplicate",
         icon: IconCopy,
         tags: ["tab", "duplicate", "copy", "clone"],
       },
       {
-        description: ["Rename tab"],
+        description: ["components.global.shortcutDescriptions.renameTab"],
         hotkeys: "F2",
         event: "Tabs.Rename",
         icon: IconSquarePen,
         tags: ["tab", "rename", "edit", "name"],
       },
       {
-        description: ["Select next tab"],
+        description: ["components.global.shortcutDescriptions.selectNextTab"],
         hotkeys: "Control+Tab",
         event: "Tabs.Select",
         parameters: "next",
@@ -589,7 +605,9 @@ export const shortcuts: ShortcutCategory[] = [
         visibility: { hideFrom: ["commands"] },
       },
       {
-        description: ["Select previous tab"],
+        description: [
+          "components.global.shortcutDescriptions.selectPreviousTab",
+        ],
         hotkeys: "Control+Shift+Tab",
         event: "Tabs.Select",
         parameters: "previous",
@@ -599,7 +617,7 @@ export const shortcuts: ShortcutCategory[] = [
       },
       // Summary entry for shortcuts panel (no hotkey registration)
       {
-        description: ["Select Nth tab"],
+        description: ["components.global.shortcutDescriptions.selectNthTab"],
         keys: [[getPlatformSpecialKey(), "1...9"]],
         event: "Tabs.Select",
         icon: IconCheckSquare2,
@@ -615,25 +633,34 @@ export const shortcuts: ShortcutCategory[] = [
   // Layout - Panel and sidebar management
   // ──────────────────────────────────────────────────────────────────────────
   {
-    title: "Layout",
+    title: "components.global.shortcutCategories.layout",
     id: "layout",
     shortcuts: [
       {
-        description: ["Sidebar", "Left"],
-        hotkeys: "Mod+\\",
+        description: [
+          "components.global.shortcutDescriptions.sidebar",
+          "components.global.shortcutDescriptions.left",
+        ],
+        hotkeys: "Mod+Shift+\\",
         event: "Sidebar.Left.Toggle",
         icon: IconPanelLeft,
         tags: ["sidebar", "toggle", "layout", "left", "panel"],
       },
       {
-        description: ["Sidebar", "Right"],
-        hotkeys: "Mod+Shift+\\",
+        description: [
+          "components.global.shortcutDescriptions.sidebar",
+          "components.global.shortcutDescriptions.right",
+        ],
+        hotkeys: "Mod+\\",
         event: "Sidebar.Right.Toggle",
         icon: IconPanelRight,
         tags: ["sidebar", "toggle", "layout", "right", "panel"],
       },
       {
-        description: ["Panel", "Bottom"],
+        description: [
+          "components.global.shortcutDescriptions.panel",
+          "components.global.shortcutDescriptions.bottom",
+        ],
         hotkeys: "Mod+J",
         event: "Panel.Bottom.Toggle",
         icon: IconPanelBottom,
@@ -646,12 +673,16 @@ export const shortcuts: ShortcutCategory[] = [
   // Team settings - Quick access to settings panels
   // ──────────────────────────────────────────────────────────────────────────
   {
-    title: "Team",
+    title: "components.global.shortcutCategories.team",
     id: "team",
     shortcuts: [
       // With keyboard shortcuts
       {
-        description: ["Settings", "Team", "Overview"],
+        description: [
+          "components.global.shortcutDescriptions.settings",
+          "components.global.shortcutDescriptions.team",
+          "components.global.shortcutDescriptions.overview",
+        ],
         hotkeys: "Mod+;",
         event: "Dialog.Settings.Open",
         parameters: "overview",
@@ -661,7 +692,11 @@ export const shortcuts: ShortcutCategory[] = [
       },
       // workspaces
       {
-        description: ["Settings", "Team", "Workspaces"],
+        description: [
+          "components.global.shortcutDescriptions.settings",
+          "components.global.shortcutDescriptions.team",
+          "components.global.shortcutDescriptions.workspaces",
+        ],
         hotkeys: "Mod+Shift+S",
         event: "Dialog.Settings.Open",
         parameters: "workspaces",
@@ -670,7 +705,11 @@ export const shortcuts: ShortcutCategory[] = [
         visibility: { hideFrom: ["commands"] },
       },
       {
-        description: ["Settings", "Team", "Members"],
+        description: [
+          "components.global.shortcutDescriptions.settings",
+          "components.global.shortcutDescriptions.team",
+          "components.global.shortcutDescriptions.members",
+        ],
         hotkeys: "Mod+Shift+M",
         event: "Dialog.Settings.Open",
         parameters: "members",
@@ -685,26 +724,35 @@ export const shortcuts: ShortcutCategory[] = [
   // Appearance - Theme switching (command palette only)
   // ──────────────────────────────────────────────────────────────────────────
   {
-    title: "Appearance",
+    title: "components.global.shortcutCategories.appearance",
     id: "appearance",
     visibility: { hideFrom: ["hotkeys", "shortcuts"] },
     shortcuts: [
       {
-        description: ["Theme", "Light"],
+        description: [
+          "components.global.shortcutDescriptions.theme",
+          "components.global.shortcutDescriptions.light",
+        ],
         event: "Theme.Change",
         parameters: "light",
         icon: IconSun,
         tags: ["theme", "light", "bright", "day"],
       },
       {
-        description: ["Theme", "Dark"],
+        description: [
+          "components.global.shortcutDescriptions.theme",
+          "components.global.shortcutDescriptions.dark",
+        ],
         event: "Theme.Change",
         parameters: "dark",
         icon: IconMoon,
         tags: ["theme", "dark", "night"],
       },
       {
-        description: ["Theme", "Auto"],
+        description: [
+          "components.global.shortcutDescriptions.theme",
+          "components.global.shortcutDescriptions.auto",
+        ],
         event: "Theme.Change",
         parameters: "auto",
         icon: IconMonitor,
@@ -717,11 +765,11 @@ export const shortcuts: ShortcutCategory[] = [
   // Account - User session management
   // ──────────────────────────────────────────────────────────────────────────
   {
-    title: "Account",
+    title: "components.global.shortcutCategories.account",
     id: "account",
     shortcuts: [
       {
-        description: ["Logout"],
+        description: ["components.global.shortcutDescriptions.logout"],
         hotkeys: "Mod+Shift+L",
         event: "Dialog.Exit.Open",
         icon: IconLogOut,

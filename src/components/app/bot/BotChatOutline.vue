@@ -92,7 +92,7 @@ const jumpToMessage = (messageId: string) => {
           class="justify-start text-left"
           @click="jumpToMessage(message.id)"
         >
-          <span class="min-w-0 truncate">
+          <span class="min-w-0 truncate font-semibold">
             {{ outlineLabel(message.content) }}
           </span>
         </Button>

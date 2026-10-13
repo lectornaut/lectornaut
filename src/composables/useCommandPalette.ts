@@ -156,11 +156,11 @@ export function useCommandPalette(): { groups: ComputedRef<PaletteGroup[]> } {
     getFilteredShortcuts({ context: "commands", isDesktop: isTauri.value }).map(
       (category) => ({
         id: `shortcut:${category.id}`,
-        heading: category.title,
+        heading: t(category.title),
         highlight: !SEARCH_ONLY_SHORTCUT_CATEGORIES.has(category.id),
         commands: category.shortcuts.map((shortcut) => ({
           id: `shortcut:${getShortcutId(shortcut)}`,
-          label: shortcut.description,
+          label: shortcut.description.map((key) => t(key)),
           icon: shortcut.icon,
           keys: displayKeys(shortcut),
           keywords: shortcut.tags.join(" "),

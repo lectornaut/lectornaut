@@ -58,23 +58,37 @@ const filterOptions = computed(() => ({
   isDesktop: isTauri.value,
 }))
 
-// Fuse instances recreated when platform changes
+const localizedShortcuts = computed<ShortcutCategory[]>(() =>
+  getFilteredShortcuts(filterOptions.value).map((category) => ({
+    ...category,
+    title: t(category.title),
+    shortcuts: category.shortcuts.map((shortcut) => ({
+      ...shortcut,
+      description: shortcut.description.map((key) => t(key)),
+    })),
+  }))
+)
+const localizedFlatShortcuts = computed(() =>
+  localizedShortcuts.value.flatMap((category) => category.shortcuts)
+)
+
+// Fuse instances recreated when platform or locale changes
 const fuseCategory = computed(
   () =>
-    new Fuse(getFilteredShortcuts(filterOptions.value), {
+    new Fuse(localizedShortcuts.value, {
       keys: ["shortcuts.description", "shortcuts.tags"],
     })
 )
 
 const fuseShortcut = computed(
   () =>
-    new Fuse(getFlatShortcuts(filterOptions.value), {
+    new Fuse(localizedFlatShortcuts.value, {
       keys: ["description", "tags"],
     })
 )
 
 const filteredShortcuts = computed(() => {
-  const baseShortcuts = getFilteredShortcuts(filterOptions.value)
+  const baseShortcuts = localizedShortcuts.value
 
   if (!search.value) {
     return baseShortcuts
@@ -129,7 +143,7 @@ const getConflict = (
     normalizeHotkeyCombo(combo)
   )
 
-  const allShortcuts = getFlatShortcuts(filterOptions.value)
+  const allShortcuts = localizedFlatShortcuts.value
   for (const shortcut of allShortcuts) {
     if (getShortcutId(shortcut) === excludeShortcutId) continue
     const effective = getEffectiveHotkeys(shortcut)

@@ -72,7 +72,6 @@ onUnmounted(() => {
                     </span>
                   </template>
                 </div>
-                <SyncIndicator />
                 <IconChevronDown />
               </SidebarMenuButton>
             </DropdownMenuTrigger>

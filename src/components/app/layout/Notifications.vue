@@ -57,9 +57,10 @@ const scrollableContainer = useTemplateRef<ScrollContainerRef>(
 const activeTab = ref<INotificationStatus>("inbox")
 const themeStore = useThemeStore()
 const isDocked = computed({
-  get: () => themeStore.themeSettings.leftDockVisible,
+  get: () => themeStore.themeSettings.leftDockPinned,
   set: (value: boolean) => {
-    themeStore.themeSettings.leftDockVisible = value
+    if (value) themeStore.themeSettings.leftDockOpen = true
+    themeStore.themeSettings.leftDockPinned = value
   },
 })
 const isPopoverOpen = ref(false)
@@ -81,8 +82,32 @@ const popoverOpen = computed({
 watch(isDocked, async (docked) => {
   isPopoverOpen.value = !docked
   await nextTick()
-  if (docked) dockedNotifications.value?.focus()
+  if (docked && themeStore.themeSettings.leftDockOpen) {
+    dockedNotifications.value?.focus()
+  }
 })
+
+watch(
+  () => themeStore.themeSettings.leftDockOpen,
+  async (open) => {
+    if (!open || !isDocked.value) return
+    await nextTick()
+    dockedNotifications.value?.focus()
+  }
+)
+
+const toggleNotifications = () => {
+  if (!isDocked.value) {
+    isPopoverOpen.value = !isPopoverOpen.value
+  } else {
+    emitter.emit("Dock.Left.Toggle")
+  }
+}
+
+onMounted(() => emitter.on("Dialog.Notifications.Toggle", toggleNotifications))
+onUnmounted(() =>
+  emitter.off("Dialog.Notifications.Toggle", toggleNotifications)
+)
 
 const filteredNotifications = computed(() => {
   return notifications.value.filter((n) => {
@@ -219,7 +244,7 @@ useInfiniteScroll(
             </EmptyDescription>
           </EmptyHeader>
         </Empty>
-        <ItemGroup v-else class="gap-2">
+        <ItemGroup v-else class="gap-0!">
           <NotificationItem
             v-for="notification in filteredNotifications"
             :key="notification.id"

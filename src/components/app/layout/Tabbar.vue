@@ -202,7 +202,7 @@ watch(copied, (isCopied) => {
       >
         <div
           data-tauri-drag-region="deep"
-          class="flex min-w-0 items-center gap-2 px-2 pt-2 transition-all"
+          class="flex min-w-0 items-center gap-2 p-2 transition-all"
           :class="{
             'pl-macos-window-controls':
               macOSTrafficLightsVisible &&

@@ -96,9 +96,11 @@ const handleClick = () => {
               {{ notification.description }}
             </ItemDescription>
           </ItemContent>
-          <ItemActions class="ml-auto grid shrink-0">
+          <ItemActions
+            class="ml-6.5 grid shrink-0 @min-[360px]/notification-item:ml-auto"
+          >
             <ButtonGroup
-              class="pointer-events-none col-start-1 row-start-1 justify-self-end opacity-0 transition-opacity duration-150 group-focus-within:pointer-events-auto group-focus-within:opacity-100 group-hover:pointer-events-auto group-hover:opacity-100 motion-reduce:transition-none [@media(hover:none)]:pointer-events-auto [@media(hover:none)]:opacity-100"
+              class="pointer-events-none col-start-1 row-start-1 justify-self-start opacity-0 transition-opacity duration-150 group-focus-within:pointer-events-auto group-focus-within:opacity-100 group-hover:pointer-events-auto group-hover:opacity-100 motion-reduce:transition-none @min-[360px]/notification-item:justify-self-end [@media(hover:none)]:pointer-events-auto [@media(hover:none)]:opacity-100"
             >
               <TooltipProvider>
                 <ButtonGroup>
@@ -195,7 +197,7 @@ const handleClick = () => {
               </TooltipProvider>
             </ButtonGroup>
             <span
-              class="text-muted-foreground/50 pointer-events-none col-start-1 row-start-1 min-w-28 truncate text-right text-xs transition-opacity duration-150 group-focus-within:opacity-0 group-hover:opacity-0 motion-reduce:transition-none [@media(hover:none)]:opacity-0"
+              class="text-muted-foreground/50 pointer-events-none col-start-1 row-start-1 min-w-28 truncate text-left text-xs transition-opacity duration-150 group-focus-within:opacity-0 group-hover:opacity-0 motion-reduce:transition-none @min-[360px]/notification-item:text-right [@media(hover:none)]:opacity-0"
             >
               {{ timeAgo }}
             </span>

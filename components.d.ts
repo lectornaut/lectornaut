@@ -257,6 +257,7 @@ declare module 'vue' {
     KeyHints: typeof import('./src/components/app/layout/KeyHints.vue')['default']
     Label: typeof import('./src/components/ui/label/Label.vue')['default']
     LanguageSwitcher: typeof import('./src/components/app/global/LanguageSwitcher.vue')['default']
+    LayoutResizeHandle: typeof import('./src/components/app/layout/LayoutResizeHandle.vue')['default']
     LoadingState: typeof import('./src/components/app/global/LoadingState.vue')['default']
     Logo: typeof import('./src/components/app/global/Logo.vue')['default']
     MainLayout: typeof import('./src/components/app/layout/MainLayout.vue')['default']

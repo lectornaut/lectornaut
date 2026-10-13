@@ -190,7 +190,7 @@ useResizeObserver(draggableEl, (entries) => {
                     >
                       <IconGripHorizontal v-if="!isDocked" class="shrink-0" />
                       <span
-                        class="min-w-0 truncate"
+                        class="min-w-0 truncate font-semibold"
                         :title="
                           isPoppedOut
                             ? poppedOutTitle || t('layouts.app.popout.title')

@@ -5,7 +5,8 @@
  * Owns the per-user appearance/theme settings: color mode, base/accent palettes
  * (incl. custom hex), font, size, language, editor theme + font size, and the
  * translucent-sidebar and reduced-motion flags, chat window mode, and left
- * and right dock visibility.
+ * and right dock visibility. Left dock pinning and open/closed state are
+ * separate so collapsing notifications does not unpin them.
  * Exposed as a single `reactive()` `themeSettings` bundle that consumers read
  * AND write two-way (notably
  * `modules/theme.ts`, which mirrors it into the live CSS / `useColorMode` state).
@@ -113,8 +114,16 @@ export const useThemeStore = defineStore("theme", () => {
     "chatWindowMode",
     "floating"
   )
-  const leftDockVisible = useStorage<boolean>("leftDockVisible", false)
-  const rightDockVisible = useStorage<boolean>("rightDockVisible", false)
+  // Keep persisted keys and cloud fields stable while exposing symmetric names.
+  const leftDockPinned = useStorage<boolean>("leftDockVisible", false)
+  const leftDockOpen = useStorage<boolean>("leftDockOpen", true)
+  const rightDockOpen = useStorage<boolean>("rightDockVisible", false)
+  const rightDockPinned = computed({
+    get: () => chatWindowMode.value === "sidebar",
+    set: (pinned: boolean) => {
+      chatWindowMode.value = pinned ? "sidebar" : "floating"
+    },
+  })
 
   const themeSettings = reactive({
     mode,
@@ -129,9 +138,10 @@ export const useThemeStore = defineStore("theme", () => {
     editorFontSize,
     translucentSidebar,
     reducedMotion,
-    chatWindowMode,
-    leftDockVisible,
-    rightDockVisible,
+    leftDockPinned,
+    leftDockOpen,
+    rightDockPinned,
+    rightDockOpen,
   })
 
   const themeDocRef = computed(() => {
@@ -165,8 +175,9 @@ export const useThemeStore = defineStore("theme", () => {
         translucentSidebar: translucentSidebar.value,
         reducedMotion: reducedMotion.value,
         chatWindowMode: chatWindowMode.value,
-        leftDockVisible: leftDockVisible.value,
-        rightDockVisible: rightDockVisible.value,
+        leftDockVisible: leftDockPinned.value,
+        leftDockOpen: leftDockOpen.value,
+        rightDockVisible: rightDockOpen.value,
       },
       "settings.themes.persist"
     )
@@ -202,15 +213,21 @@ export const useThemeStore = defineStore("theme", () => {
       }
       if (
         typeof themeDoc.leftDockVisible === "boolean" &&
-        themeDoc.leftDockVisible !== leftDockVisible.value
+        themeDoc.leftDockVisible !== leftDockPinned.value
       ) {
-        leftDockVisible.value = themeDoc.leftDockVisible
+        leftDockPinned.value = themeDoc.leftDockVisible
+      }
+      if (
+        typeof themeDoc.leftDockOpen === "boolean" &&
+        themeDoc.leftDockOpen !== leftDockOpen.value
+      ) {
+        leftDockOpen.value = themeDoc.leftDockOpen
       }
       if (
         typeof themeDoc.rightDockVisible === "boolean" &&
-        themeDoc.rightDockVisible !== rightDockVisible.value
+        themeDoc.rightDockVisible !== rightDockOpen.value
       ) {
-        rightDockVisible.value = themeDoc.rightDockVisible
+        rightDockOpen.value = themeDoc.rightDockVisible
       }
 
       if ("mode" in themeDoc && themeDoc.mode && themeDoc.mode !== mode.value) {
@@ -352,8 +369,9 @@ export const useThemeStore = defineStore("theme", () => {
       translucentSidebar,
       reducedMotion,
       chatWindowMode,
-      leftDockVisible,
-      rightDockVisible,
+      leftDockPinned,
+      leftDockOpen,
+      rightDockOpen,
     ],
     () => {
       void persistThemeWithSync()

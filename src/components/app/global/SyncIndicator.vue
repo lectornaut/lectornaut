@@ -126,20 +126,22 @@ const errorMessage = computed(
 
 <template>
   <TooltipProvider>
-    <HoverCard :open-delay="150" :close-delay="0">
+    <Popover>
       <Tooltip>
         <TooltipTrigger as-child>
-          <HoverCardTrigger as-child>
-            <Component :is="syncIcon" :class="syncIconClass" />
-          </HoverCardTrigger>
-          <HoverCardContent side="bottom" class="flex w-60 flex-col gap-2 p-2">
+          <PopoverTrigger as-child>
+            <Button variant="ghost" size="icon-sm" :aria-label="syncLabel">
+              <Component :is="syncIcon" :class="syncIconClass" />
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent class="gap-2 p-2">
             <Item class="group" size="xs">
               <ItemMedia
                 variant="icon"
                 class="size-8 rounded-4xl"
                 :class="syncBadgeClass"
               >
-                <Component :is="syncIcon" class="size-4" />
+                <Component :is="syncIcon" />
               </ItemMedia>
               <ItemContent>
                 <ItemTitle>{{ syncTitle }}</ItemTitle>
@@ -148,14 +150,13 @@ const errorMessage = computed(
                 </ItemDescription>
               </ItemContent>
             </Item>
-
             <div
               v-if="
                 syncCount > 0 ||
                 lastSuccessAt ||
                 (syncState === 'error' && lastErrorAt)
               "
-              class="space-y-2 px-3 pb-1"
+              class="space-y-2 px-3 pb-2.5"
             >
               <div
                 v-if="syncCount > 0"
@@ -203,7 +204,6 @@ const errorMessage = computed(
                 </Badge>
               </div>
             </div>
-
             <div
               v-if="syncState === 'error'"
               class="bg-destructive/10 rounded-4xl px-3 py-2"
@@ -229,10 +229,10 @@ const errorMessage = computed(
                 {{ t("actions.retry") }}
               </Button>
             </div>
-          </HoverCardContent>
+          </PopoverContent>
         </TooltipTrigger>
         <TooltipContent>{{ syncLabel }}</TooltipContent>
       </Tooltip>
-    </HoverCard>
+    </Popover>
   </TooltipProvider>
 </template>

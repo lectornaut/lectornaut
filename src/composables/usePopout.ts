@@ -21,7 +21,8 @@
  * MainLayout owns the resizable dock panel and persists its layout separately
  * from the floating window's size and position.
  * Its mode and open/closed state are separate account-synced preferences.
- * `rightDockVisible` is the sole persisted visibility flag. Pinned-chat
+ * `rightDockOpen` is the visibility preference (persisted as `rightDockVisible`).
+ * `rightDockPinned` selects docking (persisted as `chatWindowMode`). Pinned-chat
  * selection is runtime-only; an open window restores Ask AI after a reload.
  * Pinned chats cover Ask AI without unmounting it. Closing the frame
  * dismisses both surfaces; a native handoff can reveal Ask AI instead.
@@ -56,7 +57,7 @@ const poppedOutTitle = useLocalStorage("popout-title", "")
 export const usePopout = createSharedComposable(() => {
   const themeStore = useThemeStore()
   watch(
-    () => themeStore.themeSettings.rightDockVisible,
+    () => themeStore.themeSettings.rightDockOpen,
     (visible) => {
       if (visible) {
         if (!isChatWindowOpen.value) openAiAsk.value = true
@@ -71,13 +72,13 @@ export const usePopout = createSharedComposable(() => {
   // Batch surface handoffs so switching between Ask AI and a pinned chat
   // doesn't persist an intermediate closed state.
   watch(isChatWindowOpen, (visible) => {
-    themeStore.themeSettings.rightDockVisible = visible
+    themeStore.themeSettings.rightDockOpen = visible
   })
 
   const isDocked = computed({
-    get: () => themeStore.themeSettings.chatWindowMode === "sidebar",
+    get: () => themeStore.themeSettings.rightDockPinned,
     set: (value: boolean) => {
-      themeStore.themeSettings.chatWindowMode = value ? "sidebar" : "floating"
+      themeStore.themeSettings.rightDockPinned = value
     },
   })
 

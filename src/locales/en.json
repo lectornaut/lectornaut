@@ -1713,11 +1713,17 @@
         "label": "Reduce motion",
         "description": "Minimize animations and transitions across the app. Leave off for default animations."
       },
+      "notificationsMode": {
+        "label": "Notifications mode",
+        "description": "Show notifications in a popover or pin them in the left sidebar.",
+        "popover": "Popover",
+        "sidebar": "Sidebar dock"
+      },
       "chatWindowMode": {
         "label": "Chat window mode",
         "description": "Show Ask AI and pinned chats in a floating window or the right sidebar. This preference syncs with your account.",
         "floating": "Floating window",
-        "sidebar": "Sidebar"
+        "sidebar": "Sidebar dock"
       }
     },
     "workflows": {
@@ -4089,6 +4095,58 @@
         "hints": "Available keyboard shortcuts",
         "hintPressed": "Pressed {keys}",
         "hintPressFor": "Press {keys} for {action}"
+      },
+      "shortcutCategories": {
+        "general": "General",
+        "tabs": "Tabs",
+        "layout": "Layout",
+        "team": "Team",
+        "appearance": "Appearance",
+        "account": "Account"
+      },
+      "shortcutDescriptions": {
+        "commands": "Commands",
+        "askAi": "Ask AI",
+        "notifications": "Notifications",
+        "settings": "Settings",
+        "keyboardShortcuts": "Keyboard shortcuts",
+        "workspace": "Workspace",
+        "switch": "Switch",
+        "helpAndSupport": "Help and support",
+        "whatsNew": "What's new",
+        "openNewTab": "Open new tab",
+        "reopenLastClosedTab": "Reopen last closed tab",
+        "closeCurrentTab": "Close current tab",
+        "closeOtherTabs": "Close other tabs",
+        "closeAllTabs": "Close all tabs",
+        "duplicateTab": "Duplicate tab",
+        "renameTab": "Rename tab",
+        "selectNextTab": "Select next tab",
+        "selectPreviousTab": "Select previous tab",
+        "selectNthTab": "Select Nth tab",
+        "selectTab1": "Select tab 1",
+        "selectTab2": "Select tab 2",
+        "selectTab3": "Select tab 3",
+        "selectTab4": "Select tab 4",
+        "selectTab5": "Select tab 5",
+        "selectTab6": "Select tab 6",
+        "selectTab7": "Select tab 7",
+        "selectTab8": "Select tab 8",
+        "selectTab9": "Select tab 9",
+        "sidebar": "Sidebar",
+        "left": "Left",
+        "right": "Right",
+        "panel": "Panel",
+        "bottom": "Bottom",
+        "team": "Team",
+        "overview": "Overview",
+        "workspaces": "Workspaces",
+        "members": "Members",
+        "theme": "Theme",
+        "light": "Light",
+        "dark": "Dark",
+        "auto": "Auto",
+        "logout": "Logout"
       },
       "commandK": {
         "placeholder": "Search or run a command",

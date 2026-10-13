@@ -123,9 +123,17 @@ const selectedReducedMotion = computed({
 })
 
 const selectedChatWindowMode = computed({
-  get: () => themeSettings.value.chatWindowMode,
+  get: () => (themeSettings.value.rightDockPinned ? "sidebar" : "floating"),
   set: (value: ChatWindowMode) => {
-    themeSettings.value.chatWindowMode = value
+    themeSettings.value.rightDockPinned = value === "sidebar"
+  },
+})
+
+const selectedNotificationsMode = computed<"popover" | "sidebar">({
+  get: () => (themeSettings.value.leftDockPinned ? "sidebar" : "popover"),
+  set: (value) => {
+    if (value === "sidebar") themeSettings.value.leftDockOpen = false
+    themeSettings.value.leftDockPinned = value === "sidebar"
   },
 })
 
@@ -467,6 +475,31 @@ const accentSwatchStyle = (option: ColorSwatch<AccentId>) => ({
       </FieldSet>
       <FieldSeparator />
       <FieldSet>
+        <Field orientation="horizontal">
+          <FieldContent>
+            <FieldLabel for="notifications-mode">
+              {{ t("settings.appearance.notificationsMode.label") }}
+            </FieldLabel>
+            <FieldDescription>
+              {{ t("settings.appearance.notificationsMode.description") }}
+            </FieldDescription>
+          </FieldContent>
+          <Select v-model="selectedNotificationsMode">
+            <SelectTrigger id="notifications-mode">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectGroup>
+                <SelectItem value="popover">
+                  {{ t("settings.appearance.notificationsMode.popover") }}
+                </SelectItem>
+                <SelectItem value="sidebar">
+                  {{ t("settings.appearance.notificationsMode.sidebar") }}
+                </SelectItem>
+              </SelectGroup>
+            </SelectContent>
+          </Select>
+        </Field>
         <Field orientation="horizontal">
           <FieldContent>
             <FieldLabel for="chat-window-mode">

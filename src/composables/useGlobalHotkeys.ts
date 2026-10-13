@@ -27,6 +27,7 @@ import { computed } from "vue"
  *   `useHotkeyRegistrations()`.
  */
 export const useGlobalHotkeys = () => {
+  const { t } = useI18n()
   const { shortcutOverrides } = storeToRefs(useShortcutsStore())
 
   const definitions = computed(() =>
@@ -42,7 +43,11 @@ export const useGlobalHotkeys = () => {
           // outside the type-safe `Hotkey` union; they are valid at runtime.
           hotkey: combo as Hotkey,
           callback: () => emitter.emit(shortcut.event, shortcut.parameters),
-          options: { meta: { name: shortcut.description.join(" › ") } },
+          options: {
+            meta: {
+              name: shortcut.description.map((key) => t(key)).join(" › "),
+            },
+          },
         }))
       })
   )

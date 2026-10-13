@@ -1,7 +1,14 @@
 <script lang="ts" setup>
 import { navigationMenuTriggerStyle } from "@/components/ui/navigation-menu"
-import { isTauri, useIsFullscreen } from "@/composables/usePlatform"
-import { IconAi, IconDownload, IconMenu, IconSignature } from "@/data/icons"
+import {
+  IconAi,
+  IconArrowLeft,
+  IconChevronRight,
+  IconDownload,
+  IconMenu,
+  IconSignature,
+  IconX,
+} from "@/data/icons"
 import {
   companyMenu,
   productsMenu,
@@ -10,11 +17,72 @@ import {
 } from "@/helpers/defaults"
 import { useCurrentUser, useIsCurrentUserLoaded } from "vuefire"
 
-const isFullscreen = useIsFullscreen()
-
 const user = useCurrentUser()
 const isUserLoaded = useIsCurrentUserLoaded()
 const { t } = useI18n()
+
+const mobileSections = [
+  "products",
+  "solutions",
+  "resources",
+  "company",
+] as const
+type MobileSection = (typeof mobileSections)[number]
+
+const mobileMenuOpen = ref(false)
+const mobileSection = ref<MobileSection | null>(null)
+const mobileNav = useTemplateRef<HTMLElement>("mobileNav")
+const mobileBack = useTemplateRef<HTMLButtonElement>("mobileBack")
+const route = useRoute()
+
+const mobileTitle = computed(() =>
+  mobileSection.value
+    ? t(`landing.menu.${mobileSection.value}`)
+    : t("landing.header.menu")
+)
+
+const mobileGroups = computed(() => {
+  if (mobileSection.value === "solutions") {
+    return solutionsMenu.map((group) => ({
+      id: group.id,
+      title: t(`landing.menu.solutionGroups.${group.id}`),
+      items: group.items,
+    }))
+  }
+
+  const items =
+    mobileSection.value === "products"
+      ? productsMenu
+      : mobileSection.value === "resources"
+        ? resourcesMenu
+        : mobileSection.value === "company"
+          ? companyMenu
+          : []
+
+  return [{ id: "links", title: "", items }]
+})
+
+const selectMobileSection = async (section: MobileSection | null) => {
+  const previousSection = mobileSection.value
+  mobileSection.value = section
+  await nextTick()
+  if (section) {
+    mobileBack.value?.focus()
+  } else {
+    mobileNav.value
+      ?.querySelector<HTMLElement>(`[data-section="${previousSection}"]`)
+      ?.focus()
+  }
+}
+
+watch(mobileMenuOpen, (open) => {
+  if (open) mobileSection.value = null
+})
+
+watch(
+  () => route.fullPath,
+  () => (mobileMenuOpen.value = false)
+)
 </script>
 
 <template>
@@ -279,232 +347,138 @@ const { t } = useI18n()
             </Button>
           </EnterTrigger>
           <div class="flex md:hidden">
-            <Sheet>
+            <Drawer v-model:open="mobileMenuOpen" swipe-direction="right">
               <TooltipProvider>
                 <Tooltip>
-                  <SheetTrigger as-child>
+                  <DrawerTrigger as-child>
                     <TooltipTrigger as-child>
-                      <Button variant="ghost" size="icon">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        class="size-11"
+                        :aria-label="t('landing.header.menu')"
+                      >
                         <IconMenu />
                       </Button>
                     </TooltipTrigger>
                     <TooltipContent>
                       {{ t("landing.header.menu") }}
                     </TooltipContent>
-                  </SheetTrigger>
-                  <SheetContent
-                    class="m-2 mt-[calc(var(--spacing-titlebar-height,0)+(--spacing(2)))] h-auto! gap-0 overflow-clip rounded-4xl border"
-                    :class="{ 'mt-12': isTauri && !isFullscreen }"
-                  >
-                    <SheetHeader>
-                      <SheetTitle> {{ t("landing.header.menu") }} </SheetTitle>
-                      <SheetDescription>
-                        {{ t("landing.header.menuDescription") }}
-                      </SheetDescription>
-                    </SheetHeader>
-                    <Separator />
-                    <ScrollContainer>
-                      <div
-                        class="flex grow flex-col overflow-auto overscroll-none scroll-smooth"
-                      >
-                        <Accordion collapsible type="multiple" class="p-4">
-                          <AccordionItem value="products">
-                            <AccordionTrigger>
-                              {{ t("landing.menu.products") }}
-                            </AccordionTrigger>
-                            <AccordionContent>
-                              <div class="flex flex-col gap-2 p-2">
-                                <Item
-                                  v-for="item in productsMenu"
-                                  :key="item.id"
-                                  class="p-2"
-                                  as-child
-                                >
-                                  <RouterLink :to="item.url">
-                                    <ItemMedia>
-                                      <div
-                                        class="flex size-10 shrink-0 items-center justify-center"
-                                        :class="item.style.bg"
-                                      >
-                                        <Component
-                                          :is="item.icon"
-                                          :class="item.style.text"
-                                        />
-                                      </div>
-                                    </ItemMedia>
-                                    <ItemContent>
-                                      <ItemTitle>
-                                        {{
-                                          t(
-                                            "landing.menu.items." +
-                                              item.id +
-                                              ".title"
-                                          )
-                                        }}
-                                      </ItemTitle>
-                                      <ItemDescription class="text-xs">
-                                        {{
-                                          t(
-                                            "landing.menu.items." +
-                                              item.id +
-                                              ".description"
-                                          )
-                                        }}
-                                      </ItemDescription>
-                                    </ItemContent>
-                                  </RouterLink>
-                                </Item>
-                              </div>
-                            </AccordionContent>
-                          </AccordionItem>
-                          <AccordionItem value="solutions">
-                            <AccordionTrigger>
-                              {{ t("landing.menu.solutions") }}
-                            </AccordionTrigger>
-                            <AccordionContent>
-                              <div class="flex flex-col gap-4">
-                                <div
-                                  v-for="group in solutionsMenu"
-                                  :key="group.id"
-                                  class="flex flex-col gap-2 p-2"
-                                >
-                                  <span
-                                    class="text-muted-foreground px-2 text-xs font-medium tracking-wider uppercase"
-                                  >
-                                    {{
-                                      t(
-                                        "landing.menu.solutionGroups." +
-                                          group.id
-                                      )
-                                    }}
-                                  </span>
-                                  <Item
-                                    v-for="item in group.items"
-                                    :key="item.id"
-                                    class="p-2"
-                                    as-child
-                                  >
-                                    <RouterLink :to="item.url">
-                                      <ItemMedia>
-                                        <div
-                                          class="flex size-10 shrink-0 items-center justify-center"
-                                          :class="item.style.bg"
-                                        >
-                                          <Component
-                                            :is="item.icon"
-                                            :class="item.style.text"
-                                          />
-                                        </div>
-                                      </ItemMedia>
-                                      <ItemContent>
-                                        <ItemTitle>
-                                          {{ item.title }}
-                                        </ItemTitle>
-                                        <ItemDescription class="text-xs">
-                                          {{ item.description }}
-                                        </ItemDescription>
-                                      </ItemContent>
-                                    </RouterLink>
-                                  </Item>
-                                </div>
-                              </div>
-                            </AccordionContent>
-                          </AccordionItem>
-                          <AccordionItem value="resources">
-                            <AccordionTrigger>
-                              {{ t("landing.menu.resources") }}
-                            </AccordionTrigger>
-                            <AccordionContent>
-                              <div class="flex flex-col gap-2 p-2">
-                                <Item
-                                  v-for="item in resourcesMenu"
-                                  :key="item.id"
-                                  class="p-2"
-                                  as-child
-                                >
-                                  <RouterLink :to="item.url">
-                                    <ItemMedia>
-                                      <div
-                                        class="flex size-10 shrink-0 items-center justify-center"
-                                        :class="item.style.bg"
-                                      >
-                                        <Component
-                                          :is="item.icon"
-                                          :class="item.style.text"
-                                        />
-                                      </div>
-                                    </ItemMedia>
-                                    <ItemContent>
-                                      <ItemTitle>
-                                        {{ item.title }}
-                                      </ItemTitle>
-                                      <ItemDescription class="text-xs">
-                                        {{ item.description }}
-                                      </ItemDescription>
-                                    </ItemContent>
-                                  </RouterLink>
-                                </Item>
-                              </div>
-                            </AccordionContent>
-                          </AccordionItem>
-                          <AccordionItem value="company">
-                            <AccordionTrigger>
-                              {{ t("landing.menu.company") }}
-                            </AccordionTrigger>
-                            <AccordionContent>
-                              <div class="flex flex-col gap-2 p-2">
-                                <Item
-                                  v-for="item in companyMenu"
-                                  :key="item.id"
-                                  class="p-2"
-                                  as-child
-                                >
-                                  <RouterLink :to="item.url">
-                                    <ItemMedia>
-                                      <div
-                                        class="flex size-10 shrink-0 items-center justify-center"
-                                        :class="item.style.bg"
-                                      >
-                                        <Component
-                                          :is="item.icon"
-                                          :class="item.style.text"
-                                        />
-                                      </div>
-                                    </ItemMedia>
-                                    <ItemContent>
-                                      <ItemTitle>
-                                        {{ item.title }}
-                                      </ItemTitle>
-                                      <ItemDescription class="text-xs">
-                                        {{ item.description }}
-                                      </ItemDescription>
-                                    </ItemContent>
-                                  </RouterLink>
-                                </Item>
-                              </div>
-                            </AccordionContent>
-                          </AccordionItem>
-                          <Item as-child>
-                            <RouterLink to="/pricing">
-                              <ItemTitle>
-                                {{ t("landing.menu.pricing") }}
-                              </ItemTitle>
-                            </RouterLink>
-                          </Item>
-                        </Accordion>
+                  </DrawerTrigger>
+                  <DrawerContent class="items-center outline-hidden">
+                    <DrawerHeader class="w-full max-w-sm shrink-0">
+                      <div class="flex items-center gap-2">
+                        <Button
+                          v-if="mobileSection"
+                          variant="ghost"
+                          size="icon"
+                          class="size-11"
+                          as-child
+                        >
+                          <button
+                            ref="mobileBack"
+                            :aria-label="t('actions.goBack')"
+                            @click="selectMobileSection(null)"
+                          >
+                            <IconArrowLeft />
+                          </button>
+                        </Button>
+                        <DrawerTitle class="grow">{{
+                          mobileTitle
+                        }}</DrawerTitle>
+                        <DrawerClose as-child>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            class="size-11"
+                            :aria-label="t('actions.close')"
+                          >
+                            <IconX />
+                          </Button>
+                        </DrawerClose>
                       </div>
+                      <DrawerDescription class="sr-only">
+                        {{ t("landing.header.menuDescription") }}
+                      </DrawerDescription>
+                    </DrawerHeader>
+                    <ScrollContainer
+                      :key="mobileSection ?? 'menu'"
+                      class="w-full max-w-sm overscroll-none scroll-smooth p-2"
+                    >
+                      <nav
+                        ref="mobileNav"
+                        :aria-label="mobileTitle"
+                        class="flex shrink-0 flex-col gap-1"
+                      >
+                        <template v-if="!mobileSection">
+                          <Button
+                            v-for="section in mobileSections"
+                            :key="section"
+                            variant="ghost"
+                            class="h-auto min-h-11 justify-between rounded-xl px-4 py-3"
+                            :data-section="section"
+                            @click="selectMobileSection(section)"
+                          >
+                            {{ t(`landing.menu.${section}`) }}
+                            <IconChevronRight data-icon="inline-end" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            class="h-auto min-h-11 justify-start rounded-xl px-4 py-3"
+                            as-child
+                          >
+                            <RouterLink
+                              to="/pricing"
+                              @click="mobileMenuOpen = false"
+                            >
+                              {{ t("landing.menu.pricing") }}
+                            </RouterLink>
+                          </Button>
+                        </template>
+                        <template v-else>
+                          <div
+                            v-for="group in mobileGroups"
+                            :key="group.id"
+                            class="flex shrink-0 flex-col gap-1"
+                          >
+                            <p
+                              v-if="group.title"
+                              class="text-muted-foreground px-4 pt-4 pb-2 text-xs"
+                            >
+                              {{ group.title }}
+                            </p>
+                            <Button
+                              v-for="item in group.items"
+                              :key="item.id"
+                              variant="ghost"
+                              class="h-auto min-h-11 justify-start rounded-xl px-4 py-3 whitespace-normal"
+                              as-child
+                            >
+                              <a
+                                :href="item.url"
+                                @click="mobileMenuOpen = false"
+                              >
+                                <Component
+                                  :is="item.icon"
+                                  data-icon="inline-start"
+                                />
+                                {{ t(`landing.menu.items.${item.id}.title`) }}
+                              </a>
+                            </Button>
+                          </div>
+                        </template>
+                      </nav>
                     </ScrollContainer>
-                    <Separator />
-                    <SheetFooter>
+                    <DrawerFooter class="mb-safe-bottom w-full max-w-sm">
                       <div class="flex items-center justify-between gap-2">
                         <ColorMode />
                         <LanguageSwitcher />
                       </div>
-                    </SheetFooter>
-                  </SheetContent>
+                    </DrawerFooter>
+                  </DrawerContent>
                 </Tooltip>
               </TooltipProvider>
-            </Sheet>
+            </Drawer>
           </div>
         </div>
       </div>
