@@ -12,6 +12,7 @@ mod app_check;
 mod downloads;
 mod file_capture;
 mod oauth;
+mod window_controls;
 
 #[tauri::command]
 fn set_tray_visible(app: tauri::AppHandle, visible: bool) -> Result<(), String> {
@@ -200,6 +201,7 @@ pub fn run() {
             file_capture::dismiss_file_capture_window,
             file_capture::set_file_capture_drag_enabled,
             file_capture::preview_file_path,
+            window_controls::align_macos_window_controls,
             set_tray_visible
         ])
         .setup(|app| {

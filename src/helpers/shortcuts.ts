@@ -29,7 +29,7 @@ import {
   formatForDisplay,
   formatHotkey,
   parseHotkey,
-  type Hotkey,
+  type HotkeyChord,
 } from "@tanstack/vue-hotkeys"
 import type { Component } from "vue"
 
@@ -41,7 +41,7 @@ import type { Component } from "vue"
  * excludes — notably `Shift+<punctuation>` like `"Shift+/"` (the "?" help key),
  * which is layout-dependent and matched via `event.code` at runtime.
  */
-export type HotkeyBinding = Hotkey | (string & {})
+export type HotkeyBinding = HotkeyChord | (string & {})
 
 // ============================================================================
 // Platform Detection (cached for performance)

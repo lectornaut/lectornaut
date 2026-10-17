@@ -1,6 +1,7 @@
 <script lang="ts" setup>
 import { useSidebar } from "@/components/ui/sidebar"
 import { useCopy } from "@/composables/useCopy"
+import { useMacOSWindowControls } from "@/composables/useMacOSWindowControls"
 import { useMacOSTrafficLightsVisible } from "@/composables/usePlatform"
 import { useShortcutKeys } from "@/composables/useShortcutKeys"
 import { useTabRouterSync } from "@/composables/useTabRouterSync"
@@ -39,6 +40,8 @@ const macOSTrafficLightsVisible = useMacOSTrafficLightsVisible()
 const { open, isMobile } = useSidebar()
 
 const el = ref<HTMLElement>()
+const windowControlsHeader = useTemplateRef<HTMLElement>("windowControlsHeader")
+useMacOSWindowControls(windowControlsHeader)
 const { t } = useI18n()
 
 // ----------------------------------------------------------------------------
@@ -201,6 +204,7 @@ watch(copied, (isCopied) => {
         class="min-h-titlebar-height ml-titlebar-left max-w-titlebar-width pt-safe-top relative z-40"
       >
         <div
+          ref="windowControlsHeader"
           data-tauri-drag-region="deep"
           class="flex min-w-0 items-center gap-2 p-2 transition-all"
           :class="{

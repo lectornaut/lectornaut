@@ -15,11 +15,16 @@ import {
   resourcesMenu,
   solutionsMenu,
 } from "@/helpers/defaults"
+import { useMacOSWindowControls } from "@/composables/useMacOSWindowControls"
+import { useMacOSTrafficLightsVisible } from "@/composables/usePlatform"
 import { useCurrentUser, useIsCurrentUserLoaded } from "vuefire"
 
 const user = useCurrentUser()
 const isUserLoaded = useIsCurrentUserLoaded()
 const { t } = useI18n()
+const macOSTrafficLightsVisible = useMacOSTrafficLightsVisible()
+const windowControlsHeader = useTemplateRef<HTMLElement>("windowControlsHeader")
+useMacOSWindowControls(windowControlsHeader)
 
 const mobileSections = [
   "products",
@@ -91,7 +96,10 @@ watch(
   >
     <div class="mx-auto flex w-full max-w-6xl items-center justify-center">
       <div
+        ref="windowControlsHeader"
+        data-tauri-drag-region="deep"
         class="bg-background/25 grid w-full grid-cols-3 gap-2 p-2 backdrop-blur-2xl"
+        :class="{ 'pl-macos-window-controls': macOSTrafficLightsVisible }"
       >
         <div class="flex grow items-center justify-start gap-2">
           <ContextMenu>

@@ -1,4 +1,5 @@
 <script lang="ts" setup>
+import { useMacOSWindowControls } from "@/composables/useMacOSWindowControls"
 import { BotChatContextKey, useBotChat } from "@/composables/useBotChat"
 import {
   isTauri,
@@ -28,6 +29,8 @@ const route = useRoute()
 const router = useRouter()
 const isStandalone = computed(() => route.query.popout === "1")
 const macOSTrafficLightsVisible = useMacOSTrafficLightsVisible()
+const windowControlsHeader = useTemplateRef<HTMLElement>("windowControlsHeader")
+useMacOSWindowControls(windowControlsHeader)
 
 // Detached windows retain their conversation across shared preference refreshes.
 // The bot layout remounts the page when switching presentation modes.
@@ -130,6 +133,7 @@ const popOut = () => {
     class="bg-background flex h-screen w-screen grow flex-col"
   >
     <header
+      ref="windowControlsHeader"
       data-tauri-drag-region
       class="flex shrink-0 items-center justify-between gap-2 p-2"
       :class="{ 'pl-macos-window-controls': macOSTrafficLightsVisible }"

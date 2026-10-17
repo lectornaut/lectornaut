@@ -10,6 +10,20 @@ Lectornaut combines:
 2. AI Reading and Learning Companion
 3. Team Research and Collaboration Tool
 
+### macOS window controls
+
+Native traffic lights keep their system size and stay vertically aligned with
+the active header when changing Appearance font size, webview zoom, or both.
+`useMacOSWindowControls` observes header geometry and synchronizes it through
+the native `align_macos_window_controls` command. The command converts CSS
+coordinates to logical window points independently of Retina scaling and
+returns a zoom-adjusted CSS width for the shared window-control spacing token.
+Tab, page, Zen, and detached chat headers use the same alignment path; fullscreen
+suspends alignment and exiting fullscreen resynchronizes it.
+The native command also applies the titlebar frame immediately: the current tao
+runtime stores traffic-light insets in its setter but only applies them in
+`drawRect`, which may not run when WebKit occludes the native content view.
+
 ## What This Becomes
 
 Lectornaut is not:

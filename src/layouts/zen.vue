@@ -1,4 +1,5 @@
 <script lang="ts" setup>
+import { useMacOSWindowControls } from "@/composables/useMacOSWindowControls"
 import { useMacOSTrafficLightsVisible } from "@/composables/usePlatform"
 import { IconLeaf } from "@/data/icons"
 import { useMediaQuery } from "@vueuse/core"
@@ -6,6 +7,8 @@ import { useMediaQuery } from "@vueuse/core"
 const { t } = useI18n()
 const macOSTrafficLightsVisible = useMacOSTrafficLightsVisible()
 const isMobile = useMediaQuery("(max-width: 768px)")
+const windowControlsHeader = useTemplateRef<HTMLElement>("windowControlsHeader")
+useMacOSWindowControls(windowControlsHeader)
 
 // Zen renders no sidebar, so the trigger (and ⌘B) opens the preview instead.
 const previewOpen = ref(false)
@@ -22,6 +25,7 @@ const previewOpen = ref(false)
       class="min-h-titlebar-height pt-safe-top fixed top-0 left-0 z-40"
     >
       <div
+        ref="windowControlsHeader"
         data-tauri-drag-region="deep"
         class="flex items-center px-2 pt-2"
         :class="{ 'pl-macos-window-controls': macOSTrafficLightsVisible }"

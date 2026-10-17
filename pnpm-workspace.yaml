@@ -11,6 +11,7 @@ catalog:
   sharp: ^0.35.5
 
 overrides:
+  prosemirror-view: 1.42.6
   sharp: "catalog:"
 
 allowBuilds:

@@ -10,6 +10,8 @@ import {
   matchesHeldModifiers,
   useHeldKeys,
   useHotkeyRegistrations,
+  type HotkeyChordRegistrationView,
+  type HotkeySequenceRegistrationView,
   type ParsedHotkey,
 } from "@tanstack/vue-hotkeys"
 import { computed, ref, watch } from "vue"
@@ -69,7 +71,7 @@ const remainingChord = (parsed: ParsedHotkey, held: Set<string>): string =>
  *
  * - **Sequences** — after the first key of a sequence (e.g. `G`), lists every
  *   sequence that can still complete with its next key(s) (`H` → Go to Home).
- *   Progress comes from `SequenceManager` (`matchedStepCount`); it only resets
+ *   Progress comes from the hotkey manager (`matchedStepCount`); it only resets
  *   lazily on the next keydown, so the timeout is mirrored here with a timer.
  * - **Chords** — after modifiers are held alone for `MODIFIER_HINT_DELAY`, lists
  *   every hotkey those modifiers lead to (`⌘` → `K` Commands), using the
@@ -79,7 +81,19 @@ const remainingChord = (parsed: ParsedHotkey, held: Set<string>): string =>
  * listed, and nothing is shown while a shortcut recorder is capturing keys.
  */
 export const useKeyHints = () => {
-  const { hotkeys, sequences } = useHotkeyRegistrations()
+  const registrations = useHotkeyRegistrations()
+  const hotkeys = computed(() =>
+    registrations.value.filter(
+      (registration): registration is HotkeyChordRegistrationView =>
+        registration.kind === "chord"
+    )
+  )
+  const sequences = computed(() =>
+    registrations.value.filter(
+      (registration): registration is HotkeySequenceRegistrationView =>
+        registration.kind === "sequence"
+    )
+  )
   const heldKeys = useHeldKeys()
 
   // Read focus live rather than via a reactive ref: hints only change on key
@@ -91,7 +105,7 @@ export const useKeyHints = () => {
 
   const isEligible = (options: {
     enabled?: boolean
-    ignoreInputs?: boolean
+    ignoreInputs?: boolean | "auto"
   }): boolean =>
     !!options.enabled &&
     (options.ignoreInputs === false || !isEditableElement(focusedElement()))
@@ -142,10 +156,10 @@ export const useKeyHints = () => {
 
     return {
       kind: "sequence",
-      pressed: sequenceToDisplayKeys(branch[0].sequence.slice(0, depth)),
+      pressed: sequenceToDisplayKeys(branch[0].hotkey.slice(0, depth)),
       options: branch.map((registration) => ({
         id: registration.id,
-        keys: sequenceToDisplayKeys(registration.sequence.slice(depth)),
+        keys: sequenceToDisplayKeys(registration.hotkey.slice(depth)),
         label: registration.options.meta?.name ?? "",
       })),
     }

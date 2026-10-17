@@ -1,4 +1,5 @@
 <script lang="ts" setup>
+import { useMacOSWindowControls } from "@/composables/useMacOSWindowControls"
 import { useMacOSTrafficLightsVisible } from "@/composables/usePlatform"
 import { IconArrowLeft, IconLogOut } from "@/data/icons"
 import { emitter } from "@/modules/mitt"
@@ -6,10 +7,13 @@ import { useCurrentUser } from "vuefire"
 
 const macOSTrafficLightsVisible = useMacOSTrafficLightsVisible()
 const currentUser = useCurrentUser()
+const windowControlsHeader = useTemplateRef<HTMLElement>("windowControlsHeader")
+useMacOSWindowControls(windowControlsHeader)
 </script>
 
 <template>
   <div
+    ref="windowControlsHeader"
     data-tauri-drag-region="deep"
     class="grid grid-cols-2 gap-2 self-stretch p-2"
     :class="{ 'pl-macos-window-controls': macOSTrafficLightsVisible }"

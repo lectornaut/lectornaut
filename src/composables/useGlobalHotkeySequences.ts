@@ -2,14 +2,14 @@ import { useCreateActions } from "@/composables/useCreateActions"
 import { isRecordingShortcut } from "@/composables/useShortcutRecorder"
 import { defaultMenu } from "@/helpers/defaults"
 import { SEQUENCE_TIMEOUT } from "@/helpers/shortcuts"
-import { useHotkeySequences, type Hotkey } from "@tanstack/vue-hotkeys"
+import { useHotkeys, type HotkeySequence } from "@tanstack/vue-hotkeys"
 import { computed } from "vue"
 import { useRouter } from "vue-router"
 
 /**
  * Registers the app's Vim/Linear-style multi-key sequences — "go to <page>"
  * (`G` then the page's letter) and "create <thing>" (`C` then the intent's
- * letter) — with TanStack's singleton `SequenceManager`. Call once from a
+ * letter) — with TanStack's singleton hotkey manager. Call once from a
  * long-lived root component (`App.vue`); registrations tear down on unmount.
  *
  * The two surfaces that already describe these actions stay the single source
@@ -35,12 +35,15 @@ export const useGlobalHotkeySequences = () => {
     // "Go to" — navigate the current tab; the route ⇄ tab sync reuses or opens
     // a tab as usual (identical to the palette's navigate command).
     const navigate = defaultMenu.map((item) => ({
-      // Literal letter tuples are valid `Hotkey`s; the spread drops `readonly`.
-      sequence: [...item.sequence] as Hotkey[],
+      // The spread converts the readonly tuple to a mutable hotkey sequence.
+      hotkey: [...item.sequence] as HotkeySequence,
       callback: () => {
         void router.push(item.url)
       },
-      options: { meta: { name: `Go to ${item.title}` } },
+      options: {
+        timeout: SEQUENCE_TIMEOUT,
+        meta: { name: `Go to ${item.title}` },
+      },
     }))
 
     // "Create" — same gated intents the palette offers, minus the disabled ones.
@@ -48,21 +51,22 @@ export const useGlobalHotkeySequences = () => {
       .flatMap((group) => group.actions)
       .filter((action) => !action.disabled)
       .map((action) => ({
-        sequence: action.sequence as Hotkey[],
+        hotkey: action.sequence as HotkeySequence,
         callback: () => {
           void action.run()
         },
-        options: { meta: { name: `Create: ${action.label}` } },
+        options: {
+          timeout: SEQUENCE_TIMEOUT,
+          meta: { name: `Create: ${action.label}` },
+        },
       }))
 
     return [...navigate, ...create]
   })
 
-  useHotkeySequences(definitions, {
+  useHotkeys(definitions, {
     // Don't fire while typing in an editable input/textarea/contenteditable.
     ignoreInputs: true,
-    // Reset the in-progress sequence after this idle gap between keys.
-    timeout: SEQUENCE_TIMEOUT,
     // Mute every sequence while a shortcut recorder is capturing keys.
     enabled: () => !isRecordingShortcut.value,
   })
