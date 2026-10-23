@@ -4,10 +4,10 @@ import type { HTMLAttributes, Ref } from "vue"
 import type { LayoutTypes } from "."
 import { getLocalTimeZone, today } from "@internationalized/date"
 import { createReusableTemplate, reactiveOmit, useVModel } from "@vueuse/core"
+import { cn } from "cn"
 import { CalendarRoot, useDateFormatter, useForwardPropsEmits } from "reka-ui"
 import { createYear, createYearRange, toDate } from "reka-ui/date"
 import { computed, toRaw } from "vue"
-import { cn } from "@/lib/utils"
 import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select"
 import {
   CalendarCell,
@@ -156,17 +156,6 @@ const forwarded = useForwardPropsEmits(delegatedProps, emits)
     "
   >
     <CalendarHeader class="pt-0">
-      <nav
-        class="absolute inset-x-0 top-0 flex items-center justify-between gap-1"
-      >
-        <CalendarPrevButton>
-          <slot name="calendar-prev-icon" />
-        </CalendarPrevButton>
-        <CalendarNextButton>
-          <slot name="calendar-next-icon" />
-        </CalendarNextButton>
-      </nav>
-
       <slot
         name="calendar-heading"
         :date="date"
@@ -195,6 +184,17 @@ const forwarded = useForwardPropsEmits(delegatedProps, emits)
           <CalendarHeading />
         </template>
       </slot>
+
+      <nav
+        class="pointer-events-none absolute inset-x-0 top-0 flex items-center justify-between gap-1"
+      >
+        <CalendarPrevButton>
+          <slot name="calendar-prev-icon" />
+        </CalendarPrevButton>
+        <CalendarNextButton>
+          <slot name="calendar-next-icon" />
+        </CalendarNextButton>
+      </nav>
     </CalendarHeader>
 
     <div class="mt-4 flex flex-col gap-y-4 sm:flex-row sm:gap-x-4 sm:gap-y-0">

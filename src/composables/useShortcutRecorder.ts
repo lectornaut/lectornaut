@@ -3,7 +3,7 @@ import {
   IS_APPLE_DEVICE,
   SYSTEM_SHORTCUTS,
 } from "@/helpers/shortcuts"
-import { normalizeHotkeyFromEvent } from "@tanstack/vue-hotkeys"
+import { normalizeHotkey, parseKeyboardEvent } from "@tanstack/vue-hotkeys"
 import { computed, nextTick, onScopeDispose, ref } from "vue"
 import { toast } from "vue-sonner"
 
@@ -148,7 +148,10 @@ export const useShortcutRecorder = (options: ShortcutRecorderOptions) => {
     }
 
     // Convert the keyboard event to a portable combo (e.g. ⌘K → "Mod+K").
-    const hotkeyString = normalizeHotkeyFromEvent(event, RECORDER_PLATFORM)
+    const hotkeyString = normalizeHotkey(
+      parseKeyboardEvent(event, RECORDER_PLATFORM),
+      RECORDER_PLATFORM
+    )
 
     // System shortcuts are claimed by macOS and can't be reassigned. Only
     // enforced on Apple devices, where `Mod` resolves to ⌘ (the reserved key).

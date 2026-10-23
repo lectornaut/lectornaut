@@ -552,8 +552,8 @@ export const summarizeNodeTool = ai.defineTool(
       // PII scrub the model's prose output. The summary + keyPoints
       // are free-form text generated FROM the node's content, which
       // may itself have contained emails/phones the model decided to
-      // quote or paraphrase. Same redaction the user-input middleware
-      // applies, kept centralized via `redactText`. `suggestedTags`
+      // quote or paraphrase. Redaction is centralized via
+      // `redactText`. `suggestedTags`
       // are kebab-case identifiers (a model that drifts off-spec
       // could still embed an email, but those would also fail the
       // schema's `.max(40)` per-tag bound), and `model` is a

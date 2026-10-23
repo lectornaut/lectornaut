@@ -22,6 +22,7 @@
 import * as logger from "firebase-functions/logger"
 import { z } from "genkit/beta"
 import type { BotActionContext } from "./botBuiltinTools.js"
+import { resolveToolPermission } from "./botToolPermissions.js"
 import { resolveBindingAccessToken } from "./connections.js"
 import {
   clampCalendarListInput,
@@ -354,8 +355,8 @@ export const googleCalendarTool = ai.defineTool(
 //
 //   pending  → first invocation (or any non-explicit resume): validate the
 //              draft, verify the binding could even execute it (token +
-//              granted scope), then `interrupt()` — the chat pauses and the
-//              client renders an Approve / Cancel card from the tool's raw
+//              granted scope), then apply the permission policy. Ask uses
+//              `interrupt()` and renders an Approve / Cancel card from the raw
 //              `input` (which is why validation is STRICT, never clamping:
 //              the card must show exactly what would execute).
 //   approved → the resume flow stamped `{ approved: true }` server-side
@@ -363,10 +364,10 @@ export const googleCalendarTool = ai.defineTool(
 //              click). Execute the REST write and return the result.
 //   declined → `{ approved: false }`. Return a narratable cancellation.
 //
-// SECURITY: approval ONLY arrives via Genkit's restart metadata, which the
-// resume flow constructs from the ORIGINAL stored interrupt part — the model
-// cannot fabricate it (its only channels are tool args + text), and the
-// client cannot alter the draft between confirm and execute. Genkit defaults
+// Human approval arrives only via Genkit's restart metadata, constructed by
+// the resume flow from the ORIGINAL stored interrupt part. Automatic/Allow
+// approval is resolved server-side from the authenticated turn's policy.
+// The client cannot alter a draft between confirm and execute. Genkit defaults
 // missing restart metadata to `true`, which `interpretResumedConfirmation`
 // deliberately reads as `pending` — fail-closed (the tool re-interrupts).
 //
@@ -482,13 +483,15 @@ export type ConnectionToolRunContext = Parameters<
 
 /**
  * Shared pending/approved/declined skeleton for EVERY connection write tool
- * (calendar P2, Drive D2, …). `execute` runs ONLY on an explicit
- * server-stamped approval and receives a fresh access token whose grant
+ * (calendar P2, Drive D2, …). `execute` runs only after human or configured
+ * permission-policy approval and receives a fresh access token whose grant
  * passed the `requiredScope` check. Generic over the tool's result shape —
  * `fail` builds the tool-specific failure payload.
  */
 export async function runConfirmedConnectionWrite<T>(opts: {
   ctx: ConnectionToolRunContext
+  toolName: string
+  input: unknown
   provider: ConnectionProvider
   copy: ConnectionAppCopy
   /**
@@ -556,7 +559,31 @@ export async function runConfirmedConnectionWrite<T>(opts: {
     return opts.fail(opts.missingScopeMessage)
   }
 
-  if (decision === "pending") {
+  let permission
+  try {
+    permission = await resolveToolPermission({
+      mode: actionContext?.toolPermissionMode,
+      resumedDecision: decision,
+      toolName: opts.toolName,
+      input: opts.input,
+      evaluate: actionContext?.evaluateToolPermission,
+    })
+  } catch (error) {
+    logger.error("[bot] Tool permission evaluation failed", {
+      toolName: opts.toolName,
+      error,
+    })
+    return opts.fail(
+      "Permission evaluation failed. Nothing was changed. Try again or switch Permissions to Ask."
+    )
+  }
+  if (permission.decision === "declined") {
+    return opts.fail(
+      `Automatic permission denied: ${permission.reason}. Nothing was changed. Do not retry unless the user asks.`,
+      "declined"
+    )
+  }
+  if (permission.decision === "pending") {
     // Pause for the human. `interrupt()` throws Genkit's interrupt signal;
     // the resume flow restarts this tool with `{ approved }` stamped from
     // the member's authenticated Approve/Cancel click.
@@ -568,6 +595,8 @@ export async function runConfirmedConnectionWrite<T>(opts: {
 /** Calendar adapter over the generic skeleton (P2's original surface). */
 function runConfirmedCalendarWrite(opts: {
   ctx: ConnectionToolRunContext
+  toolName: string
+  input: unknown
   problems: string[]
   execute: (accessToken: string) => Promise<CalendarWriteResult>
   declineMessage: string
@@ -649,10 +678,10 @@ export const createCalendarEventTool = ai.defineTool(
       "Create an event on the user's connected Google Calendar. Use this " +
       "when the user asks to schedule, book, or add something to their " +
       "calendar. Requires summary (title), start, and end (ISO-8601; or " +
-      "allDay: true with YYYY-MM-DD dates). The user is shown the exact " +
-      "event and must approve it before anything is written — calling this " +
-      "tool only PROPOSES the event. Do not call it again after the user " +
-      "declines unless they ask you to. No invitation emails are sent to " +
+      "allDay: true with YYYY-MM-DD dates). Permission is required before " +
+      "writing, according to the user's Permissions setting (Ask, " +
+      "Automatic, or Allow). Do not call it again after permission is " +
+      "declined unless they ask you to. No invitation emails are sent to " +
       "attendees.",
     inputSchema: createCalendarEventInputSchema,
     outputSchema: calendarWriteOutputSchema,
@@ -661,6 +690,8 @@ export const createCalendarEventTool = ai.defineTool(
     const draft = validateCalendarEventDraft(input)
     return runConfirmedCalendarWrite({
       ctx,
+      toolName: "createCalendarEvent",
+      input,
       problems: draft.ok ? [] : draft.problems,
       declineMessage:
         "The user declined creating this event. Nothing was written. Do " +
@@ -685,10 +716,10 @@ export const updateCalendarEventTool = ai.defineTool(
       "Update an existing event on the user's connected Google Calendar " +
       "(title, times, description, location, or attendees). Pass the " +
       "eventId from a googleCalendar lookup plus only the fields to " +
-      "change; when changing times, pass BOTH start and end. The user is " +
-      "shown the exact change and must approve it before anything is " +
-      "written. Do not call it again after the user declines unless they " +
-      "ask you to.",
+      "change; when changing times, pass BOTH start and end. Permission is " +
+      "required before writing, according to the user's Permissions setting " +
+      "(Ask, Automatic, or Allow). Do not call it again after permission " +
+      "is declined unless they ask you to.",
     inputSchema: updateCalendarEventInputSchema,
     outputSchema: calendarWriteOutputSchema,
   },
@@ -696,6 +727,8 @@ export const updateCalendarEventTool = ai.defineTool(
     const patch = validateCalendarEventPatch(input)
     return runConfirmedCalendarWrite({
       ctx,
+      toolName: "updateCalendarEvent",
+      input,
       problems: patch.ok ? [] : patch.problems,
       declineMessage:
         "The user declined this calendar change. Nothing was written. Do " +
@@ -1332,9 +1365,9 @@ export const createDriveFileTool = ai.defineTool(
       "content. Use this when the user asks to save, export, or create a " +
       "doc in their Drive. Requires name and content; kind 'document' " +
       "(default) makes a Google Doc, 'text' a plain markdown file; " +
-      "optional folderId targets a folder. The user is shown the exact " +
-      "file and must approve it before anything is written — calling this " +
-      "tool only PROPOSES it. Do not call it again after the user declines " +
+      "optional folderId targets a folder. Permission is required before " +
+      "writing, according to the user's Permissions setting (Ask, " +
+      "Automatic, or Allow). Do not call it again after permission is declined " +
       "unless they ask you to.",
     inputSchema: createDriveFileInputSchema,
     outputSchema: driveWriteOutputSchema,
@@ -1343,6 +1376,8 @@ export const createDriveFileTool = ai.defineTool(
     const draft = validateDriveCreateDraft(input)
     return runConfirmedConnectionWrite<DriveWriteResult>({
       ctx,
+      toolName: "createDriveFile",
+      input,
       provider: "google-drive",
       copy: DRIVE_COPY,
       requiredScope: GOOGLE_DRIVE_FILE_SCOPE,
@@ -1386,9 +1421,10 @@ export const updateDriveFileTool = ai.defineTool(
       "Replace the content of a file on the user's connected Google Drive " +
       "(optionally renaming it). Works on files this assistant created; " +
       "pass the fileId from an earlier createDriveFile or googleDrive " +
-      "result plus the FULL new markdown content. The user is shown the " +
-      "exact change and must approve it before anything is written. Do " +
-      "not call it again after the user declines unless they ask you to.",
+      "result plus the FULL new markdown content. Permission is required " +
+      "before writing, according to the user's Permissions setting (Ask, " +
+      "Automatic, or Allow). Do not call it again after permission is " +
+      "declined unless they ask you to.",
     inputSchema: updateDriveFileInputSchema,
     outputSchema: driveWriteOutputSchema,
   },
@@ -1396,6 +1432,8 @@ export const updateDriveFileTool = ai.defineTool(
     const patch = validateDriveUpdateDraft(input)
     return runConfirmedConnectionWrite<DriveWriteResult>({
       ctx,
+      toolName: "updateDriveFile",
+      input,
       provider: "google-drive",
       copy: DRIVE_COPY,
       requiredScope: GOOGLE_DRIVE_FILE_SCOPE,

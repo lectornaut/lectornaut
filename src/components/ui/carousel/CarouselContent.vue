@@ -1,6 +1,7 @@
 <script setup lang="ts">
+import type { ComponentPublicInstance } from "vue"
 import type { WithClassAsProps } from "./interface"
-import { cn } from "@/lib/utils"
+import { cn } from "cn"
 import { useCarousel } from "./useCarousel"
 
 defineOptions({
@@ -11,8 +12,8 @@ const props = defineProps<WithClassAsProps>()
 
 const { carouselRef, orientation } = useCarousel()
 
-function setCarouselRef(el: Element | ComponentPublicInstance | null) {
-  carouselRef.value = (el as HTMLElement | null) ?? undefined
+function setCarouselRef(el: Element | ComponentPublicInstance | null): void {
+  carouselRef.value = el instanceof HTMLElement ? el : undefined
 }
 </script>
 

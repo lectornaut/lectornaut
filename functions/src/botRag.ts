@@ -466,9 +466,8 @@ export const searchWorkspaceNodesTool = ai.defineTool(
           // PII scrub the snippet — workspace content may contain
           // collaborators' emails / phones, and in shared chat
           // sessions the snippet flows back into the LLM context and
-          // potentially out to other team members. Same regex pair
-          // the user-input middleware uses (`redactText`), kept
-          // centralized so any future tightening propagates here too.
+          // potentially out to other team members. The shared
+          // `redactText` helper keeps snippet redaction consistent.
           // Applied only to the snippet (free-form prose), never to
           // structured fields like `nodeId` or `distance` where the
           // permissive phone regex would false-positive on

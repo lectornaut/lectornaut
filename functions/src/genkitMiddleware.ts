@@ -11,8 +11,7 @@
  * model), and gets the response back. Layers further from the model
  * wrap layers closer to it.
  *
- * Three layers, outermost first (innermost called first by reading the
- * array bottom-up):
+ * Two base layers, outermost first:
  *
  *   1. `loggingMiddleware` — structured `[ai:middleware]` log on every
  *      call, capturing correlationId, duration, message shape, and error
@@ -26,10 +25,10 @@
  *      the provider sees the request, so a runaway context window
  *      can't burn unbounded quota.
  *
- *   3. `redactionMiddleware` — scrubs email addresses and obvious
- *      phone numbers from inbound user text parts. System messages
- *      and tool outputs pass through untouched (they're internal,
- *      not user-pasted content).
+ * User-provided text is passed to the model unchanged: connected tools
+ * need exact values such as email recipients. Redaction is applied
+ * explicitly to recalled workspace prose via `redactText`, not to
+ * conversation messages.
  */
 
 import * as logger from "firebase-functions/logger"
@@ -73,12 +72,11 @@ const PHONE_RE = /\+?\d[\d\s\-().]{7,}\d/g
  * customer email costs more.
  *
  * Exported so per-tool redaction sites (`searchWorkspaceNodes` snippet
- * cleanup, `summarizeNode` output cleanup) can apply the same regex
- * set the user-turn middleware uses. Centralizing one regex pair means
- * a tighter (or looser) policy ships to every redaction site at once.
+ * cleanup, `summarizeNode` output cleanup) share the same regex pair.
+ * Do not apply this to user messages: tools need exact contact details.
  *
- * The phone regex is intentionally not applied through the middleware
- * to tool outputs in general — its permissiveness (matches any
+ * The phone regex is intentionally not applied to tool outputs in
+ * general — its permissiveness (matches any
  * digit-heavy string with dashes/spaces) would false-positive on
  * structured fields like timestamps, GUIDs, semver. Per-tool callers
  * are responsible for narrowing application to free-form text fields.
@@ -224,35 +222,10 @@ export function meteringMiddleware(
 }
 
 /**
- * Redaction middleware — scrubs PII patterns from inbound user-role
- * text parts. Touches neither system messages (engineer-authored) nor
- * tool responses (server-computed); only the user-typed surface area.
- *
- * Builds a new request rather than mutating in place — the inner
- * layers shouldn't observe a different `req` reference than the
- * outer layers do.
- */
-export const redactionMiddleware: ModelMiddleware = async (req, next) => {
-  const messages = req.messages ?? []
-  const scrubbed = messages.map((msg) => {
-    if (msg.role !== "user") return msg
-    const content = (msg.content ?? []).map((part) => {
-      if (!part || typeof part !== "object") return part
-      const p = part as Record<string, unknown>
-      if (typeof p.text !== "string") return part
-      return { ...p, text: redactText(p.text) }
-    })
-    return { ...msg, content }
-  })
-  return next({ ...req, messages: scrubbed } as typeof req)
-}
-
-/**
  * The stack we apply to every AI call in this package. Order matters:
  * Genkit invokes the array left-to-right as outer-to-inner, so the
- * model sees `redact → budget → log → provider`. Reading it
- * top-down: log it before anything happens, then enforce the budget,
- * then scrub PII, then hand off to the model.
+ * logging layer wraps the budget check, followed by optional metering,
+ * then the provider. Message content is not rewritten.
  *
  * Per-call overrides (e.g. a stricter budget for a constrained
  * surface) can append extra entries — Genkit composes them in
@@ -272,7 +245,6 @@ export function aiMiddlewares(
   const stack: ModelMiddleware[] = [
     loggingMiddleware,
     tokenBudgetMiddleware(opts.maxInputTokens ?? DEFAULT_MAX_INPUT_TOKENS),
-    redactionMiddleware,
   ]
   if (opts.onUsage) {
     stack.push(meteringMiddleware(opts.onUsage))

@@ -10,6 +10,26 @@ Lectornaut combines:
 2. AI Reading and Learning Companion
 3. Team Research and Collaboration Tool
 
+### AI chat tool permissions
+
+Open the bot configuration menu in the chat composer and select **Permissions**:
+
+- **Ask** (default): show the existing confirmation card before connected
+  Calendar, Drive, Gmail, or GitHub write tools run.
+- **Automatic**: a separate AI evaluation approves or denies each of those
+  calls against the user's request, using the chat's effective, team-approved
+  model. Evaluation uses additional tokens. A denial prevents execution; an
+  evaluation error stops the call and reports a failure.
+- **Allow**: grant permission without evaluation or confirmation. Connected tools
+  may change files or events, post to GitHub, or send email immediately.
+
+The selection is saved per signed-in user on this device and applies across
+chat surfaces, including resumed and transferred turns. It does not change
+read-only tools, workspace tools, questions, or headless workflows, and never
+bypasses membership, tool availability, input validation, or connection grants.
+An explicit confirmation-card approval or cancellation always takes precedence
+over the selected mode.
+
 ### macOS window controls
 
 Native traffic lights keep their system size and stay vertically aligned with

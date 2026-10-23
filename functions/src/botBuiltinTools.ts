@@ -43,6 +43,8 @@ import { resolveTransferOutcome } from "./botTurn.js"
 import { ai, isAiModelProviderConfigured } from "./genkitClient.js"
 // Type-only imports (erased at runtime — no import cycle with botNodeTools).
 import type { CapturedNodeChange } from "./botNodeTools.js"
+import type { ToolPermissionEvaluator } from "./botToolPermissions.js"
+import type { BotToolPermissionMode } from "./domain.js"
 import { BOT_CHAT_MODES, type BotChatMode } from "./domain.js"
 import type { WorkspaceNodeScope } from "./types.js"
 
@@ -68,6 +70,8 @@ export { BOT_CHAT_MODES, type BotChatMode }
 export interface BotActionContext {
   auth?: { uid: string }
   mode: BotChatMode
+  toolPermissionMode?: BotToolPermissionMode
+  evaluateToolPermission?: ToolPermissionEvaluator
   teamId: string
   workspaceId: string
   /**

@@ -16,13 +16,12 @@
  * collapsed-by-default disclosure — keeping reasoning out of the way
  * without hiding it.
  *
- * The disclosure mirrors `BotChatToolCall`: the same muted `Item`
- * trigger, and the expanded reasoning sits in a `Card` > `CardContent`
- * (no header — there's no input to echo) so a thinking block reads as
- * the same kind of card as a tool-call result.
+ * The shared Trace components give reasoning and tool calls one expandable
+ * activity-row treatment. Expanded reasoning renders inline beneath its
+ * trace row rather than in a second card surface.
  */
 
-import { IconChevronRight } from "@/data/icons"
+import { IconBrain } from "@/data/icons"
 
 const props = defineProps<{
   /** Custom-tag node from markstream; `content` is the inner Markdown. */
@@ -38,39 +37,22 @@ const reasoning = computed(() => props.node?.content ?? "")
 </script>
 
 <template>
-  <Collapsible v-model:open="open" class="bot-thinking-block grid gap-2">
-    <CollapsibleTrigger as-child>
-      <Item size="xs" class="group/thinking p-0 text-xs select-none">
-        <ItemContent>
-          <ItemTitle
-            class="text-muted-foreground/80 group-hover/thinking:text-muted-foreground flex items-center gap-1 text-xs"
-          >
-            {{ t("ai.reasoning") }}
-            <IconChevronRight
-              class="text-muted-foreground/80 group-hover/thinking:text-muted-foreground size-3! transition-transform will-change-transform"
-              :class="{ 'rotate-90': open }"
-            />
-          </ItemTitle>
-        </ItemContent>
-      </Item>
-    </CollapsibleTrigger>
-    <CollapsibleContent class="select-auto">
-      <Card>
-        <CardContent>
-          <AppMarkdown surface="chat" :content="reasoning" />
-        </CardContent>
-      </Card>
-    </CollapsibleContent>
-  </Collapsible>
+  <Trace class="bot-thinking-block">
+    <TraceCollapsible
+      v-model:open="open"
+      class="before:bg-border relative grid gap-2 pl-5 before:absolute before:top-3 before:bottom-0 before:left-[7px] before:w-px"
+    >
+      <TraceCollapsibleTrigger>
+        <TraceLine>
+          <TraceIcon class="bg-background -ml-5">
+            <IconBrain />
+          </TraceIcon>
+          <TraceTitle>{{ t("ai.reasoning") }}</TraceTitle>
+        </TraceLine>
+      </TraceCollapsibleTrigger>
+      <TraceCollapsibleContent class="select-auto">
+        <AppMarkdown surface="chat" :content="reasoning" />
+      </TraceCollapsibleContent>
+    </TraceCollapsible>
+  </Trace>
 </template>
-
-<style scoped>
-/* Flatten the reasoning card: the chat surface is painted with the card
-   color (body bg in `@/styles/index.css`), so the default shadow/ring add
-   no contrast — and the shadow is invisible in dark mode. Shadow + ring
-   are both composed into `box-shadow`, so one reset clears both. Matches
-   BotChatToolCall's cards. */
-:deep([data-slot="card"]) {
-  box-shadow: none;
-}
-</style>

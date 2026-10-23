@@ -1,14 +1,10 @@
 <script lang="ts" setup>
 /**
  * BotChatToolCall — renders one tool invocation segment from an agent
- * message. The collapsible header carries a single leading icon. While the
- * call is still in flight, that icon is the lifecycle-status badge (pending /
- * running — see `status` + `statusBadge`). Once the call reaches a quiet,
- * collapsed resting state, the badge gives way to a chevron that mirrors the
- * open/closed state and cues the user to reopen it (see `showChevron` for
- * which states qualify).
- * The body switches between per-tool presentations based on `tool.name`, with
- * a JSON fallback for tools we don't have a dedicated view for.
+ * message. The shared Trace components show the tool name, lifecycle status,
+ * and expandable details; the body switches between per-tool presentations
+ * based on `tool.name`, with a JSON fallback for tools we don't have a
+ * dedicated view for.
  *
  * State branches:
  *
@@ -35,22 +31,24 @@
  *
  *   4. Done with a dedicated renderer (`output` set, `tool.name`
  *      matches one of our known tools): renders a tool-specific
- *      `Card` (dice, search results, summary, …). Every
- *      done-state branch shares ONE anatomy — an optional
+ *      result (dice, search results, summary, …). Every done-state
+ *      branch shares ONE anatomy — an optional
  *      `CardHeader` echoing the call's input/query (shown only when
  *      the tool took one; the trigger already names the tool), a
  *      `CardContent` body, and an optional `CardFooter` for
  *      metadata — so the cards read uniformly regardless of tool.
  *
  *   5. Done with no dedicated renderer (`output` set, unknown
- *      `tool.name`): falls back to a `Card` wrapping a generic
- *      preview (a recognized text field as markdown, else a JSON
- *      dump) so brand-new tools added to the server still render
- *      something reasonable before the UI catches up.
+ *      `tool.name`): falls back to a generic preview (a recognized
+ *      text field as markdown, else a JSON dump) so brand-new tools
+ *      added to the server still render something reasonable before
+ *      the UI catches up.
  *
- * The card body is collapsible so a chat with several tool calls
+ * The result body is collapsible so a chat with several tool calls
  * doesn't dominate the message column. Default state: open while
- * running / awaiting input; collapsed once complete.
+ * running / awaiting input; collapsed once complete. Result content
+ * stays inline beneath its trace row rather than adding another
+ * card surface inside the chat bubble.
  *
  * Each tool's typed accessor (`diceOutput`, `searchOutput`, …) is a
  * defensive narrower — it returns `null` if the model's payload
@@ -66,11 +64,11 @@ import { botToolLabel } from "@/data/botTools"
 import {
   IconBotMessageSquare,
   IconCheck,
-  IconChevronRight,
   IconCircleHelp,
   IconDices,
   IconFileText,
   IconFolder,
+  IconLoader2,
   IconSearch,
   IconTriangleAlert,
 } from "@/data/icons"
@@ -1253,1102 +1251,1114 @@ const status = computed<ToolStatus>(() => {
   return "done"
 })
 
-// Icon + tooltip (+ optional color) per status, as an exhaustive record:
+// Icon + tooltip per status, as an exhaustive record:
 // TypeScript flags a missing key the moment a `ToolStatus` is added, and a
 // single lookup keeps ESLint's return-in-computed rule satisfied (a `switch`
 // without a `default` trips it even when every case returns). `running` maps
-// to a null icon because the spinner is a standalone component the template
-// renders via `v-if`, not a lucide glyph; `abandoned` is null for the same
-// reason it shows a chevron. The template renders a chevron instead of the
-// badge for the quiet resting states (`done`, `resolved`, `abandoned`, and
-// `error` without a dedicated failure card — see `showChevron`); those
-// entries stay mapped only to keep the record exhaustive.
+// to a null icon because the trace item renders its own spinner.
 const STATUS_BADGES: Record<
   ToolStatus,
-  { icon: Component | null; tooltipKey: string; class?: string }
+  { icon: Component | null; tooltipKey: string }
 > = {
   pending: { icon: IconCircleHelp, tooltipKey: "ai.toolCall.needsInput" },
-  abandoned: { icon: null, tooltipKey: "ai.toolCall.unanswered" },
+  abandoned: {
+    icon: IconCircleHelp,
+    tooltipKey: "ai.toolCall.unanswered",
+  },
   running: { icon: null, tooltipKey: "ai.toolCall.running" },
   resolved: { icon: IconBotMessageSquare, tooltipKey: "ai.toolCall.answered" },
-  error: {
-    icon: IconTriangleAlert,
-    tooltipKey: "ai.toolCall.failed",
-    class: "text-destructive",
-  },
+  error: { icon: IconTriangleAlert, tooltipKey: "ai.toolCall.failed" },
   done: { icon: IconCheck, tooltipKey: "ai.toolCall.done" },
 }
 
 const statusBadge = computed(() => STATUS_BADGES[status.value])
 
-// Whether the leading glyph collapses to an expand/collapse chevron. True for
-// the quiet, collapsed resting states where the chevron is the only useful
-// signal: a `done` result, a `resolved` askQuestion (already answered), an
-// `abandoned` askQuestion (the user moved on without answering), and an
-// `error` with no dedicated failure card. `pending`/`running` keep their
-// status glyph because the card is still open and working. NOTE: a finished
-// clarifying question is `resolved` or `abandoned`, never `done` (see
-// `status`), so it relies on those branches to get a chevron at all.
-const showChevron = computed(
-  () =>
-    status.value === "done" ||
-    status.value === "resolved" ||
-    status.value === "abandoned" ||
-    (status.value === "error" && !hasCustomDoneRenderer.value)
+const traceStatus = computed<"pending" | "running" | "error" | undefined>(
+  () => {
+    if (status.value === "running") return "running"
+    if (status.value === "pending") return "pending"
+    if (status.value === "error") return "error"
+    return undefined
+  }
 )
 </script>
 
 <template>
-  <Collapsible v-model:open="open" class="grid gap-2">
-    <CollapsibleTrigger as-child>
-      <Item size="xs" class="group/toolCall p-0 text-xs select-none">
-        <ItemContent>
-          <ItemTitle
-            class="text-muted-foreground/80 group-hover/toolCall:text-muted-foreground flex items-center gap-1 text-xs"
+  <Trace>
+    <TraceCollapsible
+      v-model:open="open"
+      class="before:bg-border relative grid gap-2 pl-5 before:absolute before:top-3 before:bottom-0 before:left-[7px] before:w-px"
+    >
+      <TraceCollapsibleTrigger>
+        <TraceLine :status="traceStatus">
+          <TraceIcon
+            :title="t(statusBadge.tooltipKey)"
+            class="bg-background -ml-5"
           >
-            {{ displayName }}
-            <IconChevronRight
-              v-if="showChevron"
-              class="text-muted-foreground/80 group-hover/toolCall:text-muted-foreground size-3! transition-transform will-change-transform"
-              :class="{ 'rotate-90': open }"
+            <IconLoader2
+              v-if="status === 'running'"
+              class="text-muted-foreground size-3 animate-spin"
             />
-            <TooltipProvider v-else>
-              <Tooltip>
-                <TooltipTrigger as-child>
-                  <Spinner v-if="status === 'running'" />
-                  <Component
-                    :is="statusBadge.icon"
-                    v-else
-                    :class="statusBadge.class"
+            <Component
+              :is="statusBadge.icon"
+              v-else-if="statusBadge.icon"
+              :class="[
+                'size-3',
+                status === 'error' && 'text-destructive',
+                status !== 'error' && 'text-muted-foreground',
+              ]"
+            />
+          </TraceIcon>
+          <TraceTitle>{{ displayName }}</TraceTitle>
+          <span class="sr-only">{{ t(statusBadge.tooltipKey) }}</span>
+        </TraceLine>
+      </TraceCollapsibleTrigger>
+      <TraceCollapsibleContent class="select-auto">
+        <!-- ============================================================== -->
+        <!-- Live interrupt: question + choices form (chat is paused here). -->
+        <!-- Rendered with the shadcn Questionnaire: select (click, arrows, -->
+        <!-- or letter shortcut) then confirm with Send / Enter. The free-  -->
+        <!-- form input joins the same item when `allowOther` is set — only -->
+        <!-- the selected control submits under the "answer" name.         -->
+        <!-- ============================================================== -->
+        <Card v-if="isLiveInterrupt && askQuestionInput">
+          <CardContent>
+            <Questionnaire
+              :items="askQuestionItems"
+              shortcuts="letters"
+              @submit="onQuestionnaireSubmit"
+            >
+              <QuestionnaireItem name="answer" required>
+                <QuestionnaireTitle>
+                  {{ askQuestionInput.question }}
+                </QuestionnaireTitle>
+                <QuestionnaireChoices>
+                  <QuestionnaireChoice
+                    v-for="choice in askQuestionInput.choices"
+                    :key="choice"
+                    :value="choice"
+                    :disabled="isSubmitting"
+                  >
+                    {{ choice }}
+                  </QuestionnaireChoice>
+                  <QuestionnaireInput
+                    v-if="askQuestionInput.allowOther"
+                    :placeholder="t('ai.toolCall.customAnswer')"
+                    :aria-label="t('ai.toolCall.customAnswer')"
+                    :disabled="isSubmitting"
                   />
-                </TooltipTrigger>
-                <TooltipContent>{{ t(statusBadge.tooltipKey) }}</TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-          </ItemTitle>
-        </ItemContent>
-      </Item>
-    </CollapsibleTrigger>
-    <CollapsibleContent class="select-auto">
-      <!-- ============================================================== -->
-      <!-- Live interrupt: question + choices form (chat is paused here). -->
-      <!-- Rendered with the shadcn Questionnaire: select (click, arrows, -->
-      <!-- or letter shortcut) then confirm with Send / Enter. The free-  -->
-      <!-- form input joins the same item when `allowOther` is set — only -->
-      <!-- the selected control submits under the "answer" name.         -->
-      <!-- ============================================================== -->
-      <Card v-if="isLiveInterrupt && askQuestionInput">
-        <CardContent>
-          <Questionnaire
-            :items="askQuestionItems"
-            shortcuts="letters"
-            @submit="onQuestionnaireSubmit"
-          >
-            <QuestionnaireItem name="answer" required>
-              <QuestionnaireTitle>
-                {{ askQuestionInput.question }}
-              </QuestionnaireTitle>
-              <QuestionnaireChoices>
-                <QuestionnaireChoice
-                  v-for="choice in askQuestionInput.choices"
-                  :key="choice"
-                  :value="choice"
-                  :disabled="isSubmitting"
-                >
-                  {{ choice }}
-                </QuestionnaireChoice>
-                <QuestionnaireInput
-                  v-if="askQuestionInput.allowOther"
-                  :placeholder="t('ai.toolCall.customAnswer')"
-                  :aria-label="t('ai.toolCall.customAnswer')"
-                  :disabled="isSubmitting"
-                />
-              </QuestionnaireChoices>
-              <QuestionnaireError>
-                {{ t("ai.toolCall.chooseAnswer") }}
-              </QuestionnaireError>
-            </QuestionnaireItem>
-            <QuestionnaireActions>
-              <QuestionnaireSubmit :disabled="isSubmitting">
-                <Spinner v-if="isSubmitting" />
-                {{ t("ai.toolCall.send") }}
-              </QuestionnaireSubmit>
-            </QuestionnaireActions>
-          </Questionnaire>
-        </CardContent>
-      </Card>
+                </QuestionnaireChoices>
+                <QuestionnaireError>
+                  {{ t("ai.toolCall.chooseAnswer") }}
+                </QuestionnaireError>
+              </QuestionnaireItem>
+              <QuestionnaireActions>
+                <QuestionnaireSubmit :disabled="isSubmitting">
+                  <Spinner v-if="isSubmitting" />
+                  {{ t("ai.toolCall.send") }}
+                </QuestionnaireSubmit>
+              </QuestionnaireActions>
+            </Questionnaire>
+          </CardContent>
+        </Card>
 
-      <!-- ============================================================== -->
-      <!-- Live calendar-write confirmation: the event draft + Approve / -->
-      <!-- Cancel. Approval is stamped server-side onto the tool restart; -->
-      <!-- nothing is written until the member clicks Approve.           -->
-      <!-- ============================================================== -->
-      <Card v-else-if="isLiveInterrupt && calendarWriteDraft">
-        <CardHeader>
-          <CardTitle>
-            {{
-              t(
-                calendarWriteDraft.action === "create"
-                  ? "ai.toolCall.calendarWrite.createTitle"
-                  : "ai.toolCall.calendarWrite.updateTitle"
-              )
-            }}
-          </CardTitle>
-          <CardDescription>
-            {{ t("ai.toolCall.calendarWrite.confirmHint") }}
-          </CardDescription>
-        </CardHeader>
-        <CardContent class="grid gap-1 text-sm">
-          <div v-if="calendarWriteDraft.summary" class="font-medium">
-            {{ calendarWriteDraft.summary }}
-          </div>
-          <div v-if="draftTimeRange" class="text-muted-foreground">
-            {{ draftTimeRange }}
-          </div>
-          <div v-if="calendarWriteDraft.location" class="text-muted-foreground">
-            {{ calendarWriteDraft.location }}
-          </div>
-          <div
-            v-if="calendarWriteDraft.description"
-            class="text-muted-foreground"
-          >
-            {{ calendarWriteDraft.description }}
-          </div>
-          <div
-            v-if="calendarWriteDraft.attendees.length > 0"
-            class="text-muted-foreground"
-          >
-            {{
-              t(
-                "ai.toolCall.calendarWrite.attendees",
-                calendarWriteDraft.attendees.length
-              )
-            }}: {{ calendarWriteDraft.attendees.join(", ") }}
-          </div>
-          <div
-            v-if="calendarWriteDraft.eventId"
-            class="text-muted-foreground/80 text-xs"
-          >
-            {{ t("ai.toolCall.calendarWrite.eventId") }}:
-            {{ calendarWriteDraft.eventId }}
-          </div>
-        </CardContent>
-        <CardFooter class="gap-2">
-          <Button
-            :disabled="submittingDecision !== null"
-            @click="submitDecision(true)"
-          >
-            <Spinner v-if="submittingDecision === 'approve'" />
-            {{ t("ai.toolCall.calendarWrite.approve") }}
-          </Button>
-          <Button
-            variant="outline"
-            :disabled="submittingDecision !== null"
-            @click="submitDecision(false)"
-          >
-            <Spinner v-if="submittingDecision === 'cancel'" />
-            {{ t("ai.toolCall.calendarWrite.cancel") }}
-          </Button>
-        </CardFooter>
-      </Card>
-
-      <!-- ============================================================== -->
-      <!-- Live Drive-write confirmation: the file draft + Approve /     -->
-      <!-- Cancel. Same contract as the calendar card above.             -->
-      <!-- ============================================================== -->
-      <Card v-else-if="isLiveInterrupt && driveWriteDraft">
-        <CardHeader>
-          <CardTitle>
-            {{
-              t(
-                driveWriteDraft.action === "create"
-                  ? "ai.toolCall.driveWrite.createTitle"
-                  : "ai.toolCall.driveWrite.updateTitle"
-              )
-            }}
-          </CardTitle>
-          <CardDescription>
-            {{ t("ai.toolCall.driveWrite.confirmHint") }}
-          </CardDescription>
-        </CardHeader>
-        <CardContent class="grid gap-1 text-sm">
-          <div v-if="driveWriteDraft.name" class="font-medium">
-            {{ driveWriteDraft.name }}
-          </div>
-          <div class="text-muted-foreground">
-            {{
-              t(
-                driveWriteDraft.kind === "document"
-                  ? "ai.toolCall.driveWrite.kindDocument"
-                  : "ai.toolCall.driveWrite.kindText"
-              )
-            }}
-            <template v-if="driveWriteDraft.contentChars > 0">
-              ·
+        <!-- ============================================================== -->
+        <!-- Live calendar-write confirmation: the event draft + Approve / -->
+        <!-- Cancel. Approval is stamped server-side onto the tool restart; -->
+        <!-- nothing is written until the member clicks Approve.           -->
+        <!-- ============================================================== -->
+        <Card v-else-if="isLiveInterrupt && calendarWriteDraft">
+          <CardHeader>
+            <CardTitle>
               {{
                 t(
-                  "ai.toolCall.driveWrite.contentChars",
-                  driveWriteDraft.contentChars
+                  calendarWriteDraft.action === "create"
+                    ? "ai.toolCall.calendarWrite.createTitle"
+                    : "ai.toolCall.calendarWrite.updateTitle"
                 )
               }}
-            </template>
-          </div>
-          <div
-            v-if="driveWriteDraft.contentPreview"
-            class="text-muted-foreground border-border border-l-2 pl-2 text-xs whitespace-pre-wrap"
-          >
-            {{ driveWriteDraft.contentPreview }}
-          </div>
-          <div
-            v-if="driveWriteDraft.folderId"
-            class="text-muted-foreground/80 text-xs"
-          >
-            {{ t("ai.toolCall.driveWrite.folder") }}:
-            {{ driveWriteDraft.folderId }}
-          </div>
-          <div
-            v-if="driveWriteDraft.fileId"
-            class="text-muted-foreground/80 text-xs"
-          >
-            {{ t("ai.toolCall.driveWrite.file") }}:
-            {{ driveWriteDraft.fileId }}
-          </div>
-        </CardContent>
-        <CardFooter class="gap-2">
-          <Button
-            :disabled="submittingDecision !== null"
-            @click="submitDecision(true)"
-          >
-            <Spinner v-if="submittingDecision === 'approve'" />
-            {{ t("ai.toolCall.driveWrite.approve") }}
-          </Button>
-          <Button
-            variant="outline"
-            :disabled="submittingDecision !== null"
-            @click="submitDecision(false)"
-          >
-            <Spinner v-if="submittingDecision === 'cancel'" />
-            {{ t("ai.toolCall.driveWrite.cancel") }}
-          </Button>
-        </CardFooter>
-      </Card>
-
-      <!-- GitHub-write confirm: same contract as the drive card. -->
-      <Card v-else-if="isLiveInterrupt && gitHubWriteDraft">
-        <CardHeader>
-          <CardTitle>{{ t(gitHubWriteTitleKey) }}</CardTitle>
-          <CardDescription>
-            {{ t("ai.toolCall.gitHubWrite.confirmHint") }}
-          </CardDescription>
-        </CardHeader>
-        <CardContent class="grid gap-1 text-sm">
-          <div v-if="gitHubWriteDraft.repo" class="font-medium">
-            {{ gitHubWriteDraft.repo
-            }}<template v-if="gitHubWriteDraft.issueNumber"
-              >#{{ gitHubWriteDraft.issueNumber }}</template
-            >
-          </div>
-          <div v-if="gitHubWriteDraft.title" class="text-foreground">
-            {{ gitHubWriteDraft.title }}
-          </div>
-          <div
-            v-if="gitHubWriteDraft.bodyPreview"
-            class="text-muted-foreground border-border border-l-2 pl-2 text-xs whitespace-pre-wrap"
-          >
-            {{ gitHubWriteDraft.bodyPreview }}
-          </div>
-          <div
-            v-if="gitHubWriteDraft.state"
-            class="text-muted-foreground/80 text-xs"
-          >
-            {{ t("ai.toolCall.gitHubWrite.state") }}:
-            {{ gitHubWriteDraft.state }}
-          </div>
-          <div
-            v-if="gitHubWriteDraft.labels.length > 0"
-            class="text-muted-foreground/80 text-xs"
-          >
-            {{ t("ai.toolCall.gitHubWrite.labels") }}:
-            {{ gitHubWriteDraft.labels.join(", ") }}
-          </div>
-        </CardContent>
-        <CardFooter class="gap-2">
-          <Button
-            :disabled="submittingDecision !== null"
-            @click="submitDecision(true)"
-          >
-            <Spinner v-if="submittingDecision === 'approve'" />
-            {{ t("ai.toolCall.gitHubWrite.approve") }}
-          </Button>
-          <Button
-            variant="outline"
-            :disabled="submittingDecision !== null"
-            @click="submitDecision(false)"
-          >
-            <Spinner v-if="submittingDecision === 'cancel'" />
-            {{ t("ai.toolCall.gitHubWrite.cancel") }}
-          </Button>
-        </CardFooter>
-      </Card>
-
-      <!-- Gmail-send confirm: same contract as the drive card. -->
-      <Card v-else-if="isLiveInterrupt && gmailSendDraft">
-        <CardHeader>
-          <CardTitle>
-            {{
-              t(
-                gmailSendDraft.replyToMessageId
-                  ? "ai.toolCall.gmailSend.replyTitle"
-                  : "ai.toolCall.gmailSend.sendTitle"
-              )
-            }}
-          </CardTitle>
-          <CardDescription>
-            {{ t("ai.toolCall.gmailSend.confirmHint") }}
-          </CardDescription>
-        </CardHeader>
-        <CardContent class="grid gap-1 text-sm">
-          <div v-if="gmailSendDraft.to.length > 0" class="font-medium">
-            {{ t("ai.toolCall.gmailSend.to") }}:
-            {{ gmailSendDraft.to.join(", ") }}
-          </div>
-          <div
-            v-if="gmailSendDraft.cc.length > 0"
-            class="text-muted-foreground"
-          >
-            {{ t("ai.toolCall.gmailSend.cc") }}:
-            {{ gmailSendDraft.cc.join(", ") }}
-          </div>
-          <!-- A reply without an explicit subject derives "Re: <original>"
-             server-side — say so rather than showing an empty line. -->
-          <div class="text-foreground">
-            {{
-              gmailSendDraft.subject ??
-              t("ai.toolCall.gmailSend.derivedSubject")
-            }}
-          </div>
-          <div
-            v-if="gmailSendDraft.bodyPreview"
-            class="text-muted-foreground border-border border-l-2 pl-2 text-xs whitespace-pre-wrap"
-          >
-            {{ gmailSendDraft.bodyPreview }}
-          </div>
-          <div class="text-muted-foreground/80 text-xs">
-            {{ t("ai.toolCall.gmailSend.bodyChars", gmailSendDraft.bodyChars) }}
-          </div>
-        </CardContent>
-        <CardFooter class="gap-2">
-          <Button
-            :disabled="submittingDecision !== null"
-            @click="submitDecision(true)"
-          >
-            <Spinner v-if="submittingDecision === 'approve'" />
-            {{ t("ai.toolCall.gmailSend.approve") }}
-          </Button>
-          <Button
-            variant="outline"
-            :disabled="submittingDecision !== null"
-            @click="submitDecision(false)"
-          >
-            <Spinner v-if="submittingDecision === 'cancel'" />
-            {{ t("ai.toolCall.gmailSend.cancel") }}
-          </Button>
-        </CardFooter>
-      </Card>
-
-      <!-- ============================================================== -->
-      <!-- Live interrupt with malformed payload — polite escape hatch. -->
-      <!-- ============================================================== -->
-      <Item v-else-if="isLiveInterrupt" variant="muted" size="xs">
-        <ItemContent>
-          <ItemDescription class="text-xs">
-            {{ t("ai.toolCall.malformedInterrupt") }}
-          </ItemDescription>
-        </ItemContent>
-      </Item>
-
-      <!-- ============================================================== -->
-      <!-- Abandoned interrupt: the user sent another message instead of -->
-      <!-- answering, so the chat moved on. Read-only historical card — no -->
-      <!-- choice form (resuming a superseded interrupt would fail), just -->
-      <!-- the question and a note that it went unanswered. -->
-      <!-- ============================================================== -->
-      <Card v-else-if="isAbandonedInterrupt && questionText">
-        <CardHeader>
-          <CardTitle>{{ questionText }}</CardTitle>
-        </CardHeader>
-        <CardContent class="text-muted-foreground flex items-center gap-2">
-          <IconCircleHelp />
-          <span>{{ t("ai.toolCall.unanswered") }}</span>
-        </CardContent>
-      </Card>
-
-      <!-- Abandoned calendar-write confirmation: the user moved on without -->
-      <!-- deciding, so nothing was written. Read-only historical card. -->
-      <Card v-else-if="isAbandonedInterrupt && calendarWriteDraft">
-        <CardHeader>
-          <CardTitle>
-            {{
-              t(
-                calendarWriteDraft.action === "create"
-                  ? "ai.toolCall.calendarWrite.createTitle"
-                  : "ai.toolCall.calendarWrite.updateTitle"
-              )
-            }}
-          </CardTitle>
-          <CardDescription v-if="calendarWriteDraft.summary">
-            {{ calendarWriteDraft.summary }}
-          </CardDescription>
-        </CardHeader>
-        <CardContent class="text-muted-foreground flex items-center gap-2">
-          <IconCircleHelp />
-          <span>{{ t("ai.toolCall.calendarWrite.unconfirmed") }}</span>
-        </CardContent>
-      </Card>
-
-      <!-- Abandoned Drive-write confirmation: the user moved on without -->
-      <!-- deciding, so nothing was written. Read-only historical card. -->
-      <Card v-else-if="isAbandonedInterrupt && driveWriteDraft">
-        <CardHeader>
-          <CardTitle>
-            {{
-              t(
-                driveWriteDraft.action === "create"
-                  ? "ai.toolCall.driveWrite.createTitle"
-                  : "ai.toolCall.driveWrite.updateTitle"
-              )
-            }}
-          </CardTitle>
-          <CardDescription v-if="driveWriteDraft.name">
-            {{ driveWriteDraft.name }}
-          </CardDescription>
-        </CardHeader>
-        <CardContent class="text-muted-foreground flex items-center gap-2">
-          <IconCircleHelp />
-          <span>{{ t("ai.toolCall.driveWrite.unconfirmed") }}</span>
-        </CardContent>
-      </Card>
-
-      <Card v-else-if="isAbandonedInterrupt && gitHubWriteDraft">
-        <CardHeader>
-          <CardTitle>{{ t(gitHubWriteTitleKey) }}</CardTitle>
-          <CardDescription v-if="gitHubWriteDraft.repo">
-            {{ gitHubWriteDraft.repo
-            }}<template v-if="gitHubWriteDraft.issueNumber"
-              >#{{ gitHubWriteDraft.issueNumber }}</template
-            >
-          </CardDescription>
-        </CardHeader>
-        <CardContent class="text-muted-foreground flex items-center gap-2">
-          <IconCircleHelp />
-          <span>{{ t("ai.toolCall.gitHubWrite.unconfirmed") }}</span>
-        </CardContent>
-      </Card>
-
-      <Card v-else-if="isAbandonedInterrupt && gmailSendDraft">
-        <CardHeader>
-          <CardTitle>
-            {{
-              t(
-                gmailSendDraft.replyToMessageId
-                  ? "ai.toolCall.gmailSend.replyTitle"
-                  : "ai.toolCall.gmailSend.sendTitle"
-              )
-            }}
-          </CardTitle>
-          <CardDescription v-if="gmailSendDraft.to.length > 0">
-            {{ gmailSendDraft.to.join(", ") }}
-          </CardDescription>
-        </CardHeader>
-        <CardContent class="text-muted-foreground flex items-center gap-2">
-          <IconCircleHelp />
-          <span>{{ t("ai.toolCall.gmailSend.unconfirmed") }}</span>
-        </CardContent>
-      </Card>
-
-      <!-- ============================================================== -->
-      <!-- Resolved interrupt: question (header) + the chosen answer. A -->
-      <!-- completed result, so it shares the done-state Card anatomy -->
-      <!-- rather than staying a transient-state Item. -->
-      <!-- ============================================================== -->
-      <Card v-else-if="isResolvedInterrupt && questionText && interruptAnswer">
-        <CardHeader>
-          <CardTitle>{{ questionText }}</CardTitle>
-        </CardHeader>
-        <CardContent class="flex items-center gap-2">
-          <IconCheck class="text-muted-foreground" />
-          <span class="text-foreground">{{ interruptAnswer }}</span>
-        </CardContent>
-      </Card>
-
-      <!-- ============================================================== -->
-      <!-- Calendar-write outcome: the REAL write result (or the interim -->
-      <!-- "deciding" state between the optimistic flip and the streamed -->
-      <!-- toolResult). Owns the declined case too — a deliberate Cancel -->
-      <!-- is `ok: false` but not an error. -->
-      <!-- ============================================================== -->
-      <Card v-else-if="isCalendarWrite && calendarWriteResult">
-        <CardHeader v-if="calendarWriteDraft?.summary">
-          <CardTitle>{{ calendarWriteDraft.summary }}</CardTitle>
-        </CardHeader>
-        <CardContent class="flex items-center gap-2">
-          <template v-if="calendarWriteResult.kind === 'deciding'">
-            <Spinner />
-            <span class="text-muted-foreground">
-              {{ t("ai.toolCall.calendarWrite.executing") }}
-            </span>
-          </template>
-          <template v-else-if="calendarWriteResult.kind === 'written'">
-            <IconCheck class="text-muted-foreground" />
-            <span class="text-foreground">
-              {{ t("ai.toolCall.calendarWrite.written") }}
-              <a
-                v-if="calendarWriteResult.link"
-                :href="calendarWriteResult.link"
-                target="_blank"
-                rel="noopener noreferrer"
-                class="text-primary underline-offset-2 hover:underline"
-              >
-                {{ t("ai.toolCall.calendarWrite.openEvent") }}
-              </a>
-            </span>
-          </template>
-          <template v-else-if="calendarWriteResult.kind === 'declined'">
-            <IconCircleHelp class="text-muted-foreground" />
-            <span class="text-muted-foreground">
-              {{ t("ai.toolCall.calendarWrite.declined") }}
-            </span>
-          </template>
-          <template v-else>
-            <IconTriangleAlert class="text-destructive" />
-            <span class="text-destructive">
-              {{ t("ai.toolCall.calendarWrite.failed") }}
-            </span>
-          </template>
-        </CardContent>
-      </Card>
-
-      <!-- Drive-write outcome: same contract as the calendar outcome card. -->
-      <Card v-else-if="isDriveWrite && driveWriteResult">
-        <CardHeader v-if="driveWriteDraft?.name">
-          <CardTitle>{{ driveWriteDraft.name }}</CardTitle>
-        </CardHeader>
-        <CardContent class="flex items-center gap-2">
-          <template v-if="driveWriteResult.kind === 'deciding'">
-            <Spinner />
-            <span class="text-muted-foreground">
-              {{ t("ai.toolCall.driveWrite.executing") }}
-            </span>
-          </template>
-          <template v-else-if="driveWriteResult.kind === 'written'">
-            <IconCheck class="text-muted-foreground" />
-            <span class="text-foreground">
-              {{ t("ai.toolCall.driveWrite.written") }}
-              <a
-                v-if="driveWriteResult.link"
-                :href="driveWriteResult.link"
-                target="_blank"
-                rel="noopener noreferrer"
-                class="text-primary underline-offset-2 hover:underline"
-              >
-                {{ t("ai.toolCall.driveWrite.openFile") }}
-              </a>
-            </span>
-          </template>
-          <template v-else-if="driveWriteResult.kind === 'declined'">
-            <IconCircleHelp class="text-muted-foreground" />
-            <span class="text-muted-foreground">
-              {{ t("ai.toolCall.driveWrite.declined") }}
-            </span>
-          </template>
-          <template v-else>
-            <IconTriangleAlert class="text-destructive" />
-            <span class="text-destructive">
-              {{ t("ai.toolCall.driveWrite.failed") }}
-            </span>
-          </template>
-        </CardContent>
-      </Card>
-
-      <!-- GitHub-write outcome: same contract as the calendar/drive cards. -->
-      <Card v-else-if="isGitHubWrite && gitHubWriteResult">
-        <CardHeader v-if="gitHubWriteDraft?.repo">
-          <CardTitle>
-            {{ gitHubWriteDraft.repo
-            }}<template v-if="gitHubWriteDraft.issueNumber"
-              >#{{ gitHubWriteDraft.issueNumber }}</template
-            >
-          </CardTitle>
-        </CardHeader>
-        <CardContent class="flex items-center gap-2">
-          <template v-if="gitHubWriteResult.kind === 'deciding'">
-            <Spinner />
-            <span class="text-muted-foreground">
-              {{ t("ai.toolCall.gitHubWrite.executing") }}
-            </span>
-          </template>
-          <template v-else-if="gitHubWriteResult.kind === 'written'">
-            <IconCheck class="text-muted-foreground" />
-            <span class="text-foreground">
-              {{ t("ai.toolCall.gitHubWrite.written") }}
-              <a
-                v-if="gitHubWriteResult.link"
-                :href="gitHubWriteResult.link"
-                target="_blank"
-                rel="noopener noreferrer"
-                class="text-primary underline-offset-2 hover:underline"
-              >
-                {{ t("ai.toolCall.gitHubWrite.openItem") }}
-              </a>
-            </span>
-          </template>
-          <template v-else-if="gitHubWriteResult.kind === 'declined'">
-            <IconCircleHelp class="text-muted-foreground" />
-            <span class="text-muted-foreground">
-              {{ t("ai.toolCall.gitHubWrite.declined") }}
-            </span>
-          </template>
-          <template v-else>
-            <IconTriangleAlert class="text-destructive" />
-            <span class="text-destructive">
-              {{ t("ai.toolCall.gitHubWrite.failed") }}
-            </span>
-          </template>
-        </CardContent>
-      </Card>
-
-      <!-- Gmail-send outcome: same contract as the calendar/drive cards. -->
-      <Card v-else-if="isGmailWrite && gmailSendResult">
-        <CardHeader v-if="gmailSendDraft && gmailSendDraft.to.length > 0">
-          <CardTitle>{{ gmailSendDraft.to.join(", ") }}</CardTitle>
-        </CardHeader>
-        <CardContent class="flex items-center gap-2">
-          <template v-if="gmailSendResult.kind === 'deciding'">
-            <Spinner />
-            <span class="text-muted-foreground">
-              {{ t("ai.toolCall.gmailSend.executing") }}
-            </span>
-          </template>
-          <template v-else-if="gmailSendResult.kind === 'written'">
-            <IconCheck class="text-muted-foreground" />
-            <span class="text-foreground">
-              {{ t("ai.toolCall.gmailSend.written") }}
-              <a
-                v-if="gmailSendResult.link"
-                :href="gmailSendResult.link"
-                target="_blank"
-                rel="noopener noreferrer"
-                class="text-primary underline-offset-2 hover:underline"
-              >
-                {{ t("ai.toolCall.gmailSend.openItem") }}
-              </a>
-            </span>
-          </template>
-          <template v-else-if="gmailSendResult.kind === 'declined'">
-            <IconCircleHelp class="text-muted-foreground" />
-            <span class="text-muted-foreground">
-              {{ t("ai.toolCall.gmailSend.declined") }}
-            </span>
-          </template>
-          <template v-else>
-            <IconTriangleAlert class="text-destructive" />
-            <span class="text-destructive">
-              {{ t("ai.toolCall.gmailSend.failed") }}
-            </span>
-          </template>
-        </CardContent>
-      </Card>
-
-      <!-- ============================================================== -->
-      <!-- Running: brief waiting note. Shares the done-state Card -->
-      <!-- anatomy so the body's shell doesn't reflow when the result -->
-      <!-- arrives — only the inner content swaps. The trigger's -->
-      <!-- spinner carries the progress signal at the row level. -->
-      <!-- ============================================================== -->
-      <Card v-else-if="isRunning">
-        <CardContent class="flex items-center gap-2">
-          <Spinner />
-          <span class="text-muted-foreground">
-            {{ t("ai.toolCall.waitingForReturn") }}
-          </span>
-        </CardContent>
-      </Card>
-
-      <!-- ============================================================== -->
-      <!-- rollDice: dice icon + big number. No input, so no header. -->
-      <!-- ============================================================== -->
-      <Card v-else-if="tool.name === 'rollDice' && diceOutput !== null">
-        <CardContent class="flex items-center gap-2">
-          <IconDices class="text-muted-foreground size-8" />
-          <div class="flex flex-col">
-            <span class="text-foreground text-2xl leading-none font-semibold">
-              {{ diceOutput }}
-            </span>
-            <span class="text-muted-foreground">
-              {{ t("ai.toolCall.dice.rolled") }}
-            </span>
-          </div>
-        </CardContent>
-      </Card>
-
-      <!-- ============================================================== -->
-      <!-- searchWorkspaceNodes: query (header) + result count, then the -->
-      <!-- per-result rows in the body (or an empty state). -->
-      <!-- ============================================================== -->
-      <Card v-else-if="tool.name === 'searchWorkspaceNodes' && searchOutput">
-        <CardHeader v-if="searchInput">
-          <CardTitle>"{{ searchInput.query }}"</CardTitle>
-          <CardDescription>
-            {{
-              t("ai.toolCall.search.resultCount", {
-                count: searchOutput.results.length,
-              })
-            }}
-            <template v-if="searchOutput.truncated">
-              {{ t("ai.toolCall.search.truncated") }}
-            </template>
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Empty v-if="searchOutput.results.length === 0" class="border p-6">
-            <EmptyHeader>
-              <EmptyMedia variant="icon">
-                <IconSearch />
-              </EmptyMedia>
-              <EmptyTitle>{{ t("ai.toolCall.search.empty") }}</EmptyTitle>
-            </EmptyHeader>
-          </Empty>
-          <ItemGroup v-else>
-            <Item
-              v-for="result in searchOutput.results"
-              :key="`${result.scope}:${result.nodeId}`"
-              variant="outline"
-              size="xs"
-            >
-              <ItemMedia variant="icon">
-                <Component
-                  :is="result.type === 'folder' ? IconFolder : IconFileText"
-                  class="text-muted-foreground"
-                />
-              </ItemMedia>
-              <ItemContent>
-                <ItemTitle class="break-all">{{ result.name }}</ItemTitle>
-                <ItemDescription v-if="result.snippet" class="text-xs">
-                  {{ result.snippet }}
-                </ItemDescription>
-              </ItemContent>
-              <ItemActions>
-                <Badge variant="secondary">
-                  {{ searchScopeLabel(result.scope) }}
-                </Badge>
-              </ItemActions>
-            </Item>
-          </ItemGroup>
-        </CardContent>
-      </Card>
-
-      <!-- ============================================================== -->
-      <!-- summarizeNode: error variant OR structured summary card. -->
-      <!-- ============================================================== -->
-      <Card
-        v-else-if="
-          tool.name === 'summarizeNode' &&
-          summarizeOutput &&
-          summarizeOutput.error
-        "
-      >
-        <CardHeader>
-          <CardTitle>{{ t("ai.toolCall.summarize.errorTitle") }}</CardTitle>
-        </CardHeader>
-        <CardContent class="text-destructive flex items-center gap-2">
-          <IconTriangleAlert />
-          <span>{{ summarizeOutput.error }}</span>
-        </CardContent>
-      </Card>
-
-      <Card v-else-if="tool.name === 'summarizeNode' && summarizeOutput">
-        <CardContent class="flex flex-col gap-2">
-          <p class="text-foreground">
-            {{ summarizeOutput.summary }}
-          </p>
-          <div
-            v-if="summarizeOutput.keyPoints.length > 0"
-            class="flex flex-col gap-2"
-          >
-            <span class="text-muted-foreground text-xs font-medium uppercase">
-              {{ t("ai.toolCall.summarize.keyPoints") }}
-            </span>
-            <ul
-              class="text-foreground marker:text-muted list-inside list-disc space-y-1"
-            >
-              <li v-for="(point, idx) in summarizeOutput.keyPoints" :key="idx">
-                {{ point }}
-              </li>
-            </ul>
-          </div>
-          <div
-            v-if="summarizeOutput.suggestedTags.length > 0"
-            class="flex flex-col gap-2"
-          >
-            <span class="text-muted-foreground text-xs font-medium uppercase">
-              {{ t("ai.toolCall.summarize.tags") }}
-            </span>
-            <div class="flex flex-wrap gap-1">
-              <Badge
-                v-for="tag in summarizeOutput.suggestedTags"
-                :key="tag"
-                variant="secondary"
-              >
-                {{ tag }}
-              </Badge>
+            </CardTitle>
+            <CardDescription>
+              {{ t("ai.toolCall.calendarWrite.confirmHint") }}
+            </CardDescription>
+          </CardHeader>
+          <CardContent class="grid gap-1 text-sm">
+            <div v-if="calendarWriteDraft.summary" class="font-medium">
+              {{ calendarWriteDraft.summary }}
             </div>
-          </div>
-        </CardContent>
-        <CardFooter
-          v-if="summarizeOutput.model"
-          class="text-muted-foreground text-xs"
+            <div v-if="draftTimeRange" class="text-muted-foreground">
+              {{ draftTimeRange }}
+            </div>
+            <div
+              v-if="calendarWriteDraft.location"
+              class="text-muted-foreground"
+            >
+              {{ calendarWriteDraft.location }}
+            </div>
+            <div
+              v-if="calendarWriteDraft.description"
+              class="text-muted-foreground"
+            >
+              {{ calendarWriteDraft.description }}
+            </div>
+            <div
+              v-if="calendarWriteDraft.attendees.length > 0"
+              class="text-muted-foreground"
+            >
+              {{
+                t(
+                  "ai.toolCall.calendarWrite.attendees",
+                  calendarWriteDraft.attendees.length
+                )
+              }}: {{ calendarWriteDraft.attendees.join(", ") }}
+            </div>
+            <div
+              v-if="calendarWriteDraft.eventId"
+              class="text-muted-foreground/80 text-xs"
+            >
+              {{ t("ai.toolCall.calendarWrite.eventId") }}:
+              {{ calendarWriteDraft.eventId }}
+            </div>
+          </CardContent>
+          <CardFooter class="gap-2">
+            <Button
+              :disabled="submittingDecision !== null"
+              @click="submitDecision(true)"
+            >
+              <Spinner v-if="submittingDecision === 'approve'" />
+              {{ t("ai.toolCall.calendarWrite.approve") }}
+            </Button>
+            <Button
+              variant="default"
+              :disabled="submittingDecision !== null"
+              @click="submitDecision(false)"
+            >
+              <Spinner v-if="submittingDecision === 'cancel'" />
+              {{ t("ai.toolCall.calendarWrite.cancel") }}
+            </Button>
+          </CardFooter>
+        </Card>
+
+        <!-- ============================================================== -->
+        <!-- Live Drive-write confirmation: the file draft + Approve /     -->
+        <!-- Cancel. Same contract as the calendar card above.             -->
+        <!-- ============================================================== -->
+        <Card v-else-if="isLiveInterrupt && driveWriteDraft">
+          <CardHeader>
+            <CardTitle>
+              {{
+                t(
+                  driveWriteDraft.action === "create"
+                    ? "ai.toolCall.driveWrite.createTitle"
+                    : "ai.toolCall.driveWrite.updateTitle"
+                )
+              }}
+            </CardTitle>
+            <CardDescription>
+              {{ t("ai.toolCall.driveWrite.confirmHint") }}
+            </CardDescription>
+          </CardHeader>
+          <CardContent class="grid gap-1 text-sm">
+            <div v-if="driveWriteDraft.name" class="font-medium">
+              {{ driveWriteDraft.name }}
+            </div>
+            <div class="text-muted-foreground">
+              {{
+                t(
+                  driveWriteDraft.kind === "document"
+                    ? "ai.toolCall.driveWrite.kindDocument"
+                    : "ai.toolCall.driveWrite.kindText"
+                )
+              }}
+              <template v-if="driveWriteDraft.contentChars > 0">
+                ·
+                {{
+                  t(
+                    "ai.toolCall.driveWrite.contentChars",
+                    driveWriteDraft.contentChars
+                  )
+                }}
+              </template>
+            </div>
+            <div
+              v-if="driveWriteDraft.contentPreview"
+              class="text-muted-foreground border-border border-l-2 pl-2 text-xs whitespace-pre-wrap"
+            >
+              {{ driveWriteDraft.contentPreview }}
+            </div>
+            <div
+              v-if="driveWriteDraft.folderId"
+              class="text-muted-foreground/80 text-xs"
+            >
+              {{ t("ai.toolCall.driveWrite.folder") }}:
+              {{ driveWriteDraft.folderId }}
+            </div>
+            <div
+              v-if="driveWriteDraft.fileId"
+              class="text-muted-foreground/80 text-xs"
+            >
+              {{ t("ai.toolCall.driveWrite.file") }}:
+              {{ driveWriteDraft.fileId }}
+            </div>
+          </CardContent>
+          <CardFooter class="gap-2">
+            <Button
+              :disabled="submittingDecision !== null"
+              @click="submitDecision(true)"
+            >
+              <Spinner v-if="submittingDecision === 'approve'" />
+              {{ t("ai.toolCall.driveWrite.approve") }}
+            </Button>
+            <Button
+              variant="default"
+              :disabled="submittingDecision !== null"
+              @click="submitDecision(false)"
+            >
+              <Spinner v-if="submittingDecision === 'cancel'" />
+              {{ t("ai.toolCall.driveWrite.cancel") }}
+            </Button>
+          </CardFooter>
+        </Card>
+
+        <!-- GitHub-write confirm: same contract as the drive card. -->
+        <Card v-else-if="isLiveInterrupt && gitHubWriteDraft">
+          <CardHeader>
+            <CardTitle>{{ t(gitHubWriteTitleKey) }}</CardTitle>
+            <CardDescription>
+              {{ t("ai.toolCall.gitHubWrite.confirmHint") }}
+            </CardDescription>
+          </CardHeader>
+          <CardContent class="grid gap-1 text-sm">
+            <div v-if="gitHubWriteDraft.repo" class="font-medium">
+              {{ gitHubWriteDraft.repo
+              }}<template v-if="gitHubWriteDraft.issueNumber"
+                >#{{ gitHubWriteDraft.issueNumber }}</template
+              >
+            </div>
+            <div v-if="gitHubWriteDraft.title" class="text-foreground">
+              {{ gitHubWriteDraft.title }}
+            </div>
+            <div
+              v-if="gitHubWriteDraft.bodyPreview"
+              class="text-muted-foreground border-border border-l-2 pl-2 text-xs whitespace-pre-wrap"
+            >
+              {{ gitHubWriteDraft.bodyPreview }}
+            </div>
+            <div
+              v-if="gitHubWriteDraft.state"
+              class="text-muted-foreground/80 text-xs"
+            >
+              {{ t("ai.toolCall.gitHubWrite.state") }}:
+              {{ gitHubWriteDraft.state }}
+            </div>
+            <div
+              v-if="gitHubWriteDraft.labels.length > 0"
+              class="text-muted-foreground/80 text-xs"
+            >
+              {{ t("ai.toolCall.gitHubWrite.labels") }}:
+              {{ gitHubWriteDraft.labels.join(", ") }}
+            </div>
+          </CardContent>
+          <CardFooter class="gap-2">
+            <Button
+              :disabled="submittingDecision !== null"
+              @click="submitDecision(true)"
+            >
+              <Spinner v-if="submittingDecision === 'approve'" />
+              {{ t("ai.toolCall.gitHubWrite.approve") }}
+            </Button>
+            <Button
+              variant="default"
+              :disabled="submittingDecision !== null"
+              @click="submitDecision(false)"
+            >
+              <Spinner v-if="submittingDecision === 'cancel'" />
+              {{ t("ai.toolCall.gitHubWrite.cancel") }}
+            </Button>
+          </CardFooter>
+        </Card>
+
+        <!-- Gmail-send confirm: same contract as the drive card. -->
+        <Card v-else-if="isLiveInterrupt && gmailSendDraft">
+          <CardHeader>
+            <CardTitle>
+              {{
+                t(
+                  gmailSendDraft.replyToMessageId
+                    ? "ai.toolCall.gmailSend.replyTitle"
+                    : "ai.toolCall.gmailSend.sendTitle"
+                )
+              }}
+            </CardTitle>
+            <CardDescription>
+              {{ t("ai.toolCall.gmailSend.confirmHint") }}
+            </CardDescription>
+          </CardHeader>
+          <CardContent class="grid gap-1 text-sm">
+            <div v-if="gmailSendDraft.to.length > 0" class="font-medium">
+              {{ t("ai.toolCall.gmailSend.to") }}:
+              {{ gmailSendDraft.to.join(", ") }}
+            </div>
+            <div
+              v-if="gmailSendDraft.cc.length > 0"
+              class="text-muted-foreground"
+            >
+              {{ t("ai.toolCall.gmailSend.cc") }}:
+              {{ gmailSendDraft.cc.join(", ") }}
+            </div>
+            <!-- A reply without an explicit subject derives "Re: <original>"
+             server-side — say so rather than showing an empty line. -->
+            <div class="text-foreground">
+              {{
+                gmailSendDraft.subject ??
+                t("ai.toolCall.gmailSend.derivedSubject")
+              }}
+            </div>
+            <div
+              v-if="gmailSendDraft.bodyPreview"
+              class="text-muted-foreground border-border border-l-2 pl-2 text-xs whitespace-pre-wrap"
+            >
+              {{ gmailSendDraft.bodyPreview }}
+            </div>
+            <div class="text-muted-foreground/80 text-xs">
+              {{
+                t("ai.toolCall.gmailSend.bodyChars", gmailSendDraft.bodyChars)
+              }}
+            </div>
+          </CardContent>
+          <CardFooter class="gap-2">
+            <Button
+              :disabled="submittingDecision !== null"
+              @click="submitDecision(true)"
+            >
+              <Spinner v-if="submittingDecision === 'approve'" />
+              {{ t("ai.toolCall.gmailSend.approve") }}
+            </Button>
+            <Button
+              variant="outline"
+              :disabled="submittingDecision !== null"
+              @click="submitDecision(false)"
+            >
+              <Spinner v-if="submittingDecision === 'cancel'" />
+              {{ t("ai.toolCall.gmailSend.cancel") }}
+            </Button>
+          </CardFooter>
+        </Card>
+
+        <!-- ============================================================== -->
+        <!-- Live interrupt with malformed payload — polite escape hatch. -->
+        <!-- ============================================================== -->
+        <Item v-else-if="isLiveInterrupt" variant="muted" size="xs">
+          <ItemContent>
+            <ItemDescription class="text-xs">
+              {{ t("ai.toolCall.malformedInterrupt") }}
+            </ItemDescription>
+          </ItemContent>
+        </Item>
+
+        <!-- ============================================================== -->
+        <!-- Abandoned interrupt: the user sent another message instead of -->
+        <!-- answering, so the chat moved on. Read-only historical result — no -->
+        <!-- choice form (resuming a superseded interrupt would fail), just -->
+        <!-- the question and a note that it went unanswered. -->
+        <!-- ============================================================== -->
+        <Card v-else-if="isAbandonedInterrupt && questionText">
+          <CardHeader>
+            <CardTitle>{{ questionText }}</CardTitle>
+          </CardHeader>
+          <CardContent class="text-muted-foreground flex items-center gap-2">
+            <IconCircleHelp />
+            <span>{{ t("ai.toolCall.unanswered") }}</span>
+          </CardContent>
+        </Card>
+
+        <!-- Abandoned calendar-write confirmation: the user moved on without -->
+        <!-- deciding, so nothing was written. Read-only historical card. -->
+        <Card v-else-if="isAbandonedInterrupt && calendarWriteDraft">
+          <CardHeader>
+            <CardTitle>
+              {{
+                t(
+                  calendarWriteDraft.action === "create"
+                    ? "ai.toolCall.calendarWrite.createTitle"
+                    : "ai.toolCall.calendarWrite.updateTitle"
+                )
+              }}
+            </CardTitle>
+            <CardDescription v-if="calendarWriteDraft.summary">
+              {{ calendarWriteDraft.summary }}
+            </CardDescription>
+          </CardHeader>
+          <CardContent class="text-muted-foreground flex items-center gap-2">
+            <IconCircleHelp />
+            <span>{{ t("ai.toolCall.calendarWrite.unconfirmed") }}</span>
+          </CardContent>
+        </Card>
+
+        <!-- Abandoned Drive-write confirmation: the user moved on without -->
+        <!-- deciding, so nothing was written. Read-only historical card. -->
+        <Card v-else-if="isAbandonedInterrupt && driveWriteDraft">
+          <CardHeader>
+            <CardTitle>
+              {{
+                t(
+                  driveWriteDraft.action === "create"
+                    ? "ai.toolCall.driveWrite.createTitle"
+                    : "ai.toolCall.driveWrite.updateTitle"
+                )
+              }}
+            </CardTitle>
+            <CardDescription v-if="driveWriteDraft.name">
+              {{ driveWriteDraft.name }}
+            </CardDescription>
+          </CardHeader>
+          <CardContent class="text-muted-foreground flex items-center gap-2">
+            <IconCircleHelp />
+            <span>{{ t("ai.toolCall.driveWrite.unconfirmed") }}</span>
+          </CardContent>
+        </Card>
+
+        <Card v-else-if="isAbandonedInterrupt && gitHubWriteDraft">
+          <CardHeader>
+            <CardTitle>{{ t(gitHubWriteTitleKey) }}</CardTitle>
+            <CardDescription v-if="gitHubWriteDraft.repo">
+              {{ gitHubWriteDraft.repo
+              }}<template v-if="gitHubWriteDraft.issueNumber"
+                >#{{ gitHubWriteDraft.issueNumber }}</template
+              >
+            </CardDescription>
+          </CardHeader>
+          <CardContent class="text-muted-foreground flex items-center gap-2">
+            <IconCircleHelp />
+            <span>{{ t("ai.toolCall.gitHubWrite.unconfirmed") }}</span>
+          </CardContent>
+        </Card>
+
+        <Card v-else-if="isAbandonedInterrupt && gmailSendDraft">
+          <CardHeader>
+            <CardTitle>
+              {{
+                t(
+                  gmailSendDraft.replyToMessageId
+                    ? "ai.toolCall.gmailSend.replyTitle"
+                    : "ai.toolCall.gmailSend.sendTitle"
+                )
+              }}
+            </CardTitle>
+            <CardDescription v-if="gmailSendDraft.to.length > 0">
+              {{ gmailSendDraft.to.join(", ") }}
+            </CardDescription>
+          </CardHeader>
+          <CardContent class="text-muted-foreground flex items-center gap-2">
+            <IconCircleHelp />
+            <span>{{ t("ai.toolCall.gmailSend.unconfirmed") }}</span>
+          </CardContent>
+        </Card>
+
+        <!-- ============================================================== -->
+        <!-- Resolved interrupt: question (header) + the chosen answer. A -->
+        <!-- completed result, so it shares the done-state result anatomy -->
+        <!-- rather than staying a transient-state Item. -->
+        <!-- ============================================================== -->
+        <Card
+          v-else-if="isResolvedInterrupt && questionText && interruptAnswer"
         >
-          {{
-            t("ai.toolCall.summarize.modelFooter", {
-              model: summarizeOutput.model,
-            })
-          }}
-        </CardFooter>
-      </Card>
+          <CardHeader>
+            <CardTitle>{{ questionText }}</CardTitle>
+          </CardHeader>
+          <CardContent class="flex items-center gap-2">
+            <IconCheck class="text-muted-foreground" />
+            <span class="text-foreground">{{ interruptAnswer }}</span>
+          </CardContent>
+        </Card>
 
-      <!-- ============================================================== -->
-      <!-- compareNodes: error variant OR structured comparison card. -->
-      <!-- ============================================================== -->
-      <Card
-        v-else-if="
-          tool.name === 'compareNodes' && compareOutput && compareOutput.error
-        "
-      >
-        <CardHeader>
-          <CardTitle>{{ t("ai.toolCall.compare.errorTitle") }}</CardTitle>
-        </CardHeader>
-        <CardContent class="text-destructive flex items-center gap-2">
-          <IconTriangleAlert />
-          <span>{{ compareOutput.error }}</span>
-        </CardContent>
-      </Card>
+        <!-- ============================================================== -->
+        <!-- Calendar-write outcome: the REAL write result (or the interim -->
+        <!-- "deciding" state between the optimistic flip and the streamed -->
+        <!-- toolResult). Owns the declined case too — a deliberate Cancel -->
+        <!-- is `ok: false` but not an error. -->
+        <!-- ============================================================== -->
+        <Card v-else-if="isCalendarWrite && calendarWriteResult">
+          <CardHeader v-if="calendarWriteDraft?.summary">
+            <CardTitle>{{ calendarWriteDraft.summary }}</CardTitle>
+          </CardHeader>
+          <CardContent class="flex items-center gap-2">
+            <template v-if="calendarWriteResult.kind === 'deciding'">
+              <Spinner />
+              <span class="text-muted-foreground">
+                {{ t("ai.toolCall.calendarWrite.executing") }}
+              </span>
+            </template>
+            <template v-else-if="calendarWriteResult.kind === 'written'">
+              <IconCheck class="text-muted-foreground" />
+              <span class="text-foreground">
+                {{ t("ai.toolCall.calendarWrite.written") }}
+                <a
+                  v-if="calendarWriteResult.link"
+                  :href="calendarWriteResult.link"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  class="text-primary underline-offset-2 hover:underline"
+                >
+                  {{ t("ai.toolCall.calendarWrite.openEvent") }}
+                </a>
+              </span>
+            </template>
+            <template v-else-if="calendarWriteResult.kind === 'declined'">
+              <IconCircleHelp class="text-muted-foreground" />
+              <span class="text-muted-foreground">
+                {{ t("ai.toolCall.calendarWrite.declined") }}
+              </span>
+            </template>
+            <template v-else>
+              <IconTriangleAlert class="text-destructive" />
+              <span class="text-destructive">
+                {{ t("ai.toolCall.calendarWrite.failed") }}
+              </span>
+            </template>
+          </CardContent>
+        </Card>
 
-      <Card v-else-if="tool.name === 'compareNodes' && compareOutput">
-        <CardHeader v-if="compareInput?.focus">
-          <CardTitle>{{ compareInput.focus }}</CardTitle>
-        </CardHeader>
-        <CardContent class="flex flex-col gap-2">
-          <p v-if="compareOutput.overview" class="text-foreground">
-            {{ compareOutput.overview }}
-          </p>
-          <div class="flex flex-col gap-2">
-            <span class="text-muted-foreground text-xs font-medium uppercase">
-              {{ t("ai.toolCall.compare.agreements") }}
-            </span>
-            <ul
-              v-if="compareOutput.agreements.length > 0"
-              class="text-foreground marker:text-muted list-inside list-disc space-y-1"
-            >
-              <li
-                v-for="(point, idx) in compareOutput.agreements"
-                :key="`a${idx}`"
+        <!-- Drive-write outcome: same contract as the calendar outcome card. -->
+        <Card v-else-if="isDriveWrite && driveWriteResult">
+          <CardHeader v-if="driveWriteDraft?.name">
+            <CardTitle>{{ driveWriteDraft.name }}</CardTitle>
+          </CardHeader>
+          <CardContent class="flex items-center gap-2">
+            <template v-if="driveWriteResult.kind === 'deciding'">
+              <Spinner />
+              <span class="text-muted-foreground">
+                {{ t("ai.toolCall.driveWrite.executing") }}
+              </span>
+            </template>
+            <template v-else-if="driveWriteResult.kind === 'written'">
+              <IconCheck class="text-muted-foreground" />
+              <span class="text-foreground">
+                {{ t("ai.toolCall.driveWrite.written") }}
+                <a
+                  v-if="driveWriteResult.link"
+                  :href="driveWriteResult.link"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  class="text-primary underline-offset-2 hover:underline"
+                >
+                  {{ t("ai.toolCall.driveWrite.openFile") }}
+                </a>
+              </span>
+            </template>
+            <template v-else-if="driveWriteResult.kind === 'declined'">
+              <IconCircleHelp class="text-muted-foreground" />
+              <span class="text-muted-foreground">
+                {{ t("ai.toolCall.driveWrite.declined") }}
+              </span>
+            </template>
+            <template v-else>
+              <IconTriangleAlert class="text-destructive" />
+              <span class="text-destructive">
+                {{ t("ai.toolCall.driveWrite.failed") }}
+              </span>
+            </template>
+          </CardContent>
+        </Card>
+
+        <!-- GitHub-write outcome: same contract as the calendar/drive cards. -->
+        <Card v-else-if="isGitHubWrite && gitHubWriteResult">
+          <CardHeader v-if="gitHubWriteDraft?.repo">
+            <CardTitle>
+              {{ gitHubWriteDraft.repo
+              }}<template v-if="gitHubWriteDraft.issueNumber"
+                >#{{ gitHubWriteDraft.issueNumber }}</template
               >
-                {{ point }}
-              </li>
-            </ul>
-            <span v-else class="text-muted-foreground text-xs">
-              {{ t("ai.toolCall.compare.noPoints") }}
+            </CardTitle>
+          </CardHeader>
+          <CardContent class="flex items-center gap-2">
+            <template v-if="gitHubWriteResult.kind === 'deciding'">
+              <Spinner />
+              <span class="text-muted-foreground">
+                {{ t("ai.toolCall.gitHubWrite.executing") }}
+              </span>
+            </template>
+            <template v-else-if="gitHubWriteResult.kind === 'written'">
+              <IconCheck class="text-muted-foreground" />
+              <span class="text-foreground">
+                {{ t("ai.toolCall.gitHubWrite.written") }}
+                <a
+                  v-if="gitHubWriteResult.link"
+                  :href="gitHubWriteResult.link"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  class="text-primary underline-offset-2 hover:underline"
+                >
+                  {{ t("ai.toolCall.gitHubWrite.openItem") }}
+                </a>
+              </span>
+            </template>
+            <template v-else-if="gitHubWriteResult.kind === 'declined'">
+              <IconCircleHelp class="text-muted-foreground" />
+              <span class="text-muted-foreground">
+                {{ t("ai.toolCall.gitHubWrite.declined") }}
+              </span>
+            </template>
+            <template v-else>
+              <IconTriangleAlert class="text-destructive" />
+              <span class="text-destructive">
+                {{ t("ai.toolCall.gitHubWrite.failed") }}
+              </span>
+            </template>
+          </CardContent>
+        </Card>
+
+        <!-- Gmail-send outcome: same contract as the calendar/drive cards. -->
+        <Card v-else-if="isGmailWrite && gmailSendResult">
+          <CardHeader v-if="gmailSendDraft && gmailSendDraft.to.length > 0">
+            <CardTitle>{{ gmailSendDraft.to.join(", ") }}</CardTitle>
+          </CardHeader>
+          <CardContent class="flex items-center gap-2">
+            <template v-if="gmailSendResult.kind === 'deciding'">
+              <Spinner />
+              <span class="text-muted-foreground">
+                {{ t("ai.toolCall.gmailSend.executing") }}
+              </span>
+            </template>
+            <template v-else-if="gmailSendResult.kind === 'written'">
+              <IconCheck class="text-muted-foreground" />
+              <span class="text-foreground">
+                {{ t("ai.toolCall.gmailSend.written") }}
+                <a
+                  v-if="gmailSendResult.link"
+                  :href="gmailSendResult.link"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  class="text-primary underline-offset-2 hover:underline"
+                >
+                  {{ t("ai.toolCall.gmailSend.openItem") }}
+                </a>
+              </span>
+            </template>
+            <template v-else-if="gmailSendResult.kind === 'declined'">
+              <IconCircleHelp class="text-muted-foreground" />
+              <span class="text-muted-foreground">
+                {{ t("ai.toolCall.gmailSend.declined") }}
+              </span>
+            </template>
+            <template v-else>
+              <IconTriangleAlert class="text-destructive" />
+              <span class="text-destructive">
+                {{ t("ai.toolCall.gmailSend.failed") }}
+              </span>
+            </template>
+          </CardContent>
+        </Card>
+
+        <!-- ============================================================== -->
+        <!-- Running: brief waiting note. Shares the done-state Card -->
+        <!-- anatomy so the body's shell doesn't reflow when the result -->
+        <!-- arrives — only the inner content swaps. The trigger's -->
+        <!-- spinner carries the progress signal at the row level. -->
+        <!-- ============================================================== -->
+        <Card v-else-if="isRunning">
+          <CardContent class="flex items-center gap-2">
+            <Spinner />
+            <span class="text-muted-foreground">
+              {{ t("ai.toolCall.waitingForReturn") }}
             </span>
-          </div>
-          <div class="flex flex-col gap-2">
-            <span class="text-muted-foreground text-xs font-medium uppercase">
-              {{ t("ai.toolCall.compare.disagreements") }}
-            </span>
-            <ul
-              v-if="compareOutput.disagreements.length > 0"
-              class="text-foreground marker:text-muted list-inside list-disc space-y-1"
-            >
-              <li
-                v-for="(point, idx) in compareOutput.disagreements"
-                :key="`d${idx}`"
-              >
-                {{ point }}
-              </li>
-            </ul>
-            <span v-else class="text-muted-foreground text-xs">
-              {{ t("ai.toolCall.compare.noPoints") }}
-            </span>
-          </div>
-          <div
-            v-if="compareOutput.perNode.length > 0"
-            class="flex flex-col gap-2"
-          >
-            <span class="text-muted-foreground text-xs font-medium uppercase">
-              {{ t("ai.toolCall.compare.perNode") }}
-            </span>
-            <ItemGroup>
+          </CardContent>
+        </Card>
+
+        <!-- ============================================================== -->
+        <!-- rollDice: dice icon + big number. No input, so no header. -->
+        <!-- ============================================================== -->
+        <Card v-else-if="tool.name === 'rollDice' && diceOutput !== null">
+          <CardContent class="flex items-center gap-2">
+            <IconDices class="text-muted-foreground size-8" />
+            <div class="flex flex-col">
+              <span class="text-foreground text-2xl leading-none font-semibold">
+                {{ diceOutput }}
+              </span>
+              <span class="text-muted-foreground">
+                {{ t("ai.toolCall.dice.rolled") }}
+              </span>
+            </div>
+          </CardContent>
+        </Card>
+
+        <!-- ============================================================== -->
+        <!-- searchWorkspaceNodes: query (header) + result count, then the -->
+        <!-- per-result rows in the body (or an empty state). -->
+        <!-- ============================================================== -->
+        <Card v-else-if="tool.name === 'searchWorkspaceNodes' && searchOutput">
+          <CardHeader v-if="searchInput">
+            <CardTitle>"{{ searchInput.query }}"</CardTitle>
+            <CardDescription>
+              {{
+                t("ai.toolCall.search.resultCount", {
+                  count: searchOutput.results.length,
+                })
+              }}
+              <template v-if="searchOutput.truncated">
+                {{ t("ai.toolCall.search.truncated") }}
+              </template>
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Empty v-if="searchOutput.results.length === 0" class="py-4">
+              <EmptyHeader>
+                <EmptyMedia variant="icon">
+                  <IconSearch />
+                </EmptyMedia>
+                <EmptyTitle>{{ t("ai.toolCall.search.empty") }}</EmptyTitle>
+              </EmptyHeader>
+            </Empty>
+            <ItemGroup v-else>
               <Item
-                v-for="entry in compareOutput.perNode"
-                :key="`${entry.scope}:${entry.nodeId}`"
+                v-for="result in searchOutput.results"
+                :key="`${result.scope}:${result.nodeId}`"
                 variant="outline"
                 size="xs"
               >
                 <ItemMedia variant="icon">
-                  <IconFileText class="text-muted-foreground" />
+                  <Component
+                    :is="result.type === 'folder' ? IconFolder : IconFileText"
+                    class="text-muted-foreground"
+                  />
                 </ItemMedia>
                 <ItemContent>
-                  <ItemTitle class="break-all">{{ entry.name }}</ItemTitle>
-                  <ItemDescription v-if="entry.contribution" class="text-xs">
-                    {{ entry.contribution }}
+                  <ItemTitle class="break-all">{{ result.name }}</ItemTitle>
+                  <ItemDescription v-if="result.snippet" class="text-xs">
+                    {{ result.snippet }}
                   </ItemDescription>
                 </ItemContent>
                 <ItemActions>
                   <Badge variant="secondary">
-                    {{ searchScopeLabel(entry.scope) }}
+                    {{ searchScopeLabel(result.scope) }}
                   </Badge>
                 </ItemActions>
               </Item>
             </ItemGroup>
-          </div>
-        </CardContent>
-        <CardFooter
-          v-if="compareOutput.model"
-          class="text-muted-foreground text-xs"
-        >
-          {{
-            t("ai.toolCall.compare.modelFooter", {
-              model: compareOutput.model,
-            })
-          }}
-        </CardFooter>
-      </Card>
+          </CardContent>
+        </Card>
 
-      <!-- ============================================================== -->
-      <!-- findRelatedNodes: header with result count, then per-node rows. -->
-      <!-- Same row layout as searchWorkspaceNodes for visual consistency. -->
-      <!-- ============================================================== -->
-      <Card v-else-if="tool.name === 'findRelatedNodes' && relatedOutput">
-        <CardHeader v-if="relatedInput">
-          <CardDescription>
+        <!-- ============================================================== -->
+        <!-- summarizeNode: error variant OR structured summary. -->
+        <!-- ============================================================== -->
+        <Card
+          v-else-if="
+            tool.name === 'summarizeNode' &&
+            summarizeOutput &&
+            summarizeOutput.error
+          "
+        >
+          <CardHeader>
+            <CardTitle>{{ t("ai.toolCall.summarize.errorTitle") }}</CardTitle>
+          </CardHeader>
+          <CardContent class="text-destructive flex items-center gap-2">
+            <IconTriangleAlert />
+            <span>{{ summarizeOutput.error }}</span>
+          </CardContent>
+        </Card>
+
+        <Card v-else-if="tool.name === 'summarizeNode' && summarizeOutput">
+          <CardContent class="flex flex-col gap-2">
+            <p class="text-foreground">
+              {{ summarizeOutput.summary }}
+            </p>
+            <div
+              v-if="summarizeOutput.keyPoints.length > 0"
+              class="flex flex-col gap-2"
+            >
+              <span class="text-muted-foreground text-xs font-medium uppercase">
+                {{ t("ai.toolCall.summarize.keyPoints") }}
+              </span>
+              <ul
+                class="text-foreground marker:text-muted list-inside list-disc space-y-1"
+              >
+                <li
+                  v-for="(point, idx) in summarizeOutput.keyPoints"
+                  :key="idx"
+                >
+                  {{ point }}
+                </li>
+              </ul>
+            </div>
+            <div
+              v-if="summarizeOutput.suggestedTags.length > 0"
+              class="flex flex-col gap-2"
+            >
+              <span class="text-muted-foreground text-xs font-medium uppercase">
+                {{ t("ai.toolCall.summarize.tags") }}
+              </span>
+              <div class="flex flex-wrap gap-1">
+                <Badge
+                  v-for="tag in summarizeOutput.suggestedTags"
+                  :key="tag"
+                  variant="secondary"
+                >
+                  {{ tag }}
+                </Badge>
+              </div>
+            </div>
+          </CardContent>
+          <CardFooter
+            v-if="summarizeOutput.model"
+            class="text-muted-foreground text-xs"
+          >
             {{
-              t("ai.toolCall.related.resultCount", {
-                count: relatedOutput.results.length,
+              t("ai.toolCall.summarize.modelFooter", {
+                model: summarizeOutput.model,
               })
             }}
-            <template v-if="relatedOutput.truncated">
-              {{ t("ai.toolCall.related.truncated") }}
-            </template>
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Empty v-if="relatedOutput.results.length === 0" class="border p-6">
-            <EmptyHeader>
-              <EmptyMedia variant="icon">
-                <IconSearch />
-              </EmptyMedia>
-              <EmptyTitle>{{ t("ai.toolCall.related.empty") }}</EmptyTitle>
-            </EmptyHeader>
-          </Empty>
-          <ItemGroup v-else>
-            <Item
-              v-for="result in relatedOutput.results"
-              :key="`${result.scope}:${result.nodeId}`"
-              variant="outline"
-              size="xs"
-            >
-              <ItemMedia variant="icon">
-                <Component
-                  :is="result.type === 'folder' ? IconFolder : IconFileText"
-                  class="text-muted-foreground"
-                />
-              </ItemMedia>
-              <ItemContent>
-                <ItemTitle class="break-all">{{ result.name }}</ItemTitle>
-                <ItemDescription v-if="result.snippet" class="text-xs">
-                  {{ result.snippet }}
-                </ItemDescription>
-              </ItemContent>
-              <ItemActions>
-                <Badge variant="secondary">
-                  {{ searchScopeLabel(result.scope) }}
-                </Badge>
-              </ItemActions>
-            </Item>
-          </ItemGroup>
-        </CardContent>
-      </Card>
+          </CardFooter>
+        </Card>
 
-      <!-- ============================================================== -->
-      <!-- browseInternet: query header + grounded answer (markdown) + -->
-      <!-- the source links the answer was grounded on. -->
-      <!-- ============================================================== -->
-      <Card v-else-if="tool.name === 'browseInternet' && browseInternetOutput">
-        <CardHeader v-if="browseInternetInput">
-          <CardTitle>{{ browseInternetInput }}</CardTitle>
-        </CardHeader>
-        <CardContent class="flex flex-col gap-2">
-          <AppMarkdown surface="chat" :content="browseInternetOutput.answer" />
-          <div
-            v-if="browseInternetOutput.sources.length > 0"
-            class="flex flex-col gap-2"
-          >
-            <span class="text-muted-foreground text-xs font-medium uppercase">
-              {{ t("ai.toolCall.browse.sources") }}
-            </span>
-            <ul
-              class="text-foreground marker:text-muted list-inside list-disc space-y-1"
-            >
-              <li
-                v-for="source in browseInternetOutput.sources"
-                :key="source.url"
+        <!-- ============================================================== -->
+        <!-- compareNodes: error variant OR structured comparison. -->
+        <!-- ============================================================== -->
+        <Card
+          v-else-if="
+            tool.name === 'compareNodes' && compareOutput && compareOutput.error
+          "
+        >
+          <CardHeader>
+            <CardTitle>{{ t("ai.toolCall.compare.errorTitle") }}</CardTitle>
+          </CardHeader>
+          <CardContent class="text-destructive flex items-center gap-2">
+            <IconTriangleAlert />
+            <span>{{ compareOutput.error }}</span>
+          </CardContent>
+        </Card>
+
+        <Card v-else-if="tool.name === 'compareNodes' && compareOutput">
+          <CardHeader v-if="compareInput?.focus">
+            <CardTitle>{{ compareInput.focus }}</CardTitle>
+          </CardHeader>
+          <CardContent class="flex flex-col gap-2">
+            <p v-if="compareOutput.overview" class="text-foreground">
+              {{ compareOutput.overview }}
+            </p>
+            <div class="flex flex-col gap-2">
+              <span class="text-muted-foreground text-xs font-medium uppercase">
+                {{ t("ai.toolCall.compare.agreements") }}
+              </span>
+              <ul
+                v-if="compareOutput.agreements.length > 0"
+                class="text-foreground marker:text-muted list-inside list-disc space-y-1"
               >
-                <a
-                  :href="source.url"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  class="text-destructive hover:text-destructive break-all hover:underline"
+                <li
+                  v-for="(point, idx) in compareOutput.agreements"
+                  :key="`a${idx}`"
                 >
-                  {{ source.title }}
-                </a>
-              </li>
-            </ul>
-          </div>
-        </CardContent>
-      </Card>
+                  {{ point }}
+                </li>
+              </ul>
+              <span v-else class="text-muted-foreground text-xs">
+                {{ t("ai.toolCall.compare.noPoints") }}
+              </span>
+            </div>
+            <div class="flex flex-col gap-2">
+              <span class="text-muted-foreground text-xs font-medium uppercase">
+                {{ t("ai.toolCall.compare.disagreements") }}
+              </span>
+              <ul
+                v-if="compareOutput.disagreements.length > 0"
+                class="text-foreground marker:text-muted list-inside list-disc space-y-1"
+              >
+                <li
+                  v-for="(point, idx) in compareOutput.disagreements"
+                  :key="`d${idx}`"
+                >
+                  {{ point }}
+                </li>
+              </ul>
+              <span v-else class="text-muted-foreground text-xs">
+                {{ t("ai.toolCall.compare.noPoints") }}
+              </span>
+            </div>
+            <div
+              v-if="compareOutput.perNode.length > 0"
+              class="flex flex-col gap-2"
+            >
+              <span class="text-muted-foreground text-xs font-medium uppercase">
+                {{ t("ai.toolCall.compare.perNode") }}
+              </span>
+              <ItemGroup>
+                <Item
+                  v-for="entry in compareOutput.perNode"
+                  :key="`${entry.scope}:${entry.nodeId}`"
+                  variant="outline"
+                  size="xs"
+                >
+                  <ItemMedia variant="icon">
+                    <IconFileText class="text-muted-foreground" />
+                  </ItemMedia>
+                  <ItemContent>
+                    <ItemTitle class="break-all">{{ entry.name }}</ItemTitle>
+                    <ItemDescription v-if="entry.contribution" class="text-xs">
+                      {{ entry.contribution }}
+                    </ItemDescription>
+                  </ItemContent>
+                  <ItemActions>
+                    <Badge variant="secondary">
+                      {{ searchScopeLabel(entry.scope) }}
+                    </Badge>
+                  </ItemActions>
+                </Item>
+              </ItemGroup>
+            </div>
+          </CardContent>
+          <CardFooter
+            v-if="compareOutput.model"
+            class="text-muted-foreground text-xs"
+          >
+            {{
+              t("ai.toolCall.compare.modelFooter", {
+                model: compareOutput.model,
+              })
+            }}
+          </CardFooter>
+        </Card>
 
-      <!-- ============================================================== -->
-      <!-- Fallback: unknown tool name OR narrower failed. Show a markdown -->
-      <!-- preview of a recognized text field (query / answer / …) when -->
-      <!-- present, else a JSON dump, so the message column at least -->
-      <!-- carries something meaningful. -->
-      <!-- ============================================================== -->
-      <Card v-else-if="!hasCustomDoneRenderer">
-        <CardContent class="flex flex-col gap-2">
-          <div v-if="inputMarkdown" class="flex flex-col gap-2">
-            <span class="text-muted-foreground text-xs font-medium uppercase">
-              {{ inputLabel }}
-            </span>
-            <AppMarkdown surface="chat" :content="inputMarkdown" />
-          </div>
-          <div class="flex flex-col gap-2">
-            <span class="text-muted-foreground text-xs font-medium uppercase">
-              {{ outputLabel }}
-            </span>
-            <AppMarkdown surface="chat" :content="outputMarkdown" />
-          </div>
-        </CardContent>
-      </Card>
-    </CollapsibleContent>
-  </Collapsible>
+        <!-- ============================================================== -->
+        <!-- findRelatedNodes: header with result count, then per-node rows. -->
+        <!-- Same row layout as searchWorkspaceNodes for visual consistency. -->
+        <!-- ============================================================== -->
+        <Card v-else-if="tool.name === 'findRelatedNodes' && relatedOutput">
+          <CardHeader v-if="relatedInput">
+            <CardDescription>
+              {{
+                t("ai.toolCall.related.resultCount", {
+                  count: relatedOutput.results.length,
+                })
+              }}
+              <template v-if="relatedOutput.truncated">
+                {{ t("ai.toolCall.related.truncated") }}
+              </template>
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Empty v-if="relatedOutput.results.length === 0" class="py-4">
+              <EmptyHeader>
+                <EmptyMedia variant="icon">
+                  <IconSearch />
+                </EmptyMedia>
+                <EmptyTitle>{{ t("ai.toolCall.related.empty") }}</EmptyTitle>
+              </EmptyHeader>
+            </Empty>
+            <ItemGroup v-else>
+              <Item
+                v-for="result in relatedOutput.results"
+                :key="`${result.scope}:${result.nodeId}`"
+                variant="outline"
+                size="xs"
+              >
+                <ItemMedia variant="icon">
+                  <Component
+                    :is="result.type === 'folder' ? IconFolder : IconFileText"
+                    class="text-muted-foreground"
+                  />
+                </ItemMedia>
+                <ItemContent>
+                  <ItemTitle class="break-all">{{ result.name }}</ItemTitle>
+                  <ItemDescription v-if="result.snippet" class="text-xs">
+                    {{ result.snippet }}
+                  </ItemDescription>
+                </ItemContent>
+                <ItemActions>
+                  <Badge variant="secondary">
+                    {{ searchScopeLabel(result.scope) }}
+                  </Badge>
+                </ItemActions>
+              </Item>
+            </ItemGroup>
+          </CardContent>
+        </Card>
+
+        <!-- ============================================================== -->
+        <!-- browseInternet: query header + grounded answer (markdown) + -->
+        <!-- the source links the answer was grounded on. -->
+        <!-- ============================================================== -->
+        <Card
+          v-else-if="tool.name === 'browseInternet' && browseInternetOutput"
+        >
+          <CardHeader v-if="browseInternetInput">
+            <CardTitle>{{ browseInternetInput }}</CardTitle>
+          </CardHeader>
+          <CardContent class="flex flex-col gap-2">
+            <AppMarkdown
+              surface="chat"
+              :content="browseInternetOutput.answer"
+            />
+            <div
+              v-if="browseInternetOutput.sources.length > 0"
+              class="flex flex-col gap-2"
+            >
+              <span class="text-muted-foreground text-xs font-medium uppercase">
+                {{ t("ai.toolCall.browse.sources") }}
+              </span>
+              <ul
+                class="text-foreground marker:text-muted list-inside list-disc space-y-1"
+              >
+                <li
+                  v-for="source in browseInternetOutput.sources"
+                  :key="source.url"
+                >
+                  <a
+                    :href="source.url"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    class="text-destructive hover:text-destructive break-all hover:underline"
+                  >
+                    {{ source.title }}
+                  </a>
+                </li>
+              </ul>
+            </div>
+          </CardContent>
+        </Card>
+
+        <!-- ============================================================== -->
+        <!-- Fallback: unknown tool name OR narrower failed. Show a markdown -->
+        <!-- preview of a recognized text field (query / answer / …) when -->
+        <!-- present, else a JSON dump, so the message column at least -->
+        <!-- carries something meaningful. -->
+        <!-- ============================================================== -->
+        <Card v-else-if="!hasCustomDoneRenderer">
+          <CardContent class="flex flex-col gap-2">
+            <div v-if="inputMarkdown" class="flex flex-col gap-2">
+              <span class="text-muted-foreground text-xs font-medium uppercase">
+                {{ inputLabel }}
+              </span>
+              <AppMarkdown surface="chat" :content="inputMarkdown" />
+            </div>
+            <div class="flex flex-col gap-2">
+              <span class="text-muted-foreground text-xs font-medium uppercase">
+                {{ outputLabel }}
+              </span>
+              <AppMarkdown surface="chat" :content="outputMarkdown" />
+            </div>
+          </CardContent>
+        </Card>
+      </TraceCollapsibleContent>
+    </TraceCollapsible>
+  </Trace>
 </template>
 
 <style scoped>
-/* Flatten in-chat cards: the chat surface is painted with the card color
-   (body bg in `@/styles/index.css`), so the default shadow/ring add no
-   contrast — and the shadow is invisible in dark mode (near-black card on
-   near-black page). Shadow + ring are both composed into `box-shadow`, so
-   one reset clears both. */
+/* Tool results are already grouped by the expandable trace row. Keep the
+   Card composition for its internal hierarchy, but remove the nested
+   surface so results read as part of the conversation instead of a stack
+   of cards. */
 :deep([data-slot="card"]) {
+  gap: 0.75rem;
+  overflow: visible;
+  border-radius: 0;
+  background-color: transparent;
+  padding-block: 0;
   box-shadow: none;
+}
+
+:deep([data-slot="card-header"]),
+:deep([data-slot="card-content"]),
+:deep([data-slot="card-footer"]) {
+  padding-inline: 0;
 }
 </style>

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { HTMLAttributes } from "vue"
+import { cn } from "cn"
 import { onBeforeUnmount, onMounted, useTemplateRef, watch } from "vue"
-import { cn } from "@/lib/utils"
 import { SCROLL_KEYS, useMessageScrollerContext } from "./useMessageScroller"
 
 const props = withDefaults(
@@ -57,7 +57,6 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <!-- Vendored patch: .passive wheel/touchmove — intent listeners must not block scrolling -->
   <div
     ref="viewport"
     data-slot="message-scroller-viewport"
@@ -68,13 +67,13 @@ onBeforeUnmount(() => {
     :data-autoscrolling="autoscrolling ? '' : undefined"
     :class="
       cn(
-        'scroll-fade-y size-full min-h-0 min-w-0 scrollbar-thin scrollbar-gutter-stable overflow-y-auto overscroll-contain contain-content data-autoscrolling:scrollbar-thumb-transparent data-autoscrolling:scrollbar-track-transparent',
+        'scroll-fade-b size-full min-h-0 min-w-0 scrollbar-thin scrollbar-gutter-stable overflow-y-auto overscroll-contain contain-content data-autoscrolling:scrollbar-thumb-transparent data-autoscrolling:scrollbar-track-transparent',
         props.class
       )
     "
     @scroll="syncAfterScroll()"
-    @wheel.passive="userScrollIntent()"
-    @touchmove.passive="userScrollIntent()"
+    @wheel="userScrollIntent()"
+    @touchmove="userScrollIntent()"
     @keydown="onKeyDown"
   >
     <slot />

@@ -12,7 +12,7 @@ import {
   useHotkeyRegistrations,
   type HotkeyChordRegistrationView,
   type HotkeySequenceRegistrationView,
-  type ParsedHotkey,
+  type ParsedHotkeyChord,
 } from "@tanstack/vue-hotkeys"
 import { computed, ref, watch } from "vue"
 
@@ -59,7 +59,7 @@ const isTargetActive = (
   (!!focused && target instanceof Node && target.contains(focused))
 
 /** The part of a chord still to press once `held` modifiers are down. */
-const remainingChord = (parsed: ParsedHotkey, held: Set<string>): string =>
+const remainingChord = (parsed: ParsedHotkeyChord, held: Set<string>): string =>
   [
     ...parsed.modifiers.filter((modifier) => !held.has(modifier)),
     parsed.code === undefined ? parsed.key : `[${parsed.code}]`,
@@ -207,7 +207,7 @@ export const useKeyHints = () => {
       .map((registration) => ({
         id: registration.id,
         keys: hotkeyToDisplayKeys(
-          remainingChord(registration.parsedHotkey, heldSet)
+          remainingChord(registration.parsedChord, heldSet)
         ),
         label: registration.options.meta?.name ?? "",
       }))

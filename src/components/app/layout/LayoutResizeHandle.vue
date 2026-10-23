@@ -8,7 +8,6 @@ import {
   IconHand,
   IconPointerClick,
 } from "@/data/icons"
-import { cn } from "@/lib/utils"
 import type { SplitterResizeHandleProps } from "reka-ui"
 import type { HTMLAttributes } from "vue"
 
@@ -78,12 +77,10 @@ const collapseLabel = computed(() =>
           v-bind="$attrs"
           :disabled="disabled"
           :data-collapsed="collapsed ? '' : undefined"
-          :class="
-            cn(
-              'layout-resize-handle z-20 bg-transparent after:rounded-3xl focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:outline-none',
-              props.class
-            )
-          "
+          :class="[
+            'layout-resize-handle z-20 bg-transparent after:rounded-3xl focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:outline-none',
+            props.class,
+          ]"
         />
       </TooltipTrigger>
       <TooltipContent :side="side" class="p-1!">

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { HTMLAttributes } from "vue"
+import { cn } from "cn"
 import { computed, onMounted, ref } from "vue"
-import { cn } from "@/lib/utils"
 import { useChart } from "."
 
 const props = withDefaults(
@@ -54,7 +54,7 @@ onMounted(() => {
         )
       "
     >
-      <Component :is="itemConfig?.icon" v-if="itemConfig?.icon" />
+      <component :is="itemConfig?.icon" v-if="itemConfig?.icon" />
       <div
         v-else
         class="h-2 w-2 shrink-0 rounded-xs"

@@ -4,6 +4,7 @@ import type {
   AnswerControlRegistration,
   QuestionnaireItemStatus,
 } from "./useQuestionnaire"
+import { cn } from "cn"
 import {
   computed,
   onBeforeUnmount,
@@ -12,7 +13,6 @@ import {
   useAttrs,
   watch,
 } from "vue"
-import { cn } from "@/lib/utils"
 import {
   compareDocumentOrder,
   getShortcutByChoiceValue,

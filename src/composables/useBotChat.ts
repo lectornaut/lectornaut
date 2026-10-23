@@ -69,8 +69,12 @@ import {
   useCollectionQuery,
   useDocumentQuery,
 } from "@/utils/firebase/firebase-query"
-import { isModelAllowedOnPlan } from "@lectornaut/shared/domain"
-import { until } from "@vueuse/core"
+import {
+  BOT_TOOL_PERMISSION_MODES,
+  isModelAllowedOnPlan,
+  type BotToolPermissionMode,
+} from "@lectornaut/shared/domain"
+import { until, useStorage } from "@vueuse/core"
 import { storeToRefs } from "pinia"
 import { computed, ref, watch, type InjectionKey, type Ref } from "vue"
 import { toast } from "vue-sonner"
@@ -161,6 +165,7 @@ export interface BotChatContext {
   canSend: Ref<boolean>
   /** Active action-context mode used for the next `sendMessage`. */
   mode: Ref<BotChatMode>
+  toolPermissionMode: Ref<BotToolPermissionMode>
   /** Convenience: `BOT_CHAT_MODE_OPTIONS` entry matching `mode.value`. */
   activeModeOption: Ref<BotChatModeOption>
   /**
@@ -395,6 +400,21 @@ export function useBotChat(options?: BotChatOptions): BotChatContext {
   const authStore = useAuthStore()
   const { currentUser, currentTeamId, currentWorkspaceId } =
     storeToRefs(authStore)
+  const storedToolPermissionMode = useStorage<string>(
+    computed(
+      () => `botToolPermissionMode:${currentUser.value?.uid ?? "signed-out"}`
+    ),
+    "ask"
+  )
+  const toolPermissionMode = computed<BotToolPermissionMode>({
+    get: () =>
+      BOT_TOOL_PERMISSION_MODES.find(
+        (value) => value === storedToolPermissionMode.value
+      ) ?? "ask",
+    set: (value) => {
+      storedToolPermissionMode.value = value
+    },
+  })
 
   const { currentRole, canManageWorkspaceContent } =
     useCurrentTeamRole(currentTeamId)
@@ -1241,6 +1261,7 @@ export function useBotChat(options?: BotChatOptions): BotChatContext {
           sessionId: sessionId.value ?? opts?.newSessionId ?? null,
           message: trimmed,
           mode: mode.value,
+          toolPermissionMode: toolPermissionMode.value,
           model: model.value,
           effort: effort.value,
           contextNodes,
@@ -1379,6 +1400,7 @@ export function useBotChat(options?: BotChatOptions): BotChatContext {
           name,
           response: answer,
           mode: mode.value,
+          toolPermissionMode: toolPermissionMode.value,
           model: model.value,
           effort: effort.value,
           contextNodes,
@@ -1640,6 +1662,7 @@ export function useBotChat(options?: BotChatOptions): BotChatContext {
     model,
     availableModelsByProvider,
     effort,
+    toolPermissionMode,
     activeAgentId,
     activeAgent,
     activeAgentStatus,

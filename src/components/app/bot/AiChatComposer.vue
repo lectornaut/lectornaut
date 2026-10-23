@@ -51,6 +51,7 @@ import { isAgentMembership } from "@/types/membership"
 import type { WorkspaceNodeScope } from "@/types/nodes"
 import { can, Capabilities } from "@/types/permissions"
 import { storeToRefs } from "pinia"
+import { BOT_TOOL_PERMISSION_MODES } from "@lectornaut/shared/domain"
 import { computed, inject, nextTick, ref, watch, watchEffect } from "vue"
 import type { Component } from "vue"
 import { toast } from "vue-sonner"
@@ -425,6 +426,14 @@ const modeLabel = (value: BotChatMode): string => {
   if (value === "auto") return t("ai.auto")
   if (value === "agent") return t("ai.agent")
   return t("ai.manual")
+}
+
+const toolPermissionMode = computed(
+  () => botChat?.toolPermissionMode.value ?? "ask"
+)
+const onToolPermissionModeChange = (next: unknown) => {
+  const value = BOT_TOOL_PERMISSION_MODES.find((mode) => mode === next)
+  if (botChat && value) botChat.toolPermissionMode.value = value
 }
 
 // ── Active model picker ──────────────────────────────────────────────────────
@@ -1489,6 +1498,7 @@ const onToolMenuCloseAutoFocus = (event: Event) => {
                     variant="ghost"
                     size="icon-xs"
                     :disabled="isReadOnly"
+                    :aria-label="t('ai.configuration')"
                   >
                     <!-- Icon/avatar only — name hidden. -->
                     <AppAvatar
@@ -1501,8 +1511,51 @@ const onToolMenuCloseAutoFocus = (event: Event) => {
                   </InputGroupButton>
                 </DropdownMenuTrigger>
               </TooltipTrigger>
-              <TooltipContent>{{ t("ai.agents.tooltip") }}</TooltipContent>
+              <TooltipContent>{{ t("ai.configuration") }}</TooltipContent>
               <DropdownMenuContent align="end">
+                <DropdownMenuGroup>
+                  <DropdownMenuSub>
+                    <DropdownMenuSubTrigger>
+                      {{ t("ai.permissions.label") }}
+                      <DropdownMenuShortcut class="tracking-normal">
+                        {{ t(`ai.permissions.${toolPermissionMode}.label`) }}
+                      </DropdownMenuShortcut>
+                    </DropdownMenuSubTrigger>
+                    <DropdownMenuSubContent class="w-80">
+                      <DropdownMenuRadioGroup
+                        :model-value="toolPermissionMode"
+                        @update:model-value="onToolPermissionModeChange"
+                      >
+                        <DropdownMenuGroup>
+                          <DropdownMenuLabel>
+                            {{ t("ai.permissions.scope") }}
+                          </DropdownMenuLabel>
+                          <DropdownMenuRadioItem
+                            v-for="permission in BOT_TOOL_PERMISSION_MODES"
+                            :key="permission"
+                            :value="permission"
+                            :disabled="isSending || isReadOnly"
+                          >
+                            <Item size="xs" class="p-0">
+                              <ItemContent>
+                                <ItemTitle>
+                                  {{ t(`ai.permissions.${permission}.label`) }}
+                                </ItemTitle>
+                                <ItemDescription>
+                                  {{
+                                    t(
+                                      `ai.permissions.${permission}.description`
+                                    )
+                                  }}
+                                </ItemDescription>
+                              </ItemContent>
+                            </Item>
+                          </DropdownMenuRadioItem>
+                        </DropdownMenuGroup>
+                      </DropdownMenuRadioGroup>
+                    </DropdownMenuSubContent>
+                  </DropdownMenuSub>
+                </DropdownMenuGroup>
                 <DropdownMenuSub v-if="showAgentsRow">
                   <DropdownMenuSubTrigger class="[&>svg:last-child]:ml-0">
                     {{ t("ai.agents.label") }}

@@ -2,9 +2,9 @@
 import type { PrimitiveProps } from "reka-ui"
 import type { HTMLAttributes } from "vue"
 import type { ButtonVariants } from "@/components/ui/button"
+import { cn } from "cn"
 import { Primitive } from "reka-ui"
 import { computed } from "vue"
-import { cn } from "@/lib/utils"
 import { buttonVariants } from "@/components/ui/button"
 import { injectQuestionnaireRootContext } from "./useQuestionnaire"
 

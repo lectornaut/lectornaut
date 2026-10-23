@@ -475,6 +475,9 @@ export type BotAgentModel = (typeof BOT_AGENT_MODELS)[number]
 export const BOT_CHAT_MODES = ["auto", "agent", "manual"] as const
 export type BotChatMode = (typeof BOT_CHAT_MODES)[number]
 
+export const BOT_TOOL_PERMISSION_MODES = ["ask", "automatic", "allow"] as const
+export type BotToolPermissionMode = (typeof BOT_TOOL_PERMISSION_MODES)[number]
+
 /**
  * Per-turn reasoning-effort levels the composer can request. A canonical
  * ordinal scale mapped per provider at dispatch (`buildTurnConfig`):

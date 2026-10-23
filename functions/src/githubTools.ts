@@ -442,6 +442,8 @@ const githubWriteOutputSchema = z.object({
 /** GitHub adapter over the generic confirm-gated write skeleton. */
 function runConfirmedGitHubWrite(opts: {
   ctx: ConnectionToolRunContext
+  toolName: string
+  input: unknown
   problems: string[]
   execute: (accessToken: string) => Promise<GitHubWriteResult>
   declineMessage: string
@@ -518,8 +520,8 @@ export const createGitHubIssueTool = ai.defineTool(
     name: GITHUB_WRITE_TOOL_NAMES[0],
     description:
       "Create a new issue in a repo on the user's connected GitHub. The " +
-      "user is shown the exact issue and must approve it before anything is " +
-      "filed. Use it to turn a bug report or task from the conversation into " +
+      "user's Permissions setting (Ask, Automatic, or Allow) governs approval " +
+      "before filing. Use it to turn a bug report or task from the conversation into " +
       "a tracked issue.",
     inputSchema: createIssueInputSchema,
     outputSchema: githubWriteOutputSchema,
@@ -528,6 +530,8 @@ export const createGitHubIssueTool = ai.defineTool(
     const draft = validateIssueDraft(input)
     return runConfirmedGitHubWrite({
       ctx,
+      toolName: "createGitHubIssue",
+      input,
       problems: draft.problems,
       declineMessage:
         "The user declined creating this issue. Don't file it; ask what " +
@@ -561,8 +565,8 @@ export const addGitHubCommentTool = ai.defineTool(
     name: GITHUB_WRITE_TOOL_NAMES[1],
     description:
       "Add a comment to an issue or pull request on the user's connected " +
-      "GitHub (PRs accept issue comments). The user approves the exact " +
-      "comment before it's posted.",
+      "GitHub (PRs accept issue comments). Permission is required before " +
+      "posting, according to the user's Permissions setting (Ask, Automatic, or Allow).",
     inputSchema: commentInputSchema,
     outputSchema: githubWriteOutputSchema,
   },
@@ -570,6 +574,8 @@ export const addGitHubCommentTool = ai.defineTool(
     const draft = validateCommentDraft(input)
     return runConfirmedGitHubWrite({
       ctx,
+      toolName: "addGitHubComment",
+      input,
       problems: draft.problems,
       declineMessage:
         "The user declined posting this comment. Don't post it; ask what " +
@@ -607,7 +613,8 @@ export const updateGitHubIssueTool = ai.defineTool(
     name: GITHUB_WRITE_TOOL_NAMES[2],
     description:
       "Update an existing issue on the user's connected GitHub — close or " +
-      "reopen it, or set its labels. The user approves the change first.",
+      "reopen it, or set its labels. Permission is required first, according " +
+      "to the user's Permissions setting (Ask, Automatic, or Allow).",
     inputSchema: updateIssueInputSchema,
     outputSchema: githubWriteOutputSchema,
   },
@@ -615,6 +622,8 @@ export const updateGitHubIssueTool = ai.defineTool(
     const draft = validateIssueUpdateDraft(input)
     return runConfirmedGitHubWrite({
       ctx,
+      toolName: "updateGitHubIssue",
+      input,
       problems: draft.problems,
       declineMessage:
         "The user declined this change. Don't apply it; ask what they'd " +

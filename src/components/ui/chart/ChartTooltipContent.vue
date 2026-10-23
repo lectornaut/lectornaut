@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import type { HTMLAttributes } from "vue"
 import type { ChartConfig } from "."
+import { cn } from "cn"
 import { computed } from "vue"
-import { cn } from "@/lib/utils"
 
 const props = withDefaults(
   defineProps<{
@@ -12,7 +12,7 @@ const props = withDefaults(
     nameKey?: string
     labelKey?: string
     labelFormatter?: (d: number | Date) => string
-    payload?: Record<string, string | number>
+    payload?: Record<string, unknown>
     config?: ChartConfig
     class?: HTMLAttributes["class"]
     color?: string
@@ -33,12 +33,23 @@ const payload = computed(() => {
     .map(([key, value]) => {
       // const key = `${props.nameKey || item.name || item.dataKey || "value"}`
       const itemConfig = props.config[key]
-      const indicatorColor = props.config[key]?.color ?? props.payload.fill
+      const fill = props.payload.fill
+      const indicatorColor =
+        props.config[key]?.color ??
+        (typeof fill === "string" ? fill : undefined)
 
       return { key, value, itemConfig, indicatorColor }
     })
     .filter((i) => i.itemConfig)
 })
+
+function formatValue(value: unknown): string {
+  return typeof value === "number" ||
+    typeof value === "string" ||
+    value instanceof Date
+    ? value.toLocaleString()
+    : String(value)
+}
 
 const nestLabel = computed(
   () => Object.keys(props.payload).length === 1 && props.indicator !== "dot"
@@ -120,7 +131,7 @@ const tooltipLabel = computed(() => {
               v-if="value"
               class="text-foreground font-mono font-medium tabular-nums"
             >
-              {{ value.toLocaleString() }}
+              {{ formatValue(value) }}
             </span>
           </div>
         </div>

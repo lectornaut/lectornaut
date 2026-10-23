@@ -18,12 +18,12 @@
 
 import { queryClient } from "@/modules/queryClient"
 import { FIRESTORE_QUERY_ROOT } from "@/utils/firebase/firebase-query-keys"
+import { createAsyncStoragePersister } from "@tanstack/query-async-storage-persister"
 import {
   persistQueryClientRestore,
   persistQueryClientSubscribe,
   type PersistedClient,
 } from "@tanstack/query-persist-client-core"
-import { createSyncStoragePersister } from "@tanstack/query-sync-storage-persister"
 import { dehydrate } from "@tanstack/vue-query"
 import { Timestamp } from "firebase/firestore"
 
@@ -39,7 +39,7 @@ const CACHE_BUSTER = "v2"
  * library's 1s default meant a full-cache serialize roughly every second while
  * snapshots stream. 5s keeps the persisted copy fresh enough for a cold-start
  * paint while cutting that work ~5x; the visibilitychange/pagehide flush below
- * covers the "user left mid-window" gap (the sync persister's trailing throttle
+ * covers the "user left mid-window" gap (the persister's trailing throttle
  * timer never fires once the page is gone).
  */
 const PERSIST_THROTTLE_MS = 5_000
@@ -116,7 +116,7 @@ export function reviveTimestamps(value: unknown): unknown {
   return value
 }
 
-const persister = createSyncStoragePersister({
+const persister = createAsyncStoragePersister({
   storage: typeof window !== "undefined" ? window.localStorage : undefined,
   key: STORAGE_KEY,
   throttleTime: PERSIST_THROTTLE_MS,
@@ -166,7 +166,7 @@ export const shouldDehydrateQuery = (query: DehydrateCandidate): boolean => {
 
 /**
  * Write the current dehydrated cache to storage NOW, bypassing the persister's
- * throttle. The installed `@tanstack/query-sync-storage-persister` exposes no
+ * throttle. The installed `@tanstack/query-async-storage-persister` exposes no
  * flush API — its throttle defers each save to a trailing timer that never
  * fires once the page is hidden/frozen or gone — so the lifecycle hooks in
  * `startQueryCachePersistence` dehydrate and write directly.

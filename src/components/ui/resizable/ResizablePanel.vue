@@ -6,6 +6,7 @@ const props = defineProps<SplitterPanelProps>()
 const emits = defineEmits<SplitterPanelEmits>()
 
 const forwarded = useForwardPropsEmits(props, emits)
+// Forward the panel's imperative API to parent template refs.
 const { forwardRef } = useForwardExpose()
 </script>
 

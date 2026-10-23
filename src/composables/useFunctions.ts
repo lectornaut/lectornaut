@@ -28,6 +28,7 @@ import type { IMembershipRole } from "@/types/membership"
 import type { WorkspaceNodeScope } from "@/types/nodes"
 import type { INotificationStatus } from "@/types/notification"
 import type {
+  BotToolPermissionMode,
   MemoryCategory,
   MemoryVisibility,
 } from "@lectornaut/shared/domain"
@@ -801,6 +802,7 @@ export interface SendBotMessageRequest {
    * omitted, so older clients that predate the mode selector still work.
    */
   mode?: BotChatMode
+  toolPermissionMode?: BotToolPermissionMode
   /**
    * Per-turn model override. Optional — server falls back to the team's
    * admin-configured default when omitted, and silently substitutes the
@@ -969,6 +971,7 @@ export interface RespondToBotInterruptRequest {
   /** Must conform to the interrupt tool's outputSchema. */
   response: unknown
   mode?: BotChatMode
+  toolPermissionMode?: BotToolPermissionMode
   /**
    * Per-turn model override. Same semantics as
    * `SendBotMessageRequest.model` — server falls back to the team

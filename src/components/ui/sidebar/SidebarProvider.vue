@@ -6,9 +6,9 @@ import {
   useMediaQuery,
   useVModel,
 } from "@vueuse/core"
+import { cn } from "cn"
 import { TooltipProvider } from "reka-ui"
 import { computed, ref } from "vue"
-import { cn } from "@/lib/utils"
 import {
   provideSidebarContext,
   SIDEBAR_COOKIE_MAX_AGE,

@@ -4,9 +4,26 @@
     "placeholder": "Ask, search, or chat...",
     "mode": "Mode",
     "model": "Model",
+    "configuration": "Chat configuration",
     "modeTooltip": "Select mode",
     "modelTooltip": "Select model",
     "effort": "Effort",
+    "permissions": {
+      "label": "Permissions",
+      "scope": "Tools requiring confirmation",
+      "ask": {
+        "label": "Ask",
+        "description": "Ask for permission before running."
+      },
+      "automatic": {
+        "label": "Automatic",
+        "description": "AI evaluates each call and grants or denies permission."
+      },
+      "allow": {
+        "label": "Allow",
+        "description": "Skip evaluation. Tools may make changes or send messages."
+      }
+    },
     "effortDefault": "Default",
     "effortDefaultDescription": "Let the provider pick its standard depth",
     "effortLow": "Low",
@@ -212,7 +229,7 @@
         "unconfirmed": "Not confirmed — the conversation moved on. Nothing was written.",
         "executing": "Applying your decision...",
         "written": "Added to your Google Calendar.",
-        "declined": "You declined this. Nothing was written.",
+        "declined": "Permission was declined. Nothing was written.",
         "failed": "Couldn't update your Google Calendar.",
         "openEvent": "Open in Google Calendar"
       },
@@ -230,7 +247,7 @@
         "unconfirmed": "Not confirmed - the conversation moved on. Nothing was written.",
         "executing": "Applying your decision...",
         "written": "Saved to your Google Drive.",
-        "declined": "You declined this. Nothing was written.",
+        "declined": "Permission was declined. Nothing was written.",
         "failed": "Couldn't write to your Google Drive.",
         "openFile": "Open in Google Drive"
       },
@@ -246,7 +263,7 @@
         "unconfirmed": "Not confirmed - the conversation moved on. Nothing was written.",
         "executing": "Applying your decision...",
         "written": "Done on GitHub.",
-        "declined": "You declined this. Nothing was written.",
+        "declined": "Permission was declined. Nothing was written.",
         "failed": "Couldn't complete the GitHub action.",
         "openItem": "Open on GitHub"
       },
@@ -263,7 +280,7 @@
         "unconfirmed": "Not confirmed - the conversation moved on. Nothing was sent.",
         "executing": "Applying your decision...",
         "written": "Email sent.",
-        "declined": "You declined this. Nothing was sent.",
+        "declined": "Permission was declined. Nothing was sent.",
         "failed": "Couldn't send the email.",
         "openItem": "Open in Gmail"
       },

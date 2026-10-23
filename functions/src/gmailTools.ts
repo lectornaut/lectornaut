@@ -630,10 +630,10 @@ export const sendGmailMessageTool = ai.defineTool(
       "to (recipients) and body; subject is required for new mail. To " +
       "reply within an existing conversation, pass replyToMessageId from a " +
       "googleGmail search — threading and the 'Re:' subject are handled " +
-      "automatically. Plain text only; attachments can't be sent. The user " +
-      "is shown the exact email and must approve it before anything is " +
-      "sent — calling this tool only PROPOSES it. Do not call it again " +
-      "after the user declines unless they ask you to.",
+      "automatically. Plain text only; attachments can't be sent. " +
+      "Permission is required before sending, according to the user's " +
+      "Permissions setting (Ask, Automatic, or Allow). Do not call it again " +
+      "after permission is declined unless they ask you to.",
     inputSchema: sendGmailMessageInputSchema,
     outputSchema: sendGmailMessageOutputSchema,
   },
@@ -641,6 +641,8 @@ export const sendGmailMessageTool = ai.defineTool(
     const validation = validateGmailSendDraft(input)
     return runConfirmedConnectionWrite<GmailSendResult>({
       ctx,
+      toolName: "sendGmailMessage",
+      input,
       provider: "google-gmail",
       copy: GMAIL_COPY,
       requiredScope: GOOGLE_GMAIL_SEND_SCOPE,
