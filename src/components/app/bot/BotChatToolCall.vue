@@ -25,8 +25,8 @@
  *      through the generic fallback view.
  *
  *   3. Running (`output === undefined`, no interrupt):
- *      A normal tool is executing on the server. Shows a spinner +
- *      brief waiting message in the body. In practice this state is
+ *      A normal tool is executing on the server. The trace title shimmers
+ *      above a brief waiting message in the body. In practice this state is
  *      brief — execution is fast.
  *
  *   4. Done with a dedicated renderer (`output` set, `tool.name`
@@ -45,8 +45,9 @@
  *      the UI catches up.
  *
  * The result body is collapsible so a chat with several tool calls
- * doesn't dominate the message column. Default state: open while
- * running / awaiting input; collapsed once complete. Result content
+ * doesn't dominate the message column. Default state: collapsed while
+ * running; open only for a live interrupt awaiting user input, and
+ * collapsed once complete. Result content
  * stays inline beneath its trace row rather than adding another
  * card surface inside the chat bubble.
  *
@@ -60,15 +61,14 @@ import {
   BotChatContextKey,
   type BotChatToolCall,
 } from "@/composables/useBotChat"
-import { botToolLabel } from "@/data/botTools"
+import { botToolIcon, botToolLabel } from "@/data/botTools"
 import {
-  IconBotMessageSquare,
+  IconAsterisk,
   IconCheck,
   IconCircleHelp,
   IconDices,
   IconFileText,
   IconFolder,
-  IconLoader2,
   IconSearch,
   IconTriangleAlert,
 } from "@/data/icons"
@@ -154,30 +154,14 @@ const isAbandonedInterrupt = computed(
   () => isInterrupt.value && !isConversationTail.value
 )
 
-// Open while the card is actively doing something the user must watch: a
-// LIVE interrupt's choice form or a running spinner. Everything else opens
-// collapsed — a finished result, an error, or an ABANDONED interrupt (the
-// user moved on) is a quiet historical card. Derived, NOT hardcoded `true`:
-// cards restored from history must start collapsed (the watcher only fires on
-// a live *transition*, since Vue's `watch` isn't immediate). The watcher then
-// collapses the card the moment it leaves the active state — a result lands,
-// or the interrupt is superseded by a new message. The user can override
-// either way by clicking the trigger.
-const open = ref(isRunning.value || isLiveInterrupt.value)
-watch(
-  () => isRunning.value || isLiveInterrupt.value,
-  (active) => {
-    // Symmetric: collapse when the card goes quiet (result landed /
-    // interrupt superseded), AND re-expand when it becomes active again.
-    // The re-expand matters for the rollback path — when a failed
-    // respondToInterrupt restores `isInterrupt = true` (false→true), the
-    // Approve/Cancel form must reappear rather than stay hidden behind the
-    // collapsed row the optimistic flip closed. History cards still mount
-    // collapsed: the watcher is non-immediate, so it only fires on a live
-    // transition, never on initial mount.
-    open.value = active
-  }
-)
+// Only live interrupts need attention. Ordinary running tools and historical
+// cards start collapsed; the trigger still lets the user inspect them.
+const open = ref(isLiveInterrupt.value)
+watch([isLiveInterrupt, isRunning], ([liveInterrupt]) => {
+  // Close on completion or supersession, and reopen if a failed response
+  // restores the interrupt. Watch both states so running -> interrupt opens.
+  open.value = liveInterrupt
+})
 
 // ── askQuestion-specific input shape ───────────────────────────────────────
 //
@@ -1254,8 +1238,8 @@ const status = computed<ToolStatus>(() => {
 // Icon + tooltip per status, as an exhaustive record:
 // TypeScript flags a missing key the moment a `ToolStatus` is added, and a
 // single lookup keeps ESLint's return-in-computed rule satisfied (a `switch`
-// without a `default` trips it even when every case returns). `running` maps
-// to a null icon because the trace item renders its own spinner.
+// without a `default` trips it even when every case returns). A null icon
+// uses the tool's catalog icon; running is conveyed by the title's shimmer.
 const STATUS_BADGES: Record<
   ToolStatus,
   { icon: Component | null; tooltipKey: string }
@@ -1266,12 +1250,15 @@ const STATUS_BADGES: Record<
     tooltipKey: "ai.toolCall.unanswered",
   },
   running: { icon: null, tooltipKey: "ai.toolCall.running" },
-  resolved: { icon: IconBotMessageSquare, tooltipKey: "ai.toolCall.answered" },
+  resolved: { icon: null, tooltipKey: "ai.toolCall.answered" },
   error: { icon: IconTriangleAlert, tooltipKey: "ai.toolCall.failed" },
-  done: { icon: IconCheck, tooltipKey: "ai.toolCall.done" },
+  done: { icon: null, tooltipKey: "ai.toolCall.done" },
 }
 
 const statusBadge = computed(() => STATUS_BADGES[status.value])
+const traceIcon = computed(
+  () => statusBadge.value.icon ?? botToolIcon(props.tool.name) ?? IconAsterisk
+)
 
 const traceStatus = computed<"pending" | "running" | "error" | undefined>(
   () => {
@@ -1285,29 +1272,11 @@ const traceStatus = computed<"pending" | "running" | "error" | undefined>(
 
 <template>
   <Trace>
-    <TraceCollapsible
-      v-model:open="open"
-      class="before:bg-border relative grid gap-2 pl-5 before:absolute before:top-3 before:bottom-0 before:left-[7px] before:w-px"
-    >
+    <TraceCollapsible v-model:open="open">
       <TraceCollapsibleTrigger>
         <TraceLine :status="traceStatus">
-          <TraceIcon
-            :title="t(statusBadge.tooltipKey)"
-            class="bg-background -ml-5"
-          >
-            <IconLoader2
-              v-if="status === 'running'"
-              class="text-muted-foreground size-3 animate-spin"
-            />
-            <Component
-              :is="statusBadge.icon"
-              v-else-if="statusBadge.icon"
-              :class="[
-                'size-3',
-                status === 'error' && 'text-destructive',
-                status !== 'error' && 'text-muted-foreground',
-              ]"
-            />
+          <TraceIcon :title="t(statusBadge.tooltipKey)">
+            <Component :is="traceIcon" />
           </TraceIcon>
           <TraceTitle>{{ displayName }}</TraceTitle>
           <span class="sr-only">{{ t(statusBadge.tooltipKey) }}</span>

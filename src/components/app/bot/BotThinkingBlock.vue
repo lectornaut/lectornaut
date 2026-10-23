@@ -38,13 +38,10 @@ const reasoning = computed(() => props.node?.content ?? "")
 
 <template>
   <Trace class="bot-thinking-block">
-    <TraceCollapsible
-      v-model:open="open"
-      class="before:bg-border relative grid gap-2 pl-5 before:absolute before:top-3 before:bottom-0 before:left-[7px] before:w-px"
-    >
+    <TraceCollapsible v-model:open="open">
       <TraceCollapsibleTrigger>
         <TraceLine>
-          <TraceIcon class="bg-background -ml-5">
+          <TraceIcon>
             <IconBrain />
           </TraceIcon>
           <TraceTitle>{{ t("ai.reasoning") }}</TraceTitle>

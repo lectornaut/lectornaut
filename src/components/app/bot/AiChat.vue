@@ -449,7 +449,7 @@ const renderedMessages = computed(() =>
                     >
                       <BubbleContent
                         :class="[
-                          'markdown-bubble flex flex-col',
+                          'markdown-bubble flex flex-col gap-2',
                           message.role === 'agent' &&
                             message.status !== 'error' &&
                             'w-full',
