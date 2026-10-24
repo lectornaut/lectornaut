@@ -10,9 +10,10 @@
  *
  * The capabilities an app contributes are ordinary docs in the unified
  * integrations collection with the reserved `source: "published"` and
- * `id == sourceKey` — written here on install, archived on uninstall, and
+ * `id == sourceKey` — agents/tools written here on install, archived on uninstall, and
  * from there they flow through every existing pipe (listDispatchable →
- * enabledBuiltInTools → pickChatTools; SettingsTools' enable axis).
+ * enabledBuiltInTools → pickChatTools; SettingsTools' enable axis). Workflow
+ * templates use the existing team availability + workspace deployment model.
  *
  * OAuth flow: the client runs an authorization-code popup (web: redirect to
  * the `/connections/callback` SPA route; desktop: system-browser loopback)
@@ -24,10 +25,21 @@
  * `needs_reauth` (reconnect heals it).
  */
 
+import {
+  CONNECTION_RESOURCES,
+  getConnectionResourceProvider,
+  isConnectionOwned,
+} from "@lectornaut/shared/connectionResources"
 import { FieldValue } from "firebase-admin/firestore"
 import * as logger from "firebase-functions/logger"
 import { HttpsError } from "firebase-functions/v2/https"
+import { AsyncLocalStorage } from "node:async_hooks"
 import { z } from "zod"
+import {
+  connectionIntegrationDefinitions,
+  connectionResourcePatch,
+} from "./connectionResourcesCore.js"
+import { getCatalogEntry } from "./integrationCatalog.js"
 // Call-time-only use (lifecycle audit entries) — the direct audit ↔
 // connections module cycle is init-safe: both edges are hoisted function
 // declarations touched only inside handlers, same class as audit.ts's
@@ -50,6 +62,7 @@ import { defineCallable } from "./defineCallable.js"
 import { CONNECTION_PROVIDERS, type ConnectionProvider } from "./domain.js"
 import { db } from "./firebase.js"
 import {
+  MAX_ACTIVE_PER_TYPE,
   integrationDocPath,
   invalidateIntegrationsCache,
 } from "./integrations.js"
@@ -243,52 +256,165 @@ export const installConnection = defineCallable({
     const spec = getConnectionProviderSpec(provider)
 
     const connRef = db.doc(connectionDocPath(teamId, provider))
-    const toolRefs = spec.tools.map((tool) =>
-      db.doc(integrationDocPath(teamId, tool.sourceKey))
+    const definitions = connectionIntegrationDefinitions(spec)
+    const keys = definitions.map((r) => r.sourceKey)
+    const workflowKeys = spec.workflows.map((w) => w.key)
+    const allKeys = Object.values(CONNECTION_RESOURCES).flatMap((resources) => [
+      ...connectionIntegrationDefinitions(resources).map((r) => r.sourceKey),
+      ...resources.workflows.map((w) => w.key),
+    ])
+    const shadowsCatalog = [...keys, ...workflowKeys].some((key) =>
+      (["agent", "tool", "workflow"] as const).some((type) =>
+        getCatalogEntry(type, key)
+      )
+    )
+    if (
+      new Set(allKeys).size !== allKeys.length ||
+      shadowsCatalog ||
+      definitions.some(
+        (r) =>
+          !/^[a-zA-Z0-9_-]+$/.test(r.sourceKey) ||
+          (r.type === "agent" && r.sourceKey.startsWith("_"))
+      ) ||
+      workflowKeys.some((key) => !/^[a-zA-Z0-9_-]+$/.test(key))
+    ) {
+      throw new HttpsError(
+        "failed-precondition",
+        "Connection resources contain duplicate, invalid or built-in keys."
+      )
+    }
+    const resourceRefs = definitions.map((r) =>
+      db.doc(integrationDocPath(teamId, r.sourceKey))
+    )
+    const availabilityRefs = workflowKeys.map((key) =>
+      db.doc(`teams/${teamId}/availableWorkflows/${key}`)
     )
     await db.runTransaction(async (tx) => {
-      const [connSnap, ...toolSnaps] = await tx.getAll(connRef, ...toolRefs)
+      const [connSnap, ...resourceSnaps] = await tx.getAll(
+        connRef,
+        ...resourceRefs,
+        ...availabilityRefs
+      )
+      if ((connSnap.data()?.installedRevision ?? 0) > spec.revision) {
+        throw new HttpsError(
+          "failed-precondition",
+          "A newer app revision is already installed. Reload and try again."
+        )
+      }
+      const [existingIntegrations, availability, deployments] =
+        await Promise.all([
+          tx.get(db.collection(`teams/${teamId}/integrations`)),
+          tx.get(db.collection(`teams/${teamId}/availableWorkflows`)),
+          tx.get(db.collectionGroup("workflows").where("teamId", "==", teamId)),
+        ])
+      const patches = definitions.map((definition, index) => {
+        try {
+          return connectionResourcePatch(
+            provider,
+            definition,
+            resourceSnaps[index]?.data()
+          )
+        } catch (error) {
+          throw new HttpsError(
+            "already-exists",
+            error instanceof Error
+              ? error.message
+              : "Connection resource collision."
+          )
+        }
+      })
+      for (const type of ["agent", "tool"] as const) {
+        const unrelatedActive = existingIntegrations.docs.filter(
+          (doc) =>
+            doc.data().type === type &&
+            !doc.data().archivedAt &&
+            !isConnectionOwned(doc.data(), provider)
+        ).length
+        if (
+          unrelatedActive + definitions.filter((r) => r.type === type).length >
+          MAX_ACTIVE_PER_TYPE[type]
+        ) {
+          throw new HttpsError(
+            "resource-exhausted",
+            `Too many active ${type} integrations.`
+          )
+        }
+      }
+      for (let index = 0; index < spec.workflows.length; index++) {
+        const existing = resourceSnaps[definitions.length + index]?.data()
+        if (existing && !isConnectionOwned(existing, provider)) {
+          throw new HttpsError(
+            "already-exists",
+            "Workflow availability belongs to another source."
+          )
+        }
+      }
       const now = FieldValue.serverTimestamp()
       tx.set(
         connRef,
         {
           provider,
-          status: "active",
-          installedByUid: auth.uid,
+          status: connSnap.data()?.status ?? "active",
+          installedByUid: connSnap.data()?.installedByUid ?? auth.uid,
           scopes: spec.scopes,
+          installedRevision: spec.revision,
           updatedAt: now,
           ...(connSnap.exists ? {} : { createdAt: now }),
         },
         { merge: true }
       )
-      spec.tools.forEach((tool, index) => {
-        const snap = toolSnaps[index]
-        if (snap?.exists) {
-          // Reinstall: un-archive + re-enable the published doc.
-          tx.set(
-            snap.ref,
-            { archivedAt: null, enabled: true, updatedAt: now },
-            { merge: true }
-          )
-          return
-        }
-        // First install: materialize the published integration doc. Unlike
-        // built-ins there is no virtual overlay row — doc-backed means opt-in.
-        tx.set(toolRefs[index]!, {
-          type: "tool",
-          source: "published",
-          sourceKey: tool.sourceKey,
-          name: tool.name,
-          description: tool.description,
-          avatarSeed: tool.avatarSeed,
-          spec: null,
-          enabled: true,
-          archivedAt: null,
-          createdAt: now,
-          updatedAt: now,
-          createdByUid: auth.uid,
-        })
+      patches.forEach((patch, index) => {
+        tx.set(
+          resourceRefs[index]!,
+          {
+            ...patch,
+            updatedAt: now,
+            ...(resourceSnaps[index]?.exists
+              ? {}
+              : { createdAt: now, createdByUid: auth.uid }),
+          },
+          { merge: true }
+        )
       })
+      spec.workflows.forEach((workflow, index) => {
+        tx.set(
+          availabilityRefs[index]!,
+          {
+            presetKey: workflow.key,
+            source: "published",
+            connectionProvider: provider,
+            addedByUid: auth.uid,
+            addedAt: now,
+          },
+          { merge: true }
+        )
+      })
+      for (const doc of existingIntegrations.docs) {
+        if (isConnectionOwned(doc.data(), provider) && !keys.includes(doc.id)) {
+          tx.update(doc.ref, { archivedAt: now, updatedAt: now })
+        }
+      }
+      for (const doc of availability.docs) {
+        if (
+          isConnectionOwned(doc.data(), provider) &&
+          !workflowKeys.includes(doc.id)
+        )
+          tx.delete(doc.ref)
+      }
+      for (const doc of deployments.docs) {
+        const data = doc.data()
+        if (
+          data.connectionProvider === provider &&
+          !workflowKeys.includes(data.presetKey)
+        ) {
+          tx.update(doc.ref, {
+            archivedAt: now,
+            enabled: false,
+            updatedAt: now,
+            nextRunAt: FieldValue.delete(),
+          })
+        }
+      }
       // Audited atomically with the install (covers reinstall too — that's
       // still an availability change worth a trail).
       await logEvent(
@@ -304,7 +430,10 @@ export const installConnection = defineCallable({
           context: buildContext(request),
           changes: {
             fields: ["status", "scopes"],
-            after: { status: "active", scopes: spec.scopes },
+            after: {
+              status: connSnap.data()?.status ?? "active",
+              scopes: spec.scopes,
+            },
           },
         },
         { transaction: tx }
@@ -350,26 +479,48 @@ export const uninstallConnection = defineCallable({
     const bindingsSnap = await db
       .collection(`${connectionDocPath(teamId, provider)}/bindings`)
       .get()
-    const batch = db.batch()
-    for (const doc of secretsSnap.docs) batch.delete(doc.ref)
-    for (const doc of bindingsSnap.docs) batch.delete(doc.ref)
-    batch.delete(connRef)
-    const now = FieldValue.serverTimestamp()
-    for (const tool of spec.tools) {
-      // Archive (not delete): archived tools don't dispatch, and reinstall
-      // un-archives — the same soft lifecycle every integration follows.
-      batch.set(
-        db.doc(integrationDocPath(teamId, tool.sourceKey)),
-        { archivedAt: now, updatedAt: now },
-        { merge: true }
-      )
-    }
-    await batch.commit()
+    await db.runTransaction(async (tx) => {
+      // Read the registration too so a concurrent refresh/install retries rather
+      // than leaving newly-contributed resources behind an uninstalled app.
+      await tx.get(connRef)
+      const [integrations, availability, deployments, secrets, bindings] =
+        await Promise.all([
+          tx.get(db.collection(`teams/${teamId}/integrations`)),
+          tx.get(db.collection(`teams/${teamId}/availableWorkflows`)),
+          tx.get(db.collectionGroup("workflows").where("teamId", "==", teamId)),
+          tx.get(
+            db.collection(
+              `${connectionDocPath(teamId, provider)}/bindingSecrets`
+            )
+          ),
+          tx.get(
+            db.collection(`${connectionDocPath(teamId, provider)}/bindings`)
+          ),
+        ])
+      for (const doc of secrets.docs) tx.delete(doc.ref)
+      for (const doc of bindings.docs) tx.delete(doc.ref)
+      tx.delete(connRef)
+      const now = FieldValue.serverTimestamp()
+      for (const doc of integrations.docs) {
+        if (isConnectionOwned(doc.data(), provider))
+          tx.update(doc.ref, { archivedAt: now, updatedAt: now })
+      }
+      for (const doc of availability.docs) {
+        if (isConnectionOwned(doc.data(), provider)) tx.delete(doc.ref)
+      }
+      for (const doc of deployments.docs) {
+        if (doc.data().connectionProvider === provider) {
+          tx.update(doc.ref, {
+            archivedAt: now,
+            enabled: false,
+            updatedAt: now,
+            nextRunAt: FieldValue.delete(),
+          })
+        }
+      }
+    })
     invalidateIntegrationsCache(teamId)
-    // Post-commit, like the other multi-write deletions (deleteWorkspace):
-    // the batch can't carry the log atomically, and auditing a SUCCEEDED
-    // uninstall matters more than failing it over a log write. `bindings`
-    // records how many member grants the uninstall revoked.
+    // Post-commit audit also records how many member grants were revoked.
     await logEvent({
       teamId,
       actor: { userId: auth.uid, email: auth.token.email ?? undefined, role },
@@ -590,31 +741,38 @@ export const completeConnectionBinding = defineCallable({
     }
 
     const now = FieldValue.serverTimestamp()
-    const batch = db.batch()
-    batch.set(secretRef, {
-      refreshToken,
-      accessToken: result.parsed.accessToken,
-      // Non-expiring providers store the far-future sentinel, so the token is
-      // served directly and never routed into a refresh path it can't use.
-      accessTokenExpiresAtMs: result.parsed.expiresAtMs,
-      // Granted scopes ride on the secret doc too (not just the
-      // member-visible binding doc) so `resolveBindingAccessToken` can hand
-      // write tools the grant without a second read.
-      scopes: result.parsed.scopes,
-      updatedAt: now,
-    })
-    batch.set(
-      db.doc(bindingDocPath(teamId, provider, auth.uid)),
-      {
-        status: "connected",
-        ...(email ? { email } : {}),
+    await db.runTransaction(async (tx) => {
+      const current = await tx.get(db.doc(connectionDocPath(teamId, provider)))
+      if (!current.exists || isConnectionDisabled(current.data())) {
+        throw new HttpsError(
+          "failed-precondition",
+          `${spec.name} was removed or disabled during authorization. Install or enable it under Settings → Connections and try again.`
+        )
+      }
+      tx.set(secretRef, {
+        refreshToken,
+        accessToken: result.parsed.accessToken,
+        // Non-expiring providers store the far-future sentinel, so the token is
+        // served directly and never routed into a refresh path it can't use.
+        accessTokenExpiresAtMs: result.parsed.expiresAtMs,
+        // Granted scopes ride on the secret doc too (not just the
+        // member-visible binding doc) so `resolveBindingAccessToken` can hand
+        // write tools the grant without a second read.
         scopes: result.parsed.scopes,
         updatedAt: now,
-        ...(existingSecret ? {} : { connectedAt: now }),
-      },
-      { merge: true }
-    )
-    await batch.commit()
+      })
+      tx.set(
+        db.doc(bindingDocPath(teamId, provider, auth.uid)),
+        {
+          status: "connected",
+          ...(email ? { email } : {}),
+          scopes: result.parsed.scopes,
+          updatedAt: now,
+          ...(existingSecret ? {} : { connectedAt: now }),
+        },
+        { merge: true }
+      )
+    })
     // Post-commit: an OAuth grant entering the system is the credential
     // event an audit trail is for. Reconnects/re-consents land here too —
     // each is a fresh grant. `after` mirrors the binding doc (email +
@@ -712,15 +870,28 @@ async function revokeAndDeleteBinding(
 export async function markBindingNeedsReauth(
   teamId: string,
   provider: ConnectionProvider,
-  uid: string
+  uid: string,
+  expected?: { accessToken?: string; refreshToken?: string }
 ): Promise<void> {
   try {
-    await db
-      .doc(bindingDocPath(teamId, provider, uid))
-      .set(
-        { status: "needs_reauth", updatedAt: FieldValue.serverTimestamp() },
-        { merge: true }
+    await db.runTransaction(async (tx) => {
+      const binding = db.doc(bindingDocPath(teamId, provider, uid))
+      const [snap, secret] = await tx.getAll(
+        binding,
+        db.doc(bindingSecretDocPath(teamId, provider, uid))
       )
+      if (
+        snap.exists &&
+        (expected?.accessToken === undefined ||
+          secret.data()?.accessToken === expected.accessToken) &&
+        (expected?.refreshToken === undefined ||
+          secret.data()?.refreshToken === expected.refreshToken)
+      )
+        tx.update(binding, {
+          status: "needs_reauth",
+          updatedAt: FieldValue.serverTimestamp(),
+        })
+    })
   } catch (error) {
     logger.warn("[connections] needs_reauth flag write failed", error)
   }
@@ -781,7 +952,12 @@ export type BindingTokenResult =
   | {
       ok: false
       reason:
-        "not_connected" | "needs_reauth" | "config" | "transient" | "disabled"
+        | "not_installed"
+        | "not_connected"
+        | "needs_reauth"
+        | "config"
+        | "transient"
+        | "disabled"
     }
 
 /**
@@ -803,27 +979,53 @@ export async function resolveBindingAccessToken(
   provider: ConnectionProvider,
   uid: string | undefined
 ): Promise<BindingTokenResult> {
+  const result = await resolveBindingAccessTokenUnrecorded(
+    teamId,
+    provider,
+    uid
+  )
+  // Inside runWithConnectionToolErrors: remember a dependency failure so the
+  // turn can't end as a success. Transient blips stay narratable (retryable).
+  const failures = connectionFailures.getStore()
+  if (failures && !result.ok && result.reason !== "transient") {
+    failures.message ??= connectionUnavailableMessage(provider, result.reason)
+  }
+  return result
+}
+
+async function resolveBindingAccessTokenUnrecorded(
+  teamId: string,
+  provider: ConnectionProvider,
+  uid: string | undefined
+): Promise<BindingTokenResult> {
   if (!uid) return { ok: false, reason: "not_connected" }
 
   const connRef = db.doc(connectionDocPath(teamId, provider))
   const secretRef = db.doc(bindingSecretDocPath(teamId, provider, uid))
-  let connSnap, secretSnap
+  const bindingRef = db.doc(bindingDocPath(teamId, provider, uid))
+  let connSnap, secretSnap, bindingSnap
   try {
-    ;[connSnap, secretSnap] = await Promise.all([
+    ;[connSnap, secretSnap, bindingSnap] = await Promise.all([
       connRef.get(),
       secretRef.get(),
+      bindingRef.get(),
     ])
   } catch (error) {
     logger.warn("[connections] binding secret read failed", error)
     return { ok: false, reason: "transient" }
   }
+  if (!connSnap.exists) return { ok: false, reason: "not_installed" }
   // Disabled outranks every other state: a missing binding on a disabled app
   // must say "disabled", not steer the user into a Connect that the server
   // would reject anyway.
   if (isConnectionDisabled(connSnap.data())) {
     return { ok: false, reason: "disabled" }
   }
-  if (!secretSnap.exists) return { ok: false, reason: "not_connected" }
+  if (!secretSnap.exists || !bindingSnap.exists)
+    return { ok: false, reason: "not_connected" }
+  // A flagged binding skips the cached token and retries the refresh below:
+  // a successful refresh heals it, `invalid_grant` keeps it flagged.
+  const flagged = bindingSnap.data()?.status !== "connected"
   const secret = secretSnap.data() ?? {}
   const accessToken =
     typeof secret.accessToken === "string" ? secret.accessToken : null
@@ -839,11 +1041,15 @@ export async function resolveBindingAccessToken(
       )
     : []
 
-  if (accessToken && !shouldRefreshAccessToken(expiresAtMs, Date.now())) {
+  if (
+    !flagged &&
+    accessToken &&
+    !shouldRefreshAccessToken(expiresAtMs, Date.now())
+  ) {
     return { ok: true, accessToken, grantedScopes: storedScopes }
   }
-  // Non-expiring providers (GitHub) never reach here: their token is served
-  // above. Reaching it without a refresh token means a dead grant.
+  // Non-expiring providers (GitHub) only reach here when flagged: with no
+  // refresh token, that (like any missing refresh token) is a dead grant.
   if (!refreshToken) return { ok: false, reason: "needs_reauth" }
 
   const spec = getConnectionProviderSpec(provider)
@@ -856,19 +1062,11 @@ export async function resolveBindingAccessToken(
     client_id: config.clientId,
     client_secret: config.clientSecret,
   })
-  const bindingRef = db.doc(bindingDocPath(teamId, provider, uid))
   if (!result.ok) {
     if (result.kind === "invalid_grant") {
       // The grant is dead — surface it in Settings and to the model. Best-
       // effort write: the tool's narratable failure matters more than the flag.
-      try {
-        await bindingRef.set(
-          { status: "needs_reauth", updatedAt: FieldValue.serverTimestamp() },
-          { merge: true }
-        )
-      } catch (error) {
-        logger.warn("[connections] needs_reauth flag write failed", error)
-      }
+      await markBindingNeedsReauth(teamId, provider, uid, { refreshToken })
       return { ok: false, reason: "needs_reauth" }
     }
     return { ok: false, reason: "transient" }
@@ -879,8 +1077,33 @@ export async function resolveBindingAccessToken(
   const refreshedScopes =
     result.parsed.scopes.length > 0 ? result.parsed.scopes : storedScopes
   try {
-    await secretRef.set(
-      {
+    const revoked = await db.runTransaction(async (tx) => {
+      const [connection, binding, currentSecret] = await tx.getAll(
+        connRef,
+        bindingRef,
+        secretRef
+      )
+      // Uninstalled / disabled / disconnected mid-refresh: don't hand out
+      // the token we just minted.
+      if (!connection.exists) return "not_installed" as const
+      if (isConnectionDisabled(connection.data())) return "disabled" as const
+      if (!binding.exists || !currentSecret.exists)
+        return "not_connected" as const
+      // A concurrent refresh (or reconnect) already replaced the secret. Our
+      // token is still valid for this call; just don't clobber theirs.
+      if (
+        currentSecret.data()?.refreshToken !== refreshToken ||
+        currentSecret.data()?.accessToken !== secret.accessToken
+      )
+        return null
+      if (binding.data()?.status !== "connected") {
+        // A refresh that succeeds after a needs_reauth flag heals the binding.
+        tx.update(bindingRef, {
+          status: "connected",
+          updatedAt: FieldValue.serverTimestamp(),
+        })
+      }
+      tx.update(secretRef, {
         accessToken: result.parsed.accessToken,
         accessTokenExpiresAtMs: result.parsed.expiresAtMs,
         // Google occasionally rotates the refresh token on refresh.
@@ -889,14 +1112,10 @@ export async function resolveBindingAccessToken(
           : {}),
         ...(result.parsed.scopes.length > 0 ? { scopes: refreshedScopes } : {}),
         updatedAt: FieldValue.serverTimestamp(),
-      },
-      { merge: true }
-    )
-    // A refresh that succeeds after a needs_reauth flag heals the binding.
-    await bindingRef.set(
-      { status: "connected", updatedAt: FieldValue.serverTimestamp() },
-      { merge: true }
-    )
+      })
+      return null
+    })
+    if (revoked) return { ok: false, reason: revoked }
   } catch (error) {
     // Persisting the refreshed token is an optimization — the token itself
     // is still valid for this call.
@@ -907,4 +1126,81 @@ export async function resolveBindingAccessToken(
     accessToken: result.parsed.accessToken,
     grantedScopes: refreshedScopes,
   }
+}
+
+/** Live execution gate, distinct from resource discovery and cached dispatch. */
+export async function assertConnectionAvailable(
+  teamId: string,
+  provider: ConnectionProvider,
+  uid: string | undefined
+): Promise<void> {
+  const result = await resolveBindingAccessToken(teamId, provider, uid)
+  if (result.ok) return
+  throw new HttpsError(
+    "failed-precondition",
+    connectionUnavailableMessage(provider, result.reason)
+  )
+}
+
+function connectionUnavailableMessage(
+  provider: ConnectionProvider,
+  reason: (BindingTokenResult & { ok: false })["reason"]
+): string {
+  const name = getConnectionProviderSpec(provider).name
+  const action =
+    reason === "not_installed"
+      ? "Ask a team owner or admin to install it under Settings → Connections."
+      : reason === "disabled"
+        ? "Ask a team owner or admin to enable it under Settings → Connections."
+        : reason === "config"
+          ? "Ask an administrator to configure its server OAuth client."
+          : reason === "transient"
+            ? "Try again shortly."
+            : "Connect or reconnect the acting member's account under Settings → Connections. For workflows, also configure Runs with connected accounts."
+  return `${name} is unavailable (${reason}). ${action}`
+}
+
+export async function assertConnectionAgentAvailable(
+  teamId: string,
+  agentId: string,
+  uid: string | undefined
+): Promise<void> {
+  const provider = getConnectionResourceProvider("agent", agentId)
+  const resource = (
+    await db.doc(integrationDocPath(teamId, agentId)).get()
+  ).data()
+  if (
+    !provider ||
+    !resource ||
+    !isConnectionOwned(resource, provider) ||
+    resource.archivedAt ||
+    resource.enabled === false
+  ) {
+    throw new HttpsError(
+      "failed-precondition",
+      "This connection-provided agent is unavailable. Check its connection and resource settings under Settings → Connections."
+    )
+  }
+  await assertConnectionAvailable(teamId, provider, uid)
+}
+
+/** Dependency failures recorded by resolveBindingAccessToken during a turn. */
+const connectionFailures = new AsyncLocalStorage<{ message?: string }>()
+
+/**
+ * Keep structured tool errors for the model, but never accept a successful
+ * turn that ran into a missing/disabled/disconnected connection. Ordinary
+ * tool failures (a 404, a binary file) stay recoverable model input.
+ */
+export async function runWithConnectionToolErrors<T>(
+  run: () => Promise<T>,
+  onFailure?: (message: string) => Promise<void>
+): Promise<T> {
+  const failures: { message?: string } = {}
+  const result = await connectionFailures.run(failures, run)
+  if (failures.message) {
+    await onFailure?.(failures.message)
+    throw new HttpsError("failed-precondition", failures.message)
+  }
+  return result
 }

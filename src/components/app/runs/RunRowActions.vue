@@ -1,12 +1,6 @@
 <script lang="ts" setup>
 import { useTeamWorkflows } from "@/composables/useTeamWorkflows"
-import {
-  IconCheck,
-  IconEllipsis,
-  IconRepeat,
-  IconTrash2,
-  IconX,
-} from "@/data/icons"
+import { IconCheck, IconRepeat, IconTrash2, IconX } from "@/data/icons"
 import type { IWorkflowRun } from "@/types/domain"
 import { computed, ref } from "vue"
 
@@ -53,19 +47,12 @@ const onDelete = (): Promise<void> => wrap(() => removeRun(props.run.id))
         <DropdownMenu>
           <TooltipTrigger as-child>
             <DropdownMenuTrigger as-child>
-              <Button
-                variant="ghost"
-                size="icon-xs"
-                class="data-[state=open]:bg-accent"
-                :disabled="!canManage"
+              <DataTableRowActionsButton
+                :disabled="!canManage || busy"
+                :loading="busy"
+                :label="t('settings.workflows.actions')"
                 :title="t('actions.moreOptions')"
-                @click.stop
-              >
-                <IconEllipsis />
-                <span class="sr-only">{{
-                  t("settings.workflows.actions")
-                }}</span>
-              </Button>
+              />
             </DropdownMenuTrigger>
           </TooltipTrigger>
           <TooltipContent>{{ t("actions.moreOptions") }}</TooltipContent>

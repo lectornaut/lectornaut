@@ -1,10 +1,6 @@
 <script lang="ts" setup>
 import { usePhotoUpload } from "@/composables/usePhotoUpload"
 import {
-  IconArrowDown,
-  IconArrowUp,
-  IconArrowUpDown,
-  IconMoreHorizontal,
   IconPencil,
   IconPlus,
   IconTrash,
@@ -200,88 +196,50 @@ onMounted(() => {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead class="w-1/4">
-                      <Button variant="ghost" @click="toggleGroupSort('name')">
+                    <TableHead class="min-w-64">
+                      <DataTableSortButton
+                        :direction="
+                          groupSortKey === 'name' ? groupSortDirection : null
+                        "
+                        @click="toggleGroupSort('name')"
+                      >
                         {{ t("settings.groups.name") }}
-                        <IconArrowUp
-                          v-if="
-                            groupSortKey === 'name' &&
-                            groupSortDirection === 'asc'
-                          "
-                        />
-                        <IconArrowDown
-                          v-else-if="
-                            groupSortKey === 'name' &&
-                            groupSortDirection === 'desc'
-                          "
-                        />
-                        <IconArrowUpDown v-else />
-                      </Button>
+                      </DataTableSortButton>
                     </TableHead>
                     <TableHead class="w-1/4">
-                      <Button
-                        variant="ghost"
+                      <DataTableSortButton
+                        :direction="
+                          groupSortKey === 'members' ? groupSortDirection : null
+                        "
                         @click="toggleGroupSort('members')"
                       >
                         {{ t("settings.groups.members") }}
-                        <IconArrowUp
-                          v-if="
-                            groupSortKey === 'members' &&
-                            groupSortDirection === 'asc'
-                          "
-                        />
-                        <IconArrowDown
-                          v-else-if="
-                            groupSortKey === 'members' &&
-                            groupSortDirection === 'desc'
-                          "
-                        />
-                        <IconArrowUpDown v-else />
-                      </Button>
+                      </DataTableSortButton>
                     </TableHead>
                     <TableHead class="w-1/6">
-                      <Button
-                        variant="ghost"
+                      <DataTableSortButton
+                        :direction="
+                          groupSortKey === 'usedIn' ? groupSortDirection : null
+                        "
                         @click="toggleGroupSort('usedIn')"
                       >
                         {{ t("settings.groups.usedIn") }}
-                        <IconArrowUp
-                          v-if="
-                            groupSortKey === 'usedIn' &&
-                            groupSortDirection === 'asc'
-                          "
-                        />
-                        <IconArrowDown
-                          v-else-if="
-                            groupSortKey === 'usedIn' &&
-                            groupSortDirection === 'desc'
-                          "
-                        />
-                        <IconArrowUpDown v-else />
-                      </Button>
+                      </DataTableSortButton>
                     </TableHead>
                     <TableHead class="w-1/6">
-                      <Button
-                        variant="ghost"
+                      <DataTableSortButton
+                        :direction="
+                          groupSortKey === 'created' ? groupSortDirection : null
+                        "
                         @click="toggleGroupSort('created')"
                       >
                         {{ t("settings.groups.created") }}
-                        <IconArrowUp
-                          v-if="
-                            groupSortKey === 'created' &&
-                            groupSortDirection === 'asc'
-                          "
-                        />
-                        <IconArrowDown
-                          v-else-if="
-                            groupSortKey === 'created' &&
-                            groupSortDirection === 'desc'
-                          "
-                        />
-                        <IconArrowUpDown v-else />
-                      </Button>
+                      </DataTableSortButton>
                     </TableHead>
-                    <TableHead class="text-right"></TableHead>
+                    <TableHead
+                      data-pinned="end"
+                      class="w-px text-right"
+                    ></TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -290,7 +248,7 @@ onMounted(() => {
                        the Item's line-clamp can wrap-and-ellipsize instead of
                        one long line setting the table's min-content width. -->
                     <TableCell class="whitespace-normal">
-                      <Item class="group p-0" size="xs">
+                      <Item class="group flex-nowrap p-0" size="xs">
                         <ItemMedia class="group relative">
                           <TooltipProvider>
                             <Tooltip>
@@ -330,17 +288,13 @@ onMounted(() => {
                             </Tooltip>
                           </TooltipProvider>
                         </ItemMedia>
-                        <ItemContent>
-                          <ItemTitle>
-                            {{ group.name }}
-                          </ItemTitle>
-                          <ItemDescription class="text-xs">
-                            {{
-                              group.description ||
-                              t("settings.groups.noDescription")
-                            }}
-                          </ItemDescription>
-                        </ItemContent>
+                        <SettingsIdentity
+                          :title="group.name"
+                          :description="
+                            group.description ||
+                            t('settings.groups.noDescription')
+                          "
+                        />
                       </Item>
                     </TableCell>
                     <TableCell>
@@ -362,7 +316,7 @@ onMounted(() => {
                             +{{ group.memberIds.length - AVATAR_LIMIT }}
                           </AvatarGroupCount>
                         </AvatarGroup>
-                        <span class="text-muted-foreground text-xs">
+                        <span class="text-muted-foreground tabular-nums">
                           {{
                             t("settings.groups.memberCount", {
                               count: group.memberIds.length,
@@ -371,33 +325,29 @@ onMounted(() => {
                         </span>
                       </div>
                     </TableCell>
-                    <TableCell class="text-muted-foreground text-sm">
+                    <TableCell class="text-muted-foreground tabular-nums">
                       {{
                         t("settings.groups.usedInWorkspaces", {
                           count: usageForGroup(group.id),
                         })
                       }}
                     </TableCell>
-                    <TableCell class="text-muted-foreground text-sm">
+                    <TableCell class="text-muted-foreground tabular-nums">
                       {{ formatCreatedAt(group.createdAt) }}
                     </TableCell>
-                    <TableCell class="text-right">
-                      <DropdownMenu>
-                        <TooltipProvider>
-                          <Tooltip>
+                    <TableCell data-pinned="end" class="text-right">
+                      <TooltipProvider>
+                        <Tooltip>
+                          <DropdownMenu>
                             <TooltipTrigger as-child>
                               <DropdownMenuTrigger as-child>
-                                <Button
-                                  variant="outline"
-                                  size="icon"
-                                  :disabled="isDeleting(group.id)"
-                                >
-                                  <Spinner v-if="isDeleting(group.id)" />
-                                  <IconMoreHorizontal v-else />
-                                </Button>
+                                <DataTableRowActionsButton
+                                  :label="t('actions.moreOptions')"
+                                  :loading="isDeleting(group.id)"
+                                />
                               </DropdownMenuTrigger>
                             </TooltipTrigger>
-                            <DropdownMenuContent>
+                            <DropdownMenuContent align="end">
                               <DropdownMenuItem
                                 data-hotkey="e"
                                 @click="openEdit(group)"
@@ -452,9 +402,9 @@ onMounted(() => {
                             <TooltipContent>
                               {{ t("settings.groups.actions") }}
                             </TooltipContent>
-                          </Tooltip>
-                        </TooltipProvider>
-                      </DropdownMenu>
+                          </DropdownMenu>
+                        </Tooltip>
+                      </TooltipProvider>
                     </TableCell>
                   </TableRow>
                   <TableRow v-if="groups.length === 0">

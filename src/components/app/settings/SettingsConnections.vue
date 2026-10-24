@@ -12,18 +12,11 @@ import {
 } from "@/data/connectionApps"
 import {
   IconApps,
-  IconArrowDown,
-  IconArrowUp,
-  IconArrowUpDown,
   IconDownload,
-  IconExternalLink,
   IconInfo,
   IconLink,
   IconListFilter,
-  IconMoreHorizontal,
   IconSearch,
-  IconTrash,
-  IconUnlink,
   IconX,
 } from "@/data/icons"
 import { emitter } from "@/modules/mitt"
@@ -35,22 +28,22 @@ import { computed, nextTick, ref } from "vue"
  * (docs/connections-feature.prompt.md). Moved out of SettingsIntegrations:
  * connections are credentialed third-party links, not catalog membership,
  * and unlike that page this one is NOT admin-walled — linking an account is
- * a MEMBER action. Only the Install/Uninstall app buttons are admin-gated
+ * a MEMBER action. Only the install/update app buttons are admin-gated
  * (disabled with a tooltip, mirroring SettingsTools' "New tool" CTA).
  *
  * Layout: an `ItemGroup` grid of app cards — provider logo in `ItemMedia`,
- * copy in `ItemContent`, the info + admin install/uninstall actions in
+ * copy in `ItemContent`, the info + admin install/update actions in
  * `ItemActions`, and (while installed) the signed-in member's own account
- * link in a full-width `ItemFooter` (status + Connect / Reconnect /
- * Disconnect).
+ * link in a full-width `ItemFooter` (status + Connect / Reconnect).
  *
  * The info button opens `SettingsConnectionInfo` (mounted below,
  * page-scoped) via the `Dialog.ConnectionInfo.Open` mitt event — tabs for
  * the app's tools/permissions, the connected-accounts roster, and the
  * Owner/Admin settings tab carrying the team-wide kill switch. While that
  * switch is OFF (`row.disabled`) the card shows a Disabled badge and the
- * member footer swaps Connect/Reconnect for an explanatory line — only
- * Disconnect stays (members can always pull their own credentials).
+ * member footer swaps Connect/Reconnect for an explanatory line. Uninstall
+ * lives in app details Settings; disconnect and provider management live on
+ * the member's own Accounts item, including while the app is disabled.
  */
 
 const { t } = useI18n()
@@ -262,29 +255,25 @@ const formatInstalledAt = (row: ConnectionAppRow): string => {
   return date ? useDateFormat(date, "MMM D, YYYY").value : "—"
 }
 
-// The card footer's Connect/Disconnect visibility rules, extracted so the
-// Manage menu and the cards can't drift. Connect covers first link AND
-// reconnect (needs_reauth / scope upgrade); none of it while the kill
-// switch is on — the server rejects new grants, so don't pose a doomed
-// consent popup. Disconnect stays available in EVERY state while a binding
-// exists (incl. disabled / needs_reauth): pulling your own credentials must
-// never be harder than granting them.
+// Connect covers first link and reconnect; account removal lives in app details.
 const showConnectAction = (row: ConnectionAppRow): boolean =>
   row.installed &&
   !row.disabled &&
   (!row.myBinding ||
     row.myBinding.status === "needs_reauth" ||
     row.needsScopeUpgrade)
-const showDisconnectAction = (row: ConnectionAppRow): boolean =>
-  row.installed &&
-  row.myBinding !== null &&
-  (row.disabled || row.myBinding.status !== "needs_reauth")
 
 /** Any of the row's verbs in flight — drives the Manage trigger spinner. */
 const isRowPending = (provider: ConnectionProvider): boolean =>
   isPendingId(appActionId(provider)) ||
+  isPendingId(updateActionId(provider)) ||
   isPendingId(toggleActionId(provider)) ||
   isBindingPending(provider)
+const pendingProviders = computed(() =>
+  connectionRows.value
+    .filter((row) => isRowPending(row.app.provider))
+    .map((row) => row.app.provider)
+)
 
 // ── Kill switch from the Manage row menu ───────────────────────────────────
 // The same "Enabled for the team" toggle as the info dialog's Settings tab,
@@ -326,13 +315,14 @@ const keepMenuOpen = (event: Event): void => {
 // Reassign the Set (don't mutate) so reactive `:disabled` reads re-run —
 // same idiom as SettingsIntegrations. App actions (`app:*`) lock
 // independently of binding actions; the two binding verbs get DISTINCT ids
-// (`connect:*` / `disconnect:*`) so each button spins only for its own verb
-// — in the scope-upgrade state Reconnect and Disconnect render side by side
-// — while `isBindingPending` still mutually excludes them per provider.
+// (`connect:*` / `disconnect:*`) while `isBindingPending` mutually excludes
+// account actions across the card and app details.
 const pending = ref<Set<string>>(new Set())
 const isPendingId = (id: string): boolean => pending.value.has(id)
 
 const appActionId = (provider: ConnectionProvider): string => `app:${provider}`
+const updateActionId = (provider: ConnectionProvider): string =>
+  `update:${provider}`
 /** Kill-switch toggle (Manage row menu) — locks independently of `app:*`. */
 const toggleActionId = (provider: ConnectionProvider): string =>
   `toggle:${provider}`
@@ -375,8 +365,15 @@ const handleAppAction = (
   app: ConnectionAppDescriptor,
   installed: boolean
 ): void => {
+  if (isRowPending(app.provider)) return
   if (installed) {
-    uninstallDialog.open(app)
+    const row = connectionRows.value.find(
+      (row) => row.app.provider === app.provider
+    )
+    if (!row?.updateAvailable || !canManage.value) return
+    void runLocked(updateActionId(app.provider), () =>
+      connections.install(app.provider, true)
+    )
     return
   }
   void runLocked(appActionId(app.provider), () =>
@@ -396,7 +393,7 @@ const handleUninstallConfirmed = (): Promise<void> =>
 // whole OAuth handoff (sign-in + consent in another window, then the server
 // code exchange), so the lock — and the spinner it drives — can run a while.
 const handleConnect = (provider: ConnectionProvider): void => {
-  if (isBindingPending(provider)) return
+  if (isRowPending(provider)) return
   void runLocked(connectActionId(provider), () => connections.connect(provider))
 }
 
@@ -447,8 +444,12 @@ const openInfoDialog = (provider: ConnectionProvider): void => {
            search/category predicate. -->
         <Tabs default-value="discover" orientation="horizontal">
           <div class="flex items-center justify-between gap-2">
+            <!-- The Settings dialog host is a VERTICAL Tabs, and the
+               primitives' `group-data-vertical/tabs:*` variants match ANY
+               ancestor group — so its orientation leaks in here (flex-col
+               list, left-aligned triggers). Pin the horizontal look back. -->
             <TabsList
-              class="no-scrollbar bg-input/50 scroll-fade-x grid h-9! shrink-0 grid-cols-3 justify-start overflow-clip overflow-x-auto p-0"
+              class="bg-input/50 h-9! flex-row! rounded-full! p-0 *:justify-center! *:rounded-full!"
             >
               <TabsTrigger
                 value="discover"
@@ -603,9 +604,11 @@ const openInfoDialog = (provider: ConnectionProvider): void => {
                   <ItemMedia variant="icon">
                     <Component :is="row.app.logo" />
                   </ItemMedia>
-                  <ItemContent>
-                    <ItemTitle class="flex items-center gap-1.5">
-                      {{ row.app.name }}
+                  <SettingsIdentity
+                    :title="row.app.name"
+                    :description="row.app.description"
+                  >
+                    <template #badges>
                       <!-- Kill switch is on — agents lose the app's tools and new
                      connects are rejected until an admin re-enables it. -->
                       <Badge v-if="row.disabled" variant="outline">
@@ -622,9 +625,14 @@ const openInfoDialog = (provider: ConnectionProvider): void => {
                       >
                         {{ t("settings.connections.needsReauthBadge") }}
                       </Badge>
-                    </ItemTitle>
-                    <ItemDescription>{{ row.app.description }}</ItemDescription>
-                  </ItemContent>
+                      <Badge
+                        v-if="canManage && row.updateAvailable"
+                        variant="secondary"
+                      >
+                        {{ t("settings.connectionResources.updateAvailable") }}
+                      </Badge>
+                    </template>
+                  </SettingsIdentity>
                   <ItemActions>
                     <TooltipProvider>
                       <ButtonGroup>
@@ -642,24 +650,36 @@ const openInfoDialog = (provider: ConnectionProvider): void => {
                             {{ t("settings.connections.infoButton") }}
                           </TooltipContent>
                         </Tooltip>
-                        <Tooltip>
+                        <Tooltip
+                          v-if="
+                            !row.installed ||
+                            row.updateAvailable ||
+                            isPendingId(updateActionId(row.app.provider))
+                          "
+                        >
                           <TooltipTrigger as-child>
                             <Button
                               :variant="row.installed ? 'secondary' : 'default'"
                               :disabled="
-                                !canManage ||
-                                isPendingId(appActionId(row.app.provider))
+                                !canManage || isRowPending(row.app.provider)
                               "
                               @click="handleAppAction(row.app, row.installed)"
                             >
                               <Spinner
                                 v-if="
-                                  isPendingId(appActionId(row.app.provider))
+                                  isPendingId(appActionId(row.app.provider)) ||
+                                  isPendingId(updateActionId(row.app.provider))
                                 "
                               />
                               {{
                                 row.installed
-                                  ? t("settings.connections.uninstallApp")
+                                  ? t(
+                                      isPendingId(
+                                        updateActionId(row.app.provider)
+                                      )
+                                        ? "settings.connectionResources.installingUpdates"
+                                        : "settings.connectionResources.installUpdates"
+                                    )
                                   : t("settings.connections.installApp")
                               }}
                             </Button>
@@ -674,7 +694,17 @@ const openInfoDialog = (provider: ConnectionProvider): void => {
                   <!-- The signed-in member's own account link (member action,
                  deliberately NOT admin-gated). -->
                   <ItemFooter v-if="row.installed">
-                    <div class="flex flex-col">
+                    <div
+                      class="bg-secondary flex grow flex-col rounded-2xl p-4"
+                    >
+                      <span class="text-muted-foreground text-xs">
+                        {{
+                          t(
+                            "settings.connections.membersConnected",
+                            row.bindingCount
+                          )
+                        }}
+                      </span>
                       <span class="text-sm">
                         <!-- The OAuth handoff runs in another window (GIS popup /
                        system browser) and only settles once the user finishes
@@ -709,14 +739,6 @@ const openInfoDialog = (provider: ConnectionProvider): void => {
                           {{ t("settings.connections.connected") }}
                         </template>
                       </span>
-                      <span class="text-muted-foreground text-xs">
-                        {{
-                          t(
-                            "settings.connections.membersConnected",
-                            row.bindingCount
-                          )
-                        }}
-                      </span>
                       <!-- Connected under an older, narrower grant (e.g. a P1
                      read-only Google Calendar binding after the P2 write
                      upgrade) — only a fresh consent popup can widen it. -->
@@ -732,11 +754,7 @@ const openInfoDialog = (provider: ConnectionProvider): void => {
                       </span>
                     </div>
                     <div class="flex items-center gap-2">
-                      <!-- Connect + (for GitHub) the install/configure cog,
-                     grouped. Authorizing alone isn't enough for a GitHub App —
-                     the app must be installed on the member's repos. Connect
-                     visibility lives in showConnectAction (shared with the
-                     Manage table's actions menu). -->
+                      <!-- Account management lives in app details. -->
                       <ButtonGroup>
                         <Button
                           v-if="showConnectAction(row)"
@@ -755,42 +773,6 @@ const openInfoDialog = (provider: ConnectionProvider): void => {
                               : t("settings.connections.connect")
                           }}
                         </Button>
-                        <Button
-                          v-if="showDisconnectAction(row)"
-                          variant="outline"
-                          :disabled="isBindingPending(row.app.provider)"
-                          @click="disconnectDialog.open(row.app)"
-                        >
-                          <Spinner
-                            v-if="
-                              isPendingId(disconnectActionId(row.app.provider))
-                            "
-                          />
-                          {{ t("settings.connections.disconnect") }}
-                        </Button>
-                        <TooltipProvider
-                          v-if="
-                            row.app.manage && row.myBinding && !row.disabled
-                          "
-                        >
-                          <Tooltip>
-                            <TooltipTrigger as-child>
-                              <Button
-                                as="a"
-                                :href="row.app.manage.url"
-                                :variant="row.myBinding ? 'outline' : 'default'"
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                size="icon"
-                              >
-                                <IconExternalLink />
-                              </Button>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                              {{ t(row.app.manage.labelKey) }}
-                            </TooltipContent>
-                          </Tooltip>
-                        </TooltipProvider>
                       </ButtonGroup>
                     </div>
                   </ItemFooter>
@@ -808,91 +790,59 @@ const openInfoDialog = (provider: ConnectionProvider): void => {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead class="w-1/6">
-                      <Button variant="ghost" @click="toggleManageSort('name')">
+                    <TableHead class="min-w-64">
+                      <DataTableSortButton
+                        :direction="
+                          manageSortKey === 'name' ? manageSortDirection : null
+                        "
+                        @click="toggleManageSort('name')"
+                      >
                         {{ t("settings.connections.columnApp") }}
-                        <IconArrowUp
-                          v-if="
-                            manageSortKey === 'name' &&
-                            manageSortDirection === 'asc'
-                          "
-                        />
-                        <IconArrowDown
-                          v-else-if="
-                            manageSortKey === 'name' &&
-                            manageSortDirection === 'desc'
-                          "
-                        />
-                        <IconArrowUpDown v-else />
-                      </Button>
+                      </DataTableSortButton>
                     </TableHead>
                     <TableHead class="w-1/6">
-                      <Button
-                        variant="ghost"
+                      <DataTableSortButton
+                        :direction="
+                          manageSortKey === 'status'
+                            ? manageSortDirection
+                            : null
+                        "
                         @click="toggleManageSort('status')"
                       >
                         {{ t("settings.connections.columnStatus") }}
-                        <IconArrowUp
-                          v-if="
-                            manageSortKey === 'status' &&
-                            manageSortDirection === 'asc'
-                          "
-                        />
-                        <IconArrowDown
-                          v-else-if="
-                            manageSortKey === 'status' &&
-                            manageSortDirection === 'desc'
-                          "
-                        />
-                        <IconArrowUpDown v-else />
-                      </Button>
+                      </DataTableSortButton>
                     </TableHead>
                     <TableHead class="w-1/6">
                       {{ t("settings.connections.columnCategories") }}
                     </TableHead>
                     <TableHead class="w-1/6">
-                      <Button
-                        variant="ghost"
+                      <DataTableSortButton
+                        :direction="
+                          manageSortKey === 'accounts'
+                            ? manageSortDirection
+                            : null
+                        "
                         @click="toggleManageSort('accounts')"
                       >
                         {{ t("settings.connections.columnAccounts") }}
-                        <IconArrowUp
-                          v-if="
-                            manageSortKey === 'accounts' &&
-                            manageSortDirection === 'asc'
-                          "
-                        />
-                        <IconArrowDown
-                          v-else-if="
-                            manageSortKey === 'accounts' &&
-                            manageSortDirection === 'desc'
-                          "
-                        />
-                        <IconArrowUpDown v-else />
-                      </Button>
+                      </DataTableSortButton>
                     </TableHead>
                     <TableHead class="w-1/6">
-                      <Button
-                        variant="ghost"
+                      <DataTableSortButton
+                        :direction="
+                          manageSortKey === 'installed'
+                            ? manageSortDirection
+                            : null
+                        "
                         @click="toggleManageSort('installed')"
                       >
                         {{ t("settings.connections.info.installedOnLabel") }}
-                        <IconArrowUp
-                          v-if="
-                            manageSortKey === 'installed' &&
-                            manageSortDirection === 'asc'
-                          "
-                        />
-                        <IconArrowDown
-                          v-else-if="
-                            manageSortKey === 'installed' &&
-                            manageSortDirection === 'desc'
-                          "
-                        />
-                        <IconArrowUpDown v-else />
-                      </Button>
+                      </DataTableSortButton>
                     </TableHead>
-                    <TableHead class="w-1/6 text-right"></TableHead>
+                    <TableHead
+                      data-pinned="end"
+                      class="w-px text-right"
+                    ></TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -900,22 +850,26 @@ const openInfoDialog = (provider: ConnectionProvider): void => {
                     v-for="row in sortedManageRows"
                     :key="row.app.provider"
                   >
-                    <TableCell>
-                      <Item class="group p-0" size="xs">
-                        <ItemMedia variant="icon">
+                    <TableCell class="whitespace-normal">
+                      <Item class="group flex-nowrap p-0" size="xs">
+                        <ItemMedia variant="icon" class="size-8">
                           <Component :is="row.app.logo" />
                         </ItemMedia>
-                        <ItemContent>
-                          <ItemTitle>{{ row.app.name }}</ItemTitle>
-                          <ItemDescription class="text-xs">
-                            {{ row.app.description }}
-                          </ItemDescription>
-                        </ItemContent>
+                        <SettingsIdentity
+                          :title="row.app.name"
+                          :description="row.app.description"
+                        />
                       </Item>
                     </TableCell>
                     <TableCell>
                       <Badge :variant="statusBadgeVariant(row)">
                         {{ statusLabel(row) }}
+                      </Badge>
+                      <Badge
+                        v-if="canManage && row.updateAvailable"
+                        variant="secondary"
+                      >
+                        {{ t("settings.connectionResources.updateAvailable") }}
                       </Badge>
                     </TableCell>
                     <TableCell>
@@ -929,7 +883,7 @@ const openInfoDialog = (provider: ConnectionProvider): void => {
                         </Badge>
                       </div>
                     </TableCell>
-                    <TableCell class="text-muted-foreground text-sm">
+                    <TableCell class="text-muted-foreground tabular-nums">
                       {{
                         row.installed
                           ? t(
@@ -939,25 +893,19 @@ const openInfoDialog = (provider: ConnectionProvider): void => {
                           : "—"
                       }}
                     </TableCell>
-                    <TableCell class="text-muted-foreground text-sm">
+                    <TableCell class="text-muted-foreground tabular-nums">
                       {{ formatInstalledAt(row) }}
                     </TableCell>
-                    <TableCell class="text-right">
-                      <DropdownMenu>
-                        <TooltipProvider>
-                          <Tooltip>
+                    <TableCell data-pinned="end" class="text-right">
+                      <TooltipProvider>
+                        <Tooltip>
+                          <DropdownMenu>
                             <TooltipTrigger as-child>
                               <DropdownMenuTrigger as-child>
-                                <Button
-                                  variant="outline"
-                                  size="icon"
-                                  :disabled="isRowPending(row.app.provider)"
-                                >
-                                  <Spinner
-                                    v-if="isRowPending(row.app.provider)"
-                                  />
-                                  <IconMoreHorizontal v-else />
-                                </Button>
+                                <DataTableRowActionsButton
+                                  :label="t('actions.moreOptions')"
+                                  :loading="isRowPending(row.app.provider)"
+                                />
                               </DropdownMenuTrigger>
                             </TooltipTrigger>
                             <DropdownMenuContent align="end">
@@ -973,22 +921,28 @@ const openInfoDialog = (provider: ConnectionProvider): void => {
                               <!-- Admin-gated, with the reason on hover —
                                  the workspaces table's disabled-item-in-a-
                                  tooltip pattern. -->
-                              <Tooltip>
+                              <Tooltip
+                                v-if="!row.installed || row.updateAvailable"
+                              >
                                 <TooltipTrigger as-child>
                                   <div>
                                     <DropdownMenuItem
-                                      :disabled="!canManage"
+                                      :disabled="
+                                        !canManage ||
+                                        isPendingId(
+                                          appActionId(row.app.provider)
+                                        )
+                                      "
                                       data-hotkey="u"
                                       @click="
                                         handleAppAction(row.app, row.installed)
                                       "
                                     >
-                                      <IconTrash v-if="row.installed" />
-                                      <IconDownload v-else />
+                                      <IconDownload />
                                       {{
                                         row.installed
                                           ? t(
-                                              "settings.connections.uninstallApp"
+                                              "settings.connectionResources.installUpdates"
                                             )
                                           : t("settings.connections.installApp")
                                       }}
@@ -1056,12 +1010,7 @@ const openInfoDialog = (provider: ConnectionProvider): void => {
                               </Tooltip>
                               <!-- Member binding verbs — same visibility
                                  rules as the card footer. -->
-                              <template
-                                v-if="
-                                  showConnectAction(row) ||
-                                  showDisconnectAction(row)
-                                "
-                              >
+                              <template v-if="showConnectAction(row)">
                                 <DropdownMenuSeparator />
                                 <DropdownMenuItem
                                   v-if="showConnectAction(row)"
@@ -1076,23 +1025,14 @@ const openInfoDialog = (provider: ConnectionProvider): void => {
                                   }}
                                   <DropdownMenuShortcut>C</DropdownMenuShortcut>
                                 </DropdownMenuItem>
-                                <DropdownMenuItem
-                                  v-if="showDisconnectAction(row)"
-                                  data-hotkey="x"
-                                  @click="disconnectDialog.open(row.app)"
-                                >
-                                  <IconUnlink />
-                                  {{ t("settings.connections.disconnect") }}
-                                  <DropdownMenuShortcut>X</DropdownMenuShortcut>
-                                </DropdownMenuItem>
                               </template>
                             </DropdownMenuContent>
                             <TooltipContent>
                               {{ t("settings.connections.actions") }}
                             </TooltipContent>
-                          </Tooltip>
-                        </TooltipProvider>
-                      </DropdownMenu>
+                          </DropdownMenu>
+                        </Tooltip>
+                      </TooltipProvider>
                     </TableCell>
                   </TableRow>
                   <TableRow v-if="sortedManageRows.length === 0">
@@ -1116,6 +1056,23 @@ const openInfoDialog = (provider: ConnectionProvider): void => {
         </Tabs>
       </FieldSet>
     </FieldGroup>
+
+    <!-- Page-scoped on purpose (vs the layout-mounted SettingsCustomTools):
+         only this page opens it, and scoping keeps useConnections' listeners
+         + GIS preload off every unrelated session. Mounted BEFORE the confirm
+         dialogs: same z-50, so later-teleported wins — Uninstall/Disconnect
+         opened from inside app details must stack above it. -->
+    <SettingsConnectionInfo
+      :pending-providers="pendingProviders"
+      :updating-providers="
+        connectionRows
+          .filter((row) => isPendingId(updateActionId(row.app.provider)))
+          .map((row) => row.app.provider)
+      "
+      @update="(app) => handleAppAction(app, true)"
+      @uninstall="uninstallDialog.open"
+      @disconnect="disconnectDialog.open"
+    />
 
     <!-- Confirm dialogs for the two grant-revoking actions — page-level
          singletons (driven by useConfirmationDialog) because the card
@@ -1188,11 +1145,6 @@ const openInfoDialog = (provider: ConnectionProvider): void => {
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>
-
-    <!-- Page-scoped on purpose (vs the layout-mounted SettingsCustomTools):
-         only this page opens it, and scoping keeps useConnections' listeners
-         + GIS preload off every unrelated session. -->
-    <SettingsConnectionInfo />
   </div>
   <SettingsRestricted v-else />
 </template>

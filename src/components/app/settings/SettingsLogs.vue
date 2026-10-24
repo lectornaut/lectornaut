@@ -114,7 +114,11 @@ const columns = computed<ColumnDef<AppTableFeatures, ILogEntry>[]>(() => [
         title: t("settings.logs.columnTimestamp"),
       }),
     cell: ({ row }) =>
-      h("span", { class: "truncate" }, formatTimestamp(row.original)),
+      h(
+        "span",
+        { class: "text-muted-foreground tabular-nums" },
+        formatTimestamp(row.original)
+      ),
     filterFn: (row, id, value) => {
       if (!value || typeof value !== "object") return true
       const { start, end } = value as { start?: string; end?: string }
@@ -205,7 +209,7 @@ onMounted(() => {
 <template>
   <div class="p-6">
     <FieldGroup>
-      <FieldSet>
+      <FieldSet class="min-w-0">
         <Field v-if="!canViewLogs" orientation="horizontal">
           <FieldContent>
             <Empty class="border border-dashed">
@@ -265,7 +269,7 @@ onMounted(() => {
             </div>
           </Field>
           <Field orientation="horizontal">
-            <FieldContent>
+            <FieldContent class="min-w-0">
               <LoadingState v-if="loading" :label="$t('common.loading')" />
               <Empty v-else-if="error">
                 <EmptyHeader>

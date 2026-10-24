@@ -2,7 +2,6 @@
 import {
   IconArchive,
   IconLock,
-  IconMoreHorizontal,
   IconPencil,
   IconPin,
   IconPinOff,
@@ -47,14 +46,9 @@ const shared = computed(() => props.memory.visibility === "shared")
       <DropdownMenu>
         <TooltipTrigger as-child>
           <DropdownMenuTrigger as-child>
-            <Button
-              variant="ghost"
-              size="icon-xs"
-              class="data-[state=open]:bg-accent"
-              @click.stop
-            >
-              <IconMoreHorizontal />
-            </Button>
+            <DataTableRowActionsButton
+              :label="t('settings.memory.rowActions')"
+            />
           </DropdownMenuTrigger>
         </TooltipTrigger>
         <TooltipContent>{{ t("settings.memory.rowActions") }}</TooltipContent>

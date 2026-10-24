@@ -126,6 +126,7 @@
       "tooltip": "Configure",
       "groupBuiltIn": "Agents",
       "groupCustom": "Custom",
+      "groupConnection": "Connections",
       "default": "Default",
       "defaultTooltip": "Use the team's default assistant for this chat.",
       "newAgent": "New agent",
@@ -140,6 +141,7 @@
       "deletedAgentLabel": "Deleted agent",
       "customBadge": "Custom",
       "teamMember": "Member of this team",
+      "connectionTooltip": "Connection agent",
       "customTooltip": "Custom agent",
       "builtInTooltip": "Built-in agent"
     },
@@ -636,6 +638,31 @@
     }
   },
   "settings": {
+    "connectionResources": {
+      "agentTitle": "Connection Agents",
+      "toolTitle": "Connection Tools",
+      "workflowTitle": "Connection Workflows",
+      "description": "Resources provided by installed connections. Manage installation and availability through the owning connection.",
+      "manage": "Manage connections",
+      "agentEmpty": "No connection agents installed",
+      "toolEmpty": "No connection tools installed",
+      "workflowEmpty": "No connection workflows installed",
+      "emptyDescription": "Install a connection that provides these resources from Connections.",
+      "updateAvailable": "Update available",
+      "upToDate": "Up to date",
+      "upToDateDescription": "This app has the latest configuration.",
+      "installUpdates": "Install updates",
+      "installingUpdates": "Installing updates…",
+      "updateSuccess": "App updates installed.",
+      "updateError": "Couldn't install app updates. Try again.",
+      "account": {
+        "not_connected": "Your account is not connected",
+        "needs_reauth": "Reconnect your account",
+        "error": "Account status unavailable"
+      },
+      "accountHint": "Manage your account under Connections. Workflows use the account configured in Runs with connected accounts.",
+      "updateDescription": "Install the latest app configuration. Keeps resource enable settings, connected accounts, and workspace workflow customizations. New account permissions may require reconnecting separately."
+    },
     "integrations": {
       "permissionRequired": "Only team owners and admins can manage integrations.",
       "noPermissionTitle": "Admin access required",
@@ -655,7 +682,7 @@
       },
       "tools": {
         "label": "Tools",
-        "description": "Add or remove pre-built tools from your team's active list. Set per-agent availability under Tools.",
+        "description": "Add or remove pre-built tools from your team's active list. Enable them for your team under Tools.",
         "addSuccess": "Tool added.",
         "addError": "Couldn't add the tool.",
         "removeSuccess": "Tool removed.",
@@ -676,7 +703,7 @@
     },
     "connections": {
       "label": "Connections",
-      "description": "Install apps backed by external accounts. Installed apps add tools agents can use; each member connects their own account.",
+      "description": "Install apps backed by external accounts. Apps can provide agents, tools, and workflows; each member connects their own account.",
       "permissionRequired": "Only team owners and admins can install or uninstall apps.",
       "installApp": "Install app",
       "uninstallApp": "Uninstall app",
@@ -685,7 +712,7 @@
       "removeSuccess": "App uninstalled.",
       "removeError": "Couldn't uninstall the app.",
       "uninstallConfirmTitle": "Uninstall app?",
-      "uninstallConfirmBody": "Uninstalling {name} disconnects every member's account and revokes its access, and agents lose the app's tools. Reinstalling later means every member connects again.",
+      "uninstallConfirmBody": "Uninstalling {name} disconnects every member's account, revokes its access, and removes its agents, tools, and workflows from available resources. Reinstalling later means every member connects again.",
       "connect": "Connect",
       "reconnect": "Reconnect",
       "disconnect": "Disconnect",
@@ -697,7 +724,7 @@
       "disconnectSuccess": "Account disconnected.",
       "disconnectError": "Couldn't disconnect the account.",
       "disconnectConfirmTitle": "Disconnect account?",
-      "disconnectConfirmBody": "Your {name} account will be unlinked and its access revoked. Agents can no longer use {name} on your behalf until you connect again.",
+      "disconnectConfirmBody": "Your {name} account will be unlinked and its access revoked. Agents, tools, and workflows cannot use {name} on your behalf until you connect again. Installed resources remain available to other connected members.",
       "notConfigured": "Google sign-in isn't configured for this app build.",
       "connected": "Account connected",
       "connectedAs": "Connected as {email}",
@@ -738,6 +765,8 @@
         "tabAccounts": "Accounts ({count})",
         "tabSettings": "Settings",
         "toolsTitle": "Tools it adds",
+        "agentsTitle": "Agents it adds",
+        "workflowsTitle": "Workflows it adds",
         "permissionsTitle": "Permissions",
         "permissionsDescription": "What each member grants Google when connecting their own account.",
         "scope": {
@@ -756,7 +785,7 @@
         "installedByLabel": "Installed by",
         "installedOnLabel": "Installed on",
         "enabledLabel": "Enabled for the team",
-        "enabledDescription": "When off, agents lose this app's tools and members can't connect accounts until it's re-enabled. Connected accounts and settings are kept.",
+        "enabledDescription": "When off, this app's agents, tools and workflows stop running and members can't connect accounts until it's re-enabled. Connected accounts and resource settings are kept.",
         "disabledProvenance": "Disabled by {name} on {date}.",
         "unknownMember": "Unknown member",
         "notInstalled": "This app isn't installed for the team."
@@ -1828,7 +1857,7 @@
       "deleteError": "Couldn't delete workflow.",
       "runQueued": "Run queued.",
       "runError": "Couldn't start the run.",
-      "catalogTitle": "Built-in workflows",
+      "catalogTitle": "Built-in Workflows",
       "predefinedDescription": "Ready-made automations you can switch on for this workspace.",
       "noAvailablePresets": "No built-in workflows are available yet. Add them from the Features tab.",
       "predefinedBadge": "Built-in",
@@ -1911,7 +1940,7 @@
       "availableDescription": "Create custom automations that run on a schedule, when content changes, or on demand.",
       "emptyCustom": "No custom workflows yet. Create one to automate a task.",
       "customWorkflows": {
-        "label": "Custom workflows",
+        "label": "Custom Workflows",
         "description": "Lets admins create team-authored workflows. Off keeps only built-in workflows."
       },
       "customWorkflowsOff": "Custom workflows are turned off for this team. Enable them above to create one.",
@@ -2018,7 +2047,7 @@
         "manual": "Manual suffix"
       },
       "tools": {
-        "label": "Built-in tools",
+        "label": "Built-in Tools",
         "description": "Enable or disable each installed built-in tool. To remove a tool entirely, uninstall it on the Integrations page.",
         "rollDice": {
           "label": "Roll dice",
@@ -2070,12 +2099,12 @@
           "description": "Lets member-agents read the full contents of a workspace file (beyond search snippets) so they can edit accurately or answer from a whole document. Read-only — no edit rights required."
         },
         "customAgents": {
-          "label": "Custom agents",
+          "label": "Custom Agents",
           "description": "Lets members pick team-scoped agent personas in chats; off forces the team default.",
           "configure": "Configure custom agents"
         },
         "customTools": {
-          "label": "Custom tools",
+          "label": "Custom Tools",
           "description": "Lets admins ship custom model-callable tools (webhooks, prompt templates, canned searches)."
         },
         "empty": "No built-in tools installed. Add them from the Features tab.",
@@ -2200,7 +2229,7 @@
         }
       },
       "builtInAgents": {
-        "label": "Built-in agents",
+        "label": "Built-in Agents",
         "sectionDescription": "Pre-built personas with curated tool access and system prompts for common use cases. Customize any of them to fit your team — edits apply to your team only.",
         "empty": "No built-in agents installed. Add them from the Features tab.",
         "configure": "Configure",

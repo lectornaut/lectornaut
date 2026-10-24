@@ -57,23 +57,28 @@ const palette = computed(() => props.colors ?? DEFAULT_AVATAR_COLORS)
 </script>
 
 <template>
-  <Spinner v-if="loading" />
-  <BoringAvatar
-    v-else-if="variant"
-    :name="name ?? ''"
-    :variant="variant"
-    :colors="palette"
-  />
-  <Avatar v-else :size="size">
-    <AvatarImage
-      v-if="src"
-      :src="src"
-      :alt="alt ?? name ?? undefined"
-      :referrerpolicy="referrerpolicy"
-      class="rounded-[inherit]"
+  <Avatar :size="size" class="items-center justify-center">
+    <Spinner v-if="loading" class="size-1/2" />
+    <BoringAvatar
+      v-else-if="variant"
+      :name="name ?? ''"
+      :variant="variant"
+      :colors="palette"
+      class="size-full rounded-[inherit]"
+      role="img"
+      :aria-label="alt ?? name ?? undefined"
     />
-    <AvatarFallback class="rounded-[inherit] font-medium">
-      <slot name="fallback">{{ initials }}</slot>
-    </AvatarFallback>
+    <template v-else>
+      <AvatarImage
+        v-if="src"
+        :src="src"
+        :alt="alt ?? name ?? undefined"
+        :referrerpolicy="referrerpolicy"
+        class="rounded-[inherit]"
+      />
+      <AvatarFallback class="rounded-[inherit] font-medium">
+        <slot name="fallback">{{ initials }}</slot>
+      </AvatarFallback>
+    </template>
   </Avatar>
 </template>

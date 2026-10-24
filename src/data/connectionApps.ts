@@ -14,15 +14,15 @@ import {
   IconLogosGoogleGmail,
 } from "@/data/icons"
 import {
+  CONNECTION_RESOURCES,
+  type ConnectionResources,
+} from "@lectornaut/shared/connectionResources"
+import {
   CONNECTION_PROVIDERS,
-  GITHUB_TOOL_KEY,
-  GOOGLE_CALENDAR_TOOL_KEY,
   GOOGLE_DRIVE_FILE_SCOPE,
   GOOGLE_DRIVE_READONLY_SCOPE,
-  GOOGLE_DRIVE_TOOL_KEY,
   GOOGLE_GMAIL_READONLY_SCOPE,
   GOOGLE_GMAIL_SEND_SCOPE,
-  GOOGLE_GMAIL_TOOL_KEY,
   type ConnectionProvider,
 } from "@lectornaut/shared/domain"
 import type { Component } from "vue"
@@ -44,6 +44,7 @@ export const CONNECTION_CATEGORIES = [
 export type ConnectionCategory = (typeof CONNECTION_CATEGORIES)[number]
 
 export interface ConnectionAppDescriptor {
+  resources: ConnectionResources
   provider: ConnectionProvider
   name: string
   description: string
@@ -69,8 +70,6 @@ export interface ConnectionAppDescriptor {
    * `prompt=consent` for the refresh token; GitHub needs none.
    */
   authParams: Record<string, string>
-  /** Integration sourceKeys this app contributes while installed. */
-  toolKeys: string[]
   /**
    * Optional provider-side management link, surfaced as a cog button next to
    * Connect — e.g. GitHub's install/configure page (which repos the app may
@@ -96,6 +95,7 @@ const GOOGLE_MANAGE = {
 }
 
 const GOOGLE_CALENDAR_APP: ConnectionAppDescriptor = {
+  resources: CONNECTION_RESOURCES["google-calendar"],
   provider: "google-calendar",
   name: "Google Calendar",
   description:
@@ -114,11 +114,11 @@ const GOOGLE_CALENDAR_APP: ConnectionAppDescriptor = {
   ],
   authorizeUrl: GOOGLE_AUTHORIZE_URL,
   authParams: GOOGLE_AUTH_PARAMS,
-  toolKeys: [GOOGLE_CALENDAR_TOOL_KEY],
   manage: GOOGLE_MANAGE,
 }
 
 const GOOGLE_DRIVE_APP: ConnectionAppDescriptor = {
+  resources: CONNECTION_RESOURCES["google-drive"],
   provider: "google-drive",
   name: "Google Drive",
   description:
@@ -144,11 +144,11 @@ const GOOGLE_DRIVE_APP: ConnectionAppDescriptor = {
   ],
   authorizeUrl: GOOGLE_AUTHORIZE_URL,
   authParams: GOOGLE_AUTH_PARAMS,
-  toolKeys: [GOOGLE_DRIVE_TOOL_KEY],
   manage: GOOGLE_MANAGE,
 }
 
 const GOOGLE_GMAIL_APP: ConnectionAppDescriptor = {
+  resources: CONNECTION_RESOURCES["google-gmail"],
   provider: "google-gmail",
   name: "Gmail",
   description:
@@ -169,11 +169,11 @@ const GOOGLE_GMAIL_APP: ConnectionAppDescriptor = {
   ],
   authorizeUrl: GOOGLE_AUTHORIZE_URL,
   authParams: GOOGLE_AUTH_PARAMS,
-  toolKeys: [GOOGLE_GMAIL_TOOL_KEY],
   manage: GOOGLE_MANAGE,
 }
 
 const GITHUB_APP: ConnectionAppDescriptor = {
+  resources: CONNECTION_RESOURCES.github,
   provider: "github",
   name: "GitHub",
   description:
@@ -188,7 +188,6 @@ const GITHUB_APP: ConnectionAppDescriptor = {
   scopes: [],
   authorizeUrl: "https://github.com/login/oauth/authorize",
   authParams: {},
-  toolKeys: [GITHUB_TOOL_KEY],
   // Authorizing alone yields a token that can reach NO repos until the GitHub
   // App is installed on them — point members at the install/configure page.
   manage: import.meta.env.VITE_GITHUB_APP_SLUG

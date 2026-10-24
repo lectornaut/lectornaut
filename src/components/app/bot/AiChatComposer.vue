@@ -14,7 +14,7 @@ import {
   useSessionAttachmentsState,
   type BotSessionAttachmentContext,
 } from "@/composables/useSessionAttachments"
-import { isBuiltInAgentId } from "@/data/builtInAgents"
+import { getAgentSource, isBuiltInAgentId } from "@/data/builtInAgents"
 import { BOT_NODE_TOOL_CATALOG, BOT_TOOL_CATALOG } from "@/data/botTools"
 import {
   IconAi,
@@ -574,7 +574,23 @@ const builtInAgents = computed(() =>
   availableAgents.value.filter((agent) => isBuiltInAgentId(agent.id))
 )
 const customAgents = computed(() =>
-  availableAgents.value.filter((agent) => !isBuiltInAgentId(agent.id))
+  availableAgents.value.filter((agent) => getAgentSource(agent.id) === "custom")
+)
+const additionalAgentGroups = computed(() =>
+  [
+    {
+      key: "connection",
+      label: t("ai.agents.groupConnection"),
+      agents: availableAgents.value.filter(
+        (agent) => getAgentSource(agent.id) === "published"
+      ),
+    },
+    {
+      key: "custom",
+      label: t("ai.agents.groupCustom"),
+      agents: customAgents.value,
+    },
+  ].filter((group) => group.agents.length > 0)
 )
 
 /**
@@ -1626,14 +1642,17 @@ const onToolMenuCloseAutoFocus = (event: Event) => {
                           </Item>
                         </DropdownMenuRadioItem>
                       </DropdownMenuGroup>
-                      <template v-if="customAgents.length > 0">
+                      <template
+                        v-for="group in additionalAgentGroups"
+                        :key="group.key"
+                      >
                         <DropdownMenuSeparator />
                         <DropdownMenuGroup>
                           <DropdownMenuLabel>
-                            {{ t("ai.agents.groupCustom") }}
+                            {{ group.label }}
                           </DropdownMenuLabel>
                           <DropdownMenuRadioItem
-                            v-for="agent in customAgents"
+                            v-for="agent in group.agents"
                             :key="agent.id"
                             :value="agent.id"
                           >

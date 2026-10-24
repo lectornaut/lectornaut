@@ -16,7 +16,8 @@
  * quota, network — is RETURNED as `{ ok: false, message }` tool output. A
  * handler throw aborts the entire chat turn (see `transferToAgent`'s scar in
  * botBuiltinTools.ts), and a headless workflow run hitting this tool with no
- * binding is a NORMAL outcome, not an error.
+ * binding remains narratable. The dispatcher also tracks failed connection
+ * outputs so a model cannot turn a failed dependency into a successful run.
  */
 
 import * as logger from "firebase-functions/logger"
@@ -217,10 +218,17 @@ export function googleAuthRejectionMessage(
 /** Shared model-facing copy for binding/token failures (read + write tools). */
 export function bindingFailureMessage(
   reason:
-    "not_connected" | "needs_reauth" | "config" | "transient" | "disabled",
+    | "not_installed"
+    | "not_connected"
+    | "needs_reauth"
+    | "config"
+    | "transient"
+    | "disabled",
   copy: ConnectionAppCopy
 ): string {
   switch (reason) {
+    case "not_installed":
+      return `${copy.app} is not installed for this team. Ask a team owner or admin to install it under Settings → Connections.`
     case "not_connected":
       return (
         `The user hasn't connected their ${copy.app} account yet. ` +

@@ -7,6 +7,7 @@ import {
   IconTrash,
 } from "@/data/icons"
 import type { ITeamAgent } from "@/types/domain"
+import { settingsLifecycleStatus } from "@/helpers/settingsPresentation"
 
 const { t } = useI18n()
 
@@ -48,11 +49,11 @@ const emit = defineEmits<{
 
 const isArchived = computed(() => !!props.agent.archivedAt)
 
-/** Lifecycle status for the inline badge — see Card's matching enum. */
 const statusBadgeKey = computed<"disabled" | "archived" | null>(() => {
-  if (props.agent.enabled === false) return "disabled"
-  if (props.agent.archivedAt) return "archived"
-  return null
+  return settingsLifecycleStatus(
+    props.agent.enabled !== false,
+    !!props.agent.archivedAt
+  )
 })
 
 const avatarSeedEffective = computed(
@@ -82,31 +83,25 @@ const onToggleEnabled = (value: boolean | string): void => {
 </script>
 
 <template>
-  <Item variant="outline" :class="{ 'opacity-70': statusBadgeKey !== null }">
-    <!--
-      `variant="image"` on ItemMedia gives the responsive size-10 /
-      size-8 / size-6 sizing the family already encodes for different
-      Item sizes. We override `rounded-sm` → `rounded` because
-      boring-avatars renders a SVG portrait that wants a circle clip.
-    -->
+  <Item
+    variant="outline"
+    class="flex-nowrap"
+    :class="{ 'opacity-70': statusBadgeKey !== null }"
+  >
     <ItemMedia variant="image" class="rounded-4xl">
       <AppAvatar variant="beam" :name="avatarSeedEffective" class="size-full" />
     </ItemMedia>
 
-    <ItemContent>
-      <ItemTitle>
-        {{ agent.name }}
+    <SettingsIdentity :title="agent.name" :description="description">
+      <template #badges>
         <Badge v-if="statusBadgeKey === 'disabled'" variant="outline">
           {{ t("settings.agents.custom.disabledBadge") }}
         </Badge>
         <Badge v-else-if="statusBadgeKey === 'archived'" variant="outline">
           {{ t("settings.agents.custom.archivedBadge") }}
         </Badge>
-      </ItemTitle>
-      <ItemDescription v-if="description" class="text-xs">
-        {{ description }}
-      </ItemDescription>
-    </ItemContent>
+      </template>
+    </SettingsIdentity>
 
     <ItemActions>
       <!--

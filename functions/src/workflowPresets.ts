@@ -7,6 +7,10 @@
  * Every preset here is enable-ready. (The SEO preset is intentionally omitted.)
  */
 
+import {
+  getConnectionWorkflow,
+  type ConnectionWorkflow,
+} from "@lectornaut/shared/connectionResources"
 import type { WorkspaceNodeScope } from "./types.js"
 
 type PresetTrigger =
@@ -26,7 +30,7 @@ export interface ServerWorkflowPreset {
   additionalPrompt?: string
   defaultTrigger: PresetTrigger
   defaultUpdateMode: "automatic" | "require_review"
-  defaultTargetScope: WorkspaceNodeScope | null
+  defaultTargetScope: "code" | "write" | null
 }
 
 const WEEKLY_MON_9AM = {
@@ -199,6 +203,8 @@ export const WORKFLOW_PRESETS: readonly ServerWorkflowPreset[] = [
 
 export function getWorkflowPreset(
   key: string
-): ServerWorkflowPreset | undefined {
-  return WORKFLOW_PRESETS.find((p) => p.key === key)
+): ServerWorkflowPreset | ConnectionWorkflow | undefined {
+  return (
+    WORKFLOW_PRESETS.find((p) => p.key === key) ?? getConnectionWorkflow(key)
+  )
 }

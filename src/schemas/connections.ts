@@ -39,6 +39,8 @@ export const connectionSchema = z.object({
   installedByUid: z.string(),
   /** OAuth scopes the provider's bindings request (declared, not granted). */
   scopes: z.array(z.string()).default([]),
+  /** Absent on installations made before app revision tracking. */
+  installedRevision: z.number().int().positive().optional(),
   /**
    * Kill-switch provenance (`setConnectionDisabled`): set while
    * `status === "disabled"`, nulled on re-enable. Optional+nullable — docs

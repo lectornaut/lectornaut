@@ -381,6 +381,52 @@
   @apply scroll-fade min-h-0 grow scrollbar-thin scrollbar-gutter-stable overflow-auto;
 }
 
+/* Shared by static settings tables and the DataTable pinning model. */
+:is([data-slot="table-head"], [data-slot="table-cell"]):is(
+  [data-pinned="start"],
+  [data-pinned="end"]
+) {
+  @apply sticky z-10;
+
+  /* Theme surfaces can be translucent; pinned content must hide scrolled cells. */
+  background-color: oklch(from var(--background) l c h / 100%);
+}
+
+:is([data-slot="table-head"], [data-slot="table-cell"])[data-pinned="start"] {
+  left: 0;
+  box-shadow: 1px 0 0 var(--border);
+}
+
+:is([data-slot="table-head"], [data-slot="table-cell"])[data-pinned="end"] {
+  right: 0;
+  box-shadow: -1px 0 0 var(--border);
+}
+
+[data-slot="table-head"]:is([data-pinned="start"], [data-pinned="end"]) {
+  @apply z-20;
+}
+
+[data-slot="table-row"]:is(:hover, :has([aria-expanded="true"]))
+  > [data-slot="table-cell"]:is([data-pinned="start"], [data-pinned="end"]) {
+  background-image: linear-gradient(
+    color-mix(in oklab, var(--muted) 50%, transparent),
+    color-mix(in oklab, var(--muted) 50%, transparent)
+  );
+}
+
+[data-slot="table-row"][data-expanded="expanded"]
+  > [data-slot="table-cell"]:is([data-pinned="start"], [data-pinned="end"]) {
+  background-image: linear-gradient(
+    color-mix(in oklab, var(--accent) 50%, transparent),
+    color-mix(in oklab, var(--accent) 50%, transparent)
+  );
+}
+
+[data-slot="table-row"][data-state="selected"]
+  > [data-slot="table-cell"]:is([data-pinned="start"], [data-pinned="end"]) {
+  background-image: linear-gradient(var(--accent), var(--accent));
+}
+
 /*
   markstream-vue surface overrides
   - Moved here from AppMarkdown.vue's \3c style> block. These rules style

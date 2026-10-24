@@ -24,6 +24,7 @@
  * This store covers agents + tools only.
  */
 
+import { useConnectionStatus } from "@/composables/useConnectionStatus"
 import {
   deleteIntegration as deleteIntegrationFn,
   installIntegration as installIntegrationFn,
@@ -146,8 +147,7 @@ function snapshotToStored(
   // (the handler is server code, keyed by `sourceKey`). Mirrors the server's
   // `normalizeIntegrationDoc`.
   const spec =
-    isRecord(data.spec) &&
-    (source === "custom" || (source === "builtin" && type === "agent"))
+    isRecord(data.spec) && (source === "custom" || type === "agent")
       ? (data.spec as IAgentIntegrationSpec | IToolIntegrationSpec)
       : null
   return {
@@ -175,7 +175,7 @@ function snapshotToStored(
 function resolveStored(doc: StoredIntegration): ResolvedIntegration {
   let spec = doc.spec
   let customized = false
-  if (doc.source !== "custom" && doc.type === "agent" && doc.sourceKey) {
+  if (doc.source === "builtin" && doc.type === "agent" && doc.sourceKey) {
     // A stored spec on a built-in agent doc is the team's customization
     // override; otherwise the persona comes from the shipped catalog.
     spec = doc.spec ?? builtInAgentSpec(doc.sourceKey)
@@ -322,6 +322,7 @@ function applyOptimisticIntegrationPatch(
 // ─── Store ───────────────────────────────────────────────────────────────────
 
 export const useIntegrationsStore = defineStore("integrations", () => {
+  const connectionStatus = useConnectionStatus()
   const authStore = useAuthStore()
   const { currentTeamId } = storeToRefs(authStore)
 
@@ -342,9 +343,14 @@ export const useIntegrationsStore = defineStore("integrations", () => {
     }
   )
 
-  const isLoading = computed<boolean>(() => query.isLoading.value)
+  const isLoading = computed<boolean>(
+    () => query.isLoading.value || connectionStatus.isLoading.value
+  )
   const loadError = computed<string | null>(
-    () => query.error.value?.message ?? null
+    () =>
+      query.error.value?.message ??
+      connectionStatus.error.value?.message ??
+      null
   )
 
   /** Stored agent/tool docs (custom + diverged built-ins). */
@@ -362,7 +368,8 @@ export const useIntegrationsStore = defineStore("integrations", () => {
     const customs: StoredIntegration[] = []
     for (const d of docs.value) {
       if (d.source === "custom") customs.push(d)
-      else if (d.sourceKey) byTypeKey.set(`${d.type}:${d.sourceKey}`, d)
+      else if (d.source === "builtin" && d.sourceKey)
+        byTypeKey.set(`${d.type}:${d.sourceKey}`, d)
     }
 
     const out: ResolvedIntegration[] = []
@@ -425,7 +432,18 @@ export const useIntegrationsStore = defineStore("integrations", () => {
     // `installConnection` writes it. Mirrors the server's `listIntegrations`
     // walk; without it these docs land in `byTypeKey` and never render.
     for (const d of docs.value) {
-      if (d.source === "published") out.push(resolveStored(d))
+      if (
+        d.source === "published" &&
+        d.sourceKey &&
+        connectionStatus.installed(d.type, d.sourceKey)
+      ) {
+        const resolved = resolveStored(d)
+        out.push(
+          !resolved.installed || connectionStatus.disabled(d.type, d.sourceKey)
+            ? { ...resolved, enabled: false }
+            : resolved
+        )
+      }
     }
     // Custom agents + tools (always a doc).
     for (const d of customs) out.push(resolveStored(d))

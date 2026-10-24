@@ -44,6 +44,161 @@ The native command also applies the titlebar frame immediately: the current tao
 runtime stores traffic-light insets in its setter but only applies them in
 `drawRect`, which may not run when WebKit occludes the native content view.
 
+### Settings list and table conventions
+
+Agents, Tools, and Workflows each separate **Built-in**, **Connection**, and
+**Custom** resources. Connection rows identify their provider, support
+enable/disable, and link to Connections for installation and removal. Agents
+and tools supplied by connections are not independently editable or removable.
+Workflow deployments can be configured in their workspace, like built-in presets.
+
+Connection resource definitions live in [`shared/connectionResources.ts`](shared/connectionResources.ts).
+Each provider declares any combination of `tools`, `agents` (including their
+persona `spec`), and `workflows` (including their deployment defaults). Keys
+must be globally unique, must not shadow built-ins, and must be safe Firestore
+document IDs. Connection agent keys must not start with `_` (reserved for
+built-in agent identities). Tools still require server-side handler registration;
+declaring a tool does not implement its handler.
+
+Installing a connection registers agents/tools in the existing integrations
+collection and workflow templates in team availability. Workflows remain opt-in
+per workspace; installation does not start autonomous runs.
+The app details dialog lists only resource types the manifest provides.
+Increment the provider's positive integer `revision` in the shared manifest when
+releasing changes to resources or requested permissions. Installation records
+`installedRevision` atomically with resource reconciliation. The app's Settings
+tab shows **Update available** when the available revision is newer;
+otherwise it shows **Up to date**.
+Legacy installations without a recorded revision are offered a one-time update.
+**Install updates** is available on the app card, Manage menu, and
+**App details → Settings**, sharing the same update action and busy state.
+Uninstall lives in **App details → Settings**; disconnect and provider-side
+management live on your own connected account in **App details → Accounts**.
+These destructive actions retain their confirmation dialogs, and members
+cannot disconnect another member's account.
+Deploy the client and functions with matching manifest revisions.
+Installing updates reconciles owned resources, preserves enable preferences and
+workspace workflow edits, and retires removed resources. Existing independently
+installed presets (including the Drive digest) are not adopted or overwritten.
+Updates keep account bindings intact and do not grant new OAuth permissions;
+members must reconnect separately when additional permissions are needed.
+Uninstall archives owned integrations and workflow deployments, removes their
+availability, and revokes account bindings. Disabling a connection pauses all
+three resource types without discarding their configuration.
+Installation is team-wide; connected-account availability is per member (or
+the workflow's explicitly configured **Run with my connected accounts** identity).
+Disconnecting keeps installed resources discoverable but blocks connection
+agents/workflows and returns actionable connection-tool failures until reconnect.
+Execution checks live installation, binding health and token availability,
+including a final check for a connection workflow's or agent's owning account.
+Failed connection-tool outputs cannot be converted into successful turns or
+workflow runs by the model; explicit user cancellation remains non-error.
+Token refresh and OAuth completion cannot recreate credentials after uninstall,
+and stale refreshes cannot overwrite a newly reconnected account.
+Uninstalled workflow deployments are excluded from client registries; archived
+definitions/deployments and run history remain stored for audit and idempotent
+restoration, not available for invocation. Independent resources are untouched.
+These checks cannot roll back external requests or automatic workspace edits
+that already completed before a disconnect; affected runs are reported as errors.
+Connection agents also appear as a distinct source in chat/workflow pickers
+and the team agent directory. Their profiles are team-local; global public
+profile lookup remains limited to built-in and custom agents because a
+connection's agent keys repeat across teams.
+
+### Connection PoC catalog
+
+Revision **2** of each existing app adds three agents and manual workflow
+templates through the shared manifest, not UI-only entries:
+
+| App             | Agents                                                                    | Workflows                                                                |
+| --------------- | ------------------------------------------------------------------------- | ------------------------------------------------------------------------ |
+| Google Calendar | Meeting Prep Agent; Schedule Optimizer; Daily Agenda Assistant            | Daily agenda report; Weekly schedule review; Meeting briefing with Drive |
+| Gmail           | Email Triage Agent; Inbox Summarizer; Email Follow-up Assistant           | Unread inbox digest; Email follow-up report                              |
+| Google Drive    | Document Research Agent; File Organization Assistant; Document Summarizer | Document research report; Recent documents digest                        |
+| GitHub          | Pull Request Reviewer; Issue Triage Agent; Repository Insights Agent      | Open pull request briefing; Repository activity report                   |
+
+For existing installations, choose **Install updates**. New installations register
+all resources directly. Agent and workflow names/descriptions appear in app
+details and their **Connection Agents** / **Connection Workflows** sections.
+These additions do not change existing tool definitions, permissions, or account
+bindings. The independent built-in Google Drive digest remains unchanged.
+
+To try a workflow:
+
+1. Connect the owning app for your member and enable its connection tool.
+2. Deploy the template to a workspace using **Default agent** (or a custom agent
+   with workspace content management enabled). The PoC agents are read-only
+   researchers with workspace writes disabled; use them for interactive analysis,
+   not for creating workflow reports.
+3. Enable **Run with my connected accounts**. Set any required scope in the
+   workflow's additional instructions or attached context: GitHub workflows need
+   an explicit `owner/repo`; Document research report needs a research topic.
+   Other templates have bounded time/query defaults described in their settings.
+4. Run manually and review the proposed new report in the workspace's write tree.
+   All templates default to **require review**; installation never schedules them.
+   Reports may contain private mail or documents: choose a workspace whose
+   membership is appropriate for that data.
+
+Meeting briefing with Drive belongs to Calendar but also requires Drive installed,
+enabled, and connected for the **same run identity**, with its search/read tools
+available. This dependency is stated in the template, not auto-installed. There is
+no declarative cross-app dependency graph; the existing per-tool account checks
+enforce access when called. Keep both apps available and inspect run output for
+missing-tool/configuration messages. Required inputs and tool-availability
+instructions are agent prompts, not an additional configuration-validation form.
+
+These are numbered research procedures executed in a single existing agent turn,
+not a new step engine. They use only connected-app reads; headless runs do not
+receive external write tools. Interactive agents are instructed to remain
+read-only, but this is **not a new tool sandbox**: connection tool groups remain
+team-enabled rather than per-agent allowlists, and interactive writes still use
+the existing explicit confirmation mechanism. No example requires additional
+write permissions or sends mail, changes calendar events, reorganizes Drive, or
+posts GitHub reviews.
+
+Coverage is intentionally bounded (typically 10 search results and at most 5
+detail reads; Calendar allows up to 25 events). Reports must disclose limits and
+cite sources, not claim exhaustive inventories. Calendar gaps are not guaranteed
+free/busy availability; event descriptions and attendee identities are not in the
+tool response (only titles, timing, locations, attendee counts, and attachment
+metadata). Preparation tasks are suggestions, not extracted agendas.
+Drive reads cannot extract binary/PDF content, Sheets
+cover the first sheet only, and modified times do not reveal revision diffs.
+Gmail message searches do not fetch complete threads or prove a message is
+unanswered. GitHub supports issue/PR descriptions, comments, and file reads, not
+PR diffs, CI/check execution, merge verification, commits, or release analytics;
+the reviewer is a **readiness/discussion assistant**, not a patch reviewer.
+Model output quality and live provider access still depend on the configured
+model, enabled tools, permissions, and account availability.
+
+Entity tables and workflow, agent, and tool cards share `SettingsIdentity` for
+titles, optional descriptions, and inline badges. Titles truncate independently
+of badges; full titles and descriptions remain available through native title
+tooltips. Table avatars use the default 32px size, card portraits use 40px, and
+`AppAvatar` keeps the same outer box for photos, generated portraits, and loading.
+
+Sortable columns use `DataTableSortButton`, including those inside
+`DataTableColumnHeader`. Keep action cells as table cells with right-aligned inner
+controls, reserve a compact actions column, and render dates/counts as muted
+metadata with tabular numbers. Descriptions belong below the entity title rather
+than being duplicated in a second column.
+
+Selection columns are pinned to the start and actions to the end of the table's
+own scroll viewport. Static tables opt in with `data-pinned="start"` or
+`data-pinned="end"` on both header and body cells; `DataTable` uses its
+`columnPinning` model (select/actions by default). Shared pinning styles provide
+opaque surfaces, stacking, edge dividers, and row-state feedback. Table overflow
+menus use `DataTableRowActionsButton`: a 40px outlined horizontal-ellipsis button
+with an accessible label and consistent disabled/loading states.
+Keep the dropdown root inside the trigger tooltip's root so its anchor and
+content share the same positioning context; menu content must be outside the
+tooltip trigger.
+
+Lifecycle badges use `outline`; classification badges such as Agent, Predefined,
+and tool kind use `secondary`. Archived takes precedence over Disabled through
+`settingsLifecycleStatus`. Card lists, searchable data tables, and the plan
+comparison matrix intentionally retain their distinct layouts and interactions.
+
 ## What This Becomes
 
 Lectornaut is not:

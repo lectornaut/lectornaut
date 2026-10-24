@@ -173,14 +173,8 @@ defineExpose({ getTable: () => table })
                 :data-pinned="header.column.getIsPinned()"
                 :class="[
                   props.stickyHeader && 'bg-background top-0',
-                  {
-                    'from-card/50 sticky from-50%': header.column.getIsPinned(),
-                  },
-                  header.column.getIsPinned() === 'start'
-                    ? 'left-0 bg-linear-to-r'
-                    : header.column.getIsPinned() === 'end'
-                      ? 'right-0 bg-linear-to-l'
-                      : '',
+                  header.column.id === 'actions' && 'w-px text-right',
+                  header.column.id === 'select' && 'w-px',
                 ]"
               >
                 <FlexRender
@@ -209,17 +203,7 @@ defineExpose({ getTable: () => table })
                     v-for="cell in row.getVisibleCells()"
                     :key="cell.id"
                     :data-pinned="cell.column.getIsPinned()"
-                    :class="[
-                      {
-                        'from-card/50 sticky from-50%':
-                          cell.column.getIsPinned(),
-                      },
-                      cell.column.getIsPinned() === 'start'
-                        ? 'left-0 bg-linear-to-r'
-                        : cell.column.getIsPinned() === 'end'
-                          ? 'right-0 bg-linear-to-l'
-                          : '',
-                    ]"
+                    :class="cell.column.id === 'actions' && 'text-right'"
                     @click="onCellClick(cell.column.id, $event)"
                   >
                     <template v-if="cell.getIsGrouped()">

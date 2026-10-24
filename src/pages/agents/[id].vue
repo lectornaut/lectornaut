@@ -5,7 +5,11 @@ import {
 } from "@/composables/useFunctions"
 import { useCopy } from "@/composables/useCopy"
 import { useTeamActions } from "@/composables/useTeamActions"
-import { BUILT_IN_AGENTS_BY_ID, isBuiltInAgentId } from "@/data/builtInAgents"
+import {
+  BUILT_IN_AGENTS_BY_ID,
+  getAgentSource,
+  isBuiltInAgentId,
+} from "@/data/builtInAgents"
 import {
   IconAtSign,
   IconBot,
@@ -322,9 +326,11 @@ useHead(() => ({
                 <Badge variant="secondary">
                   <IconBot />
                   {{
-                    profile.isBuiltIn
-                      ? t("pages.agents.profile.builtInBadge")
-                      : t("pages.agents.profile.customBadge")
+                    getAgentSource(agentId) === "published"
+                      ? t("ai.agents.connectionTooltip")
+                      : profile.isBuiltIn
+                        ? t("pages.agents.profile.builtInBadge")
+                        : t("pages.agents.profile.customBadge")
                   }}
                 </Badge>
                 <Badge variant="secondary">

@@ -1,11 +1,6 @@
 <script lang="ts" setup generic="TData extends RowData">
 import type { AppTableFeatures } from "@/components/table/features"
-import {
-  IconArrowDown,
-  IconArrowUp,
-  IconChevronsUpDown,
-  IconEyeOff,
-} from "@/data/icons"
+import { IconArrowDown, IconArrowUp, IconEyeOff } from "@/data/icons"
 import type { Column, RowData } from "@tanstack/vue-table"
 
 defineProps<{
@@ -22,12 +17,12 @@ defineOptions({
   <div v-if="column.getCanSort()">
     <DropdownMenu>
       <DropdownMenuTrigger as-child>
-        <Button variant="ghost" class="data-[state=open]:bg-accent">
+        <DataTableSortButton
+          :direction="column.getIsSorted() || null"
+          class="data-[state=open]:bg-accent"
+        >
           {{ title }}
-          <IconArrowDown v-if="column.getIsSorted() === 'desc'" />
-          <IconArrowUp v-else-if="column.getIsSorted() === 'asc'" />
-          <IconChevronsUpDown v-else />
-        </Button>
+        </DataTableSortButton>
       </DropdownMenuTrigger>
       <DropdownMenuContent>
         <DropdownMenuItem data-hotkey="a" @click="column.toggleSorting(false)">

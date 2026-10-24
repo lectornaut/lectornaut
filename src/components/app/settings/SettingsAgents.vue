@@ -21,18 +21,16 @@ import type { ITeamAgent } from "@/types/domain"
  *
  *   1. **Built-in agents** — per-preset feature toggles for the four
  *      shipped personas (Researcher / Writer / Summarizer / Code
- *      helper). Saved as `agentConfig.builtInAgents` (a string-keyed
- *      record). Disabling a preset hides it from the pickers and the
+ *      helper). Saved on integration divergence docs.
+ *      Disabling a preset hides it from the pickers and the
  *      cross-agent transfer roster — same effect as setting a custom
  *      agent's `enabled` to false.
  *
- *   2. **Custom agents (team-wide gate)** — `agentConfig.tools
- *      .customAgents`. Top-of-section toggle that controls whether
- *      the entire custom-agents feature is visible to members. Sits
- *      under `tools.*` in the schema but conceptually belongs to the
- *      Agents page.
+ *   2. **Connection agents** — published personas, enabled independently
+ *      while their connection is active. Installation and definitions are
+ *      managed through Connections, not through the custom-agent editor.
  *
- *   3. **Custom agents (inline list)** — active + collapsible
+ *   3. **Custom agents** — team-wide gate plus active + collapsible
  *      Disabled + collapsible Archived. Per-agent edit, archive /
  *      restore, enable/disable, and hard-delete actions sit on each
  *      row. A "New agent" button opens the editor-only
@@ -114,7 +112,7 @@ const { setEnabled: setIntegrationEnabled } = useIntegrations()
 
 const builtInAgentRows = computed(() =>
   integrationsStore.agentIntegrations
-    .filter((i) => i.source !== "custom" && i.installed)
+    .filter((i) => i.source === "builtin" && i.installed)
     .map((i) => {
       const id = i.sourceKey ?? i.id
       const def = BUILT_IN_AGENTS.find((a) => a.id === id)
@@ -395,6 +393,9 @@ const handleRemoveAgent = async (agent: ITeamAgent): Promise<void> => {
       <FieldSeparator />
 
       <!-- ── Custom agents ──────────────────────────────────────────── -->
+      <SettingsConnectionResources type="agent" :can-manage="canEdit" />
+      <FieldSeparator />
+
       <FieldSet>
         <!--
             Team-wide feature gate doubles as the section header. When

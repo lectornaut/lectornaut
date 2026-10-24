@@ -4,12 +4,8 @@ import { useConfirmationDialog } from "@/composables/useConfirmationDialog"
 import { usePhotoUpload } from "@/composables/usePhotoUpload"
 import { useTeamActions } from "@/composables/useTeamActions"
 import {
-  IconArrowDown,
-  IconArrowUp,
-  IconArrowUpDown,
   IconCheck,
   IconLogOut,
-  IconMoreHorizontal,
   IconPencil,
   IconPlus,
   IconSwitchHorizontal,
@@ -171,49 +167,33 @@ const formatCreatedAt = (
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead class="w-1/4">
-                      <Button variant="ghost" @click="toggleTeamSort('name')">
+                    <TableHead class="min-w-64">
+                      <DataTableSortButton
+                        :direction="
+                          teamSortKey === 'name' ? teamSortDirection : null
+                        "
+                        @click="toggleTeamSort('name')"
+                      >
                         {{ t("settings.teamsList.columnName") }}
-                        <IconArrowUp
-                          v-if="
-                            teamSortKey === 'name' &&
-                            teamSortDirection === 'asc'
-                          "
-                        />
-                        <IconArrowDown
-                          v-else-if="
-                            teamSortKey === 'name' &&
-                            teamSortDirection === 'desc'
-                          "
-                        />
-                        <IconArrowUpDown v-else />
-                      </Button>
+                      </DataTableSortButton>
                     </TableHead>
                     <TableHead class="w-1/4">{{
                       t("settings.teamsList.columnRole")
                     }}</TableHead>
                     <TableHead class="w-1/4">
-                      <Button
-                        variant="ghost"
+                      <DataTableSortButton
+                        :direction="
+                          teamSortKey === 'created' ? teamSortDirection : null
+                        "
                         @click="toggleTeamSort('created')"
                       >
                         {{ t("settings.teamsList.columnCreated") }}
-                        <IconArrowUp
-                          v-if="
-                            teamSortKey === 'created' &&
-                            teamSortDirection === 'asc'
-                          "
-                        />
-                        <IconArrowDown
-                          v-else-if="
-                            teamSortKey === 'created' &&
-                            teamSortDirection === 'desc'
-                          "
-                        />
-                        <IconArrowUpDown v-else />
-                      </Button>
+                      </DataTableSortButton>
                     </TableHead>
-                    <TableHead class="w-1/4 text-right"></TableHead>
+                    <TableHead
+                      data-pinned="end"
+                      class="w-px text-right"
+                    ></TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -225,7 +205,7 @@ const formatCreatedAt = (
                        the Item's line-clamp can wrap-and-ellipsize instead of
                        one long line setting the table's min-content width. -->
                     <TableCell class="whitespace-normal">
-                      <Item class="group p-0" size="xs">
+                      <Item class="group flex-nowrap p-0" size="xs">
                         <ItemMedia class="group relative">
                           <TooltipProvider>
                             <Tooltip>
@@ -284,28 +264,24 @@ const formatCreatedAt = (
                             </Tooltip>
                           </TooltipProvider>
                         </ItemMedia>
-                        <ItemContent>
-                          <ItemTitle>
-                            {{ membership.team?.name }}
-                          </ItemTitle>
-                          <ItemDescription class="text-xs">
-                            {{
-                              t("settings.teams.memberCount", {
-                                count: getTeamMemberCount(membership.teamId),
-                              })
-                            }}
-                          </ItemDescription>
-                        </ItemContent>
+                        <SettingsIdentity
+                          :title="membership.team?.name ?? ''"
+                          :description="
+                            t('settings.teams.memberCount', {
+                              count: getTeamMemberCount(membership.teamId),
+                            })
+                          "
+                        />
                       </Item>
                     </TableCell>
                     <TableCell class="capitalize">
                       {{ membership.role }}
                     </TableCell>
-                    <TableCell>
+                    <TableCell class="text-muted-foreground tabular-nums">
                       {{ formatCreatedAt(membership.createdAt) }}
                     </TableCell>
-                    <TableCell class="flex items-center justify-end text-right">
-                      <ButtonGroup>
+                    <TableCell data-pinned="end" class="text-right">
+                      <ButtonGroup class="w-full justify-end">
                         <ButtonGroup>
                           <Button
                             v-if="currentTeam?.id !== membership.team?.id"
@@ -331,112 +307,108 @@ const formatCreatedAt = (
                           </Button>
                         </ButtonGroup>
                         <ButtonGroup>
-                          <DropdownMenu>
-                            <TooltipProvider>
-                              <Tooltip>
+                          <TooltipProvider>
+                            <Tooltip>
+                              <DropdownMenu>
                                 <TooltipTrigger as-child>
                                   <DropdownMenuTrigger as-child>
-                                    <Button variant="outline" size="icon">
-                                      <IconMoreHorizontal />
-                                    </Button>
+                                    <DataTableRowActionsButton
+                                      :label="
+                                        t('settings.teamsList.actionsTooltip')
+                                      "
+                                    />
                                   </DropdownMenuTrigger>
-                                  <DropdownMenuContent>
-                                    <Tooltip>
-                                      <TooltipTrigger as-child>
-                                        <div>
-                                          <DropdownMenuItem
-                                            :disabled="!canExitTeam(membership)"
-                                            data-hotkey="x"
-                                            @click="
-                                              exitTeamDialog.open(
-                                                membership.team!
-                                              )
-                                            "
-                                          >
-                                            <IconLogOut />
-                                            {{ t("settings.members.exit") }}
-                                            <DropdownMenuShortcut>
-                                              X
-                                            </DropdownMenuShortcut>
-                                          </DropdownMenuItem>
-                                        </div>
-                                      </TooltipTrigger>
-                                      <TooltipContent
-                                        v-if="!canExitTeam(membership)"
-                                      >
-                                        {{
-                                          getCannotExitTeamReason(membership)
-                                        }}
-                                      </TooltipContent>
-                                    </Tooltip>
-                                    <DropdownMenuSeparator />
-                                    <Tooltip>
-                                      <TooltipTrigger as-child>
-                                        <div>
-                                          <DropdownMenuItem
-                                            :disabled="!canEditTeam(membership)"
-                                            data-hotkey="e"
-                                            @click="
-                                              openTeamDialog(
-                                                'edit',
-                                                membership.team!
-                                              )
-                                            "
-                                          >
-                                            <IconPencil />
-                                            {{ t("actions.edit") }}
-                                            <DropdownMenuShortcut>
-                                              E
-                                            </DropdownMenuShortcut>
-                                          </DropdownMenuItem>
-                                        </div>
-                                      </TooltipTrigger>
-                                      <TooltipContent
-                                        v-if="!canEditTeam(membership)"
-                                      >
-                                        {{
-                                          getCannotEditTeamReason(membership)
-                                        }}
-                                      </TooltipContent>
-                                    </Tooltip>
-                                    <Tooltip>
-                                      <TooltipTrigger as-child>
-                                        <div>
-                                          <DropdownMenuItem
-                                            :disabled="
-                                              !canDeleteTeam(membership)
-                                            "
-                                            data-hotkey="backspace delete"
-                                            @click="
-                                              deleteTeamDialog.open(
-                                                membership.team!
-                                              )
-                                            "
-                                          >
-                                            <IconTrash />
-                                            {{ t("actions.delete") }}
-                                            <DropdownMenuShortcut>
-                                              ⌫
-                                            </DropdownMenuShortcut>
-                                          </DropdownMenuItem>
-                                        </div>
-                                      </TooltipTrigger>
-                                      <TooltipContent
-                                        v-if="!canDeleteTeam(membership)"
-                                      >
-                                        {{
-                                          getCannotDeleteTeamReason(membership)
-                                        }}
-                                      </TooltipContent>
-                                    </Tooltip>
-                                  </DropdownMenuContent>
                                 </TooltipTrigger>
+                                <DropdownMenuContent align="end">
+                                  <Tooltip>
+                                    <TooltipTrigger as-child>
+                                      <div>
+                                        <DropdownMenuItem
+                                          :disabled="!canExitTeam(membership)"
+                                          data-hotkey="x"
+                                          @click="
+                                            exitTeamDialog.open(
+                                              membership.team!
+                                            )
+                                          "
+                                        >
+                                          <IconLogOut />
+                                          {{ t("settings.members.exit") }}
+                                          <DropdownMenuShortcut>
+                                            X
+                                          </DropdownMenuShortcut>
+                                        </DropdownMenuItem>
+                                      </div>
+                                    </TooltipTrigger>
+                                    <TooltipContent
+                                      v-if="!canExitTeam(membership)"
+                                    >
+                                      {{ getCannotExitTeamReason(membership) }}
+                                    </TooltipContent>
+                                  </Tooltip>
+                                  <DropdownMenuSeparator />
+                                  <Tooltip>
+                                    <TooltipTrigger as-child>
+                                      <div>
+                                        <DropdownMenuItem
+                                          :disabled="!canEditTeam(membership)"
+                                          data-hotkey="e"
+                                          @click="
+                                            openTeamDialog(
+                                              'edit',
+                                              membership.team!
+                                            )
+                                          "
+                                        >
+                                          <IconPencil />
+                                          {{ t("actions.edit") }}
+                                          <DropdownMenuShortcut>
+                                            E
+                                          </DropdownMenuShortcut>
+                                        </DropdownMenuItem>
+                                      </div>
+                                    </TooltipTrigger>
+                                    <TooltipContent
+                                      v-if="!canEditTeam(membership)"
+                                    >
+                                      {{ getCannotEditTeamReason(membership) }}
+                                    </TooltipContent>
+                                  </Tooltip>
+                                  <Tooltip>
+                                    <TooltipTrigger as-child>
+                                      <div>
+                                        <DropdownMenuItem
+                                          :disabled="!canDeleteTeam(membership)"
+                                          data-hotkey="backspace delete"
+                                          @click="
+                                            deleteTeamDialog.open(
+                                              membership.team!
+                                            )
+                                          "
+                                        >
+                                          <IconTrash />
+                                          {{ t("actions.delete") }}
+                                          <DropdownMenuShortcut>
+                                            ⌫
+                                          </DropdownMenuShortcut>
+                                        </DropdownMenuItem>
+                                      </div>
+                                    </TooltipTrigger>
+                                    <TooltipContent
+                                      v-if="!canDeleteTeam(membership)"
+                                    >
+                                      {{
+                                        getCannotDeleteTeamReason(membership)
+                                      }}
+                                    </TooltipContent>
+                                  </Tooltip>
+                                </DropdownMenuContent>
                                 <TooltipContent>{{
                                   t("settings.teamsList.actionsTooltip")
                                 }}</TooltipContent>
-                              </Tooltip>
-                            </TooltipProvider>
-                          </DropdownMenu>
+                              </DropdownMenu>
+                            </Tooltip>
+                          </TooltipProvider>
                         </ButtonGroup>
                       </ButtonGroup>
                     </TableCell>

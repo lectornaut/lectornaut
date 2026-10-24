@@ -39,6 +39,8 @@ import { DEFAULT_AGENT_ID } from "./agents.js"
 // audit.ts is init-safe: every edge is touched only inside handlers, never
 // during module evaluation (same class as audit.ts's blessed call-time
 // import from connections.ts).
+import { getConnectionResourceProvider } from "@lectornaut/shared/connectionResources"
+import type { ConnectionProvider } from "@lectornaut/shared/domain"
 import { buildContext, logEvent } from "./audit.js"
 import { requireVerifiedAuth } from "./auth.js"
 import { assertAdminRole as assertTeamAdminRole } from "./authGuards.js"
@@ -52,6 +54,7 @@ import {
   type ResolvedNodeContext,
 } from "./botNodeTools.js"
 import { BUILT_IN_AGENTS_BY_ID, isBuiltInAgentId } from "./builtInAgents.js"
+import { assertConnectionAvailable } from "./connections.js"
 import { actsAsUidViolation, isEligibleActsAsUid } from "./connectionsCore.js"
 import {
   NODE_SCOPES,
@@ -166,6 +169,7 @@ const workflowUpdateSchema = workflowDraftSchema
   .partial()
 
 interface WorkflowDoc {
+  connectionProvider?: ConnectionProvider
   // Denormalized so collection-group reads/queries (the team-wide client list,
   // the slot count, the scheduler) recover the team without path-walking the
   // now-nested `teams/{t}/workspaces/{w}/workflows` location.
@@ -191,6 +195,35 @@ interface WorkflowDoc {
   archivedAt: Timestamp | null
   /** P3 — connection-binding identity for headless runs (absent on old docs). */
   actsAsUid?: string | null
+}
+
+async function workflowConnectionActive(
+  teamId: string,
+  wf: Pick<WorkflowDoc, "connectionProvider" | "presetKey">
+): Promise<boolean> {
+  if (!wf.connectionProvider) return true
+  if (
+    !wf.presetKey ||
+    getConnectionResourceProvider("workflow", wf.presetKey) !==
+      wf.connectionProvider
+  )
+    return false
+  const snap = await db
+    .doc(`teams/${teamId}/connections/${wf.connectionProvider}`)
+    .get()
+  return snap.exists && snap.data()?.status !== "disabled"
+}
+
+async function assertWorkflowConnectionActive(
+  teamId: string,
+  wf: Pick<WorkflowDoc, "connectionProvider" | "presetKey">
+): Promise<void> {
+  if (!(await workflowConnectionActive(teamId, wf))) {
+    throw new HttpsError(
+      "failed-precondition",
+      "The owning connection is disabled, removed, or no longer provides this workflow."
+    )
+  }
 }
 
 type RunStatus = WorkflowRunStatus
@@ -593,6 +626,8 @@ export const updateTeamWorkflow = onCall<{
   }
   const current = snap.data() as WorkflowDoc
 
+  await assertWorkflowConnectionActive(teamId, current)
+
   // Resolve the post-update enabled + trigger so nextRunAt stays consistent.
   const nextEnabled = parsed.data.enabled ?? current.enabled
   const nextTrigger = parsed.data.trigger ?? current.trigger
@@ -657,6 +692,7 @@ export const setTeamWorkflowEnabled = onCall<{
     throw new HttpsError("not-found", "Workflow not found.")
   }
   const current = snap.data() as WorkflowDoc
+  if (enabled) await assertWorkflowConnectionActive(teamId, current)
   await ref.update({
     enabled,
     updatedAt: FieldValue.serverTimestamp(),
@@ -793,6 +829,14 @@ export const runTeamWorkflowNow = onCall<{
     throw new HttpsError("not-found", "Workflow not found.")
   }
   const wf = snap.data() as WorkflowDoc
+  await assertWorkflowConnectionActive(teamId, wf)
+  if (wf.connectionProvider) {
+    await assertConnectionAvailable(
+      teamId,
+      wf.connectionProvider,
+      await resolveRunActsAsUid(teamId, wf.actsAsUid)
+    )
+  }
   if (wf.archivedAt) {
     throw new HttpsError("failed-precondition", "This workflow is archived.")
   }
@@ -1130,6 +1174,16 @@ export const enableTeamWorkflowPreset = onCall<{
   const preset =
     typeof presetKey === "string" ? getWorkflowPreset(presetKey) : undefined
   if (!preset) throw new HttpsError("invalid-argument", "Unknown preset.")
+  const connectionProvider = getConnectionResourceProvider(
+    "workflow",
+    preset.key
+  )
+  if (connectionProvider) {
+    await assertWorkflowConnectionActive(teamId, {
+      connectionProvider,
+      presetKey: preset.key,
+    })
+  }
   await assertAgentRunnable(teamId, agentId)
 
   const parsed = workflowDraftSchema.safeParse({
@@ -1148,12 +1202,87 @@ export const enableTeamWorkflowPreset = onCall<{
   if (!parsed.success) {
     throw new HttpsError("internal", `Invalid preset: ${parsed.error.message}`)
   }
-  await assertWorkflowSlotAvailable(teamId)
-
-  const ref = db.collection(workflowsPath(teamId, workspaceId)).doc()
-  await ref.set(
-    buildWorkflowDocData(teamId, parsed.data, auth.uid, Date.now(), preset.key)
-  )
+  const ref = connectionProvider
+    ? db.doc(`${workflowsPath(teamId, workspaceId)}/connection__${preset.key}`)
+    : db.collection(workflowsPath(teamId, workspaceId)).doc()
+  if (connectionProvider) {
+    await db.runTransaction(async (tx) => {
+      const [existing, available, connection] = await tx.getAll(
+        ref,
+        db.doc(`${availableWorkflowsPath(teamId)}/${preset.key}`),
+        db.doc(`teams/${teamId}/connections/${connectionProvider}`)
+      )
+      if (
+        !available.exists ||
+        available.data()?.connectionProvider !== connectionProvider ||
+        !connection.exists ||
+        connection.data()?.status === "disabled"
+      ) {
+        throw new HttpsError(
+          "failed-precondition",
+          "Install and enable the owning connection first."
+        )
+      }
+      if (!existing.exists || existing.data()?.archivedAt) {
+        const active = await tx.get(
+          db
+            .collectionGroup("workflows")
+            .where("teamId", "==", teamId)
+            .where("archivedAt", "==", null)
+            .limit(MAX_ACTIVE_WORKFLOWS)
+        )
+        if (active.size >= MAX_ACTIVE_WORKFLOWS) {
+          throw new HttpsError(
+            "failed-precondition",
+            `Active workflow limit reached (${MAX_ACTIVE_WORKFLOWS}).`
+          )
+        }
+      }
+      if (existing.exists) {
+        if (
+          existing.data()?.connectionProvider !== connectionProvider ||
+          existing.data()?.presetKey !== preset.key
+        ) {
+          throw new HttpsError(
+            "already-exists",
+            "Workflow belongs to another source."
+          )
+        }
+        tx.update(ref, {
+          archivedAt: null,
+          enabled: true,
+          updatedAt: FieldValue.serverTimestamp(),
+          nextRunAt: nextRunAtField(
+            true,
+            (existing.data() as WorkflowDoc).trigger,
+            Date.now()
+          ),
+        })
+      } else {
+        tx.set(ref, {
+          ...buildWorkflowDocData(
+            teamId,
+            parsed.data,
+            auth.uid,
+            Date.now(),
+            preset.key
+          ),
+          connectionProvider,
+        })
+      }
+    })
+  } else {
+    await assertWorkflowSlotAvailable(teamId)
+    await ref.set(
+      buildWorkflowDocData(
+        teamId,
+        parsed.data,
+        auth.uid,
+        Date.now(),
+        preset.key
+      )
+    )
+  }
   // Same action as a custom create — one verb per outcome; `presetKey` in
   // the changes is the provenance that distinguishes a materialized preset.
   await logEvent({
@@ -1204,6 +1333,12 @@ export const setTeamWorkflowAvailability = onCall<{
   }
   if (!getWorkflowPreset(presetKey)) {
     throw new HttpsError("invalid-argument", "Unknown preset.")
+  }
+  if (getConnectionResourceProvider("workflow", presetKey)) {
+    throw new HttpsError(
+      "failed-precondition",
+      "Manage availability through the owning connection."
+    )
   }
   const role = await assertAdminRole(teamId, auth.uid)
 
@@ -1297,6 +1432,13 @@ export const dispatchScheduledWorkflows = onSchedule(
       if (!teamId) continue
       if (wf.enabled === false || wf.archivedAt) continue
       if (wf.trigger?.type !== "schedule") continue
+      if (!(await workflowConnectionActive(teamId, wf))) {
+        // Paused connections must not permanently fill the due-work batch.
+        await doc.ref.update({
+          nextRunAt: nextRunAtField(true, wf.trigger, nowMs),
+        })
+        continue
+      }
       // Usage gate: skip CUSTOM workflows when the team toggle is off.
       if (!wf.presetKey) {
         let ok = gateByTeam.get(teamId)
@@ -1380,7 +1522,12 @@ function makeWorkflowTrigger(scope: WorkspaceNodeScope) {
       for (const doc of candidates.docs) {
         const wf = doc.data() as WorkflowDoc
         const trig = wf.trigger
-        if (wf.enabled === false || wf.archivedAt) continue
+        if (
+          wf.enabled === false ||
+          wf.archivedAt ||
+          !(await workflowConnectionActive(teamId, wf))
+        )
+          continue
         if (trig?.type !== "event" || trig.scope !== scope) continue
         // Usage gate: skip CUSTOM workflows when the team toggle is off.
         if (!wf.presetKey) {
@@ -1693,7 +1840,12 @@ export const executeWorkflowRun = onDocumentCreated(
         // The workflow may have been disabled/deleted between enqueue and now.
         const wfSnap = await workflowRef.get()
         const wf = wfSnap.data() as WorkflowDoc | undefined
-        if (!wfSnap.exists || wf?.enabled === false || wf?.archivedAt) {
+        if (
+          !wfSnap.exists ||
+          wf?.enabled === false ||
+          wf?.archivedAt ||
+          (wf && !(await workflowConnectionActive(teamId, wf)))
+        ) {
           await snap.ref.update({
             status: "skipped" satisfies RunStatus,
             finishedAt: FieldValue.serverTimestamp(),
@@ -1730,6 +1882,13 @@ export const executeWorkflowRun = onDocumentCreated(
         )
 
         try {
+          if (wf?.connectionProvider) {
+            await assertConnectionAvailable(
+              teamId,
+              wf.connectionProvider,
+              connectionsActsAsUid
+            )
+          }
           const result = await runHeadlessAgentTurn({
             agentId: run.agentId,
             teamId,
@@ -1744,6 +1903,13 @@ export const executeWorkflowRun = onDocumentCreated(
             allowTransfer: run.agentId === DEFAULT_AGENT_ID,
             connectionsActsAsUid,
           })
+          if (wf?.connectionProvider) {
+            await assertConnectionAvailable(
+              teamId,
+              wf.connectionProvider,
+              connectionsActsAsUid
+            )
+          }
 
           const usage = {
             model: result.usage.model,

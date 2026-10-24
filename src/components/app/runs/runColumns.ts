@@ -7,10 +7,12 @@
  */
 
 import RunRowActions from "@/components/app/runs/RunRowActions.vue"
+import SettingsIdentity from "@/components/app/settings/SettingsIdentity.vue"
 import DataTableColumnHeader from "@/components/table/DataTableColumnHeader.vue"
 import type { AppTableFeatures } from "@/components/table/features"
 import { Badge } from "@/components/ui/badge"
 import { Checkbox } from "@/components/ui/checkbox"
+import { Item, ItemMedia } from "@/components/ui/item"
 import { IconChevronRight } from "@/data/icons"
 import {
   runStatusOptions,
@@ -211,22 +213,30 @@ export function runColumns(
       // row's expanded state (clicking anywhere on the row toggles it; see
       // DataTable's row-click handler).
       cell: ({ row }) =>
-        h("div", { class: "flex items-center gap-2" }, [
-          h(IconChevronRight, {
-            class: [
-              "text-muted-foreground size-4 shrink-0 transition-transform",
-              row.getIsExpanded() ? "rotate-90" : "",
-            ],
-          }),
-          h(
-            "span",
-            { class: "truncate font-medium" },
-            row.original.workflowName
-          ),
-          row.original.presetKey
-            ? h(Badge, { variant: "outline" }, () => "Predefined")
-            : null,
-        ]),
+        h(
+          Item,
+          { size: "xs", class: "max-w-md min-w-64 flex-nowrap p-0" },
+          () => [
+            h(ItemMedia, {}, () =>
+              h(IconChevronRight, {
+                class: [
+                  "text-muted-foreground size-4 shrink-0 transition-transform",
+                  row.getIsExpanded() ? "rotate-90" : "",
+                ],
+              })
+            ),
+            h(
+              SettingsIdentity,
+              { title: row.original.workflowName },
+              {
+                badges: () =>
+                  row.original.presetKey
+                    ? h(Badge, { variant: "secondary" }, () => "Predefined")
+                    : null,
+              }
+            ),
+          ]
+        ),
       ...(workflowOptions && workflowOptions.length > 0
         ? {
             filterFn: workflowFilterFn,
@@ -284,7 +294,7 @@ export function runColumns(
       cell: ({ row }) =>
         h(
           "span",
-          { class: row.original.changesCount ? "" : "text-muted-foreground" },
+          { class: "text-muted-foreground tabular-nums" },
           String(row.original.changesCount || "—")
         ),
       enableSorting: true,
@@ -299,7 +309,7 @@ export function runColumns(
       cell: ({ row }) =>
         h(
           "span",
-          { class: "tabular-nums" },
+          { class: "text-muted-foreground tabular-nums" },
           fmtTokens(row.original.totalTokens)
         ),
       enableSorting: true,
@@ -312,7 +322,11 @@ export function runColumns(
           title: "Est. cost",
         }),
       cell: ({ row }) =>
-        h("span", { class: "tabular-nums" }, fmtCost(row.original.costUsd)),
+        h(
+          "span",
+          { class: "text-muted-foreground tabular-nums" },
+          fmtCost(row.original.costUsd)
+        ),
       enableSorting: true,
     },
     {
@@ -340,7 +354,7 @@ export function runColumns(
       cell: ({ row }) =>
         h(
           "span",
-          { class: "text-muted-foreground whitespace-nowrap text-xs" },
+          { class: "text-muted-foreground tabular-nums" },
           fmtWhen(row.original.queuedAtMs)
         ),
       ...(dateRangeFilter

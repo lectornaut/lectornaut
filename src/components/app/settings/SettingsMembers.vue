@@ -1,16 +1,7 @@
 <script lang="ts" setup>
 import { useCanViewTeamSettings } from "@/composables/useCanViewTeamSettings"
 import { useTeamActions } from "@/composables/useTeamActions"
-import {
-  IconArrowDown,
-  IconArrowUp,
-  IconArrowUpDown,
-  IconLogOut,
-  IconMoreHorizontal,
-  IconPlus,
-  IconTrash,
-  IconUsers,
-} from "@/data/icons"
+import { IconLogOut, IconPlus, IconTrash, IconUsers } from "@/data/icons"
 import {
   isAgentMembership,
   type IAgentMembership,
@@ -41,7 +32,7 @@ const {
 
 // ── Member display helpers (users + agents share one table) ──────────────────
 // Agents are role-locked "member" rows: no email, a boring-avatar instead of
-// a photo, an "Agent" badge, a disabled role select, and a direct remove.
+// a photo, an "Agent" badge, a disabled role select, and a remove action menu.
 const memberRowKey = (member: ITeamMember) =>
   isAgentMembership(member) ? `agent:${member.agentId}` : member.userId
 
@@ -170,49 +161,35 @@ const formatCreatedAt = (
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead class="w-1/4">
-                      <Button variant="ghost" @click="toggleMemberSort('name')">
+                    <TableHead class="min-w-64">
+                      <DataTableSortButton
+                        :direction="
+                          memberSortKey === 'name' ? memberSortDirection : null
+                        "
+                        @click="toggleMemberSort('name')"
+                      >
                         {{ t("settings.members.name") }}
-                        <IconArrowUp
-                          v-if="
-                            memberSortKey === 'name' &&
-                            memberSortDirection === 'asc'
-                          "
-                        />
-                        <IconArrowDown
-                          v-else-if="
-                            memberSortKey === 'name' &&
-                            memberSortDirection === 'desc'
-                          "
-                        />
-                        <IconArrowUpDown v-else />
-                      </Button>
+                      </DataTableSortButton>
                     </TableHead>
                     <TableHead class="w-1/4">
                       {{ t("settings.members.role") }}
                     </TableHead>
                     <TableHead class="w-1/4">
-                      <Button
-                        variant="ghost"
+                      <DataTableSortButton
+                        :direction="
+                          memberSortKey === 'joined'
+                            ? memberSortDirection
+                            : null
+                        "
                         @click="toggleMemberSort('joined')"
                       >
                         {{ t("settings.members.joined") }}
-                        <IconArrowUp
-                          v-if="
-                            memberSortKey === 'joined' &&
-                            memberSortDirection === 'asc'
-                          "
-                        />
-                        <IconArrowDown
-                          v-else-if="
-                            memberSortKey === 'joined' &&
-                            memberSortDirection === 'desc'
-                          "
-                        />
-                        <IconArrowUpDown v-else />
-                      </Button>
+                      </DataTableSortButton>
                     </TableHead>
-                    <TableHead class="w-1/4 text-right"></TableHead>
+                    <TableHead
+                      data-pinned="end"
+                      class="w-px text-right"
+                    ></TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -224,7 +201,7 @@ const formatCreatedAt = (
                        the Item's line-clamp can wrap-and-ellipsize instead of
                        one long line setting the table's min-content width. -->
                     <TableCell class="whitespace-normal">
-                      <Item class="group p-0" size="xs">
+                      <Item class="group flex-nowrap p-0" size="xs">
                         <ItemMedia v-if="isAgentMembership(member)">
                           <AppAvatar
                             variant="beam"
@@ -237,28 +214,24 @@ const formatCreatedAt = (
                             :name="member.user?.displayName"
                           />
                         </ItemMedia>
-                        <ItemContent>
-                          <ItemTitle class="flex items-center gap-1.5 truncate">
-                            {{ memberDisplayName(member) }}
+                        <SettingsIdentity
+                          :title="memberDisplayName(member)"
+                          :description="
+                            isAgentMembership(member)
+                              ? member.agent.description ||
+                                t('settings.members.agentSubtitle')
+                              : member.user?.email
+                          "
+                        >
+                          <template #badges>
                             <Badge
                               v-if="isAgentMembership(member)"
                               variant="secondary"
                             >
                               {{ t("settings.members.agentBadge") }}
                             </Badge>
-                          </ItemTitle>
-                          <ItemDescription class="text-xs">
-                            <template v-if="isAgentMembership(member)">
-                              {{
-                                member.agent.description ||
-                                t("settings.members.agentSubtitle")
-                              }}
-                            </template>
-                            <template v-else>
-                              {{ member.user?.email }}
-                            </template>
-                          </ItemDescription>
-                        </ItemContent>
+                          </template>
+                        </SettingsIdentity>
                       </Item>
                     </TableCell>
                     <TableCell class="capitalize">
@@ -347,24 +320,21 @@ const formatCreatedAt = (
                         </Select>
                       </template>
                     </TableCell>
-                    <TableCell>
+                    <TableCell class="text-muted-foreground tabular-nums">
                       {{ formatCreatedAt(member.createdAt) }}
                     </TableCell>
-                    <TableCell class="flex items-center justify-end text-right">
-                      <ButtonGroup>
-                        <!-- Agent rows: direct remove only (role is locked) -->
+                    <TableCell data-pinned="end" class="text-right">
+                      <ButtonGroup class="w-full justify-end">
+                        <!-- Agent rows: remove-only dropdown (role is locked) -->
                         <template v-if="isAgentMembership(member)">
                           <TooltipProvider v-if="!canInviteMembers">
                             <Tooltip>
                               <TooltipTrigger as-child>
                                 <span class="inline-block">
-                                  <Button
-                                    variant="outline"
-                                    size="icon"
+                                  <DataTableRowActionsButton
+                                    :label="t('settings.members.actions')"
                                     disabled
-                                  >
-                                    <IconMoreHorizontal />
-                                  </Button>
+                                  />
                                 </span>
                               </TooltipTrigger>
                               <TooltipContent>
@@ -375,23 +345,40 @@ const formatCreatedAt = (
                           <AlertDialog v-else>
                             <TooltipProvider>
                               <Tooltip>
-                                <TooltipTrigger as-child>
-                                  <AlertDialogTrigger as-child>
-                                    <Button
-                                      variant="outline"
-                                      size="icon"
-                                      :disabled="isAgentRemovalPending(member)"
-                                    >
-                                      <Spinner
-                                        v-if="isAgentRemovalPending(member)"
+                                <DropdownMenu>
+                                  <TooltipTrigger as-child>
+                                    <DropdownMenuTrigger as-child>
+                                      <DataTableRowActionsButton
+                                        :label="t('settings.members.actions')"
+                                        :loading="isAgentRemovalPending(member)"
                                       />
-                                      <IconTrash v-else />
-                                    </Button>
-                                  </AlertDialogTrigger>
-                                </TooltipTrigger>
-                                <TooltipContent>
-                                  {{ t("settings.members.removeAgent") }}
-                                </TooltipContent>
+                                    </DropdownMenuTrigger>
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    {{ t("settings.members.actions") }}
+                                  </TooltipContent>
+                                  <DropdownMenuContent align="end">
+                                    <DropdownMenuGroup>
+                                      <AlertDialogTrigger as-child>
+                                        <DropdownMenuItem
+                                          data-hotkey="x"
+                                          :disabled="
+                                            isAgentRemovalPending(member)
+                                          "
+                                          @select.prevent
+                                        >
+                                          <IconTrash />
+                                          {{
+                                            t("settings.members.removeAgent")
+                                          }}
+                                          <DropdownMenuShortcut>
+                                            X
+                                          </DropdownMenuShortcut>
+                                        </DropdownMenuItem>
+                                      </AlertDialogTrigger>
+                                    </DropdownMenuGroup>
+                                  </DropdownMenuContent>
+                                </DropdownMenu>
                               </Tooltip>
                             </TooltipProvider>
                             <AlertDialogContent>
@@ -433,9 +420,10 @@ const formatCreatedAt = (
                           <Tooltip>
                             <TooltipTrigger as-child>
                               <span class="inline-block">
-                                <Button variant="outline" size="icon" disabled>
-                                  <IconMoreHorizontal />
-                                </Button>
+                                <DataTableRowActionsButton
+                                  :label="t('settings.members.actions')"
+                                  disabled
+                                />
                               </span>
                             </TooltipTrigger>
                             <TooltipContent>
@@ -443,116 +431,101 @@ const formatCreatedAt = (
                             </TooltipContent>
                           </Tooltip>
                         </TooltipProvider>
-                        <DropdownMenu v-else>
-                          <TooltipProvider>
-                            <Tooltip>
+                        <TooltipProvider v-else>
+                          <Tooltip>
+                            <DropdownMenu>
                               <TooltipTrigger as-child>
                                 <DropdownMenuTrigger as-child>
-                                  <Button
-                                    variant="outline"
-                                    size="icon"
-                                    :disabled="
+                                  <DataTableRowActionsButton
+                                    :label="t('settings.members.actions')"
+                                    :loading="
                                       teamLoading.member.isLoading(
                                         member.userId
                                       )
                                     "
-                                  >
-                                    <Spinner
-                                      v-if="
-                                        teamLoading.member.isLoading(
-                                          member.userId
-                                        )
-                                      "
-                                    />
-                                    <IconMoreHorizontal v-else />
-                                  </Button>
+                                  />
                                 </DropdownMenuTrigger>
-                                <DropdownMenuContent>
-                                  <AlertDialog>
-                                    <AlertDialogTrigger as-child>
-                                      <DropdownMenuItem
-                                        data-hotkey="x"
-                                        @select.prevent
+                              </TooltipTrigger>
+                              <DropdownMenuContent align="end">
+                                <AlertDialog>
+                                  <AlertDialogTrigger as-child>
+                                    <DropdownMenuItem
+                                      data-hotkey="x"
+                                      @select.prevent
+                                    >
+                                      <IconLogOut />
+                                      {{
+                                        member.userId === user?.uid
+                                          ? t("settings.members.exit")
+                                          : t("settings.members.remove")
+                                      }}
+                                      <DropdownMenuShortcut>
+                                        X
+                                      </DropdownMenuShortcut>
+                                    </DropdownMenuItem>
+                                  </AlertDialogTrigger>
+                                  <AlertDialogContent>
+                                    <AlertDialogHeader>
+                                      <AlertDialogTitle>
+                                        {{
+                                          member.userId === user?.uid
+                                            ? t("settings.members.exitTeam")
+                                            : t("settings.members.removeMember")
+                                        }}
+                                      </AlertDialogTitle>
+                                      <AlertDialogDescription>
+                                        {{
+                                          member.userId === user?.uid
+                                            ? t("settings.members.exitConfirm")
+                                            : t(
+                                                "settings.members.removeConfirm",
+                                                {
+                                                  name:
+                                                    member.user?.displayName ||
+                                                    member.user?.email ||
+                                                    "",
+                                                }
+                                              )
+                                        }}
+                                      </AlertDialogDescription>
+                                    </AlertDialogHeader>
+                                    <AlertDialogFooter>
+                                      <AlertDialogCancel>
+                                        {{ t("actions.cancel") }}
+                                        <Kbd>Esc</Kbd>
+                                      </AlertDialogCancel>
+                                      <AlertDialogAction
+                                        :disabled="
+                                          teamLoading.member.isLoading(
+                                            member.userId
+                                          )
+                                        "
+                                        @click="handleRemoveMember(member)"
                                       >
-                                        <IconLogOut />
+                                        <Spinner
+                                          v-if="
+                                            teamLoading.member.isLoading(
+                                              member.userId
+                                            )
+                                          "
+                                        />
                                         {{
                                           member.userId === user?.uid
                                             ? t("settings.members.exit")
                                             : t("settings.members.remove")
                                         }}
-                                        <DropdownMenuShortcut>
-                                          X
-                                        </DropdownMenuShortcut>
-                                      </DropdownMenuItem>
-                                    </AlertDialogTrigger>
-                                    <AlertDialogContent>
-                                      <AlertDialogHeader>
-                                        <AlertDialogTitle>
-                                          {{
-                                            member.userId === user?.uid
-                                              ? t("settings.members.exitTeam")
-                                              : t(
-                                                  "settings.members.removeMember"
-                                                )
-                                          }}
-                                        </AlertDialogTitle>
-                                        <AlertDialogDescription>
-                                          {{
-                                            member.userId === user?.uid
-                                              ? t(
-                                                  "settings.members.exitConfirm"
-                                                )
-                                              : t(
-                                                  "settings.members.removeConfirm",
-                                                  {
-                                                    name:
-                                                      member.user
-                                                        ?.displayName ||
-                                                      member.user?.email ||
-                                                      "",
-                                                  }
-                                                )
-                                          }}
-                                        </AlertDialogDescription>
-                                      </AlertDialogHeader>
-                                      <AlertDialogFooter>
-                                        <AlertDialogCancel>
-                                          {{ t("actions.cancel") }}
-                                          <Kbd>Esc</Kbd>
-                                        </AlertDialogCancel>
-                                        <AlertDialogAction
-                                          :disabled="
-                                            teamLoading.member.isLoading(
-                                              member.userId
-                                            )
-                                          "
-                                          @click="handleRemoveMember(member)"
-                                        >
-                                          <Spinner
-                                            v-if="
-                                              teamLoading.member.isLoading(
-                                                member.userId
-                                              )
-                                            "
-                                          />
-                                          {{
-                                            member.userId === user?.uid
-                                              ? t("settings.members.exit")
-                                              : t("settings.members.remove")
-                                          }}
-                                          <Kbd>↩</Kbd>
-                                        </AlertDialogAction>
-                                      </AlertDialogFooter>
-                                    </AlertDialogContent>
-                                  </AlertDialog>
-                                </DropdownMenuContent>
-                              </TooltipTrigger>
+                                        <Kbd>↩</Kbd>
+                                      </AlertDialogAction>
+                                    </AlertDialogFooter>
+                                  </AlertDialogContent>
+                                </AlertDialog>
+                              </DropdownMenuContent>
                               <TooltipContent>
                                 {{ t("settings.members.actions") }}
                               </TooltipContent>
-                            </Tooltip>
-                          </TooltipProvider>
-                        </DropdownMenu>
+                            </DropdownMenu>
+                          </Tooltip>
+                        </TooltipProvider>
                       </ButtonGroup>
                     </TableCell>
                   </TableRow>

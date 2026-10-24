@@ -51,13 +51,11 @@ import { z } from "zod"
 // integrations → audit → connections → integrations is init-safe: every edge
 // is touched only inside handlers, never during module evaluation (same
 // class as audit.ts's blessed call-time import from connections.ts).
+import { getConnectionResourceProvider } from "@lectornaut/shared/connectionResources"
 import { buildContext, logEvent } from "./audit.js"
 import { requireVerifiedAuth } from "./auth.js"
 import { assertAdminRole as assertTeamAdminRole } from "./authGuards.js"
-import {
-  CONNECTION_PROVIDER_BY_SOURCE_KEY,
-  CONNECTION_TOOL_WIRE_NAMES,
-} from "./connectionProviders.js"
+import { CONNECTION_TOOL_WIRE_NAMES } from "./connectionProviders.js"
 import { isConnectionDisabled } from "./connectionsCore.js"
 import { NODE_SCOPES, type IntegrationSource } from "./domain.js"
 import { db } from "./firebase.js"
@@ -509,8 +507,7 @@ function normalizeIntegrationDoc(
   // wins at resolution. Built-in TOOL docs never carry a spec (the handler
   // is code, keyed by `sourceKey`).
   const hasSpec =
-    isRecord(data.spec) &&
-    (source === "custom" || (source === "builtin" && type === "agent"))
+    isRecord(data.spec) && (source === "custom" || type === "agent")
   if (type === "agent") {
     return {
       ...base,
@@ -665,7 +662,8 @@ export async function listIntegrations(
   const customs: IntegrationDoc[] = []
   for (const doc of docs) {
     if (doc.source === "custom") customs.push(doc)
-    else if (doc.sourceKey) byTypeKey.set(`${doc.type}:${doc.sourceKey}`, doc)
+    else if (doc.source === "builtin" && doc.sourceKey)
+      byTypeKey.set(`${doc.type}:${doc.sourceKey}`, doc)
   }
 
   const resolved: ResolvedIntegration[] = []
@@ -690,24 +688,24 @@ export async function listIntegrations(
   // piggybacks this function's 5s cache and is skipped entirely for the
   // common no-connections team.
   const publishedDocs = docs.filter((d) => d.source === "published")
-  let disabledProviders: ReadonlySet<string> = new Set()
+  let activeProviders: ReadonlySet<string> = new Set()
   if (publishedDocs.length > 0) {
     const connectionsSnap = await db
       .collection(`teams/${teamId}/connections`)
       .get()
-    disabledProviders = new Set(
+    activeProviders = new Set(
       connectionsSnap.docs
-        .filter((d) => isConnectionDisabled(d.data()))
+        .filter((d) => !isConnectionDisabled(d.data()))
         .map((d) => d.id)
     )
   }
   for (const doc of publishedDocs) {
     const provider = doc.sourceKey
-      ? CONNECTION_PROVIDER_BY_SOURCE_KEY.get(doc.sourceKey)
+      ? getConnectionResourceProvider(doc.type, doc.sourceKey)
       : undefined
     const entry = resolveDoc(doc)
     resolved.push(
-      provider && disabledProviders.has(provider)
+      !provider || !activeProviders.has(provider) || !entry.installed
         ? { ...entry, enabled: false }
         : entry
     )
@@ -977,7 +975,7 @@ export const updateIntegration = onCall<UpdateIntegrationRequest>(
     if (current.source === "published") {
       throw new HttpsError(
         "failed-precondition",
-        "Connection tools can't be edited — only enabled, disabled, installed, or uninstalled."
+        "Connection resources can't be edited. Manage their definitions through the owning connection."
       )
     }
     if (current.source !== "custom" && current.type === "tool") {
@@ -1261,8 +1259,15 @@ export const installIntegration = onCall<InstallIntegrationRequest>(
     // Custom (or any existing doc) restore: clear archivedAt by id.
     if (integrationId) {
       const ref = db.doc(integrationDocPath(teamId, integrationId))
-      if (!(await ref.get()).exists) {
+      const snap = await ref.get()
+      if (!snap.exists) {
         throw new HttpsError("not-found", "Integration not found.")
+      }
+      if (snap.data()?.source === "published") {
+        throw new HttpsError(
+          "failed-precondition",
+          "Install resources through their owning connection."
+        )
       }
       await ref.set({ archivedAt: null, updatedAt: now }, { merge: true })
       invalidateIntegrationsCache(teamId)
@@ -1318,6 +1323,12 @@ export const uninstallIntegration = onCall<UninstallIntegrationRequest>(
     const role = await assertAdminRole(data.teamId, auth.uid)
 
     const ref = await resolveMutableRef(data.teamId, data)
+    if ((await ref.get()).data()?.source === "published") {
+      throw new HttpsError(
+        "failed-precondition",
+        "Remove resources through their owning connection."
+      )
+    }
     await ref.set(
       {
         archivedAt: FieldValue.serverTimestamp(),

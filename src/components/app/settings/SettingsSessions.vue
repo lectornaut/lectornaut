@@ -2,6 +2,8 @@
 import DataTableColumnHeader from "@/components/table/DataTableColumnHeader.vue"
 import SettingsSessionsRowActions from "@/components/app/settings/SettingsSessionsRowActions.vue"
 import AppAvatar from "@/components/app/global/AppAvatar.vue"
+import SettingsIdentity from "@/components/app/settings/SettingsIdentity.vue"
+import { Item, ItemMedia } from "@/components/ui/item"
 import { Badge } from "@/components/ui/badge"
 import { Checkbox } from "@/components/ui/checkbox"
 import type { BotChatMode } from "@/composables/useFunctions"
@@ -237,18 +239,23 @@ const columns = computed<ColumnDef<AppTableFeatures, IBotSession>[]>(() => [
       }),
     cell: ({ row }) => {
       const s = row.original
-      return h("div", { class: "flex max-w-xs min-w-0 items-center gap-2" }, [
-        h(
-          "span",
-          { class: "truncate font-medium" },
-          s.title || t("ai.untitledSession")
-        ),
-        s.visibility !== "private"
-          ? h(visibilityIcon(s.visibility), {
-              class: "text-muted-foreground shrink-0",
-            })
-          : null,
-      ])
+      return h(
+        Item,
+        { size: "xs", class: "max-w-md min-w-64 flex-nowrap p-0" },
+        () =>
+          h(
+            SettingsIdentity,
+            { title: s.title || t("ai.untitledSession") },
+            {
+              badges: () =>
+                s.visibility !== "private"
+                  ? h(visibilityIcon(s.visibility), {
+                      class: "text-muted-foreground shrink-0",
+                    })
+                  : null,
+            }
+          )
+      )
     },
     enableSorting: true,
     enableGrouping: false,
@@ -287,7 +294,7 @@ const columns = computed<ColumnDef<AppTableFeatures, IBotSession>[]>(() => [
       }),
     cell: ({ row }) =>
       row.original.archivedAt
-        ? h(Badge, { variant: "secondary", class: "gap-1" }, () => [
+        ? h(Badge, { variant: "outline" }, () => [
             h(IconArchive),
             t("settings.sessions.statusArchived"),
           ])
@@ -328,13 +335,11 @@ const columns = computed<ColumnDef<AppTableFeatures, IBotSession>[]>(() => [
       const uid = row.original.ownerUid
       const member = uid ? memberByUid.value.get(uid) : undefined
       const name = memberName(uid)
-      return h("div", { class: "flex min-w-0 items-center gap-2" }, [
-        h(AppAvatar, {
-          class: "size-6 shrink-0",
-          src: member?.user?.photoURL,
-          name,
-        }),
-        h("span", { class: "truncate text-sm" }, name),
+      return h(Item, { size: "xs", class: "min-w-48 flex-nowrap p-0" }, () => [
+        h(ItemMedia, {}, () =>
+          h(AppAvatar, { src: member?.user?.photoURL, name })
+        ),
+        h(SettingsIdentity, { title: name }),
       ])
     },
     filterFn: (row, id, value: string[]) =>
@@ -447,7 +452,7 @@ const columns = computed<ColumnDef<AppTableFeatures, IBotSession>[]>(() => [
     cell: ({ row }) =>
       h(
         "span",
-        { class: "tabular-nums" },
+        { class: "text-muted-foreground tabular-nums" },
         String(row.original.messageCount ?? 0)
       ),
     enableSorting: true,
@@ -619,7 +624,7 @@ const submitDelete = async () => {
 <template>
   <div class="p-6">
     <FieldGroup>
-      <FieldSet>
+      <FieldSet class="min-w-0">
         <!-- No-permission empty state — mirrors `SettingsLogs.vue`'s gate -->
         <!-- so the two admin-only pages share a UX. The whole data area -->
         <!-- collapses to this empty when the current role lacks -->
@@ -654,7 +659,7 @@ const submitDelete = async () => {
           </Field>
 
           <Field orientation="horizontal">
-            <FieldContent>
+            <FieldContent class="min-w-0">
               <LoadingState
                 v-if="isLoading && sessions.length === 0"
                 :label="$t('common.loading')"

@@ -7,14 +7,15 @@ import {
   IconTrash,
 } from "@/data/icons"
 import { computed, ref } from "vue"
+import { settingsLifecycleStatus } from "@/helpers/settingsPresentation"
 
 /**
  * Workflow row for Settings → Workflows, built on the shadcn-style `<Item>`
  * primitives (ItemMedia / ItemContent / ItemTitle / ItemDescription /
  * ItemActions) so the custom + archived lists line up with the custom-agent and
  * custom-tool rows in the sibling settings panes — same three interactive zones
- * (info / cog menu / Switch) and the same lifecycle-badge logic ("Disabled"
- * wins over "Archived" when both apply).
+ * (info / cog menu / Switch) and the same lifecycle-badge logic ("Archived"
+ * wins over "Disabled" when both apply).
  *
  * Workflow-specific vs. the agent / tool rows:
  *   - The media slot renders a `vue-boring-avatars` portrait seeded from
@@ -59,9 +60,7 @@ const emit = defineEmits<{
 const { t } = useI18n()
 
 const statusBadgeKey = computed<"disabled" | "archived" | null>(() => {
-  if (props.isArchived) return "archived"
-  if (!props.enabled) return "disabled"
-  return null
+  return settingsLifecycleStatus(props.enabled, props.isArchived)
 })
 
 const avatarSeedEffective = computed(
@@ -79,7 +78,11 @@ const onToggleEnabled = (value: boolean | string): void => {
 </script>
 
 <template>
-  <Item variant="outline" :class="{ 'opacity-70': statusBadgeKey !== null }">
+  <Item
+    variant="outline"
+    class="flex-nowrap"
+    :class="{ 'opacity-70': statusBadgeKey !== null }"
+  >
     <ItemMedia variant="image" class="rounded-4xl">
       <AppAvatar
         variant="bauhaus"
@@ -88,9 +91,8 @@ const onToggleEnabled = (value: boolean | string): void => {
       />
     </ItemMedia>
 
-    <ItemContent>
-      <ItemTitle class="flex items-center gap-2 truncate">
-        <span class="truncate">{{ name }}</span>
+    <SettingsIdentity :title="name" :description="description">
+      <template #badges>
         <Badge v-if="isPredefined" variant="secondary" class="shrink-0">
           {{ t("settings.workflows.predefinedBadge") }}
         </Badge>
@@ -108,11 +110,8 @@ const onToggleEnabled = (value: boolean | string): void => {
         >
           {{ t("settings.workflows.archivedBadge") }}
         </Badge>
-      </ItemTitle>
-      <ItemDescription v-if="description" class="text-xs">
-        {{ description }}
-      </ItemDescription>
-    </ItemContent>
+      </template>
+    </SettingsIdentity>
 
     <ItemActions>
       <!-- Configure cog. Always has Edit; custom rows add Archive / Restore +

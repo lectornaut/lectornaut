@@ -17,7 +17,7 @@ const { hint } = useKeyHints()
     <div
       v-if="hint"
       v-motion-fade
-      class="text-muted-foreground flex min-w-0 items-center rounded-2xl border text-xs whitespace-nowrap"
+      class="text-muted-foreground flex min-w-0 items-center rounded-2xl text-xs whitespace-nowrap"
     >
       <KbdGroup class="shrink-0 rounded-2xl p-1 shadow">
         <span class="sr-only">{{
@@ -35,7 +35,7 @@ const { hint } = useKeyHints()
         </Kbd>
       </KbdGroup>
       <ul
-        class="no-scrollbar scroll-fade-x flex min-w-0 items-center divide-x overflow-x-auto"
+        class="no-scrollbar scroll-fade-x flex min-w-0 items-center overflow-x-auto"
       >
         <li
           v-for="option in hint.options"

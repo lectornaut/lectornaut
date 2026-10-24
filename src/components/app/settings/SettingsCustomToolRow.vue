@@ -7,14 +7,15 @@ import {
   IconTrash,
 } from "@/data/icons"
 import type { ITeamCustomTool } from "@/types/domain"
+import { settingsLifecycleStatus } from "@/helpers/settingsPresentation"
 
 const { t } = useI18n()
 
 /**
  * Compact, non-expandable row mirror of `SettingsCustomAgentRow.vue`.
  * Same Item-based primitives, same three interactive zones (info /
- * cog menu / Switch), same lifecycle badge logic ("Disabled" wins
- * over "Archived" when both apply).
+ * cog menu / Switch), same lifecycle badge logic ("Archived" wins
+ * over "Disabled" when both apply).
  *
  * Display affordances:
  *   - Title shows `displayName` when set, otherwise the wire-name
@@ -44,9 +45,10 @@ const emit = defineEmits<{
 const isArchived = computed(() => !!props.tool.archivedAt)
 
 const statusBadgeKey = computed<"disabled" | "archived" | null>(() => {
-  if (props.tool.enabled === false) return "disabled"
-  if (props.tool.archivedAt) return "archived"
-  return null
+  return settingsLifecycleStatus(
+    props.tool.enabled !== false,
+    !!props.tool.archivedAt
+  )
 })
 
 const titleText = computed(
@@ -86,7 +88,11 @@ const onToggleEnabled = (value: boolean | string): void => {
 </script>
 
 <template>
-  <Item variant="outline" :class="{ 'opacity-70': statusBadgeKey !== null }">
+  <Item
+    variant="outline"
+    class="flex-nowrap"
+    :class="{ 'opacity-70': statusBadgeKey !== null }"
+  >
     <ItemMedia variant="image" class="rounded-4xl">
       <AppAvatar
         variant="marble"
@@ -95,12 +101,9 @@ const onToggleEnabled = (value: boolean | string): void => {
       />
     </ItemMedia>
 
-    <ItemContent>
-      <ItemTitle class="flex items-center gap-2 truncate">
-        <span class="truncate font-mono text-sm">
-          {{ titleText }}
-        </span>
-        <Badge variant="secondary" class="shrink-0 text-xs">
+    <SettingsIdentity :title="titleText" :description="description" monospace>
+      <template #badges>
+        <Badge variant="secondary">
           {{ actionKindLabel }}
         </Badge>
         <Badge v-if="statusBadgeKey === 'disabled'" variant="outline">
@@ -109,11 +112,8 @@ const onToggleEnabled = (value: boolean | string): void => {
         <Badge v-else-if="statusBadgeKey === 'archived'" variant="outline">
           {{ t("settings.agents.customTools.archivedBadge") }}
         </Badge>
-      </ItemTitle>
-      <ItemDescription v-if="description" class="text-xs">
-        {{ description }}
-      </ItemDescription>
-    </ItemContent>
+      </template>
+    </SettingsIdentity>
 
     <ItemActions>
       <TooltipProvider>

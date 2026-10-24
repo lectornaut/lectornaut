@@ -192,9 +192,16 @@ export const useTeamAgentsStore = defineStore("teamAgents", () => {
   const builtInAgents = computed<ITeamAgent[]>(() => {
     if (!customAgentsEnabled.value) return []
     return agentIntegrations.value
-      .filter((i) => i.source !== "custom" && i.installed && i.enabled)
+      .filter((i) => i.source === "builtin" && i.installed && i.enabled)
       .map(toTeamAgent)
   })
+  const connectionAgents = computed<ITeamAgent[]>(() =>
+    customAgentsEnabled.value
+      ? agentIntegrations.value
+          .filter((i) => i.source === "published" && i.installed && i.enabled)
+          .map(toTeamAgent)
+      : []
+  )
 
   /** Custom agents the admin can manage — enabled AND non-archived. */
   const selectableAgents = computed<ITeamAgent[]>(() => {
@@ -208,12 +215,16 @@ export const useTeamAgentsStore = defineStore("teamAgents", () => {
   /** Picker surface: built-ins first (declaration order), then custom. */
   const pickerAgents = computed<ITeamAgent[]>(() => [
     ...builtInAgents.value,
+    ...connectionAgents.value,
     ...selectableAgents.value,
   ])
 
   /** Built-ins + every custom (incl. disabled/archived) — badge resolution. */
   const allAgents = computed<ITeamAgent[]>(() => [
     ...builtInAgents.value,
+    ...agentIntegrations.value
+      .filter((i) => i.source === "published")
+      .map(toTeamAgent),
     ...agents.value,
   ])
 
@@ -242,9 +253,13 @@ export const useTeamAgentsStore = defineStore("teamAgents", () => {
     isLoading.value ? null : currentTeamId.value
   )
 
-  /** Lookup by id among custom agents (matches prior behavior). */
-  const getById = (agentId: string): ITeamAgent | null =>
-    agents.value.find((agent) => agent.id === agentId) ?? null
+  /** Team-local lookup for stored personas, including connection agents. */
+  const getById = (agentId: string): ITeamAgent | null => {
+    const integration = agentIntegrations.value.find(
+      (i) => i.id === agentId && i.source !== "builtin"
+    )
+    return integration ? toTeamAgent(integration) : null
+  }
 
   /**
    * Lookup for the EDITOR: any agent integration — custom or built-in, in
@@ -254,14 +269,16 @@ export const useTeamAgentsStore = defineStore("teamAgents", () => {
    * the editor always opens pre-filled with what actually dispatches.
    */
   const getEditableById = (agentId: string): ITeamAgent | null => {
-    const integration = agentIntegrations.value.find((i) => i.id === agentId)
+    const integration = agentIntegrations.value.find(
+      (i) => i.id === agentId && i.source !== "published"
+    )
     return integration ? toTeamAgent(integration) : null
   }
 
   /** True when the id resolves to a non-custom (built-in) agent integration. */
   const isBuiltIn = (agentId: string): boolean => {
     const integration = agentIntegrations.value.find((i) => i.id === agentId)
-    return integration !== undefined && integration.source !== "custom"
+    return integration !== undefined && integration.source === "builtin"
   }
 
   /** Built-in agent has diverged from the shipped persona (badge + reset). */
@@ -383,6 +400,7 @@ export const useTeamAgentsStore = defineStore("teamAgents", () => {
   return {
     agents,
     builtInAgents,
+    connectionAgents,
     allAgents,
     pickerAgents,
     activeAgents,

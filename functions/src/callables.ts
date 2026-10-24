@@ -755,6 +755,9 @@ export const getPublicAgentProfile = onCall(CALLABLE_OPTS, async (request) => {
     return { status: "not_found" as const }
   }
   const agentData = agentDoc.data() ?? {}
+  // Connection sourceKeys repeat across teams; the global profile route cannot
+  // safely identify one team's published persona. Members use the live store.
+  if (agentData.source === "published") return { status: "not_found" as const }
   if (agentData.type !== "agent") {
     return { status: "not_found" as const }
   }

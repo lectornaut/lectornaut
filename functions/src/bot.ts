@@ -31,6 +31,7 @@
  */
 
 import { cacheControl } from "@genkit-ai/anthropic"
+import { getConnectionResourceProvider } from "@lectornaut/shared/connectionResources"
 import { FieldValue, Timestamp } from "firebase-admin/firestore"
 import { onCallGenkit } from "firebase-functions/https"
 import * as logger from "firebase-functions/logger"
@@ -110,6 +111,10 @@ import {
   DEFAULT_AGENT_DEFINITION,
   hydrateBuiltInAgent,
 } from "./builtInAgents.js"
+import {
+  assertConnectionAgentAvailable,
+  runWithConnectionToolErrors,
+} from "./connections.js"
 import {
   createCalendarEventTool,
   createDriveFileTool,
@@ -2615,34 +2620,75 @@ async function runChatTurn(
   // `abort` carries the deadline signal so the handler can actually cancel the
   // model (the framework's own signal never fires for us) and the store can
   // skip an aborted-turn write.
-  return turnRuntime.run({ ...runtime, abort: turnAbort.signal }, async () => {
-    const final = await streamChatToClient(
-      chat.sendStream(
-        // Cast: our structural `AgentTurnInput` carries a `genkit/beta`
-        // `ResumeOptions` whose `Part` identity differs from the one baked into
-        // `AgentChat.sendStream`'s parameter type (duplicate type instances
-        // across the module graph). The runtime shapes match.
-        deliveryToAgentInput(delivery) as Parameters<typeof chat.sendStream>[0],
-        { abortSignal: turnAbort.signal }
-      ) as unknown as ChatStreamResult,
-      opts.sendChunk,
-      {
-        abortController: turnAbort,
-        preSentToolCalls: opts.preSentToolCalls,
-        preSentToolResults: opts.preSentToolResults,
-        preExistingToolCallCount: opts.preExistingToolCallCount,
-        preExistingToolResultCount: opts.preExistingToolResultCount,
+  return turnRuntime.run({ ...runtime, abort: turnAbort.signal }, () =>
+    runWithConnectionToolErrors(
+      async () => {
+        const final = await streamChatToClient(
+          chat.sendStream(
+            // Cast: our structural `AgentTurnInput` carries a `genkit/beta`
+            // `ResumeOptions` whose `Part` identity differs from the one baked into
+            // `AgentChat.sendStream`'s parameter type (duplicate type instances
+            // across the module graph). The runtime shapes match.
+            deliveryToAgentInput(delivery) as Parameters<
+              typeof chat.sendStream
+            >[0],
+            { abortSignal: turnAbort.signal }
+          ) as unknown as ChatStreamResult,
+          opts.sendChunk,
+          {
+            abortController: turnAbort,
+            preSentToolCalls: opts.preSentToolCalls,
+            preSentToolResults: opts.preSentToolResults,
+            preExistingToolCallCount: opts.preExistingToolCallCount,
+            preExistingToolResultCount: opts.preExistingToolResultCount,
+          }
+        )
+        // A graceful-fallback turn never reaches the store's snapshot save (it
+        // declines threads ending on the user message), so the fallback the
+        // client just watched stream would otherwise vanish on reload. Persist
+        // it as a tagged error turn — here, still inside the turn's ALS, so
+        // the store resolves the right doc from `runtime.persist`.
+        const turnError = getTurnError(final)
+        if (turnError) await persistTurnError(delivery, final.text, turnError)
+        return final
+      },
+      async (message) => {
+        opts.sendChunk({ chunk: `\n\n${message}`, status: "error" })
+        const p = runtime.persist
+        if (!p) return
+        await botSessionStore.saveSnapshot(p.sessionId, (snap) => {
+          const messages = [...((snap?.state?.messages ?? []) as MessageData[])]
+          let index = messages.length - 1
+          while (index >= 0 && messages[index]?.role !== "model") index--
+          const errorPart = { text: `\n\n${message}` }
+          if (index >= 0) {
+            const previous = messages[index]!
+            messages[index] = {
+              ...previous,
+              content: [...previous.content, errorPart],
+              metadata: {
+                ...previous.metadata,
+                [TURN_ERROR_METADATA_KEY]: "connection",
+              },
+            }
+          } else {
+            messages.push({
+              role: "model",
+              content: [errorPart],
+              metadata: { [TURN_ERROR_METADATA_KEY]: "connection" },
+            })
+          }
+          return {
+            snapshotId: p.sessionId,
+            sessionId: p.sessionId,
+            createdAt: new Date().toISOString(),
+            status: "completed",
+            state: { sessionId: p.sessionId, messages },
+          }
+        })
       }
     )
-    // A graceful-fallback turn never reaches the store's snapshot save (it
-    // declines threads ending on the user message), so the fallback the
-    // client just watched stream would otherwise vanish on reload. Persist
-    // it as a tagged error turn — here, still inside the turn's ALS, so
-    // the store resolves the right doc from `runtime.persist`.
-    const turnError = getTurnError(final)
-    if (turnError) await persistTurnError(delivery, final.text, turnError)
-    return final
-  })
+  )
 }
 
 /**
@@ -3063,10 +3109,22 @@ async function prepareChatTurn(opts: {
   // gates and `buildTransferRoster` filters to selectable targets. The ungated
   // Default persona is prepended first (it lives outside the catalog).
   const availableAgents: TeamAgentDoc[] = []
+  const requestedAgentId =
+    activeAgentId ?? existingSession?.activeAgentId ?? null
   if (agentsEnabled) {
     availableAgents.push(hydrateBuiltInAgent(teamId, DEFAULT_AGENT_DEFINITION))
     for (const integration of await listIntegrations(teamId)) {
       if (integration.type === "agent") {
+        if (
+          integration.id === requestedAgentId &&
+          integration.source === "published"
+        ) {
+          await assertConnectionAgentAvailable(
+            teamId,
+            integration.id,
+            principal.kind === "user" ? principal.uid : connectionsActsAsUid
+          )
+        }
         availableAgents.push(agentIntegrationToDoc(teamId, integration))
       }
     }
@@ -3076,6 +3134,16 @@ async function prepareChatTurn(opts: {
     sessionPersistedId: existingSession?.activeAgentId ?? null,
     availableAgents,
   })
+  if (
+    requestedAgentId &&
+    getConnectionResourceProvider("agent", requestedAgentId) &&
+    activeAgent?.id !== requestedAgentId
+  ) {
+    throw new HttpsError(
+      "failed-precondition",
+      "This connection-provided agent is unavailable. Check Settings → Connections."
+    )
+  }
   // Preserve the original session owner on shared-chat admin writes.
   // `actingId` is the actor for this turn; it is only the owner for new
   // sessions. Rewriting `ownerUid` on every save would silently transfer
@@ -3845,6 +3913,17 @@ async function runAgentTurn(
       })
     }
 
+    const finalAgentId =
+      actionContext.transferRequest?.agentId ?? actionContext.activeAgentId
+    if (finalAgentId && getConnectionResourceProvider("agent", finalAgentId)) {
+      await assertConnectionAgentAvailable(
+        opts.teamId,
+        finalAgentId,
+        opts.principal.kind === "user"
+          ? opts.principal.uid
+          : opts.connectionsActsAsUid
+      )
+    }
     return {
       sessionId,
       reply: final.text,

@@ -10,8 +10,8 @@
  * and re-exposes exactly what the view binds, so the component stays
  * presentation-only.
  */
-import { isBuiltInAgentId } from "@/data/builtInAgents"
-import { IconSparkle, IconSparkles } from "@/data/icons"
+import { getAgentSource, isBuiltInAgentId } from "@/data/builtInAgents"
+import { IconPlug, IconSparkle, IconSparkles } from "@/data/icons"
 import { defaultMenu } from "@/helpers/defaults"
 import { useMembershipStore } from "@/stores/membershipStore"
 import { useNavigationStore, type NavItem } from "@/stores/navigationStore"
@@ -71,11 +71,17 @@ export function useNavigation(
   // custom agent; the plural `sparkles` marks a built-in preset. Keyed off
   // `isBuiltInAgentId`, which detects the `_`-prefixed built-in ids.
   const agentKindIcon = (agentId: string) =>
-    isBuiltInAgentId(agentId) ? IconSparkles : IconSparkle
+    getAgentSource(agentId) === "published"
+      ? IconPlug
+      : isBuiltInAgentId(agentId)
+        ? IconSparkles
+        : IconSparkle
   const agentKindLabel = (agentId: string) =>
-    isBuiltInAgentId(agentId)
-      ? t("ai.agents.builtInTooltip")
-      : t("ai.agents.customTooltip")
+    getAgentSource(agentId) === "published"
+      ? t("ai.agents.connectionTooltip")
+      : isBuiltInAgentId(agentId)
+        ? t("ai.agents.builtInTooltip")
+        : t("ai.agents.customTooltip")
 
   // Generative-avatar seed, mirroring the Agents sidebar: explicit `avatarSeed`,
   // else the name, else the id — so the blob stays deterministic from the label.

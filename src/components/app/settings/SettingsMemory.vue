@@ -1,5 +1,7 @@
 <script lang="ts" setup>
 import SettingsMemoryRowActions from "@/components/app/settings/SettingsMemoryRowActions.vue"
+import SettingsIdentity from "@/components/app/settings/SettingsIdentity.vue"
+import { Item, ItemMedia } from "@/components/ui/item"
 import DataTableColumnHeader from "@/components/table/DataTableColumnHeader.vue"
 import { Badge } from "@/components/ui/badge"
 import { Checkbox } from "@/components/ui/checkbox"
@@ -304,24 +306,30 @@ const columns = computed<ColumnDef<AppTableFeatures, IMemory>[]>(() => [
     cell: ({ row }) => {
       const m = row.original
       const primary = m.summary || m.content
-      return h("div", { class: "flex max-w-md min-w-0 flex-col gap-0.5" }, [
-        h("div", { class: "flex min-w-0 items-center gap-1.5" }, [
-          m.pinned
-            ? h(IconPin, { class: "text-muted-foreground size-3.5 shrink-0" })
+      return h(
+        Item,
+        { size: "xs", class: "max-w-md min-w-64 flex-nowrap p-0" },
+        () => [
+          m.pinned || m.visibility === "shared"
+            ? h(ItemMedia, {}, () => [
+                m.pinned
+                  ? h(IconPin, {
+                      class: "text-muted-foreground size-3.5 shrink-0",
+                    })
+                  : null,
+                m.visibility === "shared"
+                  ? h(IconUsers, {
+                      class: "text-muted-foreground size-3.5 shrink-0",
+                    })
+                  : null,
+              ])
             : null,
-          m.visibility === "shared"
-            ? h(IconUsers, { class: "text-muted-foreground size-3.5 shrink-0" })
-            : null,
-          h("span", { class: "truncate text-sm font-medium" }, primary),
-        ]),
-        m.summary
-          ? h(
-              "span",
-              { class: "text-muted-foreground line-clamp-1 text-xs" },
-              m.content
-            )
-          : null,
-      ])
+          h(SettingsIdentity, {
+            title: primary,
+            description: m.summary ? m.content : undefined,
+          }),
+        ]
+      )
     },
     enableSorting: false,
     enableGrouping: false,
@@ -449,7 +457,7 @@ const columns = computed<ColumnDef<AppTableFeatures, IMemory>[]>(() => [
       }),
     cell: ({ row }) =>
       row.original.archived
-        ? h(Badge, { variant: "secondary", class: "gap-1" }, () => [
+        ? h(Badge, { variant: "outline" }, () => [
             h(IconArchive),
             t("settings.memory.statusArchived"),
           ])
@@ -593,7 +601,7 @@ const submitBulkDelete = async () => {
 <template>
   <div class="p-6">
     <FieldGroup>
-      <FieldSet>
+      <FieldSet class="min-w-0">
         <!-- No-permission gate — mirrors SettingsSessions. Guests (no -->
         <!-- MANAGE_WORKSPACE_CONTENT) can't manage memories. -->
         <Field v-if="!canManage" orientation="horizontal">
@@ -654,7 +662,7 @@ const submitBulkDelete = async () => {
           </Field>
 
           <Field orientation="horizontal">
-            <FieldContent>
+            <FieldContent class="min-w-0">
               <LoadingState
                 v-if="isLoading && memories.length === 0"
                 :label="$t('common.loading')"

@@ -7,12 +7,8 @@ import { useTeamUsage } from "@/composables/useTeamUsage"
 import { useWorkspaceActions } from "@/composables/useWorkspaceActions"
 import { emitter } from "@/modules/mitt"
 import {
-  IconArrowDown,
-  IconArrowUp,
-  IconArrowUpDown,
   IconCheck,
   IconLayoutGrid,
-  IconMoreHorizontal,
   IconPencil,
   IconPlus,
   IconSwitchHorizontal,
@@ -195,52 +191,34 @@ const formatCreatedAt = (value: IWorkspace["createdAt"] | null | undefined) => {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead class="w-1/4">
-                      <Button
-                        variant="ghost"
+                    <TableHead class="min-w-64">
+                      <DataTableSortButton
+                        :direction="
+                          workspaceSortKey === 'name'
+                            ? workspaceSortDirection
+                            : null
+                        "
                         @click="toggleWorkspaceSort('name')"
                       >
                         {{ t("settings.workspacesList.columnName") }}
-                        <IconArrowUp
-                          v-if="
-                            workspaceSortKey === 'name' &&
-                            workspaceSortDirection === 'asc'
-                          "
-                        />
-                        <IconArrowDown
-                          v-else-if="
-                            workspaceSortKey === 'name' &&
-                            workspaceSortDirection === 'desc'
-                          "
-                        />
-                        <IconArrowUpDown v-else />
-                      </Button>
+                      </DataTableSortButton>
                     </TableHead>
-                    <TableHead class="w-1/4">{{
-                      t("settings.workspacesList.columnDescription")
-                    }}</TableHead>
                     <TableHead class="w-1/4">
-                      <Button
-                        variant="ghost"
+                      <DataTableSortButton
+                        :direction="
+                          workspaceSortKey === 'created'
+                            ? workspaceSortDirection
+                            : null
+                        "
                         @click="toggleWorkspaceSort('created')"
                       >
                         {{ t("settings.workspacesList.columnCreated") }}
-                        <IconArrowUp
-                          v-if="
-                            workspaceSortKey === 'created' &&
-                            workspaceSortDirection === 'asc'
-                          "
-                        />
-                        <IconArrowDown
-                          v-else-if="
-                            workspaceSortKey === 'created' &&
-                            workspaceSortDirection === 'desc'
-                          "
-                        />
-                        <IconArrowUpDown v-else />
-                      </Button>
+                      </DataTableSortButton>
                     </TableHead>
-                    <TableHead class="w-1/4 text-right"></TableHead>
+                    <TableHead
+                      data-pinned="end"
+                      class="w-px text-right"
+                    ></TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -252,7 +230,7 @@ const formatCreatedAt = (value: IWorkspace["createdAt"] | null | undefined) => {
                        the Item's line-clamp can wrap-and-ellipsize instead of
                        one long line setting the table's min-content width. -->
                     <TableCell class="whitespace-normal">
-                      <Item class="group p-0" size="xs">
+                      <Item class="group flex-nowrap p-0" size="xs">
                         <ItemMedia class="group relative">
                           <TooltipProvider>
                             <Tooltip>
@@ -317,32 +295,20 @@ const formatCreatedAt = (value: IWorkspace["createdAt"] | null | undefined) => {
                             </Tooltip>
                           </TooltipProvider>
                         </ItemMedia>
-                        <ItemContent>
-                          <ItemTitle>
-                            {{ workspace.name }}
-                          </ItemTitle>
-                          <ItemDescription class="text-xs">
-                            {{
-                              workspace.description ||
-                              t("settings.workspacesList.noDescription")
-                            }}
-                          </ItemDescription>
-                        </ItemContent>
+                        <SettingsIdentity
+                          :title="workspace.name"
+                          :description="
+                            workspace.description ||
+                            t('settings.workspacesList.noDescription')
+                          "
+                        />
                       </Item>
                     </TableCell>
-                    <TableCell class="whitespace-normal">
-                      <span class="line-clamp-2">
-                        {{
-                          workspace.description ||
-                          t("settings.workspacesList.noDescription")
-                        }}
-                      </span>
-                    </TableCell>
-                    <TableCell>
+                    <TableCell class="text-muted-foreground tabular-nums">
                       {{ formatCreatedAt(workspace.createdAt) }}
                     </TableCell>
-                    <TableCell class="flex items-center justify-end text-right">
-                      <ButtonGroup>
+                    <TableCell data-pinned="end" class="text-right">
+                      <ButtonGroup class="w-full justify-end">
                         <ButtonGroup>
                           <Button
                             v-if="currentWorkspace?.id !== workspace.id"
@@ -364,95 +330,99 @@ const formatCreatedAt = (value: IWorkspace["createdAt"] | null | undefined) => {
                           </Button>
                         </ButtonGroup>
                         <ButtonGroup>
-                          <DropdownMenu>
-                            <TooltipProvider>
-                              <Tooltip>
+                          <TooltipProvider>
+                            <Tooltip>
+                              <DropdownMenu>
                                 <TooltipTrigger as-child>
                                   <DropdownMenuTrigger as-child>
-                                    <Button variant="outline" size="icon">
-                                      <IconMoreHorizontal />
-                                    </Button>
+                                    <DataTableRowActionsButton
+                                      :label="
+                                        t(
+                                          'settings.workspacesList.actionsTooltip'
+                                        )
+                                      "
+                                    />
                                   </DropdownMenuTrigger>
-                                  <DropdownMenuContent>
-                                    <Tooltip>
-                                      <TooltipTrigger as-child>
-                                        <div>
-                                          <DropdownMenuItem
-                                            :disabled="
-                                              !canUpdateWorkspace(workspace.id)
-                                            "
-                                            data-hotkey="e"
-                                            @click="
-                                              openWorkspaceDialog(
-                                                'edit',
-                                                workspace
-                                              )
-                                            "
-                                          >
-                                            <IconPencil />
-                                            {{ t("actions.edit") }}
-                                            <DropdownMenuShortcut>
-                                              E
-                                            </DropdownMenuShortcut>
-                                          </DropdownMenuItem>
-                                        </div>
-                                      </TooltipTrigger>
-                                      <TooltipContent
-                                        v-if="!canUpdateWorkspace(workspace.id)"
-                                      >
-                                        {{
-                                          getCannotUpdateWorkspaceReason(
-                                            workspace.id
-                                          )
-                                        }}
-                                      </TooltipContent>
-                                    </Tooltip>
-                                    <Tooltip>
-                                      <TooltipTrigger as-child>
-                                        <div>
-                                          <DropdownMenuItem
-                                            :disabled="
-                                              !canDeleteWorkspace(workspace.id)
-                                            "
-                                            data-hotkey="backspace delete"
-                                            @click="
-                                              deleteWorkspaceDialog.open(
-                                                workspace
-                                              )
-                                            "
-                                          >
-                                            <IconTrash />
-                                            {{ t("actions.delete") }}
-                                            <DropdownMenuShortcut>
-                                              ⌫
-                                            </DropdownMenuShortcut>
-                                          </DropdownMenuItem>
-                                        </div>
-                                      </TooltipTrigger>
-                                      <TooltipContent
-                                        v-if="!canDeleteWorkspace(workspace.id)"
-                                      >
-                                        {{
-                                          getCannotDeleteWorkspaceReason(
-                                            workspace.id
-                                          )
-                                        }}
-                                      </TooltipContent>
-                                    </Tooltip>
-                                  </DropdownMenuContent>
                                 </TooltipTrigger>
+                                <DropdownMenuContent align="end">
+                                  <Tooltip>
+                                    <TooltipTrigger as-child>
+                                      <div>
+                                        <DropdownMenuItem
+                                          :disabled="
+                                            !canUpdateWorkspace(workspace.id)
+                                          "
+                                          data-hotkey="e"
+                                          @click="
+                                            openWorkspaceDialog(
+                                              'edit',
+                                              workspace
+                                            )
+                                          "
+                                        >
+                                          <IconPencil />
+                                          {{ t("actions.edit") }}
+                                          <DropdownMenuShortcut>
+                                            E
+                                          </DropdownMenuShortcut>
+                                        </DropdownMenuItem>
+                                      </div>
+                                    </TooltipTrigger>
+                                    <TooltipContent
+                                      v-if="!canUpdateWorkspace(workspace.id)"
+                                    >
+                                      {{
+                                        getCannotUpdateWorkspaceReason(
+                                          workspace.id
+                                        )
+                                      }}
+                                    </TooltipContent>
+                                  </Tooltip>
+                                  <Tooltip>
+                                    <TooltipTrigger as-child>
+                                      <div>
+                                        <DropdownMenuItem
+                                          :disabled="
+                                            !canDeleteWorkspace(workspace.id)
+                                          "
+                                          data-hotkey="backspace delete"
+                                          @click="
+                                            deleteWorkspaceDialog.open(
+                                              workspace
+                                            )
+                                          "
+                                        >
+                                          <IconTrash />
+                                          {{ t("actions.delete") }}
+                                          <DropdownMenuShortcut>
+                                            ⌫
+                                          </DropdownMenuShortcut>
+                                        </DropdownMenuItem>
+                                      </div>
+                                    </TooltipTrigger>
+                                    <TooltipContent
+                                      v-if="!canDeleteWorkspace(workspace.id)"
+                                    >
+                                      {{
+                                        getCannotDeleteWorkspaceReason(
+                                          workspace.id
+                                        )
+                                      }}
+                                    </TooltipContent>
+                                  </Tooltip>
+                                </DropdownMenuContent>
                                 <TooltipContent>{{
                                   t("settings.workspacesList.actionsTooltip")
                                 }}</TooltipContent>
-                              </Tooltip>
-                            </TooltipProvider>
-                          </DropdownMenu>
+                              </DropdownMenu>
+                            </Tooltip>
+                          </TooltipProvider>
                         </ButtonGroup>
                       </ButtonGroup>
                     </TableCell>
                   </TableRow>
                   <TableRow v-if="workspaces.length === 0">
-                    <TableCell colspan="4">
+                    <TableCell colspan="3">
                       <Empty>
                         <EmptyHeader>
                           <EmptyMedia variant="icon">

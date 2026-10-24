@@ -21,6 +21,7 @@
  * on team switch), and mutations call the Cloud Functions in `useFunctions`.
  */
 
+import { useConnectionStatus } from "@/composables/useConnectionStatus"
 import {
   archiveTeamWorkflow as archiveTeamWorkflowFn,
   createTeamWorkflow as createTeamWorkflowFn,
@@ -108,6 +109,7 @@ const availableWorkflowConverter: FirestoreDataConverter<AvailableWorkflow> = {
 }
 
 export const useTeamWorkflowsStore = defineStore("teamWorkflows", () => {
+  const connectionStatus = useConnectionStatus()
   const authStore = useAuthStore()
   const { currentTeamId, currentWorkspaceId } = storeToRefs(authStore)
 
@@ -172,7 +174,22 @@ export const useTeamWorkflowsStore = defineStore("teamWorkflows", () => {
   const isArchived = (w: IWorkflow) => !!w.archivedAt
 
   /** Every workflow for the active team (active + archived). */
-  const workflows = computed<IWorkflow[]>(() => workflowsQuery.data.value ?? [])
+  const workflows = computed<IWorkflow[]>(() =>
+    (workflowsQuery.data.value ?? [])
+      .filter(
+        (w) =>
+          !w.connectionProvider ||
+          (!!w.presetKey && connectionStatus.installed("workflow", w.presetKey))
+      )
+      .map((w) =>
+        w.connectionProvider &&
+        w.presetKey &&
+        (!connectionStatus.installed("workflow", w.presetKey) ||
+          connectionStatus.disabled("workflow", w.presetKey))
+          ? { ...w, enabled: false }
+          : w
+      )
+  )
   const activeWorkflows = computed<IWorkflow[]>(() =>
     workflows.value.filter((w) => !isArchived(w))
   )
@@ -218,17 +235,32 @@ export const useTeamWorkflowsStore = defineStore("teamWorkflows", () => {
    */
   const availablePresetKeys = computed<Set<string>>(() => {
     const keys = new Set<string>(
-      (availableQuery.data.value ?? []).map((d) => d.presetKey)
+      (availableQuery.data.value ?? [])
+        .map((d) => d.presetKey)
+        .filter(
+          (key) =>
+            !connectionStatus.providerFor("workflow", key) ||
+            connectionStatus.installed("workflow", key)
+        )
     )
     for (const w of activeWorkflows.value) {
-      if (w.presetKey) keys.add(w.presetKey)
+      if (w.presetKey && !w.connectionProvider) keys.add(w.presetKey)
     }
     return keys
   })
 
-  const isLoading = computed<boolean>(() => workflowsQuery.isLoading.value)
+  const isLoading = computed<boolean>(
+    () =>
+      workflowsQuery.isLoading.value ||
+      availableQuery.isLoading.value ||
+      connectionStatus.isLoading.value
+  )
   const loadError = computed<string | null>(
-    () => workflowsQuery.error.value?.message ?? null
+    () =>
+      workflowsQuery.error.value?.message ??
+      availableQuery.error.value?.message ??
+      connectionStatus.error.value?.message ??
+      null
   )
 
   const getById = (id: string): IWorkflow | null =>

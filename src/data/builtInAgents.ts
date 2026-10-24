@@ -31,7 +31,16 @@
  */
 
 import type { ITeamAgent } from "@/types/domain"
+import { getConnectionResourceProvider } from "@lectornaut/shared/connectionResources"
+import type { IntegrationSource } from "@lectornaut/shared/domain"
 import { Timestamp } from "firebase/firestore"
+
+export function getAgentSource(agentId: string): IntegrationSource {
+  if (isBuiltInAgentId(agentId)) return "builtin"
+  return getConnectionResourceProvider("agent", agentId)
+    ? "published"
+    : "custom"
+}
 
 /**
  * The mandatory subset of `ITeamAgent` each built-in carries

@@ -112,7 +112,8 @@ const githubMessage = (body: unknown): string | null =>
 async function failureFromResponse(
   res: GithubResponse,
   teamId: string,
-  uid: string | undefined
+  uid: string | undefined,
+  accessToken: string
 ): Promise<string> {
   const info: GitHubErrorInfo = {
     status: res.status,
@@ -121,7 +122,7 @@ async function failureFromResponse(
   }
   const triage = triageGitHubFailure(info)
   if (triage.kind === "needs_reauth" && uid) {
-    await markBindingNeedsReauth(teamId, "github", uid)
+    await markBindingNeedsReauth(teamId, "github", uid, { accessToken })
   }
   return triage.message
 }
@@ -234,7 +235,9 @@ export const gitHubTool = ai.defineTool(
         return readFailure(`GitHub request failed (${issueRes.error}).`)
       }
       if (issueRes.status < 200 || issueRes.status >= 300) {
-        return readFailure(await failureFromResponse(issueRes, teamId, uid))
+        return readFailure(
+          await failureFromResponse(issueRes, teamId, uid, token.accessToken)
+        )
       }
       // Fetch the 20 MOST RECENT comments (desc), then reverse to chrono for
       // display — a long thread's latest discussion is what "summarize this
@@ -277,7 +280,9 @@ export const gitHubTool = ai.defineTool(
       return readFailure(`GitHub request failed (${res.error}).`)
     }
     if (res.status < 200 || res.status >= 300) {
-      return readFailure(await failureFromResponse(res, teamId, uid))
+      return readFailure(
+        await failureFromResponse(res, teamId, uid, token.accessToken)
+      )
     }
     const items =
       typeof res.body === "object" && res.body !== null
@@ -378,7 +383,9 @@ export const readGitHubFileTool = ai.defineTool(
       return readFileFailure(`GitHub request failed (${res.error}).`)
     }
     if (res.status < 200 || res.status >= 300) {
-      return readFileFailure(await failureFromResponse(res, teamId, uid))
+      return readFileFailure(
+        await failureFromResponse(res, teamId, uid, token.accessToken)
+      )
     }
     const shaped = shapeFileContents(res.body)
     if (!shaped) {
@@ -485,7 +492,9 @@ async function executeGitHubWrite(opts: {
     return githubWriteFailure(`GitHub request failed (${res.error}).`)
   }
   if (res.status < 200 || res.status >= 300) {
-    return githubWriteFailure(await failureFromResponse(res, teamId, uid))
+    return githubWriteFailure(
+      await failureFromResponse(res, teamId, uid, opts.accessToken)
+    )
   }
   const raw =
     typeof res.body === "object" && res.body !== null

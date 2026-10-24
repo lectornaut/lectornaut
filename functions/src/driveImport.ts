@@ -63,9 +63,20 @@ const DRIVE_FILES_ENDPOINT = "https://www.googleapis.com/drive/v3/files"
  * (whose copy steers the MODEL), these messages surface in toasts.
  */
 function throwBindingError(
-  reason: "not_connected" | "needs_reauth" | "config" | "transient" | "disabled"
+  reason:
+    | "not_installed"
+    | "not_connected"
+    | "needs_reauth"
+    | "config"
+    | "transient"
+    | "disabled"
 ): never {
   switch (reason) {
+    case "not_installed":
+      throw new HttpsError(
+        "failed-precondition",
+        "Google Drive is not installed for this team. Ask an owner or admin to install it under Settings → Connections."
+      )
     case "not_connected":
       throw new HttpsError(
         "failed-precondition",

@@ -1,6 +1,5 @@
 <script lang="ts" setup>
 import { labels } from "@/data/constants"
-import { IconEllipsis } from "@/data/icons"
 import type { Task } from "@/data/schema"
 import { taskSchema } from "@/data/schema"
 import type { AppTableFeatures } from "@/components/table/features"
@@ -20,54 +19,48 @@ const task = computed(() => taskSchema.parse(props.row.original))
 </script>
 
 <template>
-  <DropdownMenu>
-    <TooltipProvider>
-      <Tooltip>
+  <TooltipProvider>
+    <Tooltip>
+      <DropdownMenu>
         <TooltipTrigger as-child>
           <DropdownMenuTrigger as-child>
-            <Button
-              variant="ghost"
-              size="icon"
-              class="data-[state=open]:bg-accent"
-            >
-              <IconEllipsis />
-            </Button>
+            <DataTableRowActionsButton :label="t('actions.moreOptions')" />
           </DropdownMenuTrigger>
-          <DropdownMenuContent>
-            <DropdownMenuItem>{{ t("actions.edit") }}</DropdownMenuItem>
-            <DropdownMenuItem>{{ t("actions.duplicate") }}</DropdownMenuItem>
-            <DropdownMenuItem>{{ t("labels.favorites") }}</DropdownMenuItem>
-            <!-- <DropdownMenuItem @click="$emit('expand')">
+        </TooltipTrigger>
+        <DropdownMenuContent align="end">
+          <DropdownMenuItem>{{ t("actions.edit") }}</DropdownMenuItem>
+          <DropdownMenuItem>{{ t("actions.duplicate") }}</DropdownMenuItem>
+          <DropdownMenuItem>{{ t("labels.favorites") }}</DropdownMenuItem>
+          <!-- <DropdownMenuItem @click="$emit('expand')">
               {{ row.getIsExpanded() ? "Collapse" : "Expand" }}
             </DropdownMenuItem> -->
-            <DropdownMenuSeparator />
-            <DropdownMenuSub>
-              <DropdownMenuItem as-child>
-                <DropdownMenuSubTrigger>
-                  {{ t("components.dataTable.labels") }}
-                </DropdownMenuSubTrigger>
-              </DropdownMenuItem>
-              <DropdownMenuSubContent>
-                <DropdownMenuRadioGroup v-model="task.label">
-                  <DropdownMenuRadioItem
-                    v-for="label in labels"
-                    :key="label.value"
-                    :value="label.value"
-                  >
-                    {{ label.label }}
-                  </DropdownMenuRadioItem>
-                </DropdownMenuRadioGroup>
-              </DropdownMenuSubContent>
-            </DropdownMenuSub>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem>
-              {{ t("actions.delete") }}
-              <DropdownMenuShortcut>⌘⌫</DropdownMenuShortcut>
+          <DropdownMenuSeparator />
+          <DropdownMenuSub>
+            <DropdownMenuItem as-child>
+              <DropdownMenuSubTrigger>
+                {{ t("components.dataTable.labels") }}
+              </DropdownMenuSubTrigger>
             </DropdownMenuItem>
-          </DropdownMenuContent>
-        </TooltipTrigger>
+            <DropdownMenuSubContent>
+              <DropdownMenuRadioGroup v-model="task.label">
+                <DropdownMenuRadioItem
+                  v-for="label in labels"
+                  :key="label.value"
+                  :value="label.value"
+                >
+                  {{ label.label }}
+                </DropdownMenuRadioItem>
+              </DropdownMenuRadioGroup>
+            </DropdownMenuSubContent>
+          </DropdownMenuSub>
+          <DropdownMenuSeparator />
+          <DropdownMenuItem>
+            {{ t("actions.delete") }}
+            <DropdownMenuShortcut>⌘⌫</DropdownMenuShortcut>
+          </DropdownMenuItem>
+        </DropdownMenuContent>
         <TooltipContent>{{ t("actions.moreOptions") }}</TooltipContent>
-      </Tooltip>
-    </TooltipProvider>
-  </DropdownMenu>
+      </DropdownMenu>
+    </Tooltip>
+  </TooltipProvider>
 </template>

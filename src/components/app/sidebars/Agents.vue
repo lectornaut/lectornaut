@@ -1,9 +1,10 @@
 <script lang="ts" setup>
 import { usePopout } from "@/composables/usePopout"
-import { isBuiltInAgentId } from "@/data/builtInAgents"
+import { getAgentSource, isBuiltInAgentId } from "@/data/builtInAgents"
 import {
   IconBadgeCheck,
   IconCirclePlus,
+  IconPlug,
   IconSparkle,
   IconSparkles,
 } from "@/data/icons"
@@ -71,11 +72,17 @@ const avatarSeed = (agent: { avatarSeed: string; name: string; id: string }) =>
 // custom agent; the plural `sparkles` marks a built-in preset. Keyed off
 // `isBuiltInAgentId`, which detects the `_`-prefixed built-in ids.
 const agentKindIcon = (agentId: string) =>
-  isBuiltInAgentId(agentId) ? IconSparkles : IconSparkle
+  getAgentSource(agentId) === "published"
+    ? IconPlug
+    : isBuiltInAgentId(agentId)
+      ? IconSparkles
+      : IconSparkle
 const agentKindLabel = (agentId: string) =>
-  isBuiltInAgentId(agentId)
-    ? t("ai.agents.builtInTooltip")
-    : t("ai.agents.customTooltip")
+  getAgentSource(agentId) === "published"
+    ? t("ai.agents.connectionTooltip")
+    : isBuiltInAgentId(agentId)
+      ? t("ai.agents.builtInTooltip")
+      : t("ai.agents.customTooltip")
 
 /**
  * Open the custom agents management dialog directly in "editor"

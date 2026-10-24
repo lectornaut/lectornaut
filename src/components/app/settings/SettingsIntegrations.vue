@@ -100,15 +100,20 @@ const toggle = async (item: RegistryItem): Promise<void> => {
 
         <Field v-for="item in agents" :key="item.key" orientation="horizontal">
           <FieldContent>
-            <FieldLabel :for="rowId(item)">{{ item.name }}</FieldLabel>
+            <FieldLabel>{{ item.name }}</FieldLabel>
             <FieldDescription>{{ item.description }}</FieldDescription>
           </FieldContent>
-          <Switch
-            :id="rowId(item)"
-            :model-value="item.installed"
+          <Button
+            variant="outline"
             :disabled="isPending(item)"
-            @update:model-value="toggle(item)"
-          />
+            @click="toggle(item)"
+          >
+            {{
+              item.installed
+                ? t("settings.integrations.remove")
+                : t("settings.integrations.add")
+            }}
+          </Button>
         </Field>
 
         <Empty v-if="agents.length === 0" class="border border-dashed">
@@ -140,15 +145,20 @@ const toggle = async (item: RegistryItem): Promise<void> => {
 
         <Field v-for="item in tools" :key="item.key" orientation="horizontal">
           <FieldContent>
-            <FieldLabel :for="rowId(item)">{{ item.name }}</FieldLabel>
+            <FieldLabel>{{ item.name }}</FieldLabel>
             <FieldDescription>{{ item.description }}</FieldDescription>
           </FieldContent>
-          <Switch
-            :id="rowId(item)"
-            :model-value="item.installed"
+          <Button
+            variant="outline"
             :disabled="isPending(item)"
-            @update:model-value="toggle(item)"
-          />
+            @click="toggle(item)"
+          >
+            {{
+              item.installed
+                ? t("settings.integrations.remove")
+                : t("settings.integrations.add")
+            }}
+          </Button>
         </Field>
 
         <Empty v-if="tools.length === 0" class="border border-dashed">
@@ -184,15 +194,20 @@ const toggle = async (item: RegistryItem): Promise<void> => {
           orientation="horizontal"
         >
           <FieldContent>
-            <FieldLabel :for="rowId(item)">{{ item.name }}</FieldLabel>
+            <FieldLabel>{{ item.name }}</FieldLabel>
             <FieldDescription>{{ item.description }}</FieldDescription>
           </FieldContent>
-          <Switch
-            :id="rowId(item)"
-            :model-value="item.installed"
+          <Button
+            variant="outline"
             :disabled="isPending(item)"
-            @update:model-value="toggle(item)"
-          />
+            @click="toggle(item)"
+          >
+            {{
+              item.installed
+                ? t("settings.integrations.remove")
+                : t("settings.integrations.add")
+            }}
+          </Button>
         </Field>
 
         <Empty v-if="workflows.length === 0" class="border border-dashed">

@@ -8,6 +8,7 @@ import {
   BOT_CHAT_MODES,
   BOT_CHAT_ROLES,
   BOT_SESSION_VISIBILITIES,
+  CONNECTION_PROVIDERS,
   INTEGRATION_SOURCES,
   INTEGRATION_TYPES,
   NODE_SCOPES,
@@ -1020,6 +1021,7 @@ export const workflowRunStatusSchema = z.enum(WORKFLOW_RUN_STATUSES)
 
 /** A team automation. Written server-side; read here for the admin UI. */
 export const workflowSchema = z.object({
+  connectionProvider: z.enum(CONNECTION_PROVIDERS).optional(),
   id: z.string(),
   teamId: z.string(),
   /** null = custom; non-null (e.g. "_grammar") = a seeded predefined instance. */

@@ -50,7 +50,7 @@ const {
 <template>
   <div v-if="canViewTeamSettings" class="p-6">
     <FieldGroup>
-      <FieldSet>
+      <FieldSet class="min-w-0">
         <!-- Inner manage gate — mirrors SettingsLogs / SettingsSessions so the
              admin-only runs view shares the same empty-state UX. -->
         <Field v-if="!canManage" orientation="horizontal">
@@ -136,7 +136,7 @@ const {
           </Field>
 
           <Field orientation="horizontal">
-            <FieldContent>
+            <FieldContent class="min-w-0">
               <DataTable
                 ref="tableRef"
                 :data="allRows"

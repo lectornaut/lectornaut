@@ -10,6 +10,7 @@ import {
   DEFAULT_AGENT_DEFINITION,
   DEFAULT_AGENT_ID,
   isBuiltInAgentId,
+  getAgentSource,
 } from "@/data/builtInAgents"
 import {
   IconAlertTriangle,
@@ -52,7 +53,23 @@ const builtInAgents = computed(() =>
   pickerAgents.value.filter((agent) => isBuiltInAgentId(agent.id))
 )
 const customAgents = computed(() =>
-  pickerAgents.value.filter((agent) => !isBuiltInAgentId(agent.id))
+  pickerAgents.value.filter((agent) => getAgentSource(agent.id) === "custom")
+)
+const additionalAgentGroups = computed(() =>
+  [
+    {
+      key: "connection",
+      label: t("ai.agents.groupConnection"),
+      agents: pickerAgents.value.filter(
+        (agent) => getAgentSource(agent.id) === "published"
+      ),
+    },
+    {
+      key: "custom",
+      label: t("ai.agents.groupCustom"),
+      agents: customAgents.value,
+    },
+  ].filter((group) => group.agents.length > 0)
 )
 
 // Team-member check badge — same indicator the composer/sidebar render. The
@@ -870,14 +887,15 @@ const handleSave = async (): Promise<void> => {
                         </Item>
                       </SelectItem>
                     </SelectGroup>
-                    <template v-if="customAgents.length > 0">
+                    <template
+                      v-for="group in additionalAgentGroups"
+                      :key="group.key"
+                    >
                       <SelectSeparator />
                       <SelectGroup>
-                        <SelectLabel>{{
-                          t("ai.agents.groupCustom")
-                        }}</SelectLabel>
+                        <SelectLabel>{{ group.label }}</SelectLabel>
                         <SelectItem
-                          v-for="agent in customAgents"
+                          v-for="agent in group.agents"
                           :key="agent.id"
                           :value="agent.id"
                         >

@@ -74,7 +74,7 @@ interface AgentListRow {
  */
 const builtInRows = computed<AgentListRow[]>(() =>
   integrationsStore.agentIntegrations
-    .filter((i) => i.source !== "custom" && i.installed)
+    .filter((i) => i.source === "builtin" && i.installed)
     .map((i): AgentListRow => {
       const id = i.sourceKey ?? i.id
       return {
@@ -112,6 +112,29 @@ const customRows = computed<AgentListRow[]>(() =>
     .map(toCustomRow)
     .filter((row) => matchesQuery(row.name, row.description))
 )
+const connectionRows = computed<AgentListRow[]>(() =>
+  integrationsStore.agentIntegrations
+    .filter((i) => i.source === "published" && i.installed)
+    .flatMap((i) => {
+      const agent = teamAgentsStore.getById(i.id)
+      return agent ? [toCustomRow(agent)] : []
+    })
+    .filter((row) => matchesQuery(row.name, row.description))
+)
+const additionalGroups = computed(() =>
+  [
+    {
+      key: "connection",
+      title: t("settings.connectionResources.agentTitle"),
+      rows: connectionRows.value,
+    },
+    {
+      key: "custom",
+      title: t("pages.agents.customSection"),
+      rows: customRows.value,
+    },
+  ].filter((group) => group.rows.length > 0)
+)
 
 const hasNoAgentsAtAll = computed(
   () =>
@@ -125,6 +148,7 @@ const hasNoMatches = computed(
     !isLoading.value &&
     !hasNoAgentsAtAll.value &&
     builtInRows.value.length === 0 &&
+    connectionRows.value.length === 0 &&
     customRows.value.length === 0
 )
 
@@ -233,13 +257,17 @@ const openNewAgentDialog = (): void => {
             </ItemGroup>
           </div>
 
-          <div v-if="customRows.length > 0" class="flex flex-col gap-2">
+          <div
+            v-for="group in additionalGroups"
+            :key="group.key"
+            class="flex flex-col gap-2"
+          >
             <h2 class="text-lg font-semibold tracking-tight">
-              {{ t("pages.agents.customSection") }}
+              {{ group.title }}
             </h2>
             <ItemGroup class="grid grid-cols-1 gap-2">
               <Item
-                v-for="row in customRows"
+                v-for="row in group.rows"
                 :key="row.id"
                 variant="outline"
                 as-child

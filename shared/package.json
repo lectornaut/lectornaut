@@ -4,6 +4,10 @@
   "private": true,
   "type": "module",
   "exports": {
+    "./connectionResources": {
+      "types": "./connectionResources.ts",
+      "default": "./connectionResources.ts"
+    },
     "./permissions": {
       "types": "./permissions.ts",
       "default": "./permissions.ts"

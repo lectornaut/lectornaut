@@ -227,6 +227,7 @@ export interface ConnectionAppRow {
    * installed.
    */
   connection: IConnection | null
+  updateAvailable: boolean
   /**
    * Owner/Admin kill switch is ON (`status: "disabled"`): the server stops
    * registering the app's tools and minting tokens, and rejects new
@@ -335,6 +336,9 @@ export function useConnections() {
         app,
         installed: connection !== null,
         connection,
+        updateAvailable:
+          connection !== null &&
+          (connection.installedRevision ?? 0) < app.resources.revision,
         disabled: connection?.status === "disabled",
         myBinding,
         bindings,
@@ -360,7 +364,10 @@ export function useConnections() {
     return teamId
   }
 
-  const install = async (provider: ConnectionProvider): Promise<void> => {
+  const install = async (
+    provider: ConnectionProvider,
+    update = false
+  ): Promise<void> => {
     if (!canManage.value) {
       toast.error(t("settings.connections.permissionRequired"))
       return
@@ -369,10 +376,22 @@ export function useConnections() {
     if (!teamId) return
     try {
       await installConnectionFn({ teamId, provider })
-      toast.success(t("settings.connections.addSuccess"))
+      toast.success(
+        t(
+          update
+            ? "settings.connectionResources.updateSuccess"
+            : "settings.connections.addSuccess"
+        )
+      )
     } catch (error) {
       console.error("[useConnections] install failed:", error)
-      toast.error(t("settings.connections.addError"))
+      toast.error(
+        t(
+          update
+            ? "settings.connectionResources.updateError"
+            : "settings.connections.addError"
+        )
+      )
       throw error
     }
   }

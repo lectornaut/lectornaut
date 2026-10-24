@@ -16,6 +16,8 @@ import { useAuthStore } from "@/stores/authStore"
 import type { IWorkflow } from "@/types/domain"
 import { storeToRefs } from "pinia"
 import { computed, ref } from "vue"
+import { CONNECTION_RESOURCES } from "@lectornaut/shared/connectionResources"
+import { useConnectionStatus } from "@/composables/useConnectionStatus"
 
 const { t } = useI18n()
 
@@ -95,6 +97,35 @@ const canCreateCustom = computed(
 const availablePresets = computed(() =>
   WORKFLOW_PRESETS.filter((p) => availablePresetKeys.value.has(p.key))
 )
+const connectionStatus = useConnectionStatus()
+const connectionPresets = computed<WorkflowPreset[]>(() =>
+  Object.values(CONNECTION_RESOURCES)
+    .flatMap((r) => r.workflows)
+    .filter(
+      (p) =>
+        availablePresetKeys.value.has(p.key) &&
+        connectionStatus.installed("workflow", p.key)
+    )
+)
+const connectionWorkflowRows = computed(() =>
+  connectionPresets.value.map((preset) => ({
+    id: preset.key,
+    name: presetActiveWorkflow(preset.key)?.name ?? preset.name,
+    description:
+      presetActiveWorkflow(preset.key)?.description ?? preset.description,
+    enabled: isPresetEnabled(preset),
+    pending: isPresetSwitchDisabled(preset),
+    canConfigure: !isPresetEditDisabled(preset),
+  }))
+)
+const toggleConnectionWorkflow = (key: string, value: boolean): void => {
+  const preset = connectionPresets.value.find((p) => p.key === key)
+  if (preset) void togglePreset(preset, value)
+}
+const configureConnectionWorkflow = (key: string): void => {
+  const preset = connectionPresets.value.find((p) => p.key === key)
+  if (preset) editPreset(preset)
+}
 // Scoped to the current workspace: this preset's active deployment here.
 const presetActiveWorkflow = (key: string): IWorkflow | undefined =>
   wsActiveWorkflows.value.find((w) => w.presetKey === key)
@@ -178,8 +209,11 @@ const togglePreset = async (
 // ── Custom workflows (inline list — active / disabled / archived) ────────────
 // Mirrors SettingsAgents/SettingsTools: the non-archived custom workflows split
 // into enabled ("Active") and disabled buckets, each in its own collapsible,
-// with archived (custom + predefined) below. Predefined presets keep their own
-// per-toggle section above and are excluded here via the `presetKey` filter.
+// with archived below. Predefined presets keep their own per-toggle section
+// above and are excluded here via the `presetKey` filter. Their archived docs
+// are never listed: they're the restore target for the preset Switch (archived
+// when the team revokes availability), not something to manage by hand —
+// matching built-in agents/tools, which have no archive surface either.
 const customWorkflows = computed(() =>
   wsActiveWorkflows.value.filter((w) => !w.presetKey)
 )
@@ -189,13 +223,15 @@ const activeCustomWorkflows = computed(() =>
 const disabledCustomWorkflows = computed(() =>
   customWorkflows.value.filter((w) => !w.enabled)
 )
+const archivedCustomWorkflows = computed(() =>
+  wsArchivedWorkflows.value.filter((w) => !w.presetKey && !w.connectionProvider)
+)
 
 // Active section starts open — it's the primary content. Disabled and Archived
 // start collapsed; they're admin-discoverability extras, matching the sibling
 // SettingsAgents / SettingsTools panes.
 const activeSectionOpen = ref(true)
 const disabledSectionOpen = ref(false)
-const archivedSectionOpen = ref(false)
 
 // ── Editor dialog (shared with the Workflows page) ───────────────────────────
 const editorOpen = ref(false)
@@ -427,6 +463,15 @@ const rowDescription = (wf: IWorkflow): string =>
       <FieldSeparator />
 
       <!-- ── Custom workflows (team-wide gate + inline list) ───────────── -->
+      <SettingsConnectionResources
+        type="workflow"
+        :can-manage="canManage"
+        :workflow-rows="connectionWorkflowRows"
+        @toggle-workflow="toggleConnectionWorkflow"
+        @configure-workflow="configureConnectionWorkflow"
+      />
+      <FieldSeparator />
+
       <FieldSet>
         <!-- Team-wide feature gate — mirrors SettingsAgents' customAgents. -->
         <Field orientation="horizontal">
@@ -478,7 +523,7 @@ const rowDescription = (wf: IWorkflow): string =>
             v-if="
               activeCustomWorkflows.length === 0 &&
               disabledCustomWorkflows.length === 0 &&
-              wsArchivedWorkflows.length === 0
+              archivedCustomWorkflows.length === 0
             "
             class="border border-dashed"
           >
@@ -586,50 +631,16 @@ const rowDescription = (wf: IWorkflow): string =>
             </CollapsibleContent>
           </Collapsible>
 
-          <!-- Archived (custom + predefined) -->
-          <Collapsible
-            v-if="wsArchivedWorkflows.length > 0"
-            v-model:open="archivedSectionOpen"
-          >
-            <CollapsibleTrigger as-child>
-              <Button variant="ghost" class="w-full justify-between">
-                <span class="flex items-center gap-2">
-                  {{
-                    t("settings.workflows.archivedCount", {
-                      n: wsArchivedWorkflows.length,
-                    })
-                  }}
-                </span>
-                <IconChevronDown
-                  class="size-4 transition-transform"
-                  :class="{ 'rotate-180': archivedSectionOpen }"
-                />
-              </Button>
-            </CollapsibleTrigger>
-            <CollapsibleContent>
-              <ItemGroup class="gap-2 pt-2">
-                <SettingsWorkflowRow
-                  v-for="wf in wsArchivedWorkflows"
-                  :id="wf.id"
-                  :key="wf.id"
-                  :name="wf.name"
-                  :avatar-seed="wf.avatarSeed"
-                  :description="rowDescription(wf)"
-                  :enabled="wf.enabled"
-                  :is-predefined="!!wf.presetKey"
-                  is-archived
-                  :can-manage="canManage"
-                  :is-saving="isSaving"
-                  :can-archive="false"
-                  :can-delete="true"
-                  @edit="openEdit(wf)"
-                  @toggle-enabled="(v) => setEnabled(wf.id, v)"
-                  @restore="archive(wf.id, false)"
-                  @remove="remove(wf.id)"
-                />
-              </ItemGroup>
-            </CollapsibleContent>
-          </Collapsible>
+          <SettingsArchivedWorkflows
+            :workflows="archivedCustomWorkflows"
+            :describe="rowDescription"
+            :can-manage="canManage"
+            :is-saving="isSaving"
+            @edit="openEdit"
+            @toggle-enabled="(wf, enabled) => setEnabled(wf.id, enabled)"
+            @restore="(wf) => archive(wf.id, false)"
+            @remove="(wf) => remove(wf.id)"
+          />
         </div>
       </FieldSet>
     </FieldGroup>

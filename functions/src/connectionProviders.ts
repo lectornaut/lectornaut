@@ -14,6 +14,10 @@
 // connectionsCore.ts (type-stripping honors the workspace exports map but
 // not relative `.js`→`.ts`).
 import {
+  CONNECTION_RESOURCES,
+  type ConnectionResources,
+} from "@lectornaut/shared/connectionResources"
+import {
   GITHUB_READ_FILE_TOOL_NAME,
   GITHUB_TOOL_KEY,
   GITHUB_WRITE_TOOL_NAMES,
@@ -32,14 +36,6 @@ import {
   GOOGLE_GMAIL_WRITE_TOOL_NAMES,
   type ConnectionProvider,
 } from "@lectornaut/shared/domain"
-
-export interface ConnectionContributedTool {
-  /** Integration `sourceKey` AND Genkit wire-name (doc id == sourceKey). */
-  sourceKey: string
-  name: string
-  description: string
-  avatarSeed: string
-}
 
 /**
  * Per-provider OAuth substrate config — the data that lets ONE token-exchange
@@ -76,7 +72,7 @@ export interface ProviderOauthConfig {
   clientSecretEnvVar: string
 }
 
-export interface ConnectionProviderSpec {
+export interface ConnectionProviderSpec extends ConnectionResources {
   provider: ConnectionProvider
   name: string
   description: string
@@ -90,7 +86,6 @@ export interface ConnectionProviderSpec {
   scopes: string[]
   /** OAuth endpoint + token-lifecycle config (see ProviderOauthConfig). */
   oauth: ProviderOauthConfig
-  tools: ConnectionContributedTool[]
   /**
    * EVERY Genkit wire-name the app registers — the doc-backed sourceKeys
    * plus the companion tools that ride the same install gate (write tools,
@@ -123,15 +118,7 @@ const GOOGLE_CALENDAR: ConnectionProviderSpec = {
   // and steer stale grants to reconnect.
   scopes: ["openid", "email", GOOGLE_CALENDAR_EVENTS_SCOPE],
   oauth: GOOGLE_OAUTH,
-  tools: [
-    {
-      sourceKey: GOOGLE_CALENDAR_TOOL_KEY,
-      name: "Google Calendar",
-      description:
-        "Look up events on the chatting member's connected Google Calendar.",
-      avatarSeed: GOOGLE_CALENDAR_TOOL_KEY,
-    },
-  ],
+  ...CONNECTION_RESOURCES["google-calendar"],
   wireNames: [GOOGLE_CALENDAR_TOOL_KEY, ...GOOGLE_CALENDAR_WRITE_TOOL_NAMES],
 }
 
@@ -155,16 +142,7 @@ const GOOGLE_DRIVE: ConnectionProviderSpec = {
     GOOGLE_DRIVE_FILE_SCOPE,
   ],
   oauth: GOOGLE_OAUTH,
-  tools: [
-    {
-      sourceKey: GOOGLE_DRIVE_TOOL_KEY,
-      name: "Google Drive",
-      description:
-        "Search, read and — with per-write confirmation — save files on " +
-        "the chatting member's connected Google Drive.",
-      avatarSeed: GOOGLE_DRIVE_TOOL_KEY,
-    },
-  ],
+  ...CONNECTION_RESOURCES["google-drive"],
   // `readDriveFile` and the confirm-gated write tools all ride the ONE
   // googleDrive install gate (no integration docs of their own).
   wireNames: [
@@ -194,16 +172,7 @@ const GOOGLE_GMAIL: ConnectionProviderSpec = {
     GOOGLE_GMAIL_SEND_SCOPE,
   ],
   oauth: GOOGLE_OAUTH,
-  tools: [
-    {
-      sourceKey: GOOGLE_GMAIL_TOOL_KEY,
-      name: "Gmail",
-      description:
-        "Search and read email on the chatting member's connected Gmail " +
-        "inbox — and, with per-send confirmation, send email from it.",
-      avatarSeed: GOOGLE_GMAIL_TOOL_KEY,
-    },
-  ],
+  ...CONNECTION_RESOURCES["google-gmail"],
   // `readGmailMessage` + the confirm-gated send ride the ONE googleGmail
   // install gate (no integration docs of their own).
   wireNames: [
@@ -237,16 +206,7 @@ const GITHUB: ConnectionProviderSpec = {
     clientIdEnvVar: "GITHUB_OAUTH_CLIENT_ID",
     clientSecretEnvVar: "GITHUB_OAUTH_CLIENT_SECRET",
   },
-  tools: [
-    {
-      sourceKey: GITHUB_TOOL_KEY,
-      name: "GitHub",
-      description:
-        "Search and read issues, pull requests, repositories and file " +
-        "contents on the chatting member's connected GitHub.",
-      avatarSeed: GITHUB_TOOL_KEY,
-    },
-  ],
+  ...CONNECTION_RESOURCES.github,
   // `readGitHubFile` and the confirm-gated write tools all ride the ONE
   // gitHub install gate (no integration docs of their own).
   wireNames: [
@@ -283,19 +243,4 @@ export const CONNECTION_TOOL_WIRE_NAMES: ReadonlySet<string> = new Set(
     ...spec.wireNames,
     ...spec.tools.map((tool) => tool.sourceKey),
   ])
-)
-
-/**
- * Owning provider for each contributed tool `sourceKey` — lets the
- * integrations resolver trace a published doc back to its connection. The
- * team-wide kill switch lives on the CONNECTION doc (one flip covers every
- * tool the app contributes), so dispatch gating needs this reverse edge.
- */
-export const CONNECTION_PROVIDER_BY_SOURCE_KEY: ReadonlyMap<
-  string,
-  ConnectionProvider
-> = new Map(
-  Object.values(PROVIDERS).flatMap((spec) =>
-    spec.tools.map((tool) => [tool.sourceKey, spec.provider] as const)
-  )
 )
