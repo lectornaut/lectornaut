@@ -43,34 +43,51 @@ export async function openExternalUrl(
  * user closed or cancelled — a silent cancel, never an error. Same value as
  * `SUPERSEDED` in src-tauri/src/oauth.rs. */
 export const BROWSER_FLOW_CANCELLED = "popup_closed"
+/** Rejection when the browser blocks the popup. */
+export const BROWSER_FLOW_BLOCKED = "popup_blocked"
 
 /**
- * Waiting toast for a flow the user finishes in another browser tab. The app
- * can't always see that tab close, so Cancel runs `onCancel`, which must
- * settle `flow` (as `BROWSER_FLOW_CANCELLED`). The toast dismisses itself
- * when `flow` settles.
+ * Waiting toast for a flow the user finishes in another browser tab. Open
+ * runs `onOpen` to bring that tab back (the toast stays up); Cancel runs
+ * `onCancel`, which must settle `flow` as `BROWSER_FLOW_CANCELLED`. The
+ * toast dismisses itself when `flow` settles.
  */
 export function showBrowserFlowToast(
   flow: Promise<unknown>,
-  onCancel: () => void
+  { onOpen, onCancel }: { onOpen: () => void; onCancel: () => void }
 ): void {
   const { t } = i18n.global
   toast.promise(flow, {
     loading: t("browserAuth.waiting"),
-    description: t("browserAuth.waitingDescription"),
-    action: { label: t("browserAuth.cancel"), onClick: onCancel },
+    action: {
+      label: t("browserAuth.open"),
+      onClick: (event) => {
+        // Keeps the toast up: the flow is still waiting.
+        event.preventDefault()
+        onOpen()
+      },
+    },
+    cancel: { label: t("browserAuth.cancel"), onClick: onCancel },
   })
 }
 
 /**
- * Resolve with the first same-origin `postMessage` from `popup` that
- * `accept` matches. Closing the popup or pressing Cancel on the waiting toast
- * rejects with `BROWSER_FLOW_CANCELLED`.
+ * Open a named popup and resolve with the first same-origin `postMessage`
+ * from it that `accept` matches. Rejects with `BROWSER_FLOW_BLOCKED` if the
+ * browser blocks it (call inside the click), or `BROWSER_FLOW_CANCELLED` when
+ * the popup closes or the toast's Cancel is pressed. The toast's Open reruns
+ * `window.open` with the same name: the browser refocuses that popup (or, if
+ * it lost track of it, opens the URL fresh).
  */
 export function waitForPopupMessage<T>(
-  popup: Window,
-  accept: (data: unknown) => data is T
+  url: string,
+  accept: (data: unknown) => data is T,
+  features?: string
 ): Promise<T> {
+  const open = () => window.open(url, "lectornaut-browser-flow", features)
+  let popup = open()
+  if (!popup) return Promise.reject(BROWSER_FLOW_BLOCKED)
+
   let cancel = () => {}
   const flow = new Promise<T>((resolve, reject) => {
     let graceTimer: ReturnType<typeof setTimeout> | undefined
@@ -81,7 +98,7 @@ export function waitForPopupMessage<T>(
     }
     cancel = () => {
       cleanup()
-      popup.close()
+      popup?.close()
       reject(BROWSER_FLOW_CANCELLED)
     }
     const onMessage = (event: MessageEvent) => {
@@ -97,11 +114,17 @@ export function waitForPopupMessage<T>(
     // `closed` with the message still in flight. Give it a grace beat to win
     // before calling it a cancel; onMessage's cleanup() clears the timer.
     const closeWatch = setInterval(() => {
-      if (!popup.closed || graceTimer) return
+      if (!popup?.closed || graceTimer) return
       graceTimer = setTimeout(cancel, 400)
     }, 500)
     window.addEventListener("message", onMessage)
   })
-  showBrowserFlowToast(flow, () => cancel())
+  showBrowserFlowToast(flow, {
+    onOpen: () => {
+      popup = open() ?? popup
+      popup?.focus()
+    },
+    onCancel: () => cancel(),
+  })
   return flow
 }

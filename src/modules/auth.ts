@@ -6,6 +6,7 @@ import {
 } from "@/composables/useDeviceSessions"
 import { isTauri } from "@/composables/usePlatform"
 import {
+  BROWSER_FLOW_BLOCKED,
   BROWSER_FLOW_CANCELLED,
   showBrowserFlowToast,
   waitForPopupMessage,
@@ -48,7 +49,8 @@ interface OAuthResponse {
 
 /**
  * Run a system-browser OAuth command. The app can't see the browser tab, so
- * the waiting toast's Cancel calls `cancel_oauth` for a closed tab. A timeout
+ * the waiting toast's Open reopens the auth URL (`reopen_oauth`) and Cancel
+ * abandons the flow (`cancel_oauth`) for a closed tab. A timeout
  * is explained here and rethrown as a cancel, so callers only handle success,
  * `BROWSER_FLOW_CANCELLED`, or real errors.
  */
@@ -57,7 +59,10 @@ export async function invokeLoopbackOAuth<T>(
   config: Record<string, unknown>
 ): Promise<T> {
   const run = invoke<T>(command, { config })
-  showBrowserFlowToast(run, () => void invoke("cancel_oauth"))
+  showBrowserFlowToast(run, {
+    onOpen: () => void invoke("reopen_oauth"),
+    onCancel: () => void invoke("cancel_oauth"),
+  })
   try {
     return await run
   } catch (error) {
@@ -285,14 +290,14 @@ const isAuthPopupMessage = (data: unknown): data is AuthPopupMessage => {
 }
 
 const openAuthPopup = async (url: URL, providerName: string) => {
-  const popup = window.open(url.toString(), "_blank")
-
-  if (!popup) {
+  const data = await waitForPopupMessage(
+    url.toString(),
+    isAuthPopupMessage
+  ).catch((error) => {
+    if (error !== BROWSER_FLOW_BLOCKED) throw error
     toast.error("Popup blocked. Please allow popups for this site.")
     throw new Error("Popup blocked")
-  }
-
-  const data = await waitForPopupMessage(popup, isAuthPopupMessage)
+  })
   if (data.type === "auth_error") throw new Error(data.error)
 
   const { idToken, accessToken } = data

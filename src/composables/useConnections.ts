@@ -34,6 +34,7 @@ import {
   type ConnectionAppDescriptor,
 } from "@/data/connectionApps"
 import {
+  BROWSER_FLOW_BLOCKED,
   BROWSER_FLOW_CANCELLED,
   waitForPopupMessage,
 } from "@/helpers/openExternalUrl"
@@ -122,8 +123,8 @@ async function requestAuthorizationCodeTauri(
 /** Message type the callback page posts — namespaced so a sign-in popup's
  * token message can never be consumed by the connection listener. */
 const CONNECTION_OAUTH_MESSAGE = "connection_oauth"
-/** Reasons surfaced as Error messages so connect() can branch the toast. */
-const REDIRECT_POPUP_BLOCKED = "popup_blocked"
+/** Rejection reasons connect() branches its toast on. */
+const REDIRECT_POPUP_BLOCKED = BROWSER_FLOW_BLOCKED
 // Same value as the desktop loopback cancel, so one check covers both.
 const REDIRECT_POPUP_CLOSED = BROWSER_FLOW_CANCELLED
 
@@ -158,18 +159,15 @@ function requestAuthorizationCodeRedirect(
   for (const [key, value] of Object.entries(app.authParams)) {
     url.searchParams.set(key, value)
   }
-  const popup = window.open(
-    url.toString(),
-    "_blank",
-    "popup,width=600,height=720"
-  )
-  if (!popup) return Promise.reject(new Error(REDIRECT_POPUP_BLOCKED))
-
   // The shape guard is part of the safety boundary: never accept a
   // non-connection message (e.g. a sign-in token postMessage).
   const isConnectionMessage = (data: unknown): data is ConnectionOauthMessage =>
     (data as { type?: unknown } | null)?.type === CONNECTION_OAUTH_MESSAGE
-  return waitForPopupMessage(popup, isConnectionMessage).then((data) => {
+  return waitForPopupMessage(
+    url.toString(),
+    isConnectionMessage,
+    "popup,width=600,height=720"
+  ).then((data) => {
     if (data.error) throw new Error(data.error)
     if (data.state !== state) throw new Error("Authorization state mismatch.")
     if (typeof data.code !== "string" || !data.code) {

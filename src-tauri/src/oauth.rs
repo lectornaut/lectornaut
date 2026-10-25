@@ -48,6 +48,23 @@ const SUPERSEDED: &str = "popup_closed";
 /// usually a closed browser tab. Checked by `invokeLoopbackOAuth` in auth.ts.
 const TIMED_OUT: &str = "oauth_timeout";
 
+/// Authorize URL of the latest flow, so the app's "Open" can reopen it. The
+/// app can't address the system browser's existing tab, only open a new one;
+/// whichever tab finishes first wins the still-waiting listener.
+static FLOW_URL: std::sync::Mutex<Option<String>> = std::sync::Mutex::new(None);
+
+#[command]
+pub fn reopen_oauth<R: Runtime>(app: AppHandle<R>) -> Result<(), String> {
+    let url = FLOW_URL.lock().map_err(|e| e.to_string())?.clone();
+    match url {
+        Some(url) => app
+            .opener()
+            .open_url(url, None::<String>)
+            .map_err(|e| e.to_string()),
+        None => Ok(()),
+    }
+}
+
 /// Abandon the in-flight loopback flow, if any. The browser can't tell us the
 /// tab was closed, so the app's "Cancel" calls this to free the port and
 /// settle the pending command with `SUPERSEDED`.
@@ -118,6 +135,9 @@ async fn run_loopback_authorization<R: Runtime>(
     }
 
     // 3. Open Browser
+    if let Ok(mut flow_url) = FLOW_URL.lock() {
+        *flow_url = Some(url.to_string());
+    }
     app.opener()
         .open_url(url.as_str(), None::<String>)
         .map_err(|e| e.to_string())?;
