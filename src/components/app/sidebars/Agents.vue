@@ -142,7 +142,7 @@ const openNewAgentDialog = (): void => {
         :is-active="isChatWindowOpen && poppedOutAgentId === agent.id"
         @click="openAgentInPopout(agent.id, agent.name)"
       >
-        <AppAvatar variant="beam" :name="avatarSeed(agent)" class="size-8" />
+        <AppAvatar variant="beam" :name="avatarSeed(agent)" class="size-4" />
         <span class="truncate">
           {{ agent.name }}
         </span>
@@ -152,7 +152,7 @@ const openNewAgentDialog = (): void => {
         <SidebarMenuBadge class="flex items-center gap-1">
           <Tooltip v-if="memberAgentIds.has(agent.id)">
             <TooltipTrigger as-child>
-              <span>
+              <span class="pointer-events-auto">
                 <IconBadgeCheck />
               </span>
             </TooltipTrigger>
@@ -162,7 +162,7 @@ const openNewAgentDialog = (): void => {
           </Tooltip>
           <Tooltip>
             <TooltipTrigger as-child>
-              <span>
+              <span class="pointer-events-auto">
                 <Component :is="agentKindIcon(agent.id)" />
               </span>
             </TooltipTrigger>

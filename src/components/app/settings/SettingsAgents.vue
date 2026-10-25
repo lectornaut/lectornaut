@@ -5,6 +5,7 @@ import { useIntegrations } from "@/composables/useIntegrations"
 import { useTeamAgents } from "@/composables/useTeamAgents"
 import { BUILT_IN_AGENTS } from "@/data/builtInAgents"
 import {
+  IconBlocks,
   IconBot,
   IconChevronDown,
   IconCirclePlus,
@@ -52,6 +53,10 @@ import type { ITeamAgent } from "@/types/domain"
  */
 
 const { t } = useI18n()
+
+const openIntegrations = (): void => {
+  emitter.emit("Dialog.Settings.Open", "integrations")
+}
 
 const { canViewTeamSettings } = useCanViewTeamSettings()
 
@@ -270,6 +275,11 @@ const handleRemoveAgent = async (agent: ITeamAgent): Promise<void> => {
               {{ t("settings.agents.builtInAgents.sectionDescription") }}
             </FieldDescription>
           </FieldContent>
+          <!-- Add/remove pre-built agents lives on the Integrations page. -->
+          <Button variant="outline" size="sm" @click="openIntegrations">
+            <IconBlocks data-icon="inline-start" />
+            {{ t("settings.integrations.agents.configure") }}
+          </Button>
         </Field>
 
         <Field

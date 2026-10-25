@@ -678,7 +678,8 @@
         "removeError": "Couldn't remove the agent.",
         "enableSuccess": "Agent enabled.",
         "disableSuccess": "Agent disabled.",
-        "empty": "No pre-built agents available."
+        "empty": "No pre-built agents available.",
+        "configure": "Configure agents"
       },
       "tools": {
         "label": "Tools",
@@ -689,7 +690,8 @@
         "removeError": "Couldn't remove the tool.",
         "enableSuccess": "Tool enabled.",
         "disableSuccess": "Tool disabled.",
-        "empty": "No pre-built tools available."
+        "empty": "No pre-built tools available.",
+        "configure": "Configure tools"
       },
       "workflows": {
         "label": "Workflows",
@@ -698,7 +700,8 @@
         "addError": "Couldn't add the workflow.",
         "removeSuccess": "Workflow removed.",
         "removeError": "Couldn't remove the workflow.",
-        "empty": "No pre-built workflows available."
+        "empty": "No pre-built workflows available.",
+        "configure": "Configure workflows"
       }
     },
     "connections": {
@@ -706,6 +709,7 @@
       "description": "Install apps backed by external accounts. Apps can provide agents, tools, and workflows; each member connects their own account.",
       "permissionRequired": "Only team owners and admins can install or uninstall apps.",
       "installApp": "Install app",
+      "installing": "Installing...",
       "uninstallApp": "Uninstall app",
       "addSuccess": "App installed.",
       "addError": "Couldn't install the app.",
@@ -720,17 +724,18 @@
       "manageOnGoogle": "Manage on Google",
       "connectSuccess": "Account connected.",
       "connectError": "Couldn't connect the account.",
-      "popupBlocked": "Couldn't open the Google sign-in popup. Allow popups for this site and try again.",
+      "popupBlocked": "Couldn't open the sign-in popup. Allow popups for this site and try again.",
       "disconnectSuccess": "Account disconnected.",
       "disconnectError": "Couldn't disconnect the account.",
       "disconnectConfirmTitle": "Disconnect account?",
       "disconnectConfirmBody": "Your {name} account will be unlinked and its access revoked. Agents, tools, and workflows cannot use {name} on your behalf until you connect again. Installed resources remain available to other connected members.",
-      "notConfigured": "Google sign-in isn't configured for this app build.",
+      "notConfigured": "Sign-in for this app isn't configured in this build.",
       "connected": "Account connected",
       "connectedAs": "Connected as {email}",
       "scopeUpgradeHint": "This app now needs additional permissions. Reconnect to grant them.",
       "notConnected": "Your account isn't connected.",
-      "connecting": "Waiting for Google sign-in...",
+      "connecting": "Waiting for you to sign in...",
+      "connectingAction": "Connecting...",
       "needsReauth": "Your connection needs re-authorization.",
       "needsReauthBadge": "Reauthorize",
       "membersConnected": "{count} member connected | {count} members connected",
@@ -768,7 +773,7 @@
         "agentsTitle": "Agents it adds",
         "workflowsTitle": "Workflows it adds",
         "permissionsTitle": "Permissions",
-        "permissionsDescription": "What each member grants Google when connecting their own account.",
+        "permissionsDescription": "What each member grants when connecting their own account.",
         "scope": {
           "identity": "Verify your Google identity",
           "email": "See your email address",

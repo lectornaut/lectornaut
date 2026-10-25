@@ -104,12 +104,19 @@ onMounted(() => {
 </script>
 
 <template>
-  <Sonner
-    close-button
-    close-button-position="top-right"
-    position="bottom-center"
-    :theme="sonnerTheme"
-  />
+  <!-- A modal Reka dialog sets `pointer-events: none` on body and dismisses on
+       any document pointerdown/focusin outside it: re-enable toasts and keep
+       their events from reaching that listener, so a toast stays usable above
+       an open dialog without closing it. -->
+  <div @pointerdown.stop @focusin.stop>
+    <Sonner
+      class="pointer-events-auto"
+      close-button
+      close-button-position="top-right"
+      position="bottom-center"
+      :theme="sonnerTheme"
+    />
+  </div>
   <ExitTrigger />
   <SessionRevokedDialog />
   <MfaResolverDialog />

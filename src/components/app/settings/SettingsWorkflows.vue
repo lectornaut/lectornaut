@@ -5,6 +5,7 @@ import { useTeamWorkflows } from "@/composables/useTeamWorkflows"
 import { DEFAULT_AGENT_ID } from "@/data/builtInAgents"
 import { WORKFLOW_PRESETS, type WorkflowPreset } from "@/data/workflowPresets"
 import {
+  IconBlocks,
   IconChevronDown,
   IconCirclePlus,
   IconPencil,
@@ -12,6 +13,7 @@ import {
   IconSettings,
   IconWorkflow,
 } from "@/data/icons"
+import { emitter } from "@/modules/mitt"
 import { useAuthStore } from "@/stores/authStore"
 import type { IWorkflow } from "@/types/domain"
 import { storeToRefs } from "pinia"
@@ -20,6 +22,10 @@ import { CONNECTION_RESOURCES } from "@lectornaut/shared/connectionResources"
 import { useConnectionStatus } from "@/composables/useConnectionStatus"
 
 const { t } = useI18n()
+
+const openIntegrations = (): void => {
+  emitter.emit("Dialog.Settings.Open", "integrations")
+}
 
 const { canViewTeamSettings } = useCanViewTeamSettings()
 
@@ -341,6 +347,11 @@ const rowDescription = (wf: IWorkflow): string =>
               {{ t("settings.workflows.predefinedDescription") }}
             </FieldDescription>
           </FieldContent>
+          <!-- Add/remove pre-built workflows lives on the Integrations page. -->
+          <Button variant="outline" size="sm" @click="openIntegrations">
+            <IconBlocks data-icon="inline-start" />
+            {{ t("settings.integrations.workflows.configure") }}
+          </Button>
         </Field>
 
         <TooltipProvider>

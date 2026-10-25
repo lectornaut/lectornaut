@@ -39,7 +39,7 @@
     "handlebars": "^4.7.10",
     "mjml": "^5.4.1",
     "postmark": "^5.1.0",
-    "stripe": "^23.0.0",
+    "stripe": "^23.0.1",
     "uuid": "^14.0.3"
   },
   "devDependencies": {

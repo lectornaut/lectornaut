@@ -32,9 +32,10 @@ import { computed, nextTick, ref } from "vue"
  * (disabled with a tooltip, mirroring SettingsTools' "New tool" CTA).
  *
  * Layout: an `ItemGroup` grid of app cards — provider logo in `ItemMedia`,
- * copy in `ItemContent`, the info + admin install/update actions in
- * `ItemActions`, and (while installed) the signed-in member's own account
- * link in a full-width `ItemFooter` (status + Connect / Reconnect).
+ * copy in `ItemContent`, then (while installed) the signed-in member's
+ * account status callout in a full-width `ItemFooter`, and last one actions
+ * `ItemFooter`: admin install/update + Connect / Reconnect leading, info
+ * alone at the end.
  *
  * The info button opens `SettingsConnectionInfo` (mounted below,
  * page-scoped) via the `Dialog.ConnectionInfo.Open` mitt event — tabs for
@@ -335,11 +336,30 @@ const isBindingPending = (provider: ConnectionProvider): boolean =>
   isPendingId(connectActionId(provider)) ||
   isPendingId(disconnectActionId(provider))
 
-const runLocked = async (id: string, action: () => Promise<void>) => {
+/**
+ * The callables resolve once the SERVER write lands, but the card reads the
+ * live snapshot, which trails by a beat. `settled` holds the lock (and its
+ * spinner) until the snapshot shows the outcome, so the button never flashes
+ * back to its old idle state first. Capped so a stalled listener can't wedge
+ * the row. Not used for connect: a closed popup returns WITHOUT throwing, so
+ * there'd be no outcome to wait for.
+ */
+const SETTLE_TIMEOUT_MS = 10_000
+const rowFor = (provider: ConnectionProvider): ConnectionAppRow | undefined =>
+  connectionRows.value.find((row) => row.app.provider === provider)
+
+const runLocked = async (
+  id: string,
+  action: () => Promise<void>,
+  settled?: () => boolean
+) => {
   if (pending.value.has(id)) return
   pending.value = new Set(pending.value).add(id)
   try {
     await action()
+    if (settled) {
+      await until(settled).toBe(true, { timeout: SETTLE_TIMEOUT_MS })
+    }
   } catch {
     // Toasted inside useConnections; the row just unlocks.
   } finally {
@@ -367,24 +387,28 @@ const handleAppAction = (
 ): void => {
   if (isRowPending(app.provider)) return
   if (installed) {
-    const row = connectionRows.value.find(
-      (row) => row.app.provider === app.provider
-    )
+    const row = rowFor(app.provider)
     if (!row?.updateAvailable || !canManage.value) return
-    void runLocked(updateActionId(app.provider), () =>
-      connections.install(app.provider, true)
+    void runLocked(
+      updateActionId(app.provider),
+      () => connections.install(app.provider, true),
+      () => !rowFor(app.provider)?.updateAvailable
     )
     return
   }
-  void runLocked(appActionId(app.provider), () =>
-    connections.install(app.provider)
+  void runLocked(
+    appActionId(app.provider),
+    () => connections.install(app.provider),
+    () => !!rowFor(app.provider)?.installed
   )
 }
 
 const handleUninstallConfirmed = (): Promise<void> =>
   uninstallDialog.confirm((app) =>
-    runLocked(appActionId(app.provider), () =>
-      connections.uninstall(app.provider)
+    runLocked(
+      appActionId(app.provider),
+      () => connections.uninstall(app.provider),
+      () => !rowFor(app.provider)?.installed
     )
   )
 
@@ -400,8 +424,10 @@ const handleConnect = (provider: ConnectionProvider): void => {
 const handleDisconnectConfirmed = (): Promise<void> =>
   disconnectDialog.confirm((app) => {
     if (isBindingPending(app.provider)) return Promise.resolve()
-    return runLocked(disconnectActionId(app.provider), () =>
-      connections.disconnect(app.provider)
+    return runLocked(
+      disconnectActionId(app.provider),
+      () => connections.disconnect(app.provider),
+      () => !rowFor(app.provider)?.myBinding
     )
   })
 
@@ -600,7 +626,10 @@ const openInfoDialog = (provider: ConnectionProvider): void => {
               class="grid grid-cols-1 gap-2 xl:grid-cols-2 2xl:grid-cols-3"
             >
               <template v-for="row in rowsByTab[tab]" :key="row.app.provider">
-                <Item variant="outline">
+                <!-- content-between: grid rows stretch cards to equal height,
+                     so this pins the actions row to the bottom and buttons
+                     line up across neighbouring cards. -->
+                <Item variant="outline" class="content-between">
                   <ItemMedia variant="icon">
                     <Component :is="row.app.logo" />
                   </ItemMedia>
@@ -633,66 +662,7 @@ const openInfoDialog = (provider: ConnectionProvider): void => {
                       </Badge>
                     </template>
                   </SettingsIdentity>
-                  <ItemActions>
-                    <TooltipProvider>
-                      <ButtonGroup>
-                        <Tooltip>
-                          <TooltipTrigger as-child>
-                            <Button
-                              :variant="row.installed ? 'secondary' : 'default'"
-                              size="icon"
-                              @click="openInfoDialog(row.app.provider)"
-                            >
-                              <IconInfo />
-                            </Button>
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            {{ t("settings.connections.infoButton") }}
-                          </TooltipContent>
-                        </Tooltip>
-                        <Tooltip
-                          v-if="
-                            !row.installed ||
-                            row.updateAvailable ||
-                            isPendingId(updateActionId(row.app.provider))
-                          "
-                        >
-                          <TooltipTrigger as-child>
-                            <Button
-                              :variant="row.installed ? 'secondary' : 'default'"
-                              :disabled="
-                                !canManage || isRowPending(row.app.provider)
-                              "
-                              @click="handleAppAction(row.app, row.installed)"
-                            >
-                              <Spinner
-                                v-if="
-                                  isPendingId(appActionId(row.app.provider)) ||
-                                  isPendingId(updateActionId(row.app.provider))
-                                "
-                              />
-                              {{
-                                row.installed
-                                  ? t(
-                                      isPendingId(
-                                        updateActionId(row.app.provider)
-                                      )
-                                        ? "settings.connectionResources.installingUpdates"
-                                        : "settings.connectionResources.installUpdates"
-                                    )
-                                  : t("settings.connections.installApp")
-                              }}
-                            </Button>
-                          </TooltipTrigger>
-                          <TooltipContent v-if="!canManage">
-                            {{ t("settings.connections.permissionRequired") }}
-                          </TooltipContent>
-                        </Tooltip>
-                      </ButtonGroup>
-                    </TooltipProvider>
-                  </ItemActions>
-                  <!-- The signed-in member's own account link (member action,
-                 deliberately NOT admin-gated). -->
+                  <!-- The signed-in member's own account status. -->
                   <ItemFooter v-if="row.installed">
                     <div
                       class="bg-secondary flex grow flex-col rounded-2xl p-4"
@@ -753,9 +723,57 @@ const openInfoDialog = (provider: ConnectionProvider): void => {
                         {{ t("settings.connections.scopeUpgradeHint") }}
                       </span>
                     </div>
-                    <div class="flex items-center gap-2">
-                      <!-- Account management lives in app details. -->
-                      <ButtonGroup>
+                  </ItemFooter>
+                  <!-- One actions row for every card: the verbs lead (admin
+                       install/update, then the member's own Connect /
+                       Reconnect, deliberately NOT admin-gated); info sits
+                       alone at the end — a separate concern, so no group. -->
+                  <ItemFooter>
+                    <TooltipProvider>
+                      <div class="flex flex-wrap items-center gap-2">
+                        <Tooltip
+                          v-if="
+                            !row.installed ||
+                            row.updateAvailable ||
+                            isPendingId(updateActionId(row.app.provider))
+                          "
+                        >
+                          <TooltipTrigger as-child>
+                            <Button
+                              :variant="row.installed ? 'secondary' : 'default'"
+                              :disabled="
+                                !canManage || isRowPending(row.app.provider)
+                              "
+                              @click="handleAppAction(row.app, row.installed)"
+                            >
+                              <Spinner
+                                v-if="
+                                  isPendingId(appActionId(row.app.provider)) ||
+                                  isPendingId(updateActionId(row.app.provider))
+                                "
+                                data-icon="inline-start"
+                              />
+                              {{
+                                row.installed
+                                  ? t(
+                                      isPendingId(
+                                        updateActionId(row.app.provider)
+                                      )
+                                        ? "settings.connectionResources.installingUpdates"
+                                        : "settings.connectionResources.installUpdates"
+                                    )
+                                  : t(
+                                      isPendingId(appActionId(row.app.provider))
+                                        ? "settings.connections.installing"
+                                        : "settings.connections.installApp"
+                                    )
+                              }}
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent v-if="!canManage">
+                            {{ t("settings.connections.permissionRequired") }}
+                          </TooltipContent>
+                        </Tooltip>
                         <Button
                           v-if="showConnectAction(row)"
                           :variant="row.myBinding ? 'outline' : 'default'"
@@ -766,15 +784,35 @@ const openInfoDialog = (provider: ConnectionProvider): void => {
                             v-if="
                               isPendingId(connectActionId(row.app.provider))
                             "
+                            data-icon="inline-start"
                           />
                           {{
-                            row.myBinding
-                              ? t("settings.connections.reconnect")
-                              : t("settings.connections.connect")
+                            t(
+                              isPendingId(connectActionId(row.app.provider))
+                                ? "settings.connections.connectingAction"
+                                : row.myBinding
+                                  ? "settings.connections.reconnect"
+                                  : "settings.connections.connect"
+                            )
                           }}
                         </Button>
-                      </ButtonGroup>
-                    </div>
+                      </div>
+                      <Tooltip>
+                        <TooltipTrigger as-child>
+                          <Button
+                            variant="secondary"
+                            size="icon"
+                            class="ml-auto"
+                            @click="openInfoDialog(row.app.provider)"
+                          >
+                            <IconInfo />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          {{ t("settings.connections.infoButton") }}
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
                   </ItemFooter>
                 </Item>
               </template>
@@ -1072,6 +1110,7 @@ const openInfoDialog = (provider: ConnectionProvider): void => {
       @update="(app) => handleAppAction(app, true)"
       @uninstall="uninstallDialog.open"
       @disconnect="disconnectDialog.open"
+      @connect="(app) => handleConnect(app.provider)"
     />
 
     <!-- Confirm dialogs for the two grant-revoking actions — page-level

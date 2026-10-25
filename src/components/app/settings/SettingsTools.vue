@@ -3,7 +3,12 @@ import { useCanViewTeamSettings } from "@/composables/useCanViewTeamSettings"
 import { useAgentConfig } from "@/composables/useAgentConfig"
 import { useIntegrations } from "@/composables/useIntegrations"
 import { useTeamCustomTools } from "@/composables/useTeamCustomTools"
-import { IconChevronDown, IconCirclePlus, IconWrench } from "@/data/icons"
+import {
+  IconBlocks,
+  IconChevronDown,
+  IconCirclePlus,
+  IconWrench,
+} from "@/data/icons"
 import { emitter } from "@/modules/mitt"
 import { useIntegrationsStore } from "@/stores/integrationsStore"
 import type { ITeamCustomTool } from "@/types/domain"
@@ -51,6 +56,10 @@ import type { ITeamCustomTool } from "@/types/domain"
  */
 
 const { t } = useI18n()
+
+const openIntegrations = (): void => {
+  emitter.emit("Dialog.Settings.Open", "integrations")
+}
 
 const { canViewTeamSettings } = useCanViewTeamSettings()
 
@@ -216,6 +225,11 @@ const handleRemoveTool = async (tool: ITeamCustomTool): Promise<void> => {
               {{ t("settings.agents.tools.description") }}
             </FieldDescription>
           </FieldContent>
+          <!-- Add/remove pre-built tools lives on the Integrations page. -->
+          <Button variant="outline" size="sm" @click="openIntegrations">
+            <IconBlocks data-icon="inline-start" />
+            {{ t("settings.integrations.tools.configure") }}
+          </Button>
         </Field>
 
         <Field v-if="isToolInstalled('rollDice')" orientation="horizontal">

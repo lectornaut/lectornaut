@@ -1,5 +1,6 @@
 <script lang="ts" setup>
 import { useConnections } from "@/composables/useConnections"
+import { isTauri, useIsFullscreen } from "@/composables/usePlatform"
 import type { ConnectionAppDescriptor } from "@/data/connectionApps"
 import {
   IconBot,
@@ -27,7 +28,7 @@ import { storeToRefs } from "pinia"
 import { onBeforeUnmount, onMounted } from "vue"
 
 /**
- * Connection app info dialog — details and account/app management for one
+ * Connection app info sheet — details and account/app management for one
  * installable connection app. Patterned on
  * `SettingsCustomTools.vue`'s dialog (mitt-opened, Tabs inside
  * DialogContent), but mounted INSIDE `SettingsConnections.vue` rather than
@@ -44,7 +45,8 @@ import { onBeforeUnmount, onMounted } from "vue"
  *   - **Accounts** — every member binding (metadata only): avatar + name
  *     from the membership roster, link status, and the bound email for
  *     yourself (admins see all emails — same data their console role
- *     already implies). Members can disconnect or manage their own account.
+ *     already implies). Members can connect (or reconnect), disconnect, or
+ *     manage their own account.
  *   - **Settings** — Owner/Admin only: install provenance and the
  *     uninstall and "Enabled for the team" kill switch. The switch applies immediately
  *     (no unsaved bar — toggles are immediate everywhere in Settings);
@@ -67,6 +69,7 @@ const emit = defineEmits<{
   update: [app: ConnectionAppDescriptor]
   uninstall: [app: ConnectionAppDescriptor]
   disconnect: [app: ConnectionAppDescriptor]
+  connect: [app: ConnectionAppDescriptor]
 }>()
 
 const connections = useConnections()
@@ -81,6 +84,7 @@ const { teamMembers } = storeToRefs(membershipStore)
 
 // ── Dialog state ────────────────────────────────────────────────────────────
 
+const isFullscreen = useIsFullscreen()
 const open = ref(false)
 const activeProvider = ref<ConnectionProvider | null>(null)
 const activeTab = ref("overview")
@@ -208,6 +212,29 @@ const accountRows = computed<AccountRow[]>(() => {
   )
 })
 
+/** Same rule as the card's `showConnectAction`: first link, or reconnect
+ * for an expired / narrower grant. Never while the kill switch is on. */
+const showConnect = computed(() => {
+  const row = activeRow.value
+  return (
+    !!row &&
+    row.installed &&
+    !row.disabled &&
+    (!row.myBinding ||
+      row.myBinding.status === "needs_reauth" ||
+      row.needsScopeUpgrade)
+  )
+})
+
+/** The signed-in member's own display, for the not-yet-connected row. */
+const selfDisplay = computed(() => {
+  const uid = currentUser.value?.uid
+  return {
+    name: memberName(uid),
+    photoURL: (uid ? membersByUid.value.get(uid)?.photoURL : null) ?? null,
+  }
+})
+
 const formatDate = (
   value: { toDate?: () => Date } | null | undefined
 ): string => {
@@ -277,26 +304,31 @@ const handleToggleEnabled = async (enabled: boolean): Promise<void> => {
 </script>
 
 <template>
-  <Dialog v-model:open="open">
-    <DialogContent
-      class="grid max-h-[85svh] grid-rows-[auto_minmax(0,1fr)_auto] overflow-hidden sm:max-w-xl"
+  <Sheet v-model:open="open">
+    <!-- House floating-sheet idiom (DriveFilePicker / Navigation edit). -->
+    <SheetContent
+      class="m-2 mt-[calc(var(--spacing-titlebar-height,0px)+(--spacing(2)))] h-auto! gap-0 overflow-clip rounded-4xl border sm:max-w-md"
+      :class="{ 'mt-12': isTauri && !isFullscreen }"
     >
       <template v-if="activeRow">
-        <DialogHeader>
-          <DialogTitle class="flex items-center gap-2">
+        <SheetHeader class="pr-14">
+          <SheetTitle class="flex items-center gap-2">
             <Component :is="activeRow.app.logo" class="size-5 shrink-0" />
             {{ activeRow.app.name }}
             <Badge v-if="activeRow.disabled" variant="outline">
               {{ t("settings.connections.disabledBadge") }}
             </Badge>
-          </DialogTitle>
-          <DialogDescription>
+          </SheetTitle>
+          <SheetDescription>
             {{ activeRow.app.description }}
-          </DialogDescription>
-        </DialogHeader>
+          </SheetDescription>
+        </SheetHeader>
 
-        <Tabs v-model="activeTab" class="min-h-0">
-          <TabsList class="bg-input/50 h-9! p-0">
+        <!-- SheetContent has no built-in padding. Like the other sheets,
+             each ScrollContainer runs edge to edge (scrollbar + fade hints at
+             the sheet rim) and its inner content carries the px-6 gutter. -->
+        <Tabs v-model="activeTab" class="min-h-0 flex-1">
+          <TabsList class="bg-input/50 mx-6 h-9! p-0">
             <TabsTrigger
               value="overview"
               class="data-[state=active]:border-border! data-[state=active]:bg-background h-9"
@@ -324,11 +356,11 @@ const handleToggleEnabled = async (enabled: boolean): Promise<void> => {
           </TabsList>
 
           <!-- ── Overview — contributed tools + permissions ─────────── -->
-          <TabsContent value="overview" class="min-h-0">
-            <ScrollContainer class="h-full">
+          <TabsContent value="overview" class="flex min-h-0 flex-col">
+            <ScrollContainer>
               <!-- House roster idiom (Navigation.vue): a label legend over an
                  ItemGroup of outline xs Items, one row per resource/scope. -->
-              <FieldGroup class="gap-6 py-1">
+              <FieldGroup class="gap-6 px-6 py-1">
                 <FieldSet
                   v-for="section in resourceSections"
                   :key="section.type"
@@ -394,11 +426,45 @@ const handleToggleEnabled = async (enabled: boolean): Promise<void> => {
           </TabsContent>
 
           <!-- ── Accounts — every member binding (metadata only) ────── -->
-          <TabsContent value="accounts" class="min-h-0">
-            <ScrollContainer class="h-full">
-              <div class="flex flex-col gap-2">
+          <TabsContent value="accounts" class="flex min-h-0 flex-col">
+            <ScrollContainer>
+              <div class="flex flex-col gap-2 px-6 py-1">
+                <!-- Not connected yet: your own row leads with Connect, the
+                     app's primary member action (same verb as the card). -->
+                <Item
+                  v-if="showConnect && !activeRow.myBinding"
+                  variant="outline"
+                >
+                  <ItemMedia>
+                    <AppAvatar
+                      :src="selfDisplay.photoURL"
+                      :name="selfDisplay.name"
+                    />
+                  </ItemMedia>
+                  <ItemContent>
+                    <ItemTitle>
+                      {{ selfDisplay.name }}
+                      <span class="text-muted-foreground font-normal">
+                        {{ t("settings.connections.info.you") }}
+                      </span>
+                    </ItemTitle>
+                    <ItemDescription>
+                      {{ t("settings.connections.notConnected") }}
+                    </ItemDescription>
+                  </ItemContent>
+                  <ItemActions>
+                    <Button
+                      :disabled="isPending"
+                      @click="emit('connect', activeRow.app)"
+                    >
+                      <Spinner v-if="isPending" data-icon="inline-start" />
+                      {{ t("settings.connections.connect") }}
+                    </Button>
+                  </ItemActions>
+                </Item>
+
                 <Empty
-                  v-if="accountRows.length === 0"
+                  v-else-if="accountRows.length === 0"
                   class="border border-dashed"
                 >
                   <EmptyHeader>
@@ -448,7 +514,16 @@ const handleToggleEnabled = async (enabled: boolean): Promise<void> => {
                     </Badge>
                   </ItemActions>
                   <ItemFooter v-if="row.isSelf && activeRow.installed">
-                    <ButtonGroup>
+                    <!-- Expired or narrower grant: Reconnect leads. -->
+                    <Button
+                      v-if="showConnect"
+                      :disabled="isPending"
+                      @click="emit('connect', activeRow.app)"
+                    >
+                      <Spinner v-if="isPending" data-icon="inline-start" />
+                      {{ t("settings.connections.reconnect") }}
+                    </Button>
+                    <ButtonGroup class="ml-auto">
                       <Button
                         v-if="activeRow.app.manage"
                         as="a"
@@ -477,9 +552,13 @@ const handleToggleEnabled = async (enabled: boolean): Promise<void> => {
           </TabsContent>
 
           <!-- ── Settings (Owner/Admin) — provenance + kill switch ──── -->
-          <TabsContent v-if="canManage" value="settings" class="min-h-0">
-            <ScrollContainer class="h-full">
-              <FieldGroup class="gap-4 py-1">
+          <TabsContent
+            v-if="canManage"
+            value="settings"
+            class="flex min-h-0 flex-col"
+          >
+            <ScrollContainer>
+              <FieldGroup class="gap-4 px-6 py-1">
                 <FieldSet v-if="activeRow.connection">
                   <Field orientation="horizontal">
                     <FieldContent>
@@ -620,15 +699,15 @@ const handleToggleEnabled = async (enabled: boolean): Promise<void> => {
           </TabsContent>
         </Tabs>
 
-        <DialogFooter>
-          <DialogClose as-child>
+        <SheetFooter>
+          <SheetClose as-child>
             <Button variant="outline">
               {{ t("common.close") }}
               <Kbd>Esc</Kbd>
             </Button>
-          </DialogClose>
-        </DialogFooter>
+          </SheetClose>
+        </SheetFooter>
       </template>
-    </DialogContent>
-  </Dialog>
+    </SheetContent>
+  </Sheet>
 </template>
