@@ -4,6 +4,7 @@ use tauri_plugin_http::reqwest::Client;
 use tauri_plugin_opener::OpenerExt;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::TcpListener;
+use tokio::sync::watch;
 use tokio::time::{timeout, timeout_at, Duration, Instant};
 use url::Url;
 
@@ -30,6 +31,29 @@ pub struct OAuthConfig {
     pub redirect_uri: String,
     pub scopes: String,
     pub extra_params: Option<std::collections::HashMap<String, String>>,
+}
+
+/// Bumped by every new loopback flow. An older flow still waiting on the
+/// port (tab closed, webview reloaded) sees the change and drops its listener,
+/// so a retry can rebind instead of failing for the old flow's 5-minute wait.
+static FLOW_GENERATION: std::sync::LazyLock<watch::Sender<u64>> =
+    std::sync::LazyLock::new(|| watch::Sender::new(0));
+
+/// Error returned to a superseded or cancelled flow. Mirrors
+/// `BROWSER_FLOW_CANCELLED` in src/helpers/openExternalUrl.ts (the web popup's
+/// cancel sentinel too) so callers treat it as a silent cancel.
+const SUPERSEDED: &str = "popup_closed";
+
+/// Error returned when no callback arrives before the deadline, which is
+/// usually a closed browser tab. Checked by `invokeLoopbackOAuth` in auth.ts.
+const TIMED_OUT: &str = "oauth_timeout";
+
+/// Abandon the in-flight loopback flow, if any. The browser can't tell us the
+/// tab was closed, so the app's "Cancel" calls this to free the port and
+/// settle the pending command with `SUPERSEDED`.
+#[command]
+pub fn cancel_oauth() {
+    FLOW_GENERATION.send_modify(|g| *g += 1);
 }
 
 /// Authorization code (+ optional `state` echo) captured off the loopback
@@ -59,11 +83,22 @@ async fn run_loopback_authorization<R: Runtime>(
     let port = redirect_url.port().unwrap_or(7878);
     let host = redirect_url.host_str().unwrap_or("127.0.0.1");
 
-    // 1. Start listener
+    // 1. Supersede any in-flight flow, then start the listener. The old flow
+    //    releases the port asynchronously, so retry the bind briefly.
+    FLOW_GENERATION.send_modify(|g| *g += 1);
+    let mut cancel = FLOW_GENERATION.subscribe();
     // Note: We bind to the port specified in the redirect_uri to match provider expectations.
-    let listener = TcpListener::bind(format!("{}:{}", host, port))
-        .await
-        .map_err(|e| format!("Port {} is already in use. Please ensure no other instance of the app is running and try again. Error: {}", port, e))?;
+    let mut attempts = 0;
+    let listener = loop {
+        match TcpListener::bind(format!("{}:{}", host, port)).await {
+            Ok(listener) => break listener,
+            Err(_) if attempts < 20 => {
+                attempts += 1;
+                tokio::time::sleep(Duration::from_millis(50)).await;
+            }
+            Err(e) => return Err(format!("Port {} is already in use. Please ensure no other instance of the app is running and try again. Error: {}", port, e)),
+        }
+    };
 
     // 2. Construct Auth URL
     let mut url = Url::parse(auth_url).map_err(|e| e.to_string())?;
@@ -96,57 +131,72 @@ async fn run_loopback_authorization<R: Runtime>(
     //    checkboxes, e.g. gmail.readonly) routinely outlasts 120s. So: loop,
     //    skip/answer strays, and give the human 5 minutes.
     let deadline = Instant::now() + Duration::from_secs(300);
-    let (mut stream, path_and_query) = loop {
-        let (mut candidate, _) = timeout_at(deadline, listener.accept())
-            .await
-            .map_err(|_| "Authentication timed out. Please try again.".to_string())?
-            .map_err(|e| e.to_string())?;
+    let wait = async {
+        loop {
+            let (mut candidate, _) = timeout_at(deadline, listener.accept())
+                .await
+                .map_err(|_| TIMED_OUT.to_string())?
+                .map_err(|e| e.to_string())?;
 
-        // A silent preconnect never sends bytes — bound the read so it can't
-        // wedge the loop (the real request waits in the accept backlog).
-        let mut buffer = [0; 4096];
-        let len = match timeout(Duration::from_secs(5), candidate.read(&mut buffer)).await {
-            Ok(Ok(len)) if len > 0 => len,
-            // Empty, aborted, or idle connection — not the callback.
-            _ => continue,
-        };
-        let request = String::from_utf8_lossy(&buffer[..len]).into_owned();
+            // A silent preconnect never sends bytes — bound the read so it can't
+            // wedge the loop (the real request waits in the accept backlog).
+            let mut buffer = [0; 4096];
+            let len = match timeout(Duration::from_secs(5), candidate.read(&mut buffer)).await {
+                Ok(Ok(len)) if len > 0 => len,
+                // Empty, aborted, or idle connection — not the callback.
+                _ => continue,
+            };
+            let request = String::from_utf8_lossy(&buffer[..len]).into_owned();
 
-        // Request looks like "GET /callback?code=... HTTP/1.1 ..."
-        let mut parts = request.split_whitespace();
-        let _method = parts.next();
-        let Some(path_and_query) = parts.next().map(str::to_owned) else {
-            continue;
-        };
+            // Request looks like "GET /callback?code=... HTTP/1.1 ...", or a
+            // POST with a form body for `response_mode=form_post` (Apple).
+            let mut parts = request.split_whitespace();
+            let method = parts.next().unwrap_or_default().to_owned();
+            let Some(path) = parts.next() else {
+                continue;
+            };
+            let Ok(mut url) = Url::parse(&format!("http://localhost:{}{}", port, path)) else {
+                continue;
+            };
+            if method == "POST" {
+                // ponytail: assumes the form body arrived in the same read as the
+                // headers (true for the short OAuth posts); loop on Content-Length if not.
+                if let Some((_, body)) = request.split_once("\r\n\r\n") {
+                    url.set_query(Some(body));
+                }
+            }
 
-        // Only the redirect carries the authorization response — answer
-        // anything else (favicon.ico) with a 404 and keep waiting.
-        let full_url = format!("http://localhost:{}{}", port, path_and_query);
-        let is_callback = Url::parse(&full_url)
-            .map(|u| {
-                u.query_pairs()
-                    .any(|(key, _)| key == "code" || key == "error")
-            })
-            .unwrap_or(false);
-        if is_callback {
-            break (candidate, path_and_query);
+            // Only the redirect carries the authorization response — answer
+            // anything else (favicon.ico) with a 404 and keep waiting.
+            let params: Vec<(String, String)> = url.query_pairs().into_owned().collect();
+            if params
+                .iter()
+                .any(|(key, _)| key == "code" || key == "error")
+            {
+                return Ok::<_, String>((candidate, params));
+            }
+            let _ = candidate
+                .write_all(
+                    b"HTTP/1.1 404 Not Found\r\nContent-Length: 0\r\nConnection: close\r\n\r\n",
+                )
+                .await;
         }
-        let _ = candidate
-            .write_all(b"HTTP/1.1 404 Not Found\r\nContent-Length: 0\r\nConnection: close\r\n\r\n")
-            .await;
+    };
+    let (mut stream, params) = tokio::select! {
+        result = wait => result?,
+        _ = cancel.changed() => return Err(SUPERSEDED.to_string()),
     };
 
     // 5. Extract code
-    let full_url = format!("http://localhost:{}{}", port, path_and_query);
-    let parsed_url = Url::parse(&full_url).map_err(|e| e.to_string())?;
+    let param = |name: &str| {
+        params
+            .iter()
+            .find(|(key, _)| key == name)
+            .map(|(_, v)| v.clone())
+    };
 
-    let code_pair = parsed_url.query_pairs().find(|(key, _)| key == "code");
-
-    if let Some((_, code)) = code_pair {
-        let state = parsed_url
-            .query_pairs()
-            .find(|(key, _)| key == "state")
-            .map(|(_, v)| v.to_string());
+    if let Some(code) = param("code") {
+        let state = param("state");
 
         // 6. Send response to browser
         let response_body = include_str!("oauth_success.html");
@@ -169,7 +219,15 @@ async fn run_loopback_authorization<R: Runtime>(
         // port for the next flow.
         tokio::spawn(async move {
             let grace_deadline = Instant::now() + Duration::from_secs(5);
-            while let Ok(Ok((mut extra, _))) = timeout_at(grace_deadline, listener.accept()).await {
+            loop {
+                let accepted = tokio::select! {
+                    accepted = timeout_at(grace_deadline, listener.accept()) => accepted,
+                    // A newer flow wants the port.
+                    _ = cancel.changed() => break,
+                };
+                let Ok(Ok((mut extra, _))) = accepted else {
+                    break;
+                };
                 let mut sink = [0; 4096];
                 let _ = timeout(Duration::from_secs(1), extra.read(&mut sink)).await;
                 let body = include_str!("oauth_success.html");
@@ -183,23 +241,11 @@ async fn run_loopback_authorization<R: Runtime>(
             }
         });
 
-        Ok(CapturedAuthorization {
-            code: code.to_string(),
-            state,
-        })
+        Ok(CapturedAuthorization { code, state })
     } else {
         // Check for error
-        let error = parsed_url
-            .query_pairs()
-            .find(|(key, _)| key == "error")
-            .map(|(_, v)| v.to_string())
-            .unwrap_or_else(|| "Unknown error".to_string());
-
-        let error_description = parsed_url
-            .query_pairs()
-            .find(|(key, _)| key == "error_description")
-            .map(|(_, v)| v.to_string())
-            .unwrap_or_default();
+        let error = param("error").unwrap_or_else(|| "Unknown error".to_string());
+        let error_description = param("error_description").unwrap_or_default();
 
         let error_message = if error_description.is_empty() {
             error.clone()

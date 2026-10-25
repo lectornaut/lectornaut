@@ -5,8 +5,14 @@ import {
   removeCurrentSession,
 } from "@/composables/useDeviceSessions"
 import { isTauri } from "@/composables/usePlatform"
+import {
+  BROWSER_FLOW_CANCELLED,
+  showBrowserFlowToast,
+  waitForPopupMessage,
+} from "@/helpers/openExternalUrl"
 import { generateRandomString } from "@/helpers/utilities"
 import { auth } from "@/modules/firebase"
+import { i18n } from "@/modules/i18n"
 import { emitter } from "@/modules/mitt"
 import { router } from "@/modules/router"
 import { setDefaultUserData } from "@/queries/setDefaultUserData"
@@ -41,6 +47,31 @@ interface OAuthResponse {
 }
 
 /**
+ * Run a system-browser OAuth command. The app can't see the browser tab, so
+ * the waiting toast's Cancel calls `cancel_oauth` for a closed tab. A timeout
+ * is explained here and rethrown as a cancel, so callers only handle success,
+ * `BROWSER_FLOW_CANCELLED`, or real errors.
+ */
+export async function invokeLoopbackOAuth<T>(
+  command: "login_oauth" | "authorize_oauth",
+  config: Record<string, unknown>
+): Promise<T> {
+  const run = invoke<T>(command, { config })
+  showBrowserFlowToast(run, () => void invoke("cancel_oauth"))
+  try {
+    return await run
+  } catch (error) {
+    // Mirrors `TIMED_OUT` in oauth.rs.
+    if (error !== "oauth_timeout") throw error
+    const { t } = i18n.global
+    toast.error(t("browserAuth.timedOut"), {
+      description: t("browserAuth.timedOutDescription"),
+    })
+    throw BROWSER_FLOW_CANCELLED
+  }
+}
+
+/**
  * Check if an error is a Firebase MFA challenge
  */
 const isMfaError = (error: unknown): error is MultiFactorError => {
@@ -64,6 +95,10 @@ const handleAuthError = (error: unknown, context: string): never => {
     emitter.emit("Dialog.MfaResolver.Open", resolver)
     throw error
   }
+
+  // Browser sign-in tab closed, cancelled or timed out (a timeout is already
+  // explained) — not a failure to toast.
+  if (error === BROWSER_FLOW_CANCELLED) throw error
 
   let message: string
   if (error instanceof Error) {
@@ -240,57 +275,40 @@ export const authenticateOAuth = async () => {
   }
 }
 
-const openAuthPopup = (url: URL, providerName: string) => {
+type AuthPopupMessage =
+  | { type: "auth_success"; idToken: string; accessToken: string | null }
+  | { type: "auth_error"; error: string }
+
+const isAuthPopupMessage = (data: unknown): data is AuthPopupMessage => {
+  const type = (data as { type?: unknown } | null)?.type
+  return type === "auth_success" || type === "auth_error"
+}
+
+const openAuthPopup = async (url: URL, providerName: string) => {
   const popup = window.open(url.toString(), "_blank")
 
   if (!popup) {
     toast.error("Popup blocked. Please allow popups for this site.")
-    return Promise.reject("Popup blocked")
+    throw new Error("Popup blocked")
   }
 
-  return new Promise<void>((resolve, reject) => {
-    const handleMessage = async (event: MessageEvent) => {
-      if (event.origin !== window.location.origin) return
-      if (event.data.type === "auth_success") {
-        window.removeEventListener("message", handleMessage)
+  const data = await waitForPopupMessage(popup, isAuthPopupMessage)
+  if (data.type === "auth_error") throw new Error(data.error)
 
-        const { idToken, accessToken } = event.data
-        let credential
-
-        if (providerName === "google") {
-          credential = GoogleAuthProvider.credential(idToken, accessToken)
-        } else {
-          const providerId =
-            providerName === "microsoft" ? "microsoft.com" : "apple.com"
-          credential = new OAuthProvider(providerId).credential({
-            idToken,
-            accessToken: accessToken || undefined,
-          })
-        }
-
-        if (credential) {
-          try {
-            const result = await signInWithCredential(auth, credential)
-            lastAuthProvider.value = providerName
-            finishAuthentication(result)
-            resolve()
-          } catch (error) {
-            try {
-              handleAuthError(error, `signInWith${providerName}`)
-            } catch {
-              // handleAuthError always throws — fall through to reject
-            }
-            reject(error)
-          }
-        }
-      } else if (event.data.type === "auth_error") {
-        window.removeEventListener("message", handleMessage)
-        reject(new Error(event.data.error))
-      }
-    }
-
-    window.addEventListener("message", handleMessage)
-  })
+  const { idToken, accessToken } = data
+  const credential =
+    providerName === "google"
+      ? GoogleAuthProvider.credential(idToken, accessToken)
+      : new OAuthProvider(
+          providerName === "microsoft" ? "microsoft.com" : "apple.com"
+        ).credential({ idToken, accessToken: accessToken || undefined })
+  try {
+    const result = await signInWithCredential(auth, credential)
+    lastAuthProvider.value = providerName
+    finishAuthentication(result)
+  } catch (error) {
+    return handleAuthError(error, `signInWith${providerName}`)
+  }
 }
 
 /**
@@ -335,18 +353,16 @@ export const signInWithGoogle = async () => {
   if (isTauri.value) {
     try {
       const nonce = generateRandomString()
-      const response = await invoke<OAuthResponse>("login_oauth", {
-        config: {
-          auth_url: import.meta.env.VITE_GOOGLE_AUTH_URL,
-          token_url: import.meta.env.VITE_GOOGLE_TOKEN_URL,
-          client_id: import.meta.env.VITE_GOOGLE_CLIENT_ID,
-          client_secret: import.meta.env.VITE_GOOGLE_CLIENT_SECRET,
-          redirect_uri: import.meta.env.VITE_GOOGLE_REDIRECT_URI,
-          scopes: "openid email profile",
-          extra_params: {
-            access_type: "offline",
-            nonce,
-          },
+      const response = await invokeLoopbackOAuth<OAuthResponse>("login_oauth", {
+        auth_url: import.meta.env.VITE_GOOGLE_AUTH_URL,
+        token_url: import.meta.env.VITE_GOOGLE_TOKEN_URL,
+        client_id: import.meta.env.VITE_GOOGLE_CLIENT_ID,
+        client_secret: import.meta.env.VITE_GOOGLE_CLIENT_SECRET,
+        redirect_uri: import.meta.env.VITE_GOOGLE_REDIRECT_URI,
+        scopes: "openid email profile",
+        extra_params: {
+          access_type: "offline",
+          nonce,
         },
       })
       const credential = GoogleAuthProvider.credential(
@@ -382,17 +398,15 @@ export const signInWithMicrosoft = async () => {
   if (isTauri.value) {
     try {
       const nonce = generateRandomString()
-      const response = await invoke<OAuthResponse>("login_oauth", {
-        config: {
-          auth_url: import.meta.env.VITE_MICROSOFT_AUTH_URL,
-          token_url: import.meta.env.VITE_MICROSOFT_TOKEN_URL,
-          client_id: import.meta.env.VITE_MICROSOFT_CLIENT_ID,
-          client_secret: import.meta.env.VITE_MICROSOFT_CLIENT_SECRET,
-          redirect_uri: import.meta.env.VITE_MICROSOFT_REDIRECT_URI,
-          scopes: "openid email profile offline_access",
-          extra_params: {
-            nonce,
-          },
+      const response = await invokeLoopbackOAuth<OAuthResponse>("login_oauth", {
+        auth_url: import.meta.env.VITE_MICROSOFT_AUTH_URL,
+        token_url: import.meta.env.VITE_MICROSOFT_TOKEN_URL,
+        client_id: import.meta.env.VITE_MICROSOFT_CLIENT_ID,
+        client_secret: import.meta.env.VITE_MICROSOFT_CLIENT_SECRET,
+        redirect_uri: import.meta.env.VITE_MICROSOFT_REDIRECT_URI,
+        scopes: "openid email profile offline_access",
+        extra_params: {
+          nonce,
         },
       })
       const provider = new OAuthProvider("microsoft.com")
@@ -432,18 +446,16 @@ export const signInWithApple = async () => {
   if (isTauri.value) {
     try {
       const nonce = generateRandomString()
-      const response = await invoke<OAuthResponse>("login_oauth", {
-        config: {
-          auth_url: import.meta.env.VITE_APPLE_AUTH_URL,
-          token_url: import.meta.env.VITE_APPLE_TOKEN_URL,
-          client_id: import.meta.env.VITE_APPLE_CLIENT_ID,
-          client_secret: import.meta.env.VITE_APPLE_CLIENT_SECRET,
-          redirect_uri: import.meta.env.VITE_APPLE_REDIRECT_URI,
-          scopes: "name email",
-          extra_params: {
-            response_mode: "form_post",
-            nonce,
-          },
+      const response = await invokeLoopbackOAuth<OAuthResponse>("login_oauth", {
+        auth_url: import.meta.env.VITE_APPLE_AUTH_URL,
+        token_url: import.meta.env.VITE_APPLE_TOKEN_URL,
+        client_id: import.meta.env.VITE_APPLE_CLIENT_ID,
+        client_secret: import.meta.env.VITE_APPLE_CLIENT_SECRET,
+        redirect_uri: import.meta.env.VITE_APPLE_REDIRECT_URI,
+        scopes: "name email",
+        extra_params: {
+          response_mode: "form_post",
+          nonce,
         },
       })
       const provider = new OAuthProvider("apple.com")

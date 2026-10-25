@@ -4407,5 +4407,12 @@
     "updateAvailable": "Update available",
     "failed": "Update failed",
     "update": "Update"
+  },
+  "browserAuth": {
+    "waiting": "Continue in your browser",
+    "waitingDescription": "Finish there, or cancel if you closed the tab.",
+    "cancel": "Cancel",
+    "timedOut": "Browser step timed out",
+    "timedOutDescription": "The browser tab was closed or left unfinished. Try again."
   }
 }

@@ -1,4 +1,5 @@
 <script lang="ts" setup>
+import { BROWSER_FLOW_CANCELLED } from "@/helpers/openExternalUrl"
 import { useSsoLogin } from "@/composables/useSsoLogin"
 import {
   IconAppleFilled,
@@ -73,8 +74,12 @@ const handleAuth = async (
     }
   } catch (error) {
     // MFA_REQUIRED is handled by MfaResolverDialog (mounted globally in Actions.vue)
-    // via the emitter event — do not show a form error for it.
-    if ((error as FirebaseError)?.code !== AuthErrorCodes.MFA_REQUIRED) {
+    // via the emitter event, and a closed/cancelled browser tab isn't an
+    // error — show no form error for either.
+    if (
+      error !== BROWSER_FLOW_CANCELLED &&
+      (error as FirebaseError)?.code !== AuthErrorCodes.MFA_REQUIRED
+    ) {
       authenticateError.value = getAuthErrorMessage(error)
     }
   } finally {

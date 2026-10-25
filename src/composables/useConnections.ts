@@ -33,6 +33,11 @@ import {
   getConnectionApp,
   type ConnectionAppDescriptor,
 } from "@/data/connectionApps"
+import {
+  BROWSER_FLOW_CANCELLED,
+  waitForPopupMessage,
+} from "@/helpers/openExternalUrl"
+import { invokeLoopbackOAuth } from "@/modules/auth"
 import type { IConnection, IConnectionBinding } from "@/schemas/connections"
 import { useAuthStore } from "@/stores/authStore"
 import { useMembershipStore } from "@/stores/membershipStore"
@@ -51,7 +56,6 @@ import {
   hasGrantedScope,
   type ConnectionProvider,
 } from "@lectornaut/shared/domain"
-import { invoke } from "@tauri-apps/api/core"
 import { storeToRefs } from "pinia"
 import { computed, type ComputedRef } from "vue"
 import { toast } from "vue-sonner"
@@ -92,15 +96,16 @@ async function requestAuthorizationCodeTauri(
   // CSRF binding: the redirect must echo our nonce or the code is discarded
   // (a planted redirect to the loopback can't forge a code into our flow).
   const state = crypto.randomUUID()
-  const result = await invoke<TauriAuthorizationResult>("authorize_oauth", {
-    config: {
+  const result = await invokeLoopbackOAuth<TauriAuthorizationResult>(
+    "authorize_oauth",
+    {
       auth_url: app.authorizeUrl,
       client_id: clientId,
       redirect_uri: TAURI_LOOPBACK_REDIRECT_URI,
       scopes: app.scopes.join(" "),
       extra_params: { ...app.authParams, state },
-    },
-  })
+    }
+  )
   if (result.state !== state) {
     throw new Error("Authorization state mismatch — discarding the code.")
   }
@@ -119,7 +124,8 @@ async function requestAuthorizationCodeTauri(
 const CONNECTION_OAUTH_MESSAGE = "connection_oauth"
 /** Reasons surfaced as Error messages so connect() can branch the toast. */
 const REDIRECT_POPUP_BLOCKED = "popup_blocked"
-const REDIRECT_POPUP_CLOSED = "popup_closed"
+// Same value as the desktop loopback cancel, so one check covers both.
+const REDIRECT_POPUP_CLOSED = BROWSER_FLOW_CANCELLED
 
 interface ConnectionOauthMessage {
   type: typeof CONNECTION_OAUTH_MESSAGE
@@ -159,46 +165,18 @@ function requestAuthorizationCodeRedirect(
   )
   if (!popup) return Promise.reject(new Error(REDIRECT_POPUP_BLOCKED))
 
-  return new Promise<{ code: string; redirectUri: string }>(
-    (resolve, reject) => {
-      let graceTimer: ReturnType<typeof setTimeout> | null = null
-      const cleanup = () => {
-        window.removeEventListener("message", onMessage)
-        clearInterval(closeWatch)
-        if (graceTimer) clearTimeout(graceTimer)
-      }
-      const onMessage = (event: MessageEvent) => {
-        // Origin + type guards are the safety boundary: never read a foreign
-        // origin, never accept a non-connection message (e.g. a sign-in
-        // token postMessage).
-        if (event.origin !== window.location.origin) return
-        const data = event.data as ConnectionOauthMessage | undefined
-        if (!data || data.type !== CONNECTION_OAUTH_MESSAGE) return
-        cleanup()
-        if (data.error) return reject(new Error(data.error))
-        if (data.state !== state) {
-          return reject(new Error("Authorization state mismatch."))
-        }
-        if (typeof data.code !== "string" || !data.code) {
-          return reject(new Error(REDIRECT_POPUP_CLOSED))
-        }
-        resolve({ code: data.code, redirectUri })
-      }
-      // A closed popup MAY be a cancel — but the success message is posted
-      // immediately before window.close(), so a tick can see `closed` with the
-      // message still in flight. Give it a grace beat to win before we call it
-      // a cancel; onMessage's cleanup() cancels the grace timer if it lands.
-      const closeWatch = setInterval(() => {
-        if (!popup.closed || graceTimer) return
-        clearInterval(closeWatch)
-        graceTimer = setTimeout(() => {
-          cleanup()
-          reject(new Error(REDIRECT_POPUP_CLOSED))
-        }, 400)
-      }, 500)
-      window.addEventListener("message", onMessage)
+  // The shape guard is part of the safety boundary: never accept a
+  // non-connection message (e.g. a sign-in token postMessage).
+  const isConnectionMessage = (data: unknown): data is ConnectionOauthMessage =>
+    (data as { type?: unknown } | null)?.type === CONNECTION_OAUTH_MESSAGE
+  return waitForPopupMessage(popup, isConnectionMessage).then((data) => {
+    if (data.error) throw new Error(data.error)
+    if (data.state !== state) throw new Error("Authorization state mismatch.")
+    if (typeof data.code !== "string" || !data.code) {
+      throw new Error(REDIRECT_POPUP_CLOSED)
     }
-  )
+    return { code: data.code, redirectUri }
+  })
 }
 
 // ─── Composable ──────────────────────────────────────────────────────────────
@@ -479,7 +457,7 @@ export function useConnections() {
       })
       toast.success(t("settings.connections.connectSuccess"))
     } catch (error) {
-      const reason = error instanceof Error ? error.message : ""
+      const reason = error instanceof Error ? error.message : String(error)
       // The user closed the popup — a deliberate cancel, not a failure.
       if (reason.includes(REDIRECT_POPUP_CLOSED)) return
       console.error("[useConnections] connect failed:", error)
