@@ -19,7 +19,7 @@ import { computed, type Component } from "vue"
 
 const props = defineProps<{ run: IWorkflowRun }>()
 
-const { t, te } = useI18n()
+const { t } = useI18n()
 
 // Each lifecycle step is stamped once (in the `events` computed) with the three
 // representations the template needs: relative text, a full-date tooltip, and
@@ -39,17 +39,6 @@ const stamp = (ms: number | null) => ({
 const usage = computed(() => props.run.usage ?? null)
 const changes = computed<IWorkflowRunChange[]>(() => props.run.changes ?? [])
 
-/**
- * Localized status label. `runStatusLabel` is hardcoded English (its callers are
- * plain-module column defs with no `useI18n()` context); this panel is
- * `t()`-driven, so route the label through i18n to keep one language, falling
- * back to the English label for any status without a translation key.
- */
-const statusLabel = (status: string): string => {
-  const key = `settings.workflows.runStatus.${status}`
-  return te(key) ? t(key) : runStatusLabel(status)
-}
-
 /** Human description of what fired the run (rendered under the "Queued" step). */
 const triggerText = computed<string>(() => {
   const tb = props.run.triggeredBy
@@ -67,13 +56,13 @@ const finishedTitle = computed<string>(() => {
   const r = props.run
   // A partial apply sets `error` too, but it's not a failed run — label it by
   // its status ("Partially applied") rather than the generic "Failed".
-  if (r.status === "partially_applied") return statusLabel(r.status)
+  if (r.status === "partially_applied") return runStatusLabel(r.status)
   if (r.error) return t("settings.workflows.timelineFailed")
   if (r.status === "awaiting_review")
     return t("settings.workflows.timelineProposed")
   if (r.status === "applied" || r.status === "success")
     return t("settings.workflows.timelineApplied")
-  return statusLabel(r.status)
+  return runStatusLabel(r.status)
 })
 
 const isApprovedOutcome = (status: string): boolean =>
@@ -184,7 +173,7 @@ const opStyle = (op: string) => OP_STYLE[op] ?? OP_STYLE.update
       class="text-muted-foreground mb-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs"
     >
       <span :class="runStatusTextClass(run.status)" class="font-medium">
-        {{ statusLabel(run.status) }}
+        {{ runStatusLabel(run.status) }}
       </span>
       <template v-if="usage">
         <span v-if="usage.model" class="truncate">{{ usage.model }}</span>

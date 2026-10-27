@@ -186,6 +186,12 @@ const ownerRoleManagementReason = computed(() =>
   t("components.teamDialog.errors.ownerRoleRequiresOwner")
 )
 
+/** Hover reason for the disabled Owner option (null = option is pickable). */
+const ownerOptionReason = (role: string) =>
+  role === "owner" && !canManageOwnerRoles.value
+    ? ownerRoleManagementReason.value
+    : null
+
 const canShowTeamInvitations = computed(() => {
   return (
     (props.mode === "edit" || props.mode === "invite") && isPrivileged.value
@@ -1033,7 +1039,11 @@ const handleSubmit = async () => {
         </DialogDescription>
       </DialogHeader>
 
-      <div class="mt-4 grid gap-4">
+      <!-- grid-cols-1 (minmax(0,1fr)), here and on the invite tab: an `auto`
+         track grows to its widest item's min-content, and a `truncate`
+         agent description's min-content is the whole unbroken line, so
+         staged rows pushed the tab past the dialog edge. -->
+      <div class="mt-4 grid grid-cols-1 gap-4">
         <!-- Team Profile Picture (Create/Edit Mode) -->
         <Field v-if="mode === 'create' || mode === 'edit'">
           <div class="flex flex-col items-center gap-2">
@@ -1324,14 +1334,14 @@ const handleSubmit = async () => {
                       </Button>
                       <SelectContent>
                         <SelectGroup>
-                          <SelectItem
+                          <SelectItemWithReason
                             v-for="role in teamRoleOptions"
                             :key="role"
                             :value="role"
-                            :disabled="role === 'owner' && !canManageOwnerRoles"
+                            :reason="ownerOptionReason(role)"
                           >
                             {{ t(`components.teamDialog.roles.${role}`) }}
-                          </SelectItem>
+                          </SelectItemWithReason>
                         </SelectGroup>
                       </SelectContent>
                     </Select>
@@ -1570,7 +1580,7 @@ const handleSubmit = async () => {
              Entry form: invite a person by email, or add an agent via the
              picker, with the role to grant. Staged drafts stay listed below
              until Save; once sent they move to the Pending tab. -->
-            <TabsContent value="invite" class="grid gap-2 p-0">
+            <TabsContent value="invite" class="grid grid-cols-1 gap-2 p-0">
               <!-- Email input + agent picker -->
               <ButtonGroup class="bg-input/50 rounded-3xl p-3">
                 <ButtonGroup>
@@ -1698,14 +1708,14 @@ const handleSubmit = async () => {
                     </Button>
                     <SelectContent>
                       <SelectGroup>
-                        <SelectItem
+                        <SelectItemWithReason
                           v-for="role in teamRoleOptions"
                           :key="role"
                           :value="role"
-                          :disabled="role === 'owner' && !canManageOwnerRoles"
+                          :reason="ownerOptionReason(role)"
                         >
                           {{ t(`components.teamDialog.roles.${role}`) }}
-                        </SelectItem>
+                        </SelectItemWithReason>
                       </SelectGroup>
                     </SelectContent>
                   </Select>
@@ -1777,14 +1787,14 @@ const handleSubmit = async () => {
                       </Button>
                       <SelectContent>
                         <SelectGroup>
-                          <SelectItem
+                          <SelectItemWithReason
                             v-for="role in teamRoleOptions"
                             :key="role"
                             :value="role"
-                            :disabled="role === 'owner' && !canManageOwnerRoles"
+                            :reason="ownerOptionReason(role)"
                           >
                             {{ t(`components.teamDialog.roles.${role}`) }}
-                          </SelectItem>
+                          </SelectItemWithReason>
                         </SelectGroup>
                       </SelectContent>
                     </Select>

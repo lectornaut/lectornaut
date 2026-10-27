@@ -364,6 +364,7 @@ declare module 'vue' {
     SelectGroup: typeof import('./src/components/ui/select/SelectGroup.vue')['default']
     SelectItem: typeof import('./src/components/ui/select/SelectItem.vue')['default']
     SelectItemText: typeof import('./src/components/ui/select/SelectItemText.vue')['default']
+    SelectItemWithReason: typeof import('./src/components/app/global/SelectItemWithReason.vue')['default']
     SelectLabel: typeof import('./src/components/ui/select/SelectLabel.vue')['default']
     SelectScrollDownButton: typeof import('./src/components/ui/select/SelectScrollDownButton.vue')['default']
     SelectScrollUpButton: typeof import('./src/components/ui/select/SelectScrollUpButton.vue')['default']

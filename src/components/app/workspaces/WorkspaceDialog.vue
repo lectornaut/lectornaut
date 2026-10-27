@@ -7,11 +7,23 @@ import {
 } from "@/composables/useFunctions"
 import { usePhotoUpload } from "@/composables/usePhotoUpload"
 import { useWorkspaceActions } from "@/composables/useWorkspaceActions"
-import { IconUsers2, IconUsers, IconX, IconUsersRound } from "@/data/icons"
+import {
+  IconBuilding,
+  IconChevronRight,
+  IconUsers2,
+  IconUsers,
+  IconX,
+  IconUsersRound,
+} from "@/data/icons"
 import { useMembershipStore } from "@/stores/membershipStore"
 import { useTeamGroupsStore } from "@/stores/teamGroupsStore"
 import type { IWorkspace } from "@/types/domain"
-import { isUserMembership, type IMembership } from "@/types/membership"
+import {
+  isAgentMembership,
+  isUserMembership,
+  type IAgentMembership,
+  type IMembership,
+} from "@/types/membership"
 import { effectiveRole, type IMembershipRole } from "@/types/permissions"
 import { storeToRefs } from "pinia"
 import { toast } from "vue-sonner"
@@ -71,6 +83,11 @@ const baselineExcluded = ref<Record<string, boolean>>({})
 const rolesLoading = ref(false)
 
 const humanMembers = computed(() => teamMembers.value.filter(isUserMembership))
+// Agents are listed read-only: they're locked to Member on every workspace and
+// are never in `memberUids`, so there's nothing to override or exclude here.
+const agentMembers = computed(() => teamMembers.value.filter(isAgentMembership))
+const agentAvatarSeed = (member: IAgentMembership): string =>
+  member.agent.avatarSeed?.trim() || member.agent.name?.trim() || "Agent"
 const canAssignWorkspaceRoles = canManageMembers
 
 // ── Per-workspace group grants (elevate-only) ────────────────────────────────
@@ -129,6 +146,16 @@ const groupProvenance = (
     : null
 }
 
+/**
+ * The shown role comes from the team role: no group raises it and no override
+ * sits above it (an override at or below the team role is inert). Drives the
+ * "{role} from team role" tag; mutually exclusive with group provenance.
+ */
+const isTeamRoleSource = (member: IMembership) =>
+  !groupProvenanceByUser.value.has(member.userId) &&
+  effectiveRole(member.role, workspaceRoleOverrides.value[member.userId]) ===
+    member.role
+
 /** Group-derived provenance per member uid, for the "{role} via {group}" tag. */
 const groupProvenanceByUser = computed(() => {
   const map = new Map<string, { role: IMembershipRole; group: string }>()
@@ -176,14 +203,15 @@ const handleGroupRoleChange = (groupId: string, value: string) =>
 const handleGroupGrantToggle = (groupId: string, granted: boolean) =>
   stageGroupGrant(groupId, granted ? "member" : null)
 
-// Roles offered for an explicit grant. Owner is owner-only, mirroring the
-// team-role rules. Per-workspace roles are elevate-only, so a `guest` grant is
-// inert (it can't lower a member) — offered for parity, but never reduces access.
-const assignableRoles = computed<IMembershipRole[]>(() =>
-  isOwner.value
-    ? ["guest", "member", "admin", "owner"]
-    : ["guest", "member", "admin"]
-)
+// Every role is listed; ones that can't be picked are disabled with a reason
+// (via SelectItemWithReason), matching TeamDialog rather than hiding them.
+const assignableRoles: IMembershipRole[] = ["guest", "member", "admin", "owner"]
+
+/** Owner is owner-only, mirroring the team-role rules. */
+const ownerOnlyReason = (role: IMembershipRole) =>
+  role === "owner" && !isOwner.value
+    ? t("settings.teams.members.onlyOwnersCanManageOwners")
+    : null
 
 const memberLabel = (member: IMembership) =>
   member.user?.displayName || member.user?.email || member.userId
@@ -194,9 +222,63 @@ const memberLabel = (member: IMembership) =>
 const isWorkspaceMember = (userId: string) =>
   workspaceExcluded.value[userId] !== true
 
-/** Role select value for a member: their explicit override, else their team role. */
+/**
+ * Role select value for a member: their EFFECTIVE role here (override combined
+ * elevate-only with the team role), so a stale below-floor override saved
+ * before the floor was enforced displays what actually applies.
+ */
 const memberRoleValue = (member: IMembership): IMembershipRole =>
-  workspaceRoleOverrides.value[member.userId] ?? member.role
+  effectiveRole(member.role, workspaceRoleOverrides.value[member.userId]) ??
+  member.role
+
+/**
+ * The floor a direct pick can't go below: the team role, raised by any granted
+ * group (all elevate-only, combined with max). Picks under it are inert, so the
+ * select disables them, and shows the floor-adjusted role as its value.
+ */
+const roleFloor = (
+  member: IMembership
+): { role: IMembershipRole; group: string | null } => {
+  const { role: groupRole, via } = groupDerivedFor(member.userId)
+  const raisedByGroup =
+    !!groupRole && effectiveRole(member.role, groupRole) !== member.role
+  return raisedByGroup
+    ? { role: groupRole, group: via }
+    : { role: member.role, group: null }
+}
+
+const isBelowFloor = (member: IMembership, role: IMembershipRole) =>
+  effectiveRole(roleFloor(member).role, role) !== role
+
+/** What the select shows: the role that actually applies here. */
+const displayedRole = (member: IMembership): IMembershipRole =>
+  effectiveRole(memberRoleValue(member), roleFloor(member).role) ??
+  memberRoleValue(member)
+
+/** Tooltip for a disabled (below-floor) role, naming where the floor comes from. */
+const floorReason = (member: IMembership): string => {
+  const floor = roleFloor(member)
+  const role = t(`settings.members.roles.${floor.role}`)
+  return floor.group
+    ? t("components.workspaceDialog.roles.groupRoleFloor", {
+        role,
+        group: floor.group,
+      })
+    : t("components.workspaceDialog.roles.teamRoleFloor", { role })
+}
+
+/** Why a role can't be picked in the member select (null = pickable). */
+const memberRoleReason = (member: IMembership, role: IMembershipRole) =>
+  ownerOnlyReason(role) ??
+  (isBelowFloor(member, role) ? floorReason(member) : null)
+
+/**
+ * Why a role can't be granted to a group (null = pickable). Guest can't raise
+ * anyone (every member is at least Guest), so a Guest grant would be inert.
+ */
+const groupRoleReason = (role: IMembershipRole) =>
+  ownerOnlyReason(role) ??
+  (role === "guest" ? t("components.workspaceDialog.groups.guestInert") : null)
 
 /** The signed-in user. */
 const isSelf = (userId: string) => currentAuthUser.value?.uid === userId
@@ -511,7 +593,10 @@ const handleSubmit = async () => {
         </DialogDescription>
       </DialogHeader>
 
-      <div class="mt-4 grid gap-4">
+      <!-- grid-cols-1 (minmax(0,1fr)): an `auto` track grows to its widest
+         row's min-content, so a long truncated line would overflow the
+         dialog (same fix as TeamDialog). -->
+      <div class="mt-4 grid grid-cols-1 gap-4">
         <!-- Workspace Profile Picture -->
         <Field>
           <div class="flex flex-col items-center gap-2">
@@ -687,7 +772,7 @@ const handleSubmit = async () => {
               <LoadingState v-if="rolesLoading" />
               <template v-else>
                 <Empty
-                  v-if="humanMembers.length === 0"
+                  v-if="humanMembers.length === 0 && agentMembers.length === 0"
                   class="border border-dashed p-6"
                 >
                   <EmptyHeader>
@@ -734,7 +819,7 @@ const handleSubmit = async () => {
                     <ItemActions>
                       <Select
                         v-if="isWorkspaceMember(member.userId)"
-                        :model-value="memberRoleValue(member)"
+                        :model-value="displayedRole(member)"
                         :disabled="isLoading"
                         @update:model-value="
                           (value) =>
@@ -772,17 +857,46 @@ const handleSubmit = async () => {
                                 </TooltipContent>
                               </Tooltip>
                             </TooltipProvider>
+                            <!-- Team provenance: the role shown is just their
+                               team role (no workspace override raises it). -->
+                            <TooltipProvider
+                              v-else-if="
+                                isWorkspaceMember(member.userId) &&
+                                isTeamRoleSource(member)
+                              "
+                            >
+                              <Tooltip>
+                                <TooltipTrigger as-child>
+                                  <InputGroupButton size="icon-xs">
+                                    <IconBuilding />
+                                  </InputGroupButton>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  {{
+                                    t(
+                                      "components.workspaceDialog.roles.fromTeam",
+                                      {
+                                        role: t(
+                                          `settings.members.roles.${member.role}`
+                                        ),
+                                      }
+                                    )
+                                  }}
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
                           </SelectTrigger>
                         </Button>
                         <SelectContent>
                           <SelectGroup>
-                            <SelectItem
+                            <SelectItemWithReason
                               v-for="role in assignableRoles"
                               :key="role"
                               :value="role"
+                              :reason="memberRoleReason(member, role)"
                             >
                               {{ t(`settings.members.roles.${role}`) }}
-                            </SelectItem>
+                            </SelectItemWithReason>
                           </SelectGroup>
                         </SelectContent>
                       </Select>
@@ -816,6 +930,110 @@ const handleSubmit = async () => {
                       </TooltipProvider>
                     </ItemActions>
                   </Item>
+                  <!-- Agents: read-only (locked Member role, access always
+                     on), tucked behind a collapsed "Agents" disclosure so the
+                     editable human rows stay the focus. -->
+                  <Collapsible
+                    v-if="agentMembers.length > 0"
+                    class="group/agents flex flex-col gap-4"
+                  >
+                    <CollapsibleTrigger as-child>
+                      <Button variant="ghost" size="sm" class="w-fit">
+                        {{
+                          t("components.workspaceDialog.roles.agentsHeading")
+                        }}
+                        <span class="text-muted-foreground tabular-nums">
+                          {{ agentMembers.length }}
+                        </span>
+                        <IconChevronRight
+                          class="transition-transform group-data-[state=open]/agents:rotate-90"
+                        />
+                      </Button>
+                    </CollapsibleTrigger>
+                    <CollapsibleContent class="flex flex-col gap-4">
+                      <Item
+                        v-for="agent in agentMembers"
+                        :key="`agent:${agent.agentId}`"
+                        class="p-0"
+                      >
+                        <ItemMedia>
+                          <AppAvatar
+                            variant="beam"
+                            :name="agentAvatarSeed(agent)"
+                          />
+                        </ItemMedia>
+                        <ItemContent class="truncate">
+                          <ItemTitle>
+                            <span class="truncate">{{ agent.agent.name }}</span>
+                            <Badge variant="secondary">
+                              {{ t("settings.members.agentBadge") }}
+                            </Badge>
+                          </ItemTitle>
+                          <ItemDescription class="truncate text-xs">
+                            {{
+                              agent.agent.description ||
+                              t("settings.members.agentSubtitle")
+                            }}
+                          </ItemDescription>
+                        </ItemContent>
+                        <ItemActions>
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger as-child>
+                                <div>
+                                  <Select model-value="member" disabled>
+                                    <Button variant="outline" as-child>
+                                      <SelectTrigger>
+                                        <SelectValue />
+                                      </SelectTrigger>
+                                    </Button>
+                                    <SelectContent>
+                                      <SelectGroup>
+                                        <SelectItem value="member">
+                                          {{
+                                            t("settings.members.roles.member")
+                                          }}
+                                        </SelectItem>
+                                      </SelectGroup>
+                                    </SelectContent>
+                                  </Select>
+                                </div>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                {{
+                                  t(
+                                    "components.workspaceDialog.roles.agentLocked"
+                                  )
+                                }}
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                          <!-- Access is always on for agents: checked + disabled,
+                           styled like a locked human row (self/owner). -->
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger as-child>
+                                <Button variant="outline" size="icon">
+                                  <Checkbox
+                                    :model-value="true"
+                                    disabled
+                                    class="rounded border-none opacity-100! disabled:opacity-25! data-[state=checked]:bg-transparent"
+                                  />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                {{
+                                  t(
+                                    "components.workspaceDialog.roles.agentLocked"
+                                  )
+                                }}
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                        </ItemActions>
+                      </Item>
+                    </CollapsibleContent>
+                  </Collapsible>
                 </ItemGroup>
               </template>
             </TabsContent>
@@ -873,13 +1091,14 @@ const handleSubmit = async () => {
                         </Button>
                         <SelectContent>
                           <SelectGroup>
-                            <SelectItem
+                            <SelectItemWithReason
                               v-for="role in assignableRoles"
                               :key="role"
                               :value="role"
+                              :reason="groupRoleReason(role)"
                             >
                               {{ t(`settings.members.roles.${role}`) }}
-                            </SelectItem>
+                            </SelectItemWithReason>
                           </SelectGroup>
                         </SelectContent>
                       </Select>

@@ -168,15 +168,17 @@ useResizeObserver(draggableEl, (entries) => {
                             height: `${observedSize.height}px`,
                           }
                   "
-                  class="bg-background pointer-events-auto flex min-w-0 flex-col overflow-clip rounded-3xl"
+                  class="bg-background pointer-events-auto flex min-w-0 flex-col rounded-3xl"
                   :class="
                     isDocked
-                      ? 'size-full'
+                      ? 'size-full overflow-clip'
                       : [
-                          'absolute min-w-64 border backdrop-blur-2xl will-change-transform',
+                          'absolute min-w-64 border shadow-lg backdrop-blur-2xl will-change-transform',
                           isPoppedOutMinimized
-                            ? 'border-foreground ring-1'
-                            : 'min-h-64 resize shadow-lg',
+                            ? 'overflow-clip'
+                            : // `resize` needs a scroll container; `overflow: clip` isn't one
+                              // (only WebKit/Tauri tolerates it), so use `hidden` here.
+                              'min-h-64 resize overflow-hidden',
                         ]
                   "
                 >

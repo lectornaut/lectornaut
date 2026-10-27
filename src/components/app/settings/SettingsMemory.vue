@@ -689,6 +689,7 @@ const submitBulkDelete = async () => {
                 :data="memories"
                 :columns="columns"
                 :column-pinning="{ start: ['select'], end: ['actions'] }"
+                data-table-frame
                 class="overflow-clip rounded-4xl border"
               >
                 <template #selection-actions>

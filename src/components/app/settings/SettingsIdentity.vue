@@ -10,10 +10,12 @@ defineProps<{
 
 <template>
   <ItemContent class="min-w-0 group-data-[size=xs]/item:max-w-md">
-    <ItemTitle class="w-full min-w-0 flex-wrap">
+    <!-- Badges sit right after the name (not pushed to the far edge); the name
+       truncates first since Badge is shrink-0. -->
+    <ItemTitle class="w-full min-w-0 flex-nowrap">
       <span
         :title="title"
-        class="min-w-0 grow basis-32 truncate"
+        class="min-w-0 truncate"
         :class="{ 'font-mono': monospace }"
       >
         {{ title }}
@@ -23,7 +25,7 @@ defineProps<{
     <ItemDescription
       v-if="description"
       :title="description"
-      class="text-xs wrap-anywhere whitespace-normal"
+      class="line-clamp-1 text-xs wrap-anywhere whitespace-normal"
     >
       {{ description }}
     </ItemDescription>

@@ -19,6 +19,7 @@ import confetti from "canvas-confetti"
 import { driver } from "driver.js"
 import "driver.js/dist/driver.css"
 
+const { t } = useI18n()
 const version = __APP_VERSION__
 const openSupport = ref(false)
 
@@ -69,24 +70,24 @@ const productTour = driver({
   popoverClass: "driverjs-theme",
   popoverOffset: 8,
   showProgress: true,
-  nextBtnText: "Next",
-  prevBtnText: "Previous",
-  doneBtnText: "Finish",
+  nextBtnText: t("components.support.tour.next"),
+  prevBtnText: t("components.support.tour.previous"),
+  doneBtnText: t("components.support.tour.finish"),
   overlayOpacity: 0.25,
   steps: [
     {
       popover: {
-        title: "Welcome to Lectornaut",
-        description:
-          "This is a product tour to help you get started with Lectornaut.",
+        title: t("components.support.tour.steps.welcome.title"),
+        description: t("components.support.tour.steps.welcome.description"),
       },
     },
     {
       element: "#tour-tasks-notifications",
       popover: {
-        title: "Tasks and notifications",
-        description:
-          "You can manage your tasks and notifications here. This is useful to keep track of your work.",
+        title: t("components.support.tour.steps.tasksNotifications.title"),
+        description: t(
+          "components.support.tour.steps.tasksNotifications.description"
+        ),
         side: "bottom",
         align: "start",
       },
@@ -94,9 +95,10 @@ const productTour = driver({
     {
       element: '#tour-workspace-switcher [data-sidebar="menu-button"]',
       popover: {
-        title: "Switch workspaces",
-        description:
-          "You can switch between different workspaces using the workspace switcher. This is useful if you are part of multiple workspaces.",
+        title: t("components.support.tour.steps.workspaceSwitcher.title"),
+        description: t(
+          "components.support.tour.steps.workspaceSwitcher.description"
+        ),
         side: "bottom",
         align: "center",
       },
@@ -104,9 +106,8 @@ const productTour = driver({
     {
       element: "#tour-search-bar",
       popover: {
-        title: "Search and commands",
-        description:
-          "You can search for anything using the search bar. This is useful if you want to quickly find something.",
+        title: t("components.support.tour.steps.searchBar.title"),
+        description: t("components.support.tour.steps.searchBar.description"),
         side: "bottom",
         align: "end",
       },
@@ -114,9 +115,8 @@ const productTour = driver({
     {
       element: "#tour-ai-assistant",
       popover: {
-        title: "AI Assistant",
-        description:
-          "You can interact with the AI assistant from here. This is useful if you need help with your tasks.",
+        title: t("components.support.tour.steps.aiAssistant.title"),
+        description: t("components.support.tour.steps.aiAssistant.description"),
         side: "bottom",
         align: "center",
       },
@@ -124,9 +124,10 @@ const productTour = driver({
     {
       element: '#tour-team-switcher [data-sidebar="menu-button"]',
       popover: {
-        title: "Select your team",
-        description:
-          "You can switch between teams using the team switcher. This is useful if you are part of multiple teams.",
+        title: t("components.support.tour.steps.teamSwitcher.title"),
+        description: t(
+          "components.support.tour.steps.teamSwitcher.description"
+        ),
         side: "bottom",
         align: "center",
       },
@@ -134,9 +135,10 @@ const productTour = driver({
     {
       element: "#tour-primary-navigation",
       popover: {
-        title: "Primary navigation",
-        description:
-          "This is the primary navigation. You can use it to navigate between different sections of the application.",
+        title: t("components.support.tour.steps.primaryNavigation.title"),
+        description: t(
+          "components.support.tour.steps.primaryNavigation.description"
+        ),
         side: "right",
         align: "start",
       },
@@ -144,9 +146,8 @@ const productTour = driver({
     {
       element: "#tour-team-members",
       popover: {
-        title: "Team members",
-        description:
-          "You can see your team members here. This is useful to know who is working with you.",
+        title: t("components.support.tour.steps.teamMembers.title"),
+        description: t("components.support.tour.steps.teamMembers.description"),
         side: "right",
         align: "start",
       },
@@ -154,9 +155,8 @@ const productTour = driver({
     {
       element: '#tour-help-support [data-sidebar="menu-button"]',
       popover: {
-        title: "Help and support",
-        description:
-          "You can access help and support from here. This is useful if you need assistance with the application.",
+        title: t("components.support.tour.steps.helpSupport.title"),
+        description: t("components.support.tour.steps.helpSupport.description"),
         side: "right",
         align: "end",
       },
@@ -164,39 +164,26 @@ const productTour = driver({
     {
       element: '#tour-account-menu [data-sidebar="menu-button"]',
       popover: {
-        title: "Account menu",
-        description:
-          "You can manage your account settings from here. This is useful if you want to change your account settings.",
+        title: t("components.support.tour.steps.accountMenu.title"),
+        description: t("components.support.tour.steps.accountMenu.description"),
         side: "right",
         align: "end",
       },
     },
     {
       popover: {
-        title: "Happy Coding",
-        description:
-          "And that is all, go ahead and start adding tours to your applications.",
+        title: t("components.support.tour.steps.happyCoding.title"),
+        description: t("components.support.tour.steps.happyCoding.description"),
       },
     },
   ],
 })
 
 const selectedCategory = ref("")
-const supportCategories = [
-  { value: "demo", label: "Request a demo" },
-  { value: "pricing", label: "Pricing information" },
-  { value: "support", label: "Support inquiry" },
-  { value: "feedback", label: "Feedback or suggestions" },
-  { value: "other", label: "Other" },
-]
+const supportCategories = ["demo", "pricing", "support", "feedback", "other"]
 
 const selectedCompanySize = ref()
-const companySizes = [
-  { value: "1-99", label: "1-99 employees" },
-  { value: "100-299", label: "100-299 employees" },
-  { value: "300-1999", label: "300-1,999 employees" },
-  { value: "2000+", label: "2,000+ employees" },
-]
+const companySizes = ["1-99", "100-299", "300-1999", "2000+"]
 
 const router = useRouter()
 
@@ -363,10 +350,10 @@ const startOnboarding = () => {
                     <SelectGroup>
                       <SelectItem
                         v-for="size in companySizes"
-                        :key="size.value"
-                        :value="size.value"
+                        :key="size"
+                        :value="size"
                       >
-                        {{ size.label }}
+                        {{ $t(`components.support.companySizes.${size}`) }}
                       </SelectItem>
                     </SelectGroup>
                   </SelectContent>
@@ -388,10 +375,10 @@ const startOnboarding = () => {
                     <SelectGroup>
                       <SelectItem
                         v-for="item in supportCategories"
-                        :key="item.value"
-                        :value="item.value"
+                        :key="item"
+                        :value="item"
                       >
-                        {{ item.label }}
+                        {{ $t(`components.support.categories.${item}`) }}
                       </SelectItem>
                     </SelectGroup>
                   </SelectContent>

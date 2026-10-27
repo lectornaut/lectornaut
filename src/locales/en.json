@@ -5,8 +5,6 @@
     "mode": "Mode",
     "model": "Model",
     "configuration": "Chat configuration",
-    "modeTooltip": "Select mode",
-    "modelTooltip": "Select model",
     "effort": "Effort",
     "permissions": {
       "label": "Permissions",
@@ -33,7 +31,6 @@
     "agent": "Agent",
     "manual": "Manual",
     "attachContext": "Attach context",
-    "attachContextFull": "Attachment limit reached ({count})",
     "attachContextDescription": "Pick workspace items to ground the model in your code and writing.",
     "attachContent": "Attach content",
     "uploadFiles": "Upload files",
@@ -47,7 +44,6 @@
     "scopeWrite": "Write",
     "bot": "Bot",
     "botEmpty": "Select a file or folder to chat about it.",
-    "botLoading": "Opening chat...",
     "botHistory": "History",
     "botHistoryHint": "Previous chats about this item",
     "botHistoryEmpty": "No chats about this item yet.",
@@ -79,7 +75,6 @@
     "archive": "Archive",
     "archived": "Archived",
     "pinned": "Pinned",
-    "unarchive": "Unarchive",
     "restore": "Restore",
     "untitledChat": "Untitled chat",
     "untitledSession": "Untitled",
@@ -87,7 +82,7 @@
     "openInNewWindow": "Open in new window",
     "openFullscreen": "Open fullscreen",
     "agentUnavailable": "This agent is no longer available.",
-    "chatLoadFailed": "Failed to open chat. Please try again.",
+    "chatLoadFailed": "Couldn't open chat. Please try again.",
     "renameChat": "Rename chat",
     "renameChatHint": "Pick a name that helps you find this chat later.",
     "chatTitle": "Title",
@@ -97,7 +92,6 @@
     "deleteChatConfirm": "will be permanently deleted, including all of its messages. This action cannot be undone.",
     "botHistoryEmptyAll": "No chats yet. Start a new conversation to see it here.",
     "sharedGroupLabel": "Shared · {label}",
-    "attachmentTooLarge": "Each attachment must be {size} MB or smaller.",
     "placeholderArchived": "This chat is archived. Restore it to continue.",
     "placeholderReadOnly": "This chat is read-only",
     "showTools": "Show tools",
@@ -123,7 +117,6 @@
     "dictateStop": "Stop dictation",
     "agents": {
       "label": "Agent",
-      "tooltip": "Configure",
       "groupBuiltIn": "Agents",
       "groupCustom": "Custom",
       "groupConnection": "Connections",
@@ -132,14 +125,6 @@
       "newAgent": "New agent",
       "featureDisabled": "Custom agents are disabled for this team.",
       "emptyMember": "Ask an admin to set up custom agents.",
-      "statusDisabled": "Disabled",
-      "statusArchived": "Archived",
-      "statusDeleted": "Deleted",
-      "disabledTooltip": "This agent is disabled — your messages run under the team default.",
-      "archivedTooltip": "This agent is archived (deprecated) but still active for this chat.",
-      "deletedTooltip": "This agent has been deleted — your messages run under the team default.",
-      "deletedAgentLabel": "Deleted agent",
-      "customBadge": "Custom",
       "teamMember": "Member of this team",
       "connectionTooltip": "Connection agent",
       "customTooltip": "Custom agent",
@@ -156,19 +141,19 @@
       },
       "manual": {
         "label": "Manual",
-        "longDescription": "Tools are disabled — the assistant can explain and suggest, but won't take actions on your behalf. Useful when you only want feedback."
+        "longDescription": "Tools are disabled. The assistant can explain and suggest, but won't take actions on your behalf. Useful when you only want feedback."
       }
     },
     "sidebar": {
-      "modeDescription": "Mode steers how the assistant approaches each turn — what tools it can reach, how proactive it is, and how it phrases replies.",
+      "modeDescription": "Mode steers how the assistant approaches each turn: what tools it can reach, how proactive it is, and how it phrases replies.",
       "availableTools": "Available tools",
       "toolsEnabledHint": "The assistant can call these on its own when relevant. Try one of the example prompts below.",
       "noTools": "No tools enabled for this agent.",
       "humanInTheLoop": "Human-in-the-Loop",
-      "humanInTheLoopHint": "The assistant can pause and ask you a clarifying question instead of guessing. These interrupts are available in every mode — including {manual}.",
+      "humanInTheLoopHint": "The assistant can pause and ask you a clarifying question instead of guessing. These interrupts are available in every mode, including {manual}.",
       "manageChat": "Manage chat",
-      "noSessionActions": "Send a message to start a chat — actions will appear here.",
-      "noSessionVisibility": "Send a message to start a chat — visibility can be set after.",
+      "noSessionActions": "Send a message to start a chat. Actions will appear here.",
+      "noSessionVisibility": "Send a message to start a chat. Visibility can be set after.",
       "restoreFromArchive": "Restore from archive",
       "deleteChat": "Delete chat",
       "cannotManage": "Only the owner or a team admin can manage this chat.",
@@ -183,16 +168,6 @@
       "visibilitySharedDescription": "Members can read this chat. Owner and admins can keep editing.",
       "visibilityPublicLabel": "Public",
       "visibilityPublicDescription": "Anyone with the link can view. Coming soon."
-    },
-    "toolCatalog": {
-      "rollDice": {
-        "description": "Roll a six-sided die.",
-        "example": "Roll a die for me."
-      },
-      "askQuestion": {
-        "description": "Pauses the chat and asks you a multiple-choice question. Pick a choice (or type your own when allowed) to continue.",
-        "example": "Help me plan a backyard BBQ."
-      }
     },
     "details": {
       "empty": "Start or open a chat to see its details.",
@@ -213,7 +188,7 @@
       "running": "Running...",
       "done": "Done",
       "answered": "Answered",
-      "unanswered": "Left unanswered — the conversation moved on.",
+      "unanswered": "Left unanswered. The conversation moved on.",
       "failed": "Failed",
       "customAnswer": "Or type your own answer...",
       "send": "Send",
@@ -228,7 +203,7 @@
         "cancel": "Cancel",
         "attendees": "{count} attendee | {count} attendees",
         "eventId": "Event",
-        "unconfirmed": "Not confirmed — the conversation moved on. Nothing was written.",
+        "unconfirmed": "Not confirmed. The conversation moved on. Nothing was written.",
         "executing": "Applying your decision...",
         "written": "Added to your Google Calendar.",
         "declined": "Permission was declined. Nothing was written.",
@@ -318,7 +293,6 @@
         "sources": "Sources"
       },
       "compare": {
-        "overview": "Overview",
         "agreements": "Agreements",
         "disagreements": "Disagreements",
         "perNode": "Per-document contribution",
@@ -327,8 +301,6 @@
         "noPoints": "(none)"
       },
       "related": {
-        "scopeCode": "Code",
-        "scopeWrite": "Write",
         "resultCount": "{count} match | {count} matches",
         "truncated": "(more available)",
         "empty": "No related nodes found."
@@ -350,8 +322,6 @@
     "loadMore": "Load more",
     "archive": "Archive",
     "unarchive": "Unarchive",
-    "collapseFolder": "Collapse folder",
-    "expandFolder": "Expand folder",
     "createFolder": "Create Folder",
     "createFile": "Create File",
     "createHint": "Choose a name for your item.",
@@ -401,7 +371,7 @@
       "emptyHint": "Add or edit content and we'll surface connections from across the workspace.",
       "loading": "Finding related nodes...",
       "errorFallback": "Something went wrong while looking up related nodes.",
-      "truncated": "More matches available — refine the source to narrow."
+      "truncated": "More matches available. Refine the source to narrow."
     },
     "summary": {
       "title": "AI summary",
@@ -413,22 +383,19 @@
       "keyPoints": "Key points",
       "tags": "Tags",
       "modelFooter": "Generated with {model}",
-      "errorArchived": "This node is archived — restore it before summarizing.",
+      "errorArchived": "This node is archived. Restore it before summarizing.",
       "errorNotFound": "Node not found.",
       "errorGeneric": "Couldn't generate a summary. Try again."
     }
   },
   "actions": {
-    "add": "Add",
     "cancel": "Cancel",
     "close": "Close",
     "collapse": "Collapse",
-    "confirm": "Confirm",
     "copy": "Copy",
     "copyURL": "Copy URL",
     "create": "Create",
     "delete": "Delete",
-    "dock": "Dock",
     "done": "Done",
     "download": "Download",
     "duplicate": "Duplicate",
@@ -437,82 +404,28 @@
     "filter": "Filter",
     "goBack": "Go back",
     "goForward": "Go forward",
-    "invite": "Invite",
     "logout": "Log out",
-    "maximize": "Maximize",
-    "minimize": "Minimize",
     "more": "More",
     "moreOptions": "More options",
-    "new": "New",
     "openInNewTab": "Open in new tab",
     "pin": "Pin",
-    "popOut": "Pop out",
     "refresh": "Refresh",
-    "remove": "Remove",
     "rename": "Rename",
     "reset": "Reset",
     "retry": "Retry",
     "save": "Save",
-    "saveChanges": "Save changes",
-    "search": "Search",
     "select": "Select",
     "send": "Send",
     "settings": "Settings",
-    "share": "Share",
     "switch": "Switch",
     "unpin": "Unpin",
-    "update": "Update",
-    "upload": "Upload",
-    "view": "View",
     "resetFilters": "Reset"
   },
   "labels": {
-    "account": "Account",
-    "active": "Active",
-    "appearance": "Appearance",
-    "available": "Available",
-    "calendar": "Calendar",
-    "checking": "Checking",
-    "console": "Console",
-    "createdBy": "Created by",
     "createdOn": "Created on",
-    "description": "Description",
-    "desktop": "Desktop",
-    "dimensions": "Dimensions",
-    "email": "Email",
-    "emailAddress": "Email address",
-    "endDate": "End date",
     "favorites": "Favorites",
     "history": "History",
-    "iconsAndText": "Icons and text",
-    "iconsOnly": "Icons only",
-    "information": "Information",
-    "lastModified": "Last modified",
-    "members": "Members",
-    "mobile": "Mobile",
     "name": "Name",
-    "notifications": "Notifications",
-    "overview": "Overview",
-    "owner": "Owner",
-    "admin": "Admin",
-    "panel": "Panel",
-    "password": "Password",
-    "private": "Private",
-    "public": "Public",
-    "resolution": "Resolution",
-    "roles": "Roles",
-    "search": "Search",
-    "sharedWith": "Shared with",
-    "sidebar": "Sidebar",
-    "startDate": "Start date",
-    "status": "Status",
-    "tableOfContents": "Table of Contents",
-    "tasks": "Tasks",
-    "teams": "Teams",
-    "templates": "Templates",
-    "trash": "Trash",
-    "usage": "Usage",
-    "viewer": "Viewer",
     "member": "Member",
     "guest": "Guest"
   },
@@ -525,25 +438,14 @@
     "unavailable": "Unavailable",
     "offline": "You are offline",
     "synced": "Synced to cloud",
-    "syncing": "Syncing...",
-    "unknown": "Unknown"
+    "syncing": "Syncing..."
   },
   "tooltips": {
     "closePanel": "Close panel",
-    "closeTab": "Close tab",
-    "closeSidebar": "Close sidebar",
-    "collapsePanel": "Collapse panel",
     "doubleClickToggle": "Double click to toggle",
     "dragToResize": "Drag to resize",
-    "expandPanel": "Expand panel",
-    "expandSidebar": "Expand sidebar",
     "leftArrowCollapse": "← Collapse",
     "leftArrowExpand": "← Expand",
-    "maximizePanel": "Maximize panel",
-    "minimizePanel": "Minimize panel",
-    "minimizeSidebar": "Minimize sidebar",
-    "newTab": "New tab",
-    "newTerminal": "New Terminal",
     "rightArrowCollapse": "→ Collapse",
     "rightArrowExpand": "→ Expand",
     "shiftLargeSteps": "Shift for large steps",
@@ -552,14 +454,12 @@
   },
   "empty": {
     "noResults": "No matches found.",
-    "noActiveSessions": "No active sessions",
     "noData": "No data",
     "noFilteredData": "No matches",
     "resetFilters": "Reset filters"
   },
   "enter": {
     "title": "Enter",
-    "subtitle": "Choose how you want to sign in.",
     "triggerDescription": "Create an account or sign in to continue.",
     "signUp": "Sign up",
     "signIn": "Sign in",
@@ -593,7 +493,6 @@
       "hidePassword": "Hide password"
     },
     "tooltips": {
-      "notifications": "Used for account updates and sign-in",
       "strongPassword": "Use a strong password"
     },
     "uhoh": "Something went wrong",
@@ -601,20 +500,12 @@
     "google": "Google",
     "microsoft": "Microsoft",
     "apple": "Apple",
-    "removeAccount": "Remove account",
-    "useAccount": "Use account",
-    "showAllAuthOptions": "All sign-in options",
-    "showAllAccounts": "All accounts",
     "footer": {
       "terms": "Terms",
       "privacy": "Privacy"
     }
   },
   "common": {
-    "more": "More",
-    "fontLarger": "Larger",
-    "fontSmaller": "Smaller",
-    "fontReset": "Reset",
     "cancel": "Cancel",
     "delete": "Delete",
     "save": "Save",
@@ -627,14 +518,12 @@
     "reorder": "Reorder",
     "backToHome": "Back to Home",
     "select": "Select",
-    "none": "None",
     "unsavedChanges": "Unsaved changes",
     "discard": "Discard",
     "add": "Add",
     "next": "Next",
     "actions": {
-      "cancel": "Cancel",
-      "resetFilters": "Reset filters"
+      "cancel": "Cancel"
     }
   },
   "settings": {
@@ -652,7 +541,7 @@
       "upToDate": "Up to date",
       "upToDateDescription": "This app has the latest configuration.",
       "installUpdates": "Install updates",
-      "installingUpdates": "Installing updates…",
+      "installingUpdates": "Installing updates...",
       "updateSuccess": "App updates installed.",
       "updateError": "Couldn't install app updates. Try again.",
       "account": {
@@ -832,7 +721,7 @@
     "descriptions": {
       "preferences": "Language, theme, font, and display.",
       "account": "Profile, sign-in, and account details.",
-      "privacy": "Personal data controls — wipe or archive every chat you own in this workspace.",
+      "privacy": "Personal data controls: wipe or archive every chat you own in this workspace.",
       "notifications": "Choose what to receive and how often.",
       "appearance": "Theme, colors, and typography.",
       "security": "Password, MFA, and domain controls.",
@@ -842,15 +731,15 @@
       "workflows": "Automations that run an agent on a schedule, on content changes, or on demand.",
       "members": "Members, roles, and access.",
       "groups": "Reusable member bundles that grant per-workspace roles.",
-      "connections": "Apps backed by external accounts — install them for the team, then connect your own account.",
+      "connections": "Apps backed by external accounts. Install them for the team, then connect your own account.",
       "overview": "Team details, visibility, and access.",
       "teams": "Create and manage teams.",
       "workspaces": "Create and switch workspaces.",
       "runs": "Run history and current status.",
       "sessions": "Admin view of every bot chat session in the team's selected workspace. Filter, audit, and bulk-manage across all members.",
       "memory": "Durable notes agents recall before replying and save after. Yours are private until you share them with the workspace.",
-      "data": "Team-wide chat data controls — archive or permanently delete every member's bot chats in this workspace.",
-      "storage": "Bulk-wipe workspace files — delete every code or write document at once.",
+      "data": "Team-wide chat data controls: archive or permanently delete every member's bot chats in this workspace.",
+      "storage": "Bulk-wipe workspace files: delete every code or write document at once.",
       "integrations": "Add or remove pre-built agents, tools, and workflows for your team.",
       "logs": "Activity and system history.",
       "billing": "Plans, invoices, and billing status.",
@@ -896,12 +785,6 @@
         "description": "Upload or remove your profile photo.",
         "upload": "Upload",
         "remove": "Remove",
-        "updated": "Profile photo updated",
-        "updatedDesc": "Your profile photo was updated.",
-        "uploading": "Uploading...",
-        "uploadingDesc": "Uploading your profile photo.",
-        "failed": "Couldn't update profile photo",
-        "failedUpload": "Couldn't upload profile photo",
         "removed": "Profile picture removed",
         "removeFailed": "Couldn't remove profile picture",
         "uploadStartFailed": "Couldn't start profile photo upload.",
@@ -943,10 +826,7 @@
         "changeDesc": "Enter the email used for sign-in and notifications.",
         "newLabel": "New email address",
         "newPlaceholder": "New email address",
-        "sendVerification": "Send link",
-        "sent": "Verification email sent",
-        "sentDesc": "Check your inbox to verify this email address.",
-        "failed": "Couldn't send verification email"
+        "sendVerification": "Send link"
       },
       "password": {
         "label": "Password",
@@ -957,15 +837,11 @@
         "setTitle": "Create password",
         "changeDesc": "Enter a new password.",
         "newLabel": "New password",
-        "newPlaceholder": "New password",
-        "updated": "Password updated",
-        "updatedDesc": "Your password was updated.",
-        "failed": "Couldn't update password"
+        "newPlaceholder": "New password"
       },
       "identityProviders": {
         "label": "Identity providers",
         "description": "Sign-in methods connected to this account.",
-        "connect": "Connect",
         "noAccounts": "No sign-in methods",
         "unlinked": "Provider unlinked",
         "unlinkedDesc": "This sign-in method was removed.",
@@ -977,15 +853,12 @@
       },
       "devices": {
         "label": "Devices",
-        "description": "Manage active sessions across devices.",
         "logoutAllDescription": "Revoke active sessions on other devices.",
         "logoutAllButton": "Revoke all",
         "logoutDevice": "Revoke",
         "thisDevice": "Current session",
         "lastActive": "Last active {time}",
         "lastActiveUnknown": "unavailable",
-        "ipAddress": "IP address {ip}",
-        "originalSignIn": "Signed in {date}",
         "noSessions": "No active sessions found.",
         "logoutAllConfirmTitle": "Revoke all devices?",
         "logoutAllConfirmDescription": "Ends all sessions except this one. You'll need to sign in again elsewhere.",
@@ -1017,7 +890,6 @@
         "smsDialogTitle": "Set up phone verification",
         "smsDialogDescription": "Add a phone number to receive SMS codes.",
         "phonePlaceholder": "+1 234 567 8900",
-        "codePlaceholder": "000000",
         "displayNamePlaceholder": "Display name",
         "verify": "Verify",
         "sendCode": "Send code",
@@ -1051,7 +923,6 @@
         "description": "Delete this account and its data.",
         "title": "Delete account",
         "confirm": "Delete this account permanently?",
-        "deleted": "Account deleted",
         "deletedDesc": "Your account was deleted.",
         "failed": "Couldn't delete account",
         "confirmLabel": "Type 'delete my account' to confirm deletion.",
@@ -1094,11 +965,6 @@
         "label": "Text",
         "description": "Adjust text size for readability.",
         "placeholder": "Select text size"
-      },
-      "zoom": {
-        "label": "Zoom",
-        "description": "Use Ctrl/Cmd +/- to change zoom while you work.",
-        "placeholder": "Select zoom level"
       },
       "base": {
         "label": "Base",
@@ -1169,7 +1035,6 @@
       "fileDropOverlayShortcutKeys": {
         "label": "Shortcut keys",
         "description": "Press a key combination to set the shortcut.",
-        "placeholder": "Click to record shortcut",
         "recording": "Change",
         "restoreDefault": "Restore default"
       }
@@ -1223,7 +1088,6 @@
       "thisMonth": {
         "label": "This month",
         "description": "Tokens used by every chat turn and workflow run in this team since the start of the month (UTC). Resets on the 1st.",
-        "ofLimit": "{used} of {limit} tokens",
         "unlimited": "{used} tokens, no limit",
         "stats": {
           "available": "Total available",
@@ -1299,11 +1163,6 @@
         "description": "Update the payment method used for billing.",
         "button": "Update"
       },
-      "billingAddress": {
-        "label": "Billing address",
-        "description": "Update the address shown on invoices.",
-        "button": "Update"
-      },
       "billingHistory": {
         "label": "Billing history",
         "description": "View invoices and previous charges.",
@@ -1316,8 +1175,7 @@
         "upgrade": "Update plan"
       },
       "cancelSubscription": {
-        "label": "Cancel subscription",
-        "description": "Cancel at the end of the billing period."
+        "label": "Cancel subscription"
       },
       "noPermission": "Billing access required",
       "noPermissionTitle": "Admin access required",
@@ -1441,7 +1299,7 @@
     },
     "sessions": {
       "sessionsLabel": "Workspace chat sessions",
-      "sessionsDescription": "Every bot chat created by any member in the selected workspace. Rename, archive, restore, and permanently delete in bulk — server-side rules grant this view to team owners and admins only.",
+      "sessionsDescription": "Every bot chat created by any member in the selected workspace. Rename, archive, restore, and permanently delete in bulk. Server-side rules grant this view to team owners and admins only.",
       "noPermissionTitle": "Admin access required",
       "noPermissionDescription": "Only team owners and admins can manage workspace bot sessions.",
       "columnTitle": "Title",
@@ -1470,7 +1328,7 @@
       "bulkDelete": "Delete selected",
       "bulkClear": "Clear selection",
       "bulkDeleteTitle": "Delete selected chats?",
-      "bulkDeleteConfirm": "All selected chats — across every member — will be permanently deleted, including every message. This action cannot be undone.",
+      "bulkDeleteConfirm": "All selected chats across every member will be permanently deleted, including every message. This action cannot be undone.",
       "emptyTitle": "No bot sessions yet",
       "emptyDescription": "Once a member starts a chat from the bot page, it will appear here."
     },
@@ -1556,19 +1414,17 @@
         "description": "Move every active chat you own out of the sidebar. They stay readable in the Archived group; you can restore them anytime.",
         "action": "Archive all",
         "confirmTitle": "Archive every chat you own?",
-        "confirmBody": "{count} active chat will be archived. | {count} active chat will be archived. | {count} active chats will be archived.",
-        "noActive": "You don't have any active chats to archive."
+        "confirmBody": "{count} active chat will be archived. | {count} active chat will be archived. | {count} active chats will be archived."
       },
       "deleteAll": {
         "label": "Delete all my chats",
-        "description": "Permanently remove every chat you own — active and archived — along with all their messages. This action cannot be undone.",
+        "description": "Permanently remove every chat you own, active and archived, along with all their messages. This action cannot be undone.",
         "action": "Delete all",
         "confirmTitle": "Permanently delete every chat you own?",
-        "confirmBody": "{count} chat will be permanently deleted, including every message. This action cannot be undone. | {count} chat will be permanently deleted, including every message. This action cannot be undone. | {count} chats will be permanently deleted, including every message. This action cannot be undone.",
-        "noChats": "You don't have any chats to delete."
+        "confirmBody": "{count} chat will be permanently deleted, including every message. This action cannot be undone. | {count} chat will be permanently deleted, including every message. This action cannot be undone. | {count} chats will be permanently deleted, including every message. This action cannot be undone."
       },
       "memoriesLabel": "Your memories",
-      "memoriesDescription": "Bulk actions on the private memories you own in this workspace. Shared memories — yours or anyone else's — are never affected.",
+      "memoriesDescription": "Bulk actions on the private memories you own in this workspace. Shared memories, yours or anyone else's, are never affected.",
       "memoryCount": "No private memories yet | {count} private memory | {count} private memories",
       "archiveMemories": {
         "label": "Archive all my private memories",
@@ -1581,7 +1437,7 @@
       },
       "deleteMemories": {
         "label": "Delete all my private memories",
-        "description": "Permanently remove every private memory you own — active and archived. Shared memories are not affected. This action cannot be undone.",
+        "description": "Permanently remove every private memory you own, active and archived. Shared memories are not affected. This action cannot be undone.",
         "action": "Delete all",
         "confirmTitle": "Permanently delete every private memory you own?",
         "confirmBody": "{count} private memory will be permanently deleted. This action cannot be undone. | {count} private memory will be permanently deleted. This action cannot be undone. | {count} private memories will be permanently deleted. This action cannot be undone.",
@@ -1597,19 +1453,17 @@
       "noPermissionDescription": "Only team owners and admins can manage workspace chat data.",
       "archiveAll": {
         "label": "Archive all team chats",
-        "description": "Move every active chat — across all members — into their owners' Archived groups. Owners can restore individually.",
+        "description": "Move every active chat across all members into their owners' Archived groups. Owners can restore individually.",
         "action": "Archive all",
         "confirmTitle": "Archive every chat in this workspace?",
-        "confirmBody": "{count} active chat will be archived for every member of this workspace. | {count} active chat will be archived for every member of this workspace. | {count} active chats will be archived for every member of this workspace.",
-        "noActive": "No active chats to archive."
+        "confirmBody": "{count} active chat will be archived for every member of this workspace. | {count} active chat will be archived for every member of this workspace. | {count} active chats will be archived for every member of this workspace."
       },
       "deleteAll": {
         "label": "Delete all team chats",
-        "description": "Permanently remove every chat in this workspace — active and archived — across every member. This action cannot be undone.",
+        "description": "Permanently remove every chat in this workspace, active and archived, across every member. This action cannot be undone.",
         "action": "Delete all",
         "confirmTitle": "Permanently delete every chat in this workspace?",
-        "confirmBody": "{count} chat will be permanently deleted across every member, including every message. This action cannot be undone. | {count} chat will be permanently deleted across every member, including every message. This action cannot be undone. | {count} chats will be permanently deleted across every member, including every message. This action cannot be undone.",
-        "noChats": "No chats to delete."
+        "confirmBody": "{count} chat will be permanently deleted across every member, including every message. This action cannot be undone. | {count} chat will be permanently deleted across every member, including every message. This action cannot be undone. | {count} chats will be permanently deleted across every member, including every message. This action cannot be undone."
       }
     },
     "storage": {
@@ -1624,38 +1478,34 @@
         "description": "Mark every active top-level file and folder under the Code workspace as archived. Children stay where they are and individual items can be restored later.",
         "action": "Archive all code",
         "confirmTitle": "Archive every active Code document?",
-        "confirmBody": "{count} active top-level item will be archived. You can restore each one later from its workspace view. | {count} active top-level item will be archived. You can restore each one later from its workspace view. | {count} active top-level items will be archived. You can restore each one later from their workspace view.",
-        "noItems": "No active code documents to archive."
+        "confirmBody": "{count} active top-level item will be archived. You can restore each one later from its workspace view. | {count} active top-level item will be archived. You can restore each one later from its workspace view. | {count} active top-level items will be archived. You can restore each one later from their workspace view."
       },
       "deleteCodes": {
         "label": "Delete all code documents",
         "description": "Permanently remove every file and folder under the Code workspace. Cascade delete reaches every descendant.",
         "action": "Delete all code",
         "confirmTitle": "Delete every Code document?",
-        "confirmBody": "{count} top-level item will be permanently deleted along with every descendant file, folder, and attachment. This action cannot be undone. | {count} top-level item will be permanently deleted along with every descendant file, folder, and attachment. This action cannot be undone. | {count} top-level items will be permanently deleted along with every descendant file, folder, and attachment. This action cannot be undone.",
-        "noItems": "No code documents to delete."
+        "confirmBody": "{count} top-level item will be permanently deleted along with every descendant file, folder, and attachment. This action cannot be undone. | {count} top-level item will be permanently deleted along with every descendant file, folder, and attachment. This action cannot be undone. | {count} top-level items will be permanently deleted along with every descendant file, folder, and attachment. This action cannot be undone."
       },
       "archiveWrites": {
         "label": "Archive all write documents",
         "description": "Mark every active top-level file and folder under the Write workspace as archived. Children stay where they are and individual items can be restored later.",
         "action": "Archive all writes",
         "confirmTitle": "Archive every active Write document?",
-        "confirmBody": "{count} active top-level item will be archived. You can restore each one later from its workspace view. | {count} active top-level item will be archived. You can restore each one later from its workspace view. | {count} active top-level items will be archived. You can restore each one later from their workspace view.",
-        "noItems": "No active write documents to archive."
+        "confirmBody": "{count} active top-level item will be archived. You can restore each one later from its workspace view. | {count} active top-level item will be archived. You can restore each one later from its workspace view. | {count} active top-level items will be archived. You can restore each one later from their workspace view."
       },
       "deleteWrites": {
         "label": "Delete all write documents",
         "description": "Permanently remove every file and folder under the Write workspace. Cascade delete reaches every descendant.",
         "action": "Delete all writes",
         "confirmTitle": "Delete every Write document?",
-        "confirmBody": "{count} top-level item will be permanently deleted along with every descendant file, folder, and attachment. This action cannot be undone. | {count} top-level item will be permanently deleted along with every descendant file, folder, and attachment. This action cannot be undone. | {count} top-level items will be permanently deleted along with every descendant file, folder, and attachment. This action cannot be undone.",
-        "noItems": "No write documents to delete."
+        "confirmBody": "{count} top-level item will be permanently deleted along with every descendant file, folder, and attachment. This action cannot be undone. | {count} top-level item will be permanently deleted along with every descendant file, folder, and attachment. This action cannot be undone. | {count} top-level items will be permanently deleted along with every descendant file, folder, and attachment. This action cannot be undone."
       },
       "memoryCount": "No memories | {count} memory | {count} memories",
       "activeMemoryCount": "No active memories | {count} active memory | {count} active memories",
       "archiveMemories": {
         "label": "Archive all memories",
-        "description": "Mark every active memory in this workspace — across all members, private and shared — as archived so agents stop recalling them. Individually restorable.",
+        "description": "Mark every active memory in this workspace (all members, private and shared) as archived so agents stop recalling them. Individually restorable.",
         "action": "Archive all memories",
         "confirmTitle": "Archive every active memory?",
         "confirmBody": "{count} active memory will be archived for every member of this workspace. | {count} active memory will be archived for every member of this workspace. | {count} active memories will be archived for every member of this workspace.",
@@ -1664,7 +1514,7 @@
       },
       "deleteMemories": {
         "label": "Delete all memories",
-        "description": "Permanently remove every memory in this workspace — across all members, private and shared. This action cannot be undone.",
+        "description": "Permanently remove every memory in this workspace across all members, private and shared. This action cannot be undone.",
         "action": "Delete all memories",
         "confirmTitle": "Delete every memory in this workspace?",
         "confirmBody": "{count} memory will be permanently deleted across every member. This action cannot be undone. | {count} memory will be permanently deleted across every member. This action cannot be undone. | {count} memories will be permanently deleted across every member. This action cannot be undone.",
@@ -1800,7 +1650,7 @@
       "permissionRequired": "Only team owners and admins can manage workflows.",
       "new": "New workflow",
       "empty": "No workflows yet. Create one to automate content maintenance.",
-      "loadError": "Couldn't load workflows — check your permissions and try again.",
+      "loadError": "Couldn't load workflows. Check your permissions and try again.",
       "newTitle": "New workflow",
       "editTitle": "Edit workflow",
       "dialogHint": "The agent follows the prompt each run, with access to your team content per its role.",
@@ -1832,7 +1682,7 @@
       "agent": "Run as agent",
       "agentPlaceholder": "Select an agent",
       "runAsAgentToggle": "Run as a specific agent",
-      "runAsAgentHint": "Runs as the Default agent — it completes the task itself and hands off to a specialist agent when one is better suited.",
+      "runAsAgentHint": "Runs as the Default agent. It completes the task itself and hands off to a specialist agent when one is better suited.",
       "defaultAgentDescription": "Completes the task itself; hands off to a specialist when needed.",
       "trigger": "Trigger",
       "triggerManualOpt": "Manual / on demand",
@@ -1877,7 +1727,7 @@
       "minutes": "minutes",
       "targetScope": "Edits which tree",
       "contextNodes": "Context nodes (read-only reference)",
-      "contextNodesHint": "Optional nodes the agent reads for grounding — e.g. read the source code while updating the docs. Context never triggers the workflow.",
+      "contextNodesHint": "Optional nodes the agent reads for grounding, e.g. read the source code while updating the docs. Context never triggers the workflow.",
       "contextNodeIdPlaceholder": "Node id",
       "remove": "Remove",
       "add": "Add",
@@ -1901,7 +1751,6 @@
       "needsReview": "Needs review",
       "citedFrom": "Derived from {id}",
       "changeFailed": "Couldn't be applied",
-      "details": "Details",
       "tokensWord": "tokens",
       "changesWord": "Changes",
       "promptWord": "Prompt",
@@ -2101,7 +1950,7 @@
         },
         "readContent": {
           "label": "Read content",
-          "description": "Lets member-agents read the full contents of a workspace file (beyond search snippets) so they can edit accurately or answer from a whole document. Read-only — no edit rights required."
+          "description": "Lets member-agents read the full contents of a workspace file (beyond search snippets) so they can edit accurately or answer from a whole document. Read-only: no edit rights required."
         },
         "customAgents": {
           "label": "Custom Agents",
@@ -2144,7 +1993,7 @@
           "tabPrompt": "Prompt",
           "tabConfigure": "Configure",
           "promptLabel": "Describe your agent",
-          "promptDescription": "Write what you want this agent to do. AI drafts the full configuration — review and fine-tune it in the Configure tab before saving.",
+          "promptDescription": "Write what you want this agent to do. AI drafts the full configuration. Review and fine-tune it in the Configure tab before saving.",
           "promptPlaceholder": "e.g. A research assistant that searches our workspace, cites its sources, and answers concisely in a neutral tone.",
           "generate": "Generate",
           "regenerate": "Regenerate",
@@ -2176,7 +2025,7 @@
         "deleteForever": "Delete forever",
         "deleteConfirmTitle": "Delete this agent forever?",
         "deleteConfirmBody": "Deleting \"{name}\" removes it permanently. Existing chats that reference it will fall back to the team default and show a \"Deleted\" badge. This action cannot be undone.",
-        "enabledTooltip": "Agent is enabled. Click to disable — chats will fall back to the team default.",
+        "enabledTooltip": "Agent is enabled. Click to disable. Chats will fall back to the team default.",
         "disabledTooltip": "Agent is disabled. Click to re-enable.",
         "empty": "No custom agents yet.",
         "emptyHint": "Create one to give your team a focused persona.",
@@ -2227,7 +2076,7 @@
           "disabledAtTeamTooltip": "Enable this tool in the team's tool settings above before assigning it to an agent."
         },
         "customToolsHeader": "Custom tools",
-        "customToolsHeaderDesc": "Admin-authored tools the agent can call. New tools default to enabled for every agent — disable any you don't want this persona to use.",
+        "customToolsHeaderDesc": "Admin-authored tools the agent can call. New tools default to enabled for every agent. Disable any you don't want this persona to use.",
         "isPublic": {
           "label": "Public profile",
           "description": "Anyone with the link can view this agent's profile page while the team is public. Team members can always view it."
@@ -2235,7 +2084,7 @@
       },
       "builtInAgents": {
         "label": "Built-in Agents",
-        "sectionDescription": "Pre-built personas with curated tool access and system prompts for common use cases. Customize any of them to fit your team — edits apply to your team only.",
+        "sectionDescription": "Pre-built personas with curated tool access and system prompts for common use cases. Customize any of them to fit your team. Edits apply to your team only.",
         "empty": "No built-in agents installed. Add them from the Features tab.",
         "configure": "Configure",
         "customizedBadge": "Customized",
@@ -2262,7 +2111,7 @@
         }
       },
       "customTools": {
-        "sectionDescription": "Build admin-authored Genkit tools — HTTP webhooks, prompt templates, canned searches, or constant stubs. The model invokes them by the names you define.",
+        "sectionDescription": "Build admin-authored Genkit tools: HTTP webhooks, prompt templates, canned searches, or constant stubs. The model invokes them by the names you define.",
         "ai": {
           "tabPrompt": "Prompt",
           "tabConfigure": "Configure",
@@ -2297,7 +2146,7 @@
         "deleteForever": "Delete forever",
         "deleteConfirmTitle": "Delete this tool forever?",
         "deleteConfirmBody": "Deleting \"{name}\" removes it permanently. Existing chats that reference it will lose access on their next turn. This action cannot be undone.",
-        "enabledTooltip": "Tool is enabled. Click to disable — the model will stop seeing it in its catalog.",
+        "enabledTooltip": "Tool is enabled. Click to disable. The model will stop seeing it in its catalog.",
         "disabledTooltip": "Tool is disabled. Click to re-enable.",
         "empty": "No custom tools yet.",
         "emptyHint": "Create one to extend the model with your own callable tool.",
@@ -2319,7 +2168,7 @@
         "deleteError": "Couldn't delete tool.",
         "name": {
           "label": "Wire name",
-          "description": "How the model calls this tool — must start with a lowercase letter and contain only letters, digits, or underscores.",
+          "description": "How the model calls this tool. Must start with a lowercase letter and contain only letters, digits, or underscores.",
           "placeholder": "e.g. lookupCustomer"
         },
         "displayName": {
@@ -2345,14 +2194,12 @@
         },
         "output": {
           "label": "Output schema",
-          "description": "Documentation for the model on what fields come back. The tool's actual return is sent verbatim — this list shapes the model's expectations.",
+          "description": "Documentation for the model on what fields come back. The tool's actual return is sent verbatim. This list shapes the model's expectations.",
           "addField": "Add output field",
           "emptyHint": "No output fields documented yet."
         },
         "field": {
-          "name": "Name",
           "namePlaceholder": "e.g. customerId",
-          "description": "Description",
           "descriptionPlaceholder": "Shown to the model as context",
           "required": "Required"
         },
@@ -2480,7 +2327,6 @@
       "limitUnlimited": "{count} workspaces. No plan limit.",
       "upgrade": "Upgrade plan",
       "columnName": "Name",
-      "columnDescription": "Description",
       "columnCreated": "Created",
       "current": "Current",
       "actionsTooltip": "Actions",
@@ -2536,7 +2382,6 @@
       "deleteGroup": "Delete Group",
       "deleteConfirm": "Delete the group {name}? It is removed from every workspace that grants it a role, and members lose any access it conferred. Members keep their team and direct roles.",
       "empty": "No groups yet. Create one to grant a role to several members at once.",
-      "loadError": "Couldn't load groups",
       "createError": "Couldn't create group",
       "updateError": "Couldn't update group",
       "deleteError": "Couldn't delete group"
@@ -2567,7 +2412,6 @@
   },
   "tabs": {
     "newTab": "New tab",
-    "copy": "(copy)",
     "goBack": "Go back",
     "goForward": "Go forward",
     "closeOthers": "Close others",
@@ -2830,7 +2674,6 @@
       "byStatus": "By status"
     },
     "workflows": {
-      "runsOf": "Runs · {name}",
       "selectHint": "Select a workflow to see its runs and actions.",
       "lastRun": "Last run",
       "nextRun": "Next run",
@@ -2874,27 +2717,7 @@
     },
     "changelog": {
       "title": "Changelog",
-      "subtitle": "The latest changes and improvements.",
-      "versionVisual": "visual",
-      "readMore": "Learn more"
-    },
-    "tasks": {
-      "newCalendar": "New Calendar",
-      "calendars": {
-        "myCalendars": "My Calendars",
-        "favorites": "Favorites",
-        "other": "Other"
-      },
-      "items": {
-        "personal": "Personal",
-        "work": "Work",
-        "family": "Family",
-        "holidays": "Holidays",
-        "birthdays": "Birthdays",
-        "travel": "Travel",
-        "reminders": "Reminders",
-        "deadlines": "Deadlines"
-      }
+      "subtitle": "The latest changes and improvements."
     },
     "agents": {
       "title": "Agents",
@@ -2953,8 +2776,7 @@
           "title": "Enterprise"
         },
         "cta": {
-          "getStarted": "Get Started",
-          "contactSales": "Contact Sales"
+          "getStarted": "Get Started"
         }
       },
       "features": {
@@ -3024,15 +2846,11 @@
       "sidebar": {
         "favorites": "Favorites",
         "teams": "Teams",
-        "more": "More",
         "tableOfContents": "Table of Contents"
       },
       "dropdown": {
         "addToFavorites": "Favorite",
-        "removeFromFavorites": "Unfavorite",
-        "copyLink": "Copy link",
-        "openInNewTab": "Open in new tab",
-        "delete": "Delete"
+        "removeFromFavorites": "Unfavorite"
       },
       "tabs": {
         "overview": "Overview",
@@ -3067,7 +2885,6 @@
       "noUsername": "No username yet",
       "public": "Public",
       "private": "Private",
-      "settings": "Settings",
       "teamCount": "{count} team | {count} teams",
       "noTeams": "No teams yet."
     },
@@ -3092,9 +2909,6 @@
       "empty": {
         "title": "No teams yet",
         "description": "Create a team to start working with other people."
-      },
-      "members": {
-        "title": "Members"
       }
     },
     "welcome": {
@@ -3121,14 +2935,6 @@
         }
       },
       "content": {
-        "accountDetails": "Account Details",
-        "accountDescription": "Set up your profile to get started.",
-        "preferences": "Appearance",
-        "preferencesDescription": "Adjust app look and language.",
-        "paymentMethod": "Team and workspace",
-        "paymentDescription": "Create a team and workspace to start in.",
-        "confirmation": "Plans",
-        "confirmationDescription": "Choose a plan to finish setup.",
         "plans": "Choose a plan",
         "plansDescription": "Select a plan and billing interval.",
         "allSet": "All Set!",
@@ -3146,7 +2952,6 @@
         "unavailable": "Unavailable",
         "seatCount": "{count} seat | {count} seats",
         "quantitySummary": "Billing is based on {seats}.",
-        "pricingSummary": "{monthly}/mo • {annual}/yr",
         "pricingSummaryPerSeat": "{monthly}/mo per seat • {annual}/yr per seat",
         "pricingSummaryTotal": "{monthly}/mo total • {annual}/yr total for {seats}",
         "monthlyDescription": "Pay monthly. Change plans anytime.",
@@ -3214,60 +3019,19 @@
       }
     },
     "exit": {
-      "logout": "Log out",
       "dialog": {
         "title": "Log out?",
         "description": "You'll be redirected to the sign-in page.",
-        "cancel": "Cancel",
         "logout": "Log out"
       }
     },
-    "test": {
-      "signInPrompt": "Please sign in to manage teams.",
-      "userProfile": "User Profile",
-      "uid": "UID",
-      "email": "Email",
-      "currentTeamId": "Current Team ID",
-      "currentTeam": "Current Team",
-      "id": "ID",
-      "members": "Members",
-      "inviteMember": "Invite member",
-      "noTeamSelected": "No team selected.",
-      "createNewTeam": "Create New Team",
-      "create": "Create",
-      "myTeams": "My Teams",
-      "role": "Role",
-      "active": "Active",
-      "inviting": "Inviting...",
-      "inviteSuccess": "User invited successfully!",
-      "userEmail": "User Email",
-      "teamName": "Team Name",
-      "status": {
-        "inviting": "Inviting...",
-        "active": "Active"
-      },
-      "success": {
-        "invited": "User invited successfully!"
-      },
-      "buttons": {
-        "invite": "Invite",
-        "create": "Create",
-        "switch": "Switch"
-      },
-      "placeholders": {
-        "userEmail": "User Email",
-        "teamName": "Team Name"
-      }
-    },
     "join": {
-      "title": "Join a team",
       "labels": {
         "findInvite": "Choose an invitation",
         "pending": "Pending",
         "declined": "Declined",
         "joinTeam": "Join {teamName}",
         "invitedAs": "{inviterName} invited you as {role}",
-        "sentOn": "From {inviterEmail} on {date}",
         "hasDeclined": "You declined this invitation",
         "invitedBy": "invited by"
       },
@@ -3277,8 +3041,7 @@
       "buttons": {
         "goHome": "Go home",
         "accept": "Join team",
-        "decline": "Decline invitation",
-        "useDifferentAccount": "Use a different account"
+        "decline": "Decline invitation"
       },
       "empty": {
         "noPending": "No pending invitations.",
@@ -3289,7 +3052,6 @@
         "error": "Couldn't load invitation"
       },
       "errors": {
-        "invalidLink": "Invalid invitation link.",
         "notFoundOrExpired": "Invitation not found or expired.",
         "emailMismatch": "Invitation was sent to a different email. You're signed in as {email}.",
         "loadFailed": "Couldn't load this invitation.",
@@ -3313,18 +3075,10 @@
   },
   "components": {
     "ui": {
-      "close": "Close",
-      "sidebar": "Sidebar",
-      "sidebarDescription": "Displays the mobile sidebar.",
-      "toggleSidebar": "Toggle sidebar",
-      "previousSlide": "Previous slide",
-      "nextSlide": "Next slide",
-      "more": "More",
-      "loading": "Loading"
+      "toggleSidebar": "Toggle sidebar"
     },
     "dataTable": {
       "labels": "Labels",
-      "actions": "Actions",
       "view": "View",
       "options": "Options",
       "display": "Display",
@@ -3334,10 +3088,6 @@
       "selectedCount": "{count} selected",
       "noResults": "No results found.",
       "clearFilters": "Clear filters",
-      "noMatches": "No matches",
-      "sortAsc": "Asc",
-      "sortDesc": "Desc",
-      "sortNone": "Clear sort",
       "sort": "Sort",
       "sortByLabel": "Sort by",
       "sortOrder": "Order",
@@ -3345,16 +3095,8 @@
       "descending": "Descending",
       "sortReset": "None",
       "groupBy": "Group by",
-      "groupByPlaceholder": "Group by column",
       "groupNone": "No grouping",
       "search": "Search",
-      "searchPlaceholder": "Search...",
-      "filterDateRange": "Date range",
-      "pickStart": "Pick start date",
-      "pickEnd": "Pick end date",
-      "pickDate": "Pick a date",
-      "to": "to",
-      "filterReset": "Reset",
       "from": "From {date}",
       "until": "Until {date}",
       "rangeBoth": "{start} – {end}",
@@ -3381,8 +3123,7 @@
       "expandAll": "Expand all",
       "collapseAll": "Collapse all",
       "column": "Column",
-      "sorting": "Sorting",
-      "sortBy": "Sort by"
+      "sorting": "Sorting"
     },
     "teamSelector": {
       "title": "Teams",
@@ -3434,26 +3175,20 @@
         "requiresHandle": "Add a handle to enable",
         "turnOnPublicTeam": "Turn on to make team public",
         "publicTeamUrl": "Public at {url}",
-        "inviteEmail": "Invite {email}",
         "removeAgent": "Remove agent",
-        "agentRoleLocked": "Agents join as members — role can't be changed",
+        "agentRoleLocked": "Agents join as members, so their role can't be changed",
         "addAgent": "Add an agent"
       },
       "labels": {
         "teamName": "Name",
-        "inviteMembers": "Invite members",
-        "emailAddress": "Email address",
         "members": "Members",
-        "sendInvites": "Send invitations",
         "teamPhoto": "Photo",
         "invite": "Invite",
         "pending": "Pending",
-        "invitations": "Invitations",
         "noActiveMembers": "No active members yet.",
         "noPendingInvites": "No pending invitations yet.",
         "publicHandle": "Public handle",
         "publicTeam": "Publish profile",
-        "agents": "Agents",
         "agentBadge": "Agent",
         "noAgentMatches": "No agents found"
       },
@@ -3469,13 +3204,6 @@
         "admin": "Admin",
         "member": "Member",
         "guest": "Guest"
-      },
-      "buttons": {
-        "add": "Add",
-        "cancel": "Cancel",
-        "createTeam": "Create team",
-        "saveChanges": "Save changes",
-        "inviteMembers": "Invite {count} member | Invite {count} members"
       },
       "errors": {
         "invalidEmail": "Please enter a valid email address",
@@ -3507,11 +3235,6 @@
       }
     },
     "subNavigation": {
-      "contextMenu": {
-        "refresh": "Refresh",
-        "goBack": "Go back",
-        "goForward": "Go forward"
-      },
       "tooltips": {
         "home": "Home",
         "toggleLeftSidebar": "Toggle left sidebar",
@@ -3598,26 +3321,6 @@
     "languageSwitcher": {
       "tooltip": "Change language"
     },
-    "settingsMenu": {
-      "settings": "Settings",
-      "tooltip": "Settings"
-    },
-    "tasksNotifications": {
-      "tasks": "Tasks",
-      "tasksHeader": "Tasks",
-      "notifications": "Notifications",
-      "notificationsHeader": "Notifications",
-      "tabs": {
-        "inbox": "Inbox",
-        "saved": "Saved",
-        "done": "Done"
-      },
-      "buttons": {
-        "newTask": "New task",
-        "markAllDone": "Mark all done",
-        "markAllSaved": "Mark all saved"
-      }
-    },
     "notificationItem": {
       "tooltips": {
         "markUnread": "Mark unread",
@@ -3636,39 +3339,6 @@
         "delete": "Delete"
       }
     },
-    "mainSidebar": {
-      "completeOnboarding": "Complete onboarding",
-      "contextMenu": {
-        "appearance": "Appearance",
-        "iconsOnly": "Icons only",
-        "iconsAndText": "Icons and text"
-      }
-    },
-    "aiAsk": {
-      "buttons": {
-        "askAi": "Ask AI",
-        "pin": "Dock",
-        "unpin": "Undock"
-      },
-      "tooltips": {
-        "askAi": "Ask AI"
-      },
-      "sheet": {
-        "title": "AI assistant",
-        "description": "Ask, search, and chat in your workspace."
-      },
-      "placeholders": {
-        "input": "Ask, search, or chat..."
-      },
-      "modes": {
-        "auto": "Auto",
-        "agent": "Agent",
-        "manual": "Manual"
-      },
-      "status": {
-        "used": "{percent}% used"
-      }
-    },
     "terminal": {
       "welcome": "Welcome to Lectornaut CLI",
       "typeHelp": "Type \"help\" to see available commands.",
@@ -3680,8 +3350,7 @@
       "helpCmd": "show this help menu",
       "jsCmd": "eval JavaScript code",
       "clearCmd": "clear the terminal",
-      "commandNotFound": "\"{cmd}\" command not found",
-      "errorPrefix": "Error"
+      "commandNotFound": "\"{cmd}\" command not found"
     },
     "notifications": {
       "title": "Notifications",
@@ -3695,8 +3364,7 @@
       "read": "Read",
       "unread": "Unread",
       "deleteAll": "Delete all",
-      "markAllRead": "Mark all read",
-      "sampleContent": "Sample Content"
+      "markAllRead": "Mark all read"
     },
     "workspaceDialog": {
       "createTitle": "Create Workspace",
@@ -3713,26 +3381,25 @@
       "saveChanges": "Save changes",
       "roles": {
         "label": "Members",
-        "hint": "Choose who participates in this workspace and at what role. Unchecking a user excludes them.",
-        "inherit": "Inherit team role",
-        "usersHeading": "Users",
         "you": "You",
         "empty": "No members to assign yet.",
         "loadError": "Couldn't load workspace roles",
         "assignError": "Couldn't update workspace role",
         "selfLocked": "You can't remove yourself from a workspace.",
         "ownerLocked": "Owners can't be removed from a workspace. Change their role first.",
-        "via": "{role} via {group}"
+        "via": "{role} via {group}",
+        "fromTeam": "{role} from team role",
+        "agentLocked": "Agents always have Member access to every workspace.",
+        "agentsHeading": "Agents",
+        "teamRoleFloor": "Their team role is {role}. Workspace roles can only raise access, not lower it.",
+        "groupRoleFloor": "{group} gives them {role} here. Workspace roles can only raise access, not lower it."
       },
       "groups": {
         "label": "Groups",
-        "hint": "Grant a group a role in this workspace. Elevate-only — a group can only raise a member's access here, never lower it.",
-        "addGroup": "Add group",
         "empty": "No groups in this team yet.",
-        "noGroupsToAdd": "All groups already have access, or none exist yet.",
-        "remove": "Remove group access",
         "loadError": "Couldn't load group access",
-        "assignError": "Couldn't update group access"
+        "assignError": "Couldn't update group access",
+        "guestInert": "Everyone already has at least Guest access, so a Guest grant changes nothing."
       }
     },
     "groupDialog": {
@@ -3748,7 +3415,7 @@
       "descriptionLabel": "Description",
       "descriptionPlaceholder": "A brief description of this group...",
       "membersLabel": "Members",
-      "membersHint": "Only human team members can be added.",
+      "membersHint": "Agents can't be added. They work within the access of whoever is using them.",
       "searchPlaceholder": "Search members...",
       "noMembers": "No team members to add.",
       "selectedCount": "{count} selected",
@@ -3757,14 +3424,10 @@
       "saveChanges": "Save changes"
     },
     "nodeAttachments": {
-      "title": "Attachments",
-      "countSingular": "{count} attachment",
-      "countPlural": "{count} attachments",
       "upload": "Upload",
       "addFromDrive": "Add from Google Drive",
       "readOnlyArchived": "Archived nodes are read-only. You can still open existing attachments.",
       "readOnlyPermission": "You can view and download attachments, but only members, admins, and owners can edit them.",
-      "uploadsTitle": "Uploads",
       "clear": "Clear",
       "uploading": "Uploading...",
       "loadingAttachments": "Loading attachments...",
@@ -3774,8 +3437,6 @@
       "emptyWritable": "No attachments yet. Upload files to keep node-specific assets here.",
       "syncing": "Syncing",
       "unknownType": "Unknown type",
-      "createdLabel": "Created",
-      "updatedLabel": "Updated",
       "editTitle": "Edit attachment",
       "editDescription": "Rename the attachment or replace the stored file while keeping it linked to the same node.",
       "fileNameLabel": "File name",
@@ -3805,64 +3466,14 @@
       }
     },
     "textEditor": {
-      "summary": "Summary",
       "typeForCommands": "Type '/' for commands",
-      "turnInto": "Turn into",
-      "paragraph": "Paragraph",
       "heading1": "Heading 1",
       "heading2": "Heading 2",
       "heading3": "Heading 3",
-      "bulletedList": "Bulleted list",
-      "numberedList": "Numbered list",
-      "todoList": "To-do list",
-      "toggleList": "Toggle list",
       "codeBlock": "Code block",
       "blockquote": "Blockquote",
-      "bold": "Bold",
-      "italic": "Italic",
-      "underline": "Underline",
-      "strike": "Strike",
-      "code": "Code",
-      "textColor": "Text Color",
-      "removeColor": "Remove Color",
-      "highlightColor": "Highlight Color",
-      "removeHighlight": "Remove Highlight",
       "fontSize": "Font size",
-      "removeFontSize": "Remove Font Size",
       "fontFamily": "Font family",
-      "removeFontFamily": "Remove Font Family",
-      "comicSans": "Comic Sans",
-      "cursive": "Cursive",
-      "textAlign": "Text Align",
-      "textAlignment": "Text Alignment",
-      "textStyle": "Text Style",
-      "alignLeft": "Left",
-      "alignCenter": "Center",
-      "alignRight": "Right",
-      "alignJustify": "Justify",
-      "removeAlignment": "Remove Alignment",
-      "subscript": "Subscript",
-      "superscript": "Superscript",
-      "table": "Table",
-      "insertTable": "Insert Table",
-      "deleteTable": "Delete Table",
-      "columns": "Columns",
-      "addColumnBefore": "Add Column Before",
-      "addColumnAfter": "Add Column After",
-      "deleteColumn": "Delete Column",
-      "rows": "Rows",
-      "addRowBefore": "Add Row Before",
-      "addRowAfter": "Add Row After",
-      "deleteRow": "Delete Row",
-      "cells": "Cells",
-      "mergeCells": "Merge Cells",
-      "splitCell": "Split Cell",
-      "link": "Link",
-      "setLink": "Set Link",
-      "removeLink": "Remove Link",
-      "openLink": "Open Link",
-      "editLink": "Edit Link",
-      "linkPlaceholder": "Enter URL",
       "stats": "{characters} chars · {words} words · {minutes} min read",
       "blockText": "Text",
       "blockH1": "H1",
@@ -3870,9 +3481,6 @@
       "blockH3": "H3",
       "blockQuote": "Quote",
       "blockCode": "Code",
-      "blockHeading1": "Heading 1",
-      "blockHeading2": "Heading 2",
-      "blockHeading3": "Heading 3",
       "tableSelectLabel": "Select columns × rows",
       "tablePickerLabel": "{cols} × {rows} columns × rows",
       "tableTitle": "Table",
@@ -3883,7 +3491,6 @@
       "tableDeleteRow": "Delete row",
       "tableDeleteColumn": "Delete column",
       "tableDeleteTable": "Delete table",
-      "language": "Language",
       "auto": "Auto",
       "searchLanguage": "Search language...",
       "noLanguages": "No languages found.",
@@ -4060,75 +3667,15 @@
         }
       }
     },
-    "hyper": {
-      "uploadPicture": "Upload a picture",
-      "pasteLink": "Paste your link here...",
-      "askAi": "Ask AI what you want to find...",
-      "nav": {
-        "home": "Home",
-        "camera": "Camera",
-        "image": "Image",
-        "link": "Link",
-        "ai": "AI"
-      },
-      "trySampleImage": "Try sample image",
-      "trySampleLink": "Try sample link",
-      "trySamplePrompt": "Try sample prompt",
-      "attach": "Attach",
-      "attachToPrompt": "Attach to your prompt",
-      "uploadImage": "Upload image",
-      "takePhoto": "Take photo",
-      "imageUrl": "Image URL",
-      "productLink": "Product Link",
-      "supportedFormats": "JPEG, PNG, GIF, WEBP, AVIF • Max 5MB.",
-      "supportedPlatforms": "Amazon, Shopify, Etsy, eBay, Rakuten, Walmart.",
-      "errors": {
-        "cameraAccess": "Allow camera access in browser settings."
-      }
-    },
     "landing": {
-      "cta": {
-        "tooltip": "Press {key} to sign in or sign up"
-      },
-      "faq": {
-        "tooltip": "FAQ",
-        "title": "Frequently Asked Questions",
-        "description": "Get answers to common questions.",
-        "buttons": {
-          "enter": "Enter",
-          "close": "Close"
-        },
-        "items": {
-          "accessible": {
-            "question": "Is it accessible?",
-            "answer": "Yes. It adheres to the WAI-ARIA design pattern."
-          },
-          "styled": {
-            "question": "Is it styled?",
-            "answer": "Yes. It comes with default styles that match the other components' aesthetic."
-          },
-          "animated": {
-            "question": "Is it animated?",
-            "answer": "Yes. It's animated by default, but you can disable it if you prefer."
-          }
-        }
-      },
       "qrCode": {
         "alt": "QR Code",
-        "heroAlt": "Hero",
         "title": "Get the app",
         "description": "Scan the QR code to download the app",
         "scan": "Scan to get the app"
       },
       "wallOfLove": {
         "photoBy": "Photo by"
-      }
-    },
-    "enter": {
-      "placeholders": {
-        "email": "Email address",
-        "exampleEmail": "ada{'@'}lovelace.com",
-        "password": "********"
       }
     },
     "global": {
@@ -4138,12 +3685,10 @@
         "noShortcuts": "No shortcuts found.",
         "getSupport": "Get support",
         "documentation": "Documentation",
-        "edit": "Edit shortcut",
         "recording": "Change",
         "restoreDefault": "Restore default",
         "resetAll": "Reset all shortcuts",
         "conflict": "Already used by \"{shortcut}\"",
-        "customized": "Customized",
         "save": "Save",
         "uneditable": "Disabled",
         "hints": "Available keyboard shortcuts",
@@ -4221,12 +3766,6 @@
         "urlCopied": "Copied URL to clipboard"
       }
     },
-    "sidebars": {
-      "agents": {
-        "searchPlaceholder": "Ask, Search or Chat...",
-        "mode": "Mode"
-      }
-    },
     "workspaceSelector": {
       "title": "Workspaces",
       "description": "Select a workspace to continue",
@@ -4238,7 +3777,6 @@
     },
     "workspaceSwitcher": {
       "noOtherWorkspaces": "No workspaces yet",
-      "myWorkspaces": "Your workspaces",
       "createWorkspace": "Create workspace",
       "menu": {
         "settings": "Workspace settings"
@@ -4249,59 +3787,11 @@
   },
   "accountMenu": {
     "account": "Account",
-    "billing": "Billing",
     "logout": "Log out",
     "profile": "Profile"
   },
   "layouts": {
     "app": {
-      "contextMenu": {
-        "closePanel": "Close panel",
-        "collapsePanel": "Collapse panel",
-        "expandPanel": "Expand panel",
-        "closeSidebar": "Close sidebar",
-        "expandSidebar": "Expand sidebar",
-        "minimizeSidebar": "Minimize sidebar",
-        "refresh": "Refresh",
-        "goBack": "Go back",
-        "goForward": "Go forward",
-        "appearance": "Appearance",
-        "iconsOnly": "Icons only",
-        "iconsAndText": "Icons and text"
-      },
-      "tooltips": {
-        "closePanel": "Close panel",
-        "closeTab": "Close tab",
-        "closeSidebar": "Close sidebar",
-        "dragToResize": "Drag to resize",
-        "doubleClickToggle": "Double click to toggle",
-        "rightArrowExpand": "→ Expand",
-        "leftArrowCollapse": "← Collapse",
-        "leftArrowExpand": "← Expand",
-        "rightArrowCollapse": "→ Collapse",
-        "upArrowExpand": "↑ Expand",
-        "downArrowCollapse": "↓ Collapse",
-        "shiftLargeSteps": "Shift for large steps",
-        "newTab": "New tab",
-        "minimizePanel": "Minimize panel",
-        "maximizePanel": "Maximize panel",
-        "expand": "Expand",
-        "collapse": "Collapse",
-        "dock": "Dock",
-        "popOut": "Floating window"
-      },
-      "emptyState": {
-        "console": "Console",
-        "noActiveSessions": "No active sessions"
-      },
-      "buttons": {
-        "newTerminal": "New Terminal",
-        "console": "Console",
-        "sidebar": "Sidebar",
-        "panel": "Panel",
-        "dock": "Dock",
-        "popOut": "Floating window"
-      },
       "status": {
         "offline": "You are offline",
         "failed": "Cloud sync failed",
@@ -4357,19 +3847,9 @@
         }
       },
       "statusBar": {
-        "console": "Console",
-        "sidebar": "Sidebar",
-        "sync": "Sync",
-        "panel": "Panel",
-        "panels": "Panels",
         "leftPanel": "Left panel",
         "bottomPanel": "Bottom panel",
-        "rightPanel": "Right panel",
-        "dock": "Dock",
-        "popOut": "Floating window",
-        "appearance": "Appearance",
-        "iconsOnly": "Icons only",
-        "iconsAndText": "Icons and text"
+        "rightPanel": "Right panel"
       }
     }
   },

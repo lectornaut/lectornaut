@@ -142,6 +142,7 @@ const {
                 :data="allRows"
                 :columns="columns"
                 :column-pinning="{ start: ['select'], end: ['actions'] }"
+                data-table-frame
                 class="overflow-clip rounded-4xl border"
               >
                 <template #expanded="{ row }">

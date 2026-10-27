@@ -183,7 +183,10 @@ const handleSubmit = async () => {
         </DialogDescription>
       </DialogHeader>
 
-      <div class="mt-4 grid gap-4">
+      <!-- grid-cols-1 (minmax(0,1fr)): an `auto` track grows to its widest
+         row's min-content, so a long truncated line would overflow the
+         dialog (same fix as TeamDialog). -->
+      <div class="mt-4 grid grid-cols-1 gap-4">
         <!-- Group Photo -->
         <Field>
           <div class="flex flex-col items-center gap-2">
@@ -334,6 +337,9 @@ const handleSubmit = async () => {
               </ItemActions>
             </Item>
           </ItemGroup>
+          <FieldDescription>
+            {{ t("components.groupDialog.membersHint") }}
+          </FieldDescription>
         </Field>
       </div>
 

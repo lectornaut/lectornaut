@@ -392,7 +392,10 @@ const comparisonPlans = computed(() => [
     </div>
     <div class="px-8 py-4">
       <div class="overflow-x-auto">
-        <Table class="table-fixed">
+        <!-- table-fixed caps each column at 1/5, so cells must wrap: TableCell's
+           default nowrap would spill long values into the next column. Top-
+           aligned so wrapped lists in one row start on the same line. -->
+        <Table class="table-fixed [&_td]:align-top [&_td]:whitespace-normal">
           <TableHeader>
             <TableRow>
               <TableHead> {{ t("pages.pricing.feature") }} </TableHead>

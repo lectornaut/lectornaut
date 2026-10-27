@@ -20,6 +20,7 @@ const {
   currentTeam,
   teamMembers,
   isLoading,
+  isOwner,
   canInviteMembers,
   getCannotInviteMembersReason,
   loading: teamLoading,
@@ -157,7 +158,11 @@ const formatCreatedAt = (
         <Field orientation="horizontal">
           <FieldContent class="min-w-0">
             <LoadingState v-if="isLoading" />
-            <div v-else class="overflow-clip rounded-4xl border">
+            <div
+              v-else
+              data-table-frame
+              class="overflow-clip rounded-4xl border"
+            >
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -303,9 +308,18 @@ const formatCreatedAt = (
                           </SelectTrigger>
                           <SelectContent>
                             <SelectGroup>
-                              <SelectItem value="owner">
+                              <SelectItemWithReason
+                                value="owner"
+                                :reason="
+                                  isOwner
+                                    ? null
+                                    : t(
+                                        'settings.teams.members.onlyOwnersCanManageOwners'
+                                      )
+                                "
+                              >
                                 {{ t("settings.members.roles.owner") }}
-                              </SelectItem>
+                              </SelectItemWithReason>
                               <SelectItem value="admin">
                                 {{ t("settings.members.roles.admin") }}
                               </SelectItem>

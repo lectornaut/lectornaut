@@ -1,9 +1,9 @@
 /**
  * Shared display constants for workflow runs — faceted-filter options (for the
  * runs DataTable) and status → colour helpers (for cells + the calendar
- * indicators). Labels are hardcoded English to match the existing table
- * convention (`@/data/constants.ts`), since column/option definitions are
- * plain modules with no `useI18n()` context.
+ * indicators). Status labels resolve through the global i18n instance since
+ * these are plain modules with no `useI18n()` context; trigger and update-mode
+ * labels are still hardcoded English.
  */
 
 import {
@@ -19,6 +19,7 @@ import {
   IconPlay,
   IconXCircle,
 } from "@/data/icons"
+import { i18n } from "@/modules/i18n"
 import type { Component } from "vue"
 
 export interface RunOption {
@@ -27,22 +28,29 @@ export interface RunOption {
   icon?: Component
 }
 
-export const runStatusOptions: RunOption[] = [
-  { value: "queued", label: "Queued", icon: IconClock },
-  { value: "running", label: "Running", icon: IconLoader2 },
-  { value: "success", label: "Applied (auto)", icon: IconCheckCircle },
-  { value: "awaiting_review", label: "Awaiting review", icon: IconEye },
-  { value: "applied", label: "Applied", icon: IconCheckCircle },
-  {
-    value: "partially_applied",
-    label: "Partially applied",
-    icon: IconAlertTriangle,
-  },
-  { value: "cancelled", label: "Rejected", icon: IconCircleX },
-  { value: "error", label: "Error", icon: IconXCircle },
-  { value: "blocked", label: "Blocked", icon: IconBan },
-  { value: "skipped", label: "Skipped", icon: IconCircleDashed },
+const RUN_STATUS_ICONS: [string, Component][] = [
+  ["queued", IconClock],
+  ["running", IconLoader2],
+  ["success", IconCheckCircle],
+  ["awaiting_review", IconEye],
+  ["applied", IconCheckCircle],
+  ["partially_applied", IconAlertTriangle],
+  ["cancelled", IconCircleX],
+  ["error", IconXCircle],
+  ["blocked", IconBan],
+  ["skipped", IconCircleDashed],
 ]
+
+// Getter so the label follows the active locale at read time.
+export const runStatusOptions: RunOption[] = RUN_STATUS_ICONS.map(
+  ([value, icon]) => ({
+    value,
+    icon,
+    get label() {
+      return runStatusLabel(value)
+    },
+  })
+)
 
 export const runTriggerOptions: RunOption[] = [
   { value: "schedule", label: "Schedule", icon: IconClock },
@@ -107,8 +115,10 @@ export const runStatusDotClass = (status: string): string =>
 export const runStatusRank = (status: string): number =>
   STATUS_RANK[status] ?? 0
 
-export const runStatusLabel = (status: string): string =>
-  runStatusOptions.find((o) => o.value === status)?.label ?? status
+export const runStatusLabel = (status: string): string => {
+  const key = `settings.workflows.runStatus.${status}`
+  return i18n.global.te(key) ? i18n.global.t(key) : status
+}
 
 export const runTriggerLabel = (trigger: string): string =>
   runTriggerOptions.find((o) => o.value === trigger)?.label ?? "—"

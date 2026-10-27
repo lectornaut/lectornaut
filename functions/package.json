@@ -45,7 +45,7 @@
   "devDependencies": {
     "@eslint/js": "^10.0.1",
     "@lectornaut/shared": "workspace:*",
-    "@types/mjml": "5.0.0",
+    "@types/mjml": "5.4.1",
     "@typescript-eslint/parser": "^8.72.0",
     "esbuild": "^0.28.2",
     "eslint": "^10.13.0",
