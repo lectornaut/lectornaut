@@ -6,7 +6,7 @@ import {
   IconSettings,
   IconTrash,
 } from "@/data/icons"
-import { computed, ref } from "vue"
+import { computed } from "vue"
 import { settingsLifecycleStatus } from "@/helpers/settingsPresentation"
 
 /**
@@ -25,7 +25,8 @@ import { settingsLifecycleStatus } from "@/helpers/settingsPresentation"
  *     palette.
  *   - The cog menu is flag-driven: predefined rows expose only "Edit"; custom
  *     rows add Archive / Restore + Delete-forever (`canArchive` / `isArchived`
- *     / `canDelete`).
+ *     / `canDelete`). Delete only emits `remove`; the parent list owns the
+ *     one confirm dialog.
  *   - `switchDisabled` lets a gated predefined preset (dependency not shipped
  *     yet) render its Switch inert.
  */
@@ -67,11 +68,6 @@ const avatarSeedEffective = computed(
   () => props.avatarSeed.trim() || props.name.trim() || "Workflow"
 )
 
-const deleteConfirmOpen = ref(false)
-const handleDeleteConfirmed = (): void => {
-  deleteConfirmOpen.value = false
-  emit("remove")
-}
 const onToggleEnabled = (value: boolean | string): void => {
   emit("toggleEnabled", Boolean(value))
 }
@@ -83,7 +79,7 @@ const onToggleEnabled = (value: boolean | string): void => {
     class="flex-nowrap"
     :class="{ 'opacity-70': statusBadgeKey !== null }"
   >
-    <ItemMedia variant="image" class="rounded-4xl">
+    <ItemMedia variant="image" class="rounded-full">
       <AppAvatar
         variant="bauhaus"
         :name="avatarSeedEffective"
@@ -124,6 +120,7 @@ const onToggleEnabled = (value: boolean | string): void => {
                 <InputGroupButton
                   variant="ghost"
                   size="icon-xs"
+                  :aria-label="t('settings.workflows.configure')"
                   :disabled="!canManage || isSaving"
                 >
                   <IconSettings />
@@ -161,8 +158,9 @@ const onToggleEnabled = (value: boolean | string): void => {
                 </DropdownMenuItem>
                 <DropdownMenuItem
                   v-if="canDelete"
+                  variant="destructive"
                   data-hotkey="backspace delete"
-                  @select="deleteConfirmOpen = true"
+                  @select="emit('remove')"
                 >
                   <IconTrash />
                   {{ t("settings.workflows.delete") }}
@@ -199,26 +197,4 @@ const onToggleEnabled = (value: boolean | string): void => {
       </TooltipProvider>
     </ItemActions>
   </Item>
-
-  <AlertDialog v-model:open="deleteConfirmOpen">
-    <AlertDialogContent>
-      <AlertDialogHeader>
-        <AlertDialogTitle>
-          {{ t("settings.workflows.deleteConfirmTitle") }}
-        </AlertDialogTitle>
-        <AlertDialogDescription>
-          {{ t("settings.workflows.confirmDelete", { name }) }}
-        </AlertDialogDescription>
-      </AlertDialogHeader>
-      <AlertDialogFooter>
-        <AlertDialogCancel
-          >{{ t("settings.workflows.cancel") }}<Kbd>Esc</Kbd>
-        </AlertDialogCancel>
-        <AlertDialogAction @click="handleDeleteConfirmed">
-          {{ t("settings.workflows.delete") }}
-          <Kbd>↩</Kbd>
-        </AlertDialogAction>
-      </AlertDialogFooter>
-    </AlertDialogContent>
-  </AlertDialog>
 </template>

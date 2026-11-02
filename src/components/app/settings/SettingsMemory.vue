@@ -5,6 +5,7 @@ import { Item, ItemMedia } from "@/components/ui/item"
 import DataTableColumnHeader from "@/components/table/DataTableColumnHeader.vue"
 import { Badge } from "@/components/ui/badge"
 import { Checkbox } from "@/components/ui/checkbox"
+import { useConfirmationDialog } from "@/composables/useConfirmationDialog"
 import { useMemories } from "@/composables/useMemories"
 import {
   IconAlertTriangle,
@@ -246,27 +247,21 @@ const handleArchiveToggle = async (memory: IMemory) => {
   }
 }
 
-const deleteDialogOpen = ref(false)
-const deleteTarget = ref<IMemory | null>(null)
+const deleteDialog = useConfirmationDialog<IMemory>()
+const openDelete = (memory: IMemory) => deleteDialog.open(memory)
 
-const openDelete = (memory: IMemory) => {
-  deleteTarget.value = memory
-  deleteDialogOpen.value = true
-}
-
-const submitDelete = async () => {
-  const target = deleteTarget.value
-  if (!target) return
-  try {
-    await remove(target.id)
-    toast.success(t("settings.memory.deleteSuccess"))
-  } catch (error) {
-    console.error("[SettingsMemory] delete failed:", error)
-    toast.error(t("settings.memory.deleteError"))
-  }
-  deleteDialogOpen.value = false
-  deleteTarget.value = null
-}
+// Throws on failure so ConfirmAction stays open (the error is toasted here).
+const submitDelete = () =>
+  deleteDialog.confirm(async (memory) => {
+    try {
+      await remove(memory.id)
+      toast.success(t("settings.memory.deleteSuccess"))
+    } catch (error) {
+      console.error("[SettingsMemory] delete failed:", error)
+      toast.error(t("settings.memory.deleteError"))
+      throw error
+    }
+  })
 
 // ── Columns ──────────────────────────────────────────────────────────────────
 
@@ -576,22 +571,21 @@ const openBulkDelete = () => {
   bulkDeleteDialogOpen.value = true
 }
 
-const submitBulkDelete = async () => {
-  if (bulkBusy.value) return
+// Resolves `false` on failure so ConfirmAction stays open (toasted here).
+const submitBulkDelete = async (): Promise<boolean> => {
+  if (bulkBusy.value) return false
   const targets = selectedMemories.value.map((m) => m.id)
-  if (targets.length === 0) {
-    bulkDeleteDialogOpen.value = false
-    return
-  }
+  if (targets.length === 0) return true
   bulkBusy.value = true
   try {
     for (const id of targets) await remove(id)
-    bulkDeleteDialogOpen.value = false
     clearSelection()
     toast.success(t("settings.memory.deleteSuccess"))
+    return true
   } catch (error) {
     console.error("[SettingsMemory] bulk delete failed:", error)
     toast.error(t("settings.memory.deleteError"))
+    return false
   } finally {
     bulkBusy.value = false
   }
@@ -690,7 +684,7 @@ const submitBulkDelete = async () => {
                 :columns="columns"
                 :column-pinning="{ start: ['select'], end: ['actions'] }"
                 data-table-frame
-                class="overflow-clip rounded-4xl border"
+                class="rounded-surface overflow-clip border"
               >
                 <template #selection-actions>
                   <DropdownMenuLabel class="text-muted-foreground tabular-nums">
@@ -786,12 +780,8 @@ const submitBulkDelete = async () => {
               <Label for="memory-category">
                 {{ t("settings.memory.fieldCategory") }}
               </Label>
-              <Select
-                id="memory-category"
-                v-model="form.category"
-                :disabled="isMutating"
-              >
-                <SelectTrigger>
+              <Select v-model="form.category" :disabled="isMutating">
+                <SelectTrigger id="memory-category">
                   <SelectValue>{{ categoryLabel(form.category) }}</SelectValue>
                 </SelectTrigger>
                 <SelectContent>
@@ -812,12 +802,8 @@ const submitBulkDelete = async () => {
               <Label for="memory-importance">
                 {{ t("settings.memory.fieldImportance") }}
               </Label>
-              <Select
-                id="memory-importance"
-                v-model="form.importance"
-                :disabled="isMutating"
-              >
-                <SelectTrigger>
+              <Select v-model="form.importance" :disabled="isMutating">
+                <SelectTrigger id="memory-importance">
                   <SelectValue>
                     {{ t(`settings.memory.importance.${form.importance}`) }}
                   </SelectValue>
@@ -889,65 +875,30 @@ const submitBulkDelete = async () => {
     </Dialog>
 
     <!-- Single-row delete confirm -->
-    <AlertDialog v-model:open="deleteDialogOpen">
-      <AlertDialogContent>
-        <AlertDialogHeader>
-          <AlertDialogTitle>
-            {{ t("settings.memory.deleteTitle") }}
-          </AlertDialogTitle>
-          <AlertDialogDescription>
-            {{ t("settings.memory.deleteConfirm") }}
-          </AlertDialogDescription>
-        </AlertDialogHeader>
-        <AlertDialogFooter>
-          <AlertDialogCancel :disabled="isMutating">
-            {{ t("actions.cancel") }}
-            <Kbd>Esc</Kbd>
-          </AlertDialogCancel>
-          <AlertDialogAction
-            :disabled="isMutating"
-            @click.prevent="submitDelete"
-          >
-            <Spinner v-if="isMutating" />
-            {{ t("actions.delete") }}
-            <Kbd>↩</Kbd>
-          </AlertDialogAction>
-        </AlertDialogFooter>
-      </AlertDialogContent>
-    </AlertDialog>
+    <ConfirmAction
+      v-model:open="deleteDialog.isOpen.value"
+      :title="t('settings.memory.deleteTitle')"
+      :description="t('settings.memory.deleteConfirm')"
+      :action-label="t('actions.delete')"
+      destructive
+      :on-confirm="submitDelete"
+    />
 
     <!-- Bulk delete confirm -->
-    <AlertDialog v-model:open="bulkDeleteDialogOpen">
-      <AlertDialogContent>
-        <AlertDialogHeader>
-          <AlertDialogTitle>
-            {{ t("settings.memory.bulkDeleteTitle") }}
-          </AlertDialogTitle>
-          <AlertDialogDescription>
-            <span class="text-foreground font-medium">
-              {{
-                t("settings.memory.selectedCount", { count: selectionCount })
-              }}
-            </span>
-            —
-            {{ t("settings.memory.bulkDeleteConfirm") }}
-          </AlertDialogDescription>
-        </AlertDialogHeader>
-        <AlertDialogFooter>
-          <AlertDialogCancel :disabled="bulkBusy">
-            {{ t("actions.cancel") }}
-            <Kbd>Esc</Kbd>
-          </AlertDialogCancel>
-          <AlertDialogAction
-            :disabled="bulkBusy || selectionCount === 0"
-            @click.prevent="submitBulkDelete"
-          >
-            <Spinner v-if="bulkBusy" />
-            {{ t("actions.delete") }}
-            <Kbd>↩</Kbd>
-          </AlertDialogAction>
-        </AlertDialogFooter>
-      </AlertDialogContent>
-    </AlertDialog>
+    <ConfirmAction
+      v-model:open="bulkDeleteDialogOpen"
+      :title="t('settings.memory.bulkDeleteTitle')"
+      :action-label="t('actions.delete')"
+      destructive
+      :disabled="selectionCount === 0"
+      :on-confirm="submitBulkDelete"
+    >
+      <template #description>
+        <span class="text-foreground font-medium">{{
+          t("settings.memory.selectedCount", { count: selectionCount })
+        }}</span
+        >. {{ t("settings.memory.bulkDeleteConfirm") }}
+      </template>
+    </ConfirmAction>
   </div>
 </template>

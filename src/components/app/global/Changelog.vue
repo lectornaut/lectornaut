@@ -11,16 +11,19 @@ const openChangelog = ref(false)
 
 const activeLog = ref(changelog[0]?.id)
 
-emitter.on("Dialog.Changelog.Open", (id) => {
-  openChangelog.value = !openChangelog.value
+// A specific entry always opens (and switches to) it; a bare event toggles.
+const onChangelogOpen = (id: unknown) => {
+  openChangelog.value = typeof id === "string" ? true : !openChangelog.value
   activeLog.value = (id as string) ?? changelog[0]?.id
-})
+}
+emitter.on("Dialog.Changelog.Open", onChangelogOpen)
+onBeforeUnmount(() => emitter.off("Dialog.Changelog.Open", onChangelogOpen))
 </script>
 
 <template>
   <Sheet v-model:open="openChangelog">
     <SheetContent
-      class="m-2 mt-[calc(var(--spacing-titlebar-height,0px)+(--spacing(2)))] h-auto! gap-0 overflow-clip rounded-4xl border"
+      class="rounded-surface m-2 mt-[calc(var(--spacing-titlebar-height,0px)+(--spacing(2)))] h-auto! gap-0 overflow-clip border"
       :class="{ 'mt-12': isTauri && !isFullscreen }"
     >
       <SheetHeader>

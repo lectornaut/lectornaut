@@ -211,7 +211,7 @@ watch(copied, (isCopied) => {
             'pl-macos-window-controls':
               macOSTrafficLightsVisible &&
               (isMobile || (!open && !sidebarPinned)),
-            'pl-[calc(var(--spacing-macos-window-controls)-var(--sidebar-width-icon))]':
+            'pl-[calc(var(--spacing-macos-window-controls)-var(--sidebar-width-icon)-(--spacing(4)))]':
               macOSTrafficLightsVisible && !isMobile && !open && sidebarPinned,
           }"
         >
@@ -227,7 +227,7 @@ watch(copied, (isCopied) => {
               side="bottom"
               align="start"
               :side-offset="8"
-              class="h-[80svh] overflow-clip p-0"
+              class="flex max-h-[calc(var(--reka-hover-card-content-available-height)-3.5rem)] flex-col overflow-clip p-0"
             >
               <MainSidebar preview />
             </HoverCardContent>
@@ -498,7 +498,7 @@ watch(copied, (isCopied) => {
                       </KbdGroup>
                     </div>
                     <div
-                      class="bg-secondary aspect-video rounded-4xl border"
+                      class="bg-secondary rounded-surface aspect-video border"
                     ></div>
                   </HoverCardContent>
                 </HoverCard>

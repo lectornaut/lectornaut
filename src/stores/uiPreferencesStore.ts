@@ -54,6 +54,9 @@ export const useUiPreferencesStore = defineStore("uiPreferences", () => {
   // When pinned, MainSidebar collapses to an icon rail instead of sliding
   // offscreen. Same lane as `sidebarOpen`.
   const sidebarPinned = useStorage<boolean>("layout.sidebar.pinned", false)
+  // Expanded MainSidebar width in rem, set by dragging its rail. Device-local on
+  // purpose (screen sizes differ), so it is NOT mirrored to `navigation.ui`.
+  const sidebarWidth = useStorage<number>("layout.sidebar.width", 16)
   const leftPanelCollapsed = useStorage<boolean>(
     "layout.panel.left.collapsed",
     false
@@ -331,6 +334,7 @@ export const useUiPreferencesStore = defineStore("uiPreferences", () => {
     // State
     sidebarOpen,
     sidebarPinned,
+    sidebarWidth,
     leftPanelCollapsed,
     rightPanelCollapsed,
     bottomPanelCollapsed,

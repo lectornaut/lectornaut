@@ -24,9 +24,9 @@ const { t } = useI18n()
  *      explicit and consistent with archive / delete from the same
  *      menu.
  *   2. Cog dropdown (ItemActions) — Edit, Archive (or Restore),
- *      Delete forever. Delete opens the sibling AlertDialog because
- *      it's irreversible; archive runs without confirmation (Restore
- *      reverses it).
+ *      Delete forever. Delete emits `remove`; the parent list owns the
+ *      one confirm dialog because it's irreversible. Archive runs
+ *      without confirmation (Restore reverses it).
  *   3. Enable/Disable Switch (ItemActions) — admin toggle, mirrors
  *      the team provider Switch pattern.
  *
@@ -62,13 +62,6 @@ const avatarSeedEffective = computed(
 
 const description = computed(() => props.agent.description.trim())
 
-const deleteConfirmOpen = ref(false)
-
-const handleDeleteConfirmed = (): void => {
-  deleteConfirmOpen.value = false
-  emit("remove")
-}
-
 const handleArchiveFromMenu = (): void => {
   if (isArchived.value) {
     emit("restore")
@@ -88,7 +81,7 @@ const onToggleEnabled = (value: boolean | string): void => {
     class="flex-nowrap"
     :class="{ 'opacity-70': statusBadgeKey !== null }"
   >
-    <ItemMedia variant="image" class="rounded-4xl">
+    <ItemMedia variant="image" class="rounded-full">
       <AppAvatar variant="beam" :name="avatarSeedEffective" class="size-full" />
     </ItemMedia>
 
@@ -106,8 +99,8 @@ const onToggleEnabled = (value: boolean | string): void => {
     <ItemActions>
       <!--
         Cog actions dropdown. Includes the destructive "Delete forever"
-        entry — clicking it opens the AlertDialog below rather than
-        acting immediately, since the action is irreversible.
+        entry: it emits `remove` and the parent list confirms first,
+        since the action is irreversible.
       -->
       <TooltipProvider>
         <Tooltip>
@@ -117,6 +110,7 @@ const onToggleEnabled = (value: boolean | string): void => {
                 <InputGroupButton
                   variant="ghost"
                   size="icon-xs"
+                  :aria-label="t('settings.agents.custom.actions')"
                   :disabled="!canManage || isSaving"
                 >
                   <IconSettings />
@@ -143,8 +137,9 @@ const onToggleEnabled = (value: boolean | string): void => {
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem
+                variant="destructive"
                 data-hotkey="backspace delete"
-                @select="deleteConfirmOpen = true"
+                @select="emit('remove')"
               >
                 <IconTrash />
                 {{ t("settings.agents.custom.deleteForever") }}
@@ -182,36 +177,4 @@ const onToggleEnabled = (value: boolean | string): void => {
       </TooltipProvider>
     </ItemActions>
   </Item>
-
-  <!--
-    Hard-delete confirmation — required because the action is
-    irreversible. Sibling of the Item so the overlay isn't constrained
-    by the row layout. Archive intentionally has no equivalent guard
-    (it's reversible via Restore from the same menu).
-  -->
-  <AlertDialog v-model:open="deleteConfirmOpen">
-    <AlertDialogContent>
-      <AlertDialogHeader>
-        <AlertDialogTitle>
-          {{ t("settings.agents.custom.deleteConfirmTitle") }}
-        </AlertDialogTitle>
-        <AlertDialogDescription>
-          {{
-            t("settings.agents.custom.deleteConfirmBody", {
-              name: agent.name,
-            })
-          }}
-        </AlertDialogDescription>
-      </AlertDialogHeader>
-      <AlertDialogFooter>
-        <AlertDialogCancel
-          >{{ t("common.cancel") }}<Kbd>Esc</Kbd>
-        </AlertDialogCancel>
-        <AlertDialogAction @click="handleDeleteConfirmed">
-          {{ t("settings.agents.custom.deleteForever") }}
-          <Kbd>↩</Kbd>
-        </AlertDialogAction>
-      </AlertDialogFooter>
-    </AlertDialogContent>
-  </AlertDialog>
 </template>

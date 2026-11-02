@@ -1,6 +1,7 @@
 <script lang="ts" setup>
 import {
   provideSidebarContext,
+  SIDEBAR_MOBILE_BREAKPOINT,
   useSidebar,
 } from "@/components/ui/sidebar/utils"
 import {
@@ -77,7 +78,9 @@ const currentWindow = getCurrentTauriWindow()
 const isCaptureWindow = currentWindow?.label === FILE_CAPTURE_WINDOW_LABEL
 const overlaySidebarOpen = ref(true)
 const overlaySidebarOpenMobile = ref(false)
-const overlaySidebarIsMobile = useMediaQuery("(max-width: 768px)")
+const overlaySidebarIsMobile = useMediaQuery(
+  `(max-width: ${SIDEBAR_MOBILE_BREAKPOINT - 1}px)`
+)
 const existingSidebarContext = useSidebar(null)
 
 // FileDropOverlay can render outside the app shell, so it needs its own
@@ -1027,7 +1030,7 @@ const macOSTrafficLightsVisible = useMacOSTrafficLightsVisible()
   >
     <div
       v-if="shouldRender"
-      class="bg-background fixed inset-0 isolate z-50 flex flex-col gap-2 p-2"
+      class="bg-background/50 fixed inset-0 isolate z-50 flex flex-col gap-2 p-2 backdrop-blur-2xl"
     >
       <div
         data-tauri-drag-region="deep"
@@ -1040,7 +1043,7 @@ const macOSTrafficLightsVisible = useMacOSTrafficLightsVisible()
         <TooltipProvider>
           <ToggleGroup
             type="single"
-            class="overflow-clip rounded-4xl"
+            class="rounded-control overflow-clip"
             :model-value="fileListLayout"
             @update:model-value="updateFileListLayout"
           >
@@ -1116,7 +1119,7 @@ const macOSTrafficLightsVisible = useMacOSTrafficLightsVisible()
                 {{ t("components.fileDropOverlay.buttons.save") }}
               </Button>
               <SheetContent
-                class="m-2 mt-[calc(var(--spacing-titlebar-height,0px)+(--spacing(2)))] h-auto! gap-0 overflow-clip rounded-4xl border"
+                class="rounded-surface m-2 mt-[calc(var(--spacing-titlebar-height,0px)+(--spacing(2)))] h-auto! gap-0 overflow-clip border"
                 :class="{ 'mt-12': isTauri && !isFullscreen }"
               >
                 <SheetHeader>
@@ -1136,10 +1139,10 @@ const macOSTrafficLightsVisible = useMacOSTrafficLightsVisible()
                     :model-value="activeSaveScope"
                     @update:model-value="updateActiveSaveScope"
                   >
-                    <TabsList class="bg-input/50 m-2 h-9! p-0">
+                    <TabsList class="bg-input/50 h-control! m-2 p-0">
                       <TabsTrigger
                         value="code"
-                        class="data-[state=active]:border-border! data-[state=active]:bg-background h-9"
+                        class="data-[state=active]:border-border! data-[state=active]:bg-background h-control"
                       >
                         {{
                           t("components.fileDropOverlay.saveSheet.tabs.code")
@@ -1147,7 +1150,7 @@ const macOSTrafficLightsVisible = useMacOSTrafficLightsVisible()
                       </TabsTrigger>
                       <TabsTrigger
                         value="write"
-                        class="data-[state=active]:border-border! data-[state=active]:bg-background h-9"
+                        class="data-[state=active]:border-border! data-[state=active]:bg-background h-control"
                       >
                         {{
                           t("components.fileDropOverlay.saveSheet.tabs.write")
@@ -1201,9 +1204,11 @@ const macOSTrafficLightsVisible = useMacOSTrafficLightsVisible()
                     <ButtonGroup>
                       <Button
                         class="justify-start"
+                        data-dialog-action
                         :disabled="!canMoveQueuedFiles"
                         @click="moveQueuedFilesToSelectedNode"
                       >
+                        <Spinner v-if="isMoving" />
                         {{
                           isMoving
                             ? t("components.fileDropOverlay.saveSheet.moving")
@@ -1211,6 +1216,7 @@ const macOSTrafficLightsVisible = useMacOSTrafficLightsVisible()
                                 "components.fileDropOverlay.saveSheet.configure"
                               )
                         }}
+                        <Kbd>↩</Kbd>
                       </Button>
                     </ButtonGroup>
                     <ButtonGroup>
@@ -1221,6 +1227,7 @@ const macOSTrafficLightsVisible = useMacOSTrafficLightsVisible()
                         @click="handleSaveSheetOpenChange(false)"
                       >
                         {{ t("actions.cancel") }}
+                        <Kbd>Esc</Kbd>
                       </Button>
                     </ButtonGroup>
                   </ButtonGroup>

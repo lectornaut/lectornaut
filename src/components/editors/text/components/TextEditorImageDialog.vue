@@ -35,6 +35,9 @@ const fileInput = ref<HTMLInputElement | null>(null)
 // Matches the editor's FileHandler allow-list (SVG stays blocked upstream).
 const UPLOAD_ACCEPT = "image/png,image/jpeg,image/gif,image/webp"
 
+// Bumped on every upload and every close, so a dismissed upload is dropped.
+let uploadRun = 0
+
 const pickFile = () => {
   fileInput.value?.click()
 }
@@ -49,17 +52,21 @@ const uploadPickedFile = async (event: Event) => {
   }
 
   error.value = null
+  const run = ++uploadRun
   isUploading.value = true
   try {
     const src = await upload(file)
+    // Dismissed mid-upload: the user cancelled, so never insert late.
+    if (run !== uploadRun) return
     emit("insert", { src, align: "center", width: "100%" })
     closeDialog()
   } catch (uploadError) {
+    if (run !== uploadRun) return
     error.value =
       (uploadError as Error).message ||
       t("components.textEditor.imageUploadFailed")
   } finally {
-    isUploading.value = false
+    if (run === uploadRun) isUploading.value = false
   }
 }
 
@@ -84,6 +91,7 @@ const validateImageUrl = (rawValue: string): string | null => {
 const resetState = () => {
   imageUrl.value = ""
   error.value = null
+  uploadRun++
   isUploading.value = false
 }
 

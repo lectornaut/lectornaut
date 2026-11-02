@@ -78,7 +78,7 @@ const collapseLabel = computed(() =>
           :disabled="disabled"
           :data-collapsed="collapsed ? '' : undefined"
           :class="[
-            'layout-resize-handle z-20 bg-transparent after:rounded-3xl focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:outline-none',
+            'layout-resize-handle z-20 bg-transparent after:rounded-full focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:outline-none',
             props.class,
           ]"
         />

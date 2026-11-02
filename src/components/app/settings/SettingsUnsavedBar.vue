@@ -1,4 +1,14 @@
+<script lang="ts">
+// Each tab mounts this bar only while it has staged edits, so "any bar is
+// mounted" is the Settings dialog's dirty signal (see Settings.vue's guard).
+const mountedBars = ref(0)
+export const hasUnsavedSettings = computed(() => mountedBars.value > 0)
+</script>
+
 <script lang="ts" setup>
+onMounted(() => mountedBars.value++)
+onUnmounted(() => mountedBars.value--)
+
 withDefaults(
   defineProps<{
     /** Save in flight: shows the spinner and disables both actions. */
@@ -31,7 +41,7 @@ const { t } = useI18n()
 
 <template>
   <DialogFooter
-    class="bg-popover sticky bottom-3 z-10 m-3 flex items-center gap-2 rounded-4xl border p-2 shadow-xl"
+    class="bg-popover sticky bottom-3 z-10 m-3 flex items-center gap-2 rounded-full border p-2 shadow-xl"
   >
     <p
       class="mr-auto ml-1 text-xs"

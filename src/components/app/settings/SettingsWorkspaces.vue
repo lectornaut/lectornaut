@@ -13,7 +13,6 @@ import {
   IconPlus,
   IconSwitchHorizontal,
   IconTrash,
-  IconX,
 } from "@/data/icons"
 import type { IWorkspace } from "@/types/domain"
 
@@ -190,7 +189,7 @@ const formatCreatedAt = (value: IWorkspace["createdAt"] | null | undefined) => {
             <div
               v-else
               data-table-frame
-              class="overflow-clip rounded-4xl border"
+              class="rounded-surface overflow-clip border"
             >
               <Table>
                 <TableHeader>
@@ -235,69 +234,22 @@ const formatCreatedAt = (value: IWorkspace["createdAt"] | null | undefined) => {
                        one long line setting the table's min-content width. -->
                     <TableCell class="whitespace-normal">
                       <Item class="group flex-nowrap p-0" size="xs">
-                        <ItemMedia class="group relative">
-                          <TooltipProvider>
-                            <Tooltip>
-                              <TooltipTrigger as-child>
-                                <AppAvatar
-                                  :class="{
-                                    'cursor-pointer': canUpdateWorkspace(
-                                      workspace.id
-                                    ),
-                                    'cursor-not-allowed opacity-60':
-                                      !canUpdateWorkspace(workspace.id),
-                                  }"
-                                  :loading="
-                                    workspaceLoading.isLoading(
-                                      `photo-${workspace.id}`
-                                    )
-                                  "
-                                  :src="workspace.photoURL"
-                                  :name="workspace.name"
-                                  @click="handleWorkspaceAvatarClick(workspace)"
-                                />
-                              </TooltipTrigger>
-                              <TooltipContent>
-                                {{
-                                  !canUpdateWorkspace(workspace.id)
-                                    ? getCannotUpdateWorkspaceReason(
-                                        workspace.id
-                                      )
-                                    : workspaceLoading.isLoading(
-                                          `photo-${workspace.id}`
-                                        )
-                                      ? t(
-                                          "settings.overview.teamPhoto.uploading"
-                                        )
-                                      : t("settings.workspacesList.uploadPhoto")
-                                }}
-                              </TooltipContent>
-                            </Tooltip>
-                            <Tooltip v-if="workspace.photoURL">
-                              <TooltipTrigger as-child>
-                                <Button
-                                  variant="secondary"
-                                  class="ring-background absolute -top-2 -right-2 size-4 opacity-0! ring-2 transition group-hover:enabled:opacity-100!"
-                                  size="icon"
-                                  :disabled="!canUpdateWorkspace(workspace.id)"
-                                  @click.stop="
-                                    removeWorkspacePhoto(workspace.id)
-                                  "
-                                >
-                                  <IconX />
-                                </Button>
-                              </TooltipTrigger>
-                              <TooltipContent>
-                                {{
-                                  !canUpdateWorkspace(workspace.id)
-                                    ? getCannotUpdateWorkspaceReason(
-                                        workspace.id
-                                      )
-                                    : t("settings.workspacesList.removePhoto")
-                                }}
-                              </TooltipContent>
-                            </Tooltip>
-                          </TooltipProvider>
+                        <ItemMedia>
+                          <PhotoUploadAvatar
+                            :src="workspace.photoURL"
+                            :name="workspace.name"
+                            :loading="
+                              workspaceLoading.isLoading(
+                                `photo-${workspace.id}`
+                              )
+                            "
+                            :disabled="!canUpdateWorkspace(workspace.id)"
+                            :disabled-reason="
+                              getCannotUpdateWorkspaceReason(workspace.id)
+                            "
+                            @upload="handleWorkspaceAvatarClick(workspace)"
+                            @remove="removeWorkspacePhoto(workspace.id)"
+                          />
                         </ItemMedia>
                         <SettingsIdentity
                           :title="workspace.name"
@@ -386,6 +338,7 @@ const formatCreatedAt = (value: IWorkspace["createdAt"] | null | undefined) => {
                                     <TooltipTrigger as-child>
                                       <div>
                                         <DropdownMenuItem
+                                          variant="destructive"
                                           :disabled="
                                             !canDeleteWorkspace(workspace.id)
                                           "
@@ -449,50 +402,24 @@ const formatCreatedAt = (value: IWorkspace["createdAt"] | null | undefined) => {
   </div>
   <SettingsRestricted v-else />
 
-  <!-- Delete Workspace Dialog -->
-  <AlertDialog v-model:open="deleteWorkspaceDialog.isOpen.value">
-    <AlertDialogContent>
-      <AlertDialogHeader>
-        <AlertDialogTitle>{{
-          t("settings.workspacesList.deleteTitle")
-        }}</AlertDialogTitle>
-        <AlertDialogDescription>
-          <i18n-t keypath="settings.workspacesList.deleteConfirm" tag="span">
-            <template #name>
-              <span class="text-foreground font-medium">{{
-                deleteWorkspaceDialog.item.value?.name
-              }}</span>
-            </template>
-          </i18n-t>
-        </AlertDialogDescription>
-      </AlertDialogHeader>
-      <AlertDialogFooter>
-        <AlertDialogCancel
-          >{{ t("actions.cancel") }}<Kbd>Esc</Kbd>
-        </AlertDialogCancel>
-        <AlertDialogAction
-          :disabled="
-            deleteWorkspaceDialog.item.value &&
-            workspaceLoading.isLoading(
-              `delete-${deleteWorkspaceDialog.item.value.id}`
-            )
-          "
-          @click.prevent="handleDeleteWorkspace"
-        >
-          <Spinner
-            v-if="
-              deleteWorkspaceDialog.item.value &&
-              workspaceLoading.isLoading(
-                `delete-${deleteWorkspaceDialog.item.value.id}`
-              )
-            "
-          />
-          {{ t("settings.workspacesList.deleteTitle") }}
-          <Kbd>↩</Kbd>
-        </AlertDialogAction>
-      </AlertDialogFooter>
-    </AlertDialogContent>
-  </AlertDialog>
+  <ConfirmAction
+    v-model:open="deleteWorkspaceDialog.isOpen.value"
+    :title="t('settings.workspacesList.deleteTitle')"
+    :action-label="t('actions.delete')"
+    destructive
+    :confirm-phrase="deleteWorkspaceDialog.item.value?.name"
+    :on-confirm="handleDeleteWorkspace"
+  >
+    <template #description>
+      <i18n-t keypath="settings.workspacesList.deleteConfirm" tag="span">
+        <template #name>
+          <span class="text-foreground font-medium">{{
+            deleteWorkspaceDialog.item.value?.name
+          }}</span>
+        </template>
+      </i18n-t>
+    </template>
+  </ConfirmAction>
 
   <!-- Workspace Create/Edit Dialog -->
   <WorkspaceDialog

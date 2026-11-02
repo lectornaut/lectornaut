@@ -1,4 +1,6 @@
 <script lang="ts" setup>
+import { hasUnsavedSettings } from "@/components/app/settings/SettingsUnsavedBar.vue"
+import { useDismissGuard } from "@/composables/useDismissGuard"
 import { defaultSettingsTab, defaultSettingsTabs } from "@/helpers/defaults"
 import { emitter, listenForMainWindowIntents } from "@/modules/mitt"
 
@@ -33,15 +35,32 @@ onBeforeUnmount(() => {
   void unlistenMainWindowIntents.then((unlisten) => unlisten())
 })
 
-emitter.on("Dialog.Settings.Open", (event) => {
-  activeTab.value = normalizeSettingsTab(event as string)
+// Staged edits live in the active tab and die when it unmounts, so both
+// dismissing the dialog and switching tabs ask first.
+const guard = useDismissGuard(openSettings, () => hasUnsavedSettings.value)
+
+const selectTab = (tab: string | number) => {
+  const next = normalizeSettingsTab(String(tab))
+  if (next === activeTab.value) return
+  guard.request(() => (activeTab.value = next))
+}
+
+const onOpenSettings = (event: unknown) => {
   openSettings.value = true
-})
+  selectTab(event as string)
+}
 
 // Pair to "Dialog.Settings.Open" — lets any settings sub-page close the
 // dialog as it navigates away (e.g. SettingsSessions opening a chat).
-emitter.on("Dialog.Settings.Close", () => {
+const onCloseSettings = () => {
   openSettings.value = false
+}
+
+emitter.on("Dialog.Settings.Open", onOpenSettings)
+emitter.on("Dialog.Settings.Close", onCloseSettings)
+onBeforeUnmount(() => {
+  emitter.off("Dialog.Settings.Open", onOpenSettings)
+  emitter.off("Dialog.Settings.Close", onCloseSettings)
 })
 
 const activeTabConfig = computed(() => {
@@ -71,15 +90,16 @@ const tabContentClass = "overflow-auto overscroll-none scroll-smooth h-full"
 </script>
 
 <template>
-  <Dialog v-model:open="openSettings">
+  <Dialog :open="openSettings" @update:open="guard.onOpenChange">
     <DialogContent
       class="h-3/4 max-h-3/4! w-3/4 max-w-3/4! overflow-auto overscroll-none scroll-smooth p-0"
     >
       <Tabs
-        v-model="activeTab"
+        :model-value="activeTab"
         :default-value="activeTab"
         class="flex size-full flex-col overflow-auto overscroll-none scroll-smooth"
         orientation="vertical"
+        @update:model-value="selectTab"
       >
         <SidebarProvider
           :default-open="true"
@@ -267,4 +287,14 @@ const tabContentClass = "overflow-auto overscroll-none scroll-smooth h-full"
       </Tabs>
     </DialogContent>
   </Dialog>
+
+  <ConfirmAction
+    v-model:open="guard.confirmOpen.value"
+    :title="t('common.discardChangesTitle')"
+    :description="t('common.discardChangesDescription')"
+    :action-label="t('common.discard')"
+    :cancel-label="t('common.keepEditing')"
+    destructive
+    :on-confirm="guard.discard"
+  />
 </template>

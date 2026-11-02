@@ -284,52 +284,16 @@ const discardChanges = () => {
                 {{ t("settings.overview.teamPhoto.description") }}
               </FieldDescription>
             </FieldContent>
-            <div class="group relative">
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger as-child>
-                    <span class="inline-flex">
-                      <AppAvatar
-                        class="flex size-10 items-center justify-center"
-                        :class="{
-                          'cursor-pointer': canUpdateTeam,
-                          'cursor-not-allowed opacity-60': !canUpdateTeam,
-                        }"
-                        :loading="isTeamPhotoLoading"
-                        :src="currentTeam?.photoURL"
-                        :name="localTeamName || currentTeam?.name"
-                        :alt="currentTeam?.name || 'Team'"
-                        @click="triggerTeamPhotoUpload"
-                      />
-                    </span>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    {{
-                      canUpdateTeam
-                        ? isTeamPhotoLoading
-                          ? t("settings.overview.teamPhoto.uploading")
-                          : t("settings.overview.teamPhoto.upload")
-                        : getCannotUpdateTeamReason
-                    }}
-                  </TooltipContent>
-                </Tooltip>
-                <Tooltip v-if="currentTeam?.photoURL && canUpdateTeam">
-                  <TooltipTrigger as-child>
-                    <Button
-                      variant="secondary"
-                      class="ring-background absolute -top-2 -right-2 size-4 opacity-0! ring-2 transition group-hover:enabled:opacity-100!"
-                      size="icon"
-                      @click.stop="handleRemoveTeamPhoto"
-                    >
-                      <IconX />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>{{
-                    t("settings.overview.teamPhoto.remove")
-                  }}</TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-            </div>
+            <PhotoUploadAvatar
+              class="size-10"
+              :src="currentTeam?.photoURL"
+              :name="localTeamName || currentTeam?.name"
+              :loading="isTeamPhotoLoading"
+              :disabled="!canUpdateTeam"
+              :disabled-reason="getCannotUpdateTeamReason"
+              @upload="triggerTeamPhotoUpload"
+              @remove="handleRemoveTeamPhoto"
+            />
           </Field>
 
           <Field orientation="horizontal">

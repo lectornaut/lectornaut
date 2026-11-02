@@ -1,6 +1,7 @@
 <script lang="ts" setup>
+import { useDismissGuard } from "@/composables/useDismissGuard"
 import { usePhotoUpload } from "@/composables/usePhotoUpload"
-import { IconUsers, IconX } from "@/data/icons"
+import { IconUsers } from "@/data/icons"
 import { useMembershipStore } from "@/stores/membershipStore"
 import { useTeamGroupsStore } from "@/stores/teamGroupsStore"
 import type { IGroup } from "@/types/domain"
@@ -111,13 +112,33 @@ watch(
   }
 )
 
+// Dirty = the form differs from what it held right after opening.
+const formSnapshot = () =>
+  JSON.stringify([
+    groupName.value,
+    groupDescription.value,
+    [...selectedIds.value].sort(),
+    photoPreview.value,
+  ])
+const baseline = ref("")
+const guard = useDismissGuard(
+  isOpen,
+  () => !!baseline.value && formSnapshot() !== baseline.value
+)
+
 watch(isOpen, (val) => {
   emit("update:open", val)
-  if (val) initFromGroup()
-  else resetForm()
+  if (val) {
+    initFromGroup()
+    baseline.value = formSnapshot()
+  } else {
+    resetForm()
+    baseline.value = ""
+  }
 })
 
 const handleSubmit = async () => {
+  if (isSaving.value) return
   const name = groupName.value.trim()
   if (!name) return
 
@@ -164,8 +185,11 @@ const handleSubmit = async () => {
 </script>
 
 <template>
-  <Dialog v-model:open="isOpen">
-    <DialogContent class="w-2xl max-w-fit">
+  <Dialog
+    :open="isOpen"
+    @update:open="(next: boolean) => !isSaving && guard.onOpenChange(next)"
+  >
+    <DialogContent class="sm:max-w-2xl">
       <DialogHeader>
         <DialogTitle>
           {{
@@ -193,40 +217,15 @@ const handleSubmit = async () => {
             <FieldLabel>
               {{ t("components.groupDialog.photoLabel") }}
             </FieldLabel>
-            <div class="group relative">
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger as-child>
-                    <div class="bg-secondary cursor-pointer rounded-4xl p-3">
-                      <AppAvatar
-                        class="size-16"
-                        :src="photoPreview"
-                        :name="groupName"
-                        @click="triggerGroupPhotoSelection"
-                      />
-                    </div>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    {{ t("components.groupDialog.uploadPhoto") }}
-                  </TooltipContent>
-                </Tooltip>
-                <Tooltip v-if="photoPreview">
-                  <TooltipTrigger as-child>
-                    <Button
-                      variant="secondary"
-                      class="ring-background absolute top-1 right-1 size-4 opacity-0 ring-2 transition group-hover:opacity-100"
-                      size="icon"
-                      @click.stop="removePhoto"
-                    >
-                      <IconX />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    {{ t("components.groupDialog.removePhoto") }}
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-            </div>
+            <PhotoUploadAvatar
+              class="size-16"
+              :src="photoPreview"
+              :name="groupName"
+              :loading="isSaving && !!photoFile"
+              :disabled="isSaving"
+              @upload="triggerGroupPhotoSelection"
+              @remove="removePhoto"
+            />
           </div>
         </Field>
 
@@ -239,7 +238,6 @@ const handleSubmit = async () => {
             id="group-name"
             v-model="groupName"
             :placeholder="t('components.groupDialog.namePlaceholder')"
-            @keyup.enter="handleSubmit"
           />
         </Field>
 
@@ -296,7 +294,7 @@ const handleSubmit = async () => {
             </EmptyHeader>
           </Empty>
           <ItemGroup
-            class="bg-secondary max-h-56 overflow-y-auto rounded-4xl p-3"
+            class="bg-secondary rounded-surface max-h-56 overflow-y-auto p-3"
           >
             <Item
               v-for="member in filteredMembers"
@@ -366,4 +364,14 @@ const handleSubmit = async () => {
       </DialogFooter>
     </DialogContent>
   </Dialog>
+
+  <ConfirmAction
+    v-model:open="guard.confirmOpen.value"
+    :title="t('common.discardChangesTitle')"
+    :description="t('common.discardChangesDescription')"
+    :action-label="t('common.discard')"
+    :cancel-label="t('common.keepEditing')"
+    destructive
+    :on-confirm="guard.discard"
+  />
 </template>

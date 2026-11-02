@@ -1320,7 +1320,7 @@ const onToolMenuCloseAutoFocus = (event: Event) => {
         </TooltipProvider>
         <Sheet v-model:open="attachSheetOpen">
           <SheetContent
-            class="m-2 mt-[calc(var(--spacing-titlebar-height,0px)+(--spacing(2)))] h-auto! gap-0 overflow-clip rounded-4xl border"
+            class="rounded-surface m-2 mt-[calc(var(--spacing-titlebar-height,0px)+(--spacing(2)))] h-auto! gap-0 overflow-clip border"
           >
             <SheetHeader>
               <SheetTitle>{{ t("ai.attachContext") }}</SheetTitle>
@@ -1335,16 +1335,16 @@ const onToolMenuCloseAutoFocus = (event: Event) => {
                 :model-value="activeAttachScope"
                 @update:model-value="updateActiveAttachScope"
               >
-                <TabsList class="bg-input/50 m-2 h-9! p-0">
+                <TabsList class="bg-input/50 h-control! m-2 p-0">
                   <TabsTrigger
                     value="code"
-                    class="data-[state=active]:border-border! data-[state=active]:bg-background h-9"
+                    class="data-[state=active]:border-border! data-[state=active]:bg-background h-control"
                   >
                     {{ t("ai.scopeCode") }}
                   </TabsTrigger>
                   <TabsTrigger
                     value="write"
-                    class="data-[state=active]:border-border! data-[state=active]:bg-background h-9"
+                    class="data-[state=active]:border-border! data-[state=active]:bg-background h-control"
                   >
                     {{ t("ai.scopeWrite") }}
                   </TabsTrigger>

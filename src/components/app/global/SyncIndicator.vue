@@ -138,7 +138,7 @@ const errorMessage = computed(
             <Item class="group" size="xs">
               <ItemMedia
                 variant="icon"
-                class="size-8 rounded-4xl"
+                class="rounded-control size-8"
                 :class="syncBadgeClass"
               >
                 <Component :is="syncIcon" />
@@ -206,7 +206,7 @@ const errorMessage = computed(
             </div>
             <div
               v-if="syncState === 'error'"
-              class="bg-destructive/10 rounded-4xl px-3 py-2"
+              class="bg-destructive/10 rounded-surface px-3 py-2"
             >
               <p class="text-destructive text-xs font-medium">
                 {{ t("layouts.app.status.hovercard.errorDetails") }}

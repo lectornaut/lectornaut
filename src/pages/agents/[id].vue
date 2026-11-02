@@ -303,7 +303,7 @@ useHead(() => ({
       <template v-else>
         <div class="flex flex-col items-center justify-center p-2">
           <div
-            class="bg-background flex aspect-video max-h-40 w-full flex-col rounded-4xl border shadow-xs"
+            class="bg-background rounded-surface flex aspect-video max-h-40 w-full flex-col border shadow-xs"
           >
             <div class="flex items-center justify-between p-2">
               <Logo class="size-8 shrink-0 p-2" />
@@ -349,7 +349,7 @@ useHead(() => ({
             </div>
           </div>
           <div
-            class="bg-background mx-auto -mt-10 rounded-4xl border p-1.5 shadow-xs"
+            class="bg-background mx-auto -mt-10 rounded-full border p-1.5 shadow-xs"
           >
             <div v-if="pageState === 'found' && profile">
               <AppAvatar
@@ -360,7 +360,7 @@ useHead(() => ({
             </div>
             <div
               v-else
-              class="bg-muted text-muted-foreground flex size-20 items-center justify-center rounded-4xl"
+              class="bg-muted text-muted-foreground flex size-20 items-center justify-center rounded-full"
             >
               <IconBot />
             </div>

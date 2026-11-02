@@ -261,7 +261,7 @@ const formatInvitationTimestamp = (
     </Field>
     <ScrollContainer class="w-full max-w-md items-center justify-between p-2">
       <div
-        class="bg-sidebar flex size-full flex-col items-center justify-between rounded-2xl p-2"
+        class="bg-sidebar rounded-item flex size-full flex-col items-center justify-between p-2"
       >
         <div class="m-auto grid grow flex-col items-center justify-center">
           <LoadingState

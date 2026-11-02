@@ -1,10 +1,9 @@
 <script lang="ts" setup>
+import { useConfirmationDialog } from "@/composables/useConfirmationDialog"
 import { useDeviceSessions } from "@/composables/useDeviceSessions"
-import { useLoadingState } from "@/composables/useLoadingState"
-import { usePhotoUpload } from "@/composables/usePhotoUpload"
+import { useProfilePhoto } from "@/composables/useProfilePhoto"
 import { useUsernameAvailability } from "@/composables/useUsernameAvailability"
 import {
-  IconAlertTriangle,
   IconAtSign,
   IconBadgeCheck,
   IconCheck,
@@ -18,9 +17,7 @@ import {
   IconX,
 } from "@/data/icons"
 import { verifyPhoneNumberWithRecaptcha } from "@/helpers/firebase-phone-verification"
-import { withToast } from "@/helpers/toast"
 import { USERNAME_MAX_LENGTH, usernamesMatch } from "@/helpers/username"
-import { getInitials } from "@/helpers/utilities"
 import { logout } from "@/modules/auth"
 import { auth, firestore } from "@/modules/firebase"
 import { emitter } from "@/modules/mitt"
@@ -37,7 +34,6 @@ import type { IMembership } from "@/types/membership"
 import {
   createUserMembershipsQuery,
   deleteUserPhotoFile,
-  getUserPhotoStorageRef,
 } from "@/utils/firebase/firebase-helpers"
 import { formatTimeAgoIntl } from "@vueuse/core"
 import {
@@ -60,7 +56,7 @@ import QRCode from "qrcode"
 import { REGEXP_ONLY_DIGITS } from "vue-input-otp"
 import { toast } from "vue-sonner"
 import { useDocumentQuery } from "@/utils/firebase/firebase-query"
-import { useCurrentUser, useStorageFile } from "vuefire"
+import { useCurrentUser } from "vuefire"
 
 const { t, locale } = useI18n()
 
@@ -80,7 +76,6 @@ const currentIsPublic = computed(() => userData.value?.isPublic ?? false)
 const optimisticUsername = ref<string | null>(null)
 const optimisticIsPublic = ref<boolean | null>(null)
 const hiddenProviderIds = ref<Set<string>>(new Set())
-const optimisticPhotoPreview = ref<string | null>(null)
 
 const effectiveUsername = computed(
   () => optimisticUsername.value ?? currentUsername.value
@@ -175,7 +170,9 @@ const saveChanges = async () => {
           displayName: localDisplayName.value,
         })
       } catch (error) {
-        errors.push(`Display name: ${(error as Error).message}`)
+        errors.push(
+          `${t("settings.account.preferredName.label")}: ${(error as Error).message}`
+        )
       }
     }
 
@@ -190,10 +187,14 @@ const saveChanges = async () => {
           await claimUsername(nextUsername)
         } catch (error) {
           optimisticUsername.value = previousOptimisticUsername
-          errors.push(`Username: ${(error as Error).message}`)
+          errors.push(
+            `${t("settings.account.username.label")}: ${(error as Error).message}`
+          )
         }
       } else if (usernameError.value) {
-        errors.push(`Username: ${usernameError.value}`)
+        errors.push(
+          `${t("settings.account.username.label")}: ${usernameError.value}`
+        )
       }
     }
 
@@ -271,21 +272,6 @@ const toggleIsPublic = async (value: boolean) => {
   }
 }
 
-const displayPhotoURL = computed(
-  () => optimisticPhotoPreview.value ?? user.value?.photoURL ?? null
-)
-
-const clearOptimisticPhotoPreview = () => {
-  if (optimisticPhotoPreview.value?.startsWith("blob:")) {
-    URL.revokeObjectURL(optimisticPhotoPreview.value)
-  }
-  optimisticPhotoPreview.value = null
-}
-
-onBeforeUnmount(() => {
-  clearOptimisticPhotoPreview()
-})
-
 const sendingVerificationEmail = ref(false)
 const sendVerificationEmail = async () => {
   sendingVerificationEmail.value = true
@@ -334,7 +320,12 @@ const handleAuthError = async (error: unknown, defaultMessage: string) => {
 
 const newEmail = ref("")
 const changingEmail = ref(false)
+const emailDialogOpen = ref(false)
+watch(emailDialogOpen, (isOpen) => {
+  if (!isOpen) newEmail.value = ""
+})
 const changeEmail = async () => {
+  if (changingEmail.value) return
   changingEmail.value = true
 
   await verifyBeforeUpdateEmail(user.value!, newEmail.value)
@@ -342,6 +333,7 @@ const changeEmail = async () => {
       toast.info(t("settings.account.messages.verificationSent"), {
         description: t("settings.account.messages.verificationSentDesc"),
       })
+      emailDialogOpen.value = false
     })
     .catch((error) => {
       handleAuthError(error, t("settings.account.messages.verificationFailed"))
@@ -353,7 +345,12 @@ const changeEmail = async () => {
 
 const newPassword = ref("")
 const changingPassword = ref(false)
+const passwordDialogOpen = ref(false)
+watch(passwordDialogOpen, (isOpen) => {
+  if (!isOpen) newPassword.value = ""
+})
 const changePassword = async () => {
+  if (changingPassword.value) return
   changingPassword.value = true
 
   await updatePassword(user.value!, newPassword.value)
@@ -361,7 +358,7 @@ const changePassword = async () => {
       toast.success(t("settings.account.messages.passwordUpdated"), {
         description: t("settings.account.messages.passwordUpdatedDesc"),
       })
-      newPassword.value = ""
+      passwordDialogOpen.value = false
     })
     .catch((error) => {
       handleAuthError(
@@ -374,19 +371,10 @@ const changePassword = async () => {
     })
 }
 
-const deletingAccount = ref(false)
-const deleteAccountInput = ref("")
-const isDeleteAccountInputValid = computed(
-  () => deleteAccountInput.value.trim().toLowerCase() === "delete my account"
-)
+// Confirm handlers below resolve `false` on failure so the ConfirmAction
+// stays open (handleAuthError toasts and swallows the error).
 
 const deleteAccount = async () => {
-  if (!isDeleteAccountInputValid.value) {
-    toast.error(t("settings.account.deleteAccount.confirmRequired"))
-    return
-  }
-  deletingAccount.value = true
-
   try {
     const membershipStore = useMembershipStore()
 
@@ -409,16 +397,12 @@ const deleteAccount = async () => {
       const members = await membershipStore.getMembersForTeam(membership.teamId)
       const memberCount = members.length
       const owners = members.filter((m) => m.role === "owner")
-      const teamName = membership.team?.name || "Unknown Team"
+      const team = membership.team?.name || t("common.unknown")
 
       if (memberCount <= 1) {
-        errors.push(
-          `You are the only member of the team '${teamName}'. Please delete the team first.`
-        )
+        errors.push(t("settings.account.deleteAccount.onlyMember", { team }))
       } else if (membership.role === "owner" && owners.length <= 1) {
-        errors.push(
-          `You are the sole owner of the team '${teamName}'. Please transfer ownership or delete the team.`
-        )
+        errors.push(t("settings.account.deleteAccount.soleOwner", { team }))
       }
     }
 
@@ -428,7 +412,7 @@ const deleteAccount = async () => {
         description: errors[0],
       })
       // STOP: Do not proceed with any cleanup
-      return
+      return false
     }
 
     // 2. Cleanup: Remove user from all teams
@@ -448,109 +432,35 @@ const deleteAccount = async () => {
       description: t("settings.account.deleteAccount.deletedDesc"),
     })
   } catch (error) {
-    handleAuthError(error, t("settings.account.deleteAccount.failed"))
-  } finally {
-    deletingAccount.value = false
-    deleteAccountInput.value = ""
+    void handleAuthError(error, t("settings.account.deleteAccount.failed"))
+    return false
   }
 }
 
-const unlinkingProviderMap = ref<Record<string, boolean>>({})
-const unlinkProvider = async (providerId: string) => {
+// One confirm for the provider list, mounted outside the rows: the row hides
+// optimistically mid-unlink, which would otherwise unmount its own dialog.
+const unlinkProviderDialog = useConfirmationDialog<UserInfo>()
+
+const unlinkProvider = async () => {
+  const providerId = unlinkProviderDialog.item.value?.providerId
+  if (!providerId) return false
   const previousHiddenProviderIds = new Set(hiddenProviderIds.value)
   hiddenProviderIds.value = new Set(hiddenProviderIds.value).add(providerId)
 
-  unlinkingProviderMap.value = {
-    ...unlinkingProviderMap.value,
-    [providerId]: true,
-  }
-
-  await unlink(user.value!, providerId)
-    .then(() => {
-      toast.success(t("settings.account.identityProviders.unlinked"), {
-        description: t("settings.account.identityProviders.unlinkedDesc"),
-      })
-    })
-    .catch((error) => {
-      hiddenProviderIds.value = previousHiddenProviderIds
-      handleAuthError(error, t("settings.account.identityProviders.failed"))
-    })
-    .finally(() => {
-      unlinkingProviderMap.value = {
-        ...unlinkingProviderMap.value,
-        [providerId]: false,
-      }
-    })
-}
-
-const profilePhotoFileRef = computed(() => {
-  if (!user.value?.uid) return null
-  return getUserPhotoStorageRef(user.value.uid)
-})
-
-const { uploadProgress, uploadError, uploadTask, upload, refresh } =
-  useStorageFile(profilePhotoFileRef)
-
-const profilePhotoUpload = usePhotoUpload({
-  canUpload: () => !!user.value?.uid,
-  onUpload: async (_id, file) => {
-    clearOptimisticPhotoPreview()
-    optimisticPhotoPreview.value = URL.createObjectURL(file)
-    try {
-      await withToast(
-        async () => {
-          const uploadPromise = upload(file)
-          if (!uploadPromise) {
-            throw new Error(
-              t("settings.account.profilePicture.uploadStartFailed")
-            )
-          }
-
-          await uploadPromise
-          const [nextPhotoURL] = await refresh()
-
-          if (!nextPhotoURL) {
-            throw new Error(
-              t("settings.account.profilePicture.resolveUrlFailed")
-            )
-          }
-
-          await authStore.updateUserProfile({ photoURL: nextPhotoURL })
-        },
-        {
-          info: "Uploading profile picture...",
-          success: "Profile picture updated",
-          error: "Failed to upload profile picture",
-        }
-      )
-      clearOptimisticPhotoPreview()
-    } catch (error) {
-      clearOptimisticPhotoPreview()
-      console.error("Error uploading picture or updating profile:", error)
-    }
-  },
-})
-
-const triggerProfilePhotoUpload = () => {
-  if (!user.value?.uid) return
-  profilePhotoUpload.triggerUpload(user.value.uid)
-}
-
-const handleRemoveProfilePicture = async () => {
-  if (!user.value?.uid) return
-
   try {
-    clearOptimisticPhotoPreview()
-    await authStore.updateUserProfile({ photoURL: null })
-    await deleteUserPhotoFile(user.value.uid)
-    toast.success(t("settings.account.profilePicture.removed"))
-  } catch (error) {
-    console.error("Error removing profile picture:", error)
-    toast.error(t("settings.account.profilePicture.removeFailed"), {
-      description: (error as Error).message,
+    await unlink(user.value!, providerId)
+    toast.success(t("settings.account.identityProviders.unlinked"), {
+      description: t("settings.account.identityProviders.unlinkedDesc"),
     })
+  } catch (error) {
+    hiddenProviderIds.value = previousHiddenProviderIds
+    void handleAuthError(error, t("settings.account.identityProviders.failed"))
+    return false
   }
 }
+
+const { displayPhotoURL, isBusy, uploadProfilePhoto, removeProfilePhoto } =
+  useProfilePhoto()
 
 const getComputedProviderName = (provider: string) => {
   switch (provider) {
@@ -593,10 +503,9 @@ const hasSmsFactor = computed(() =>
   )
 )
 
-const disablingMfa = ref(false)
+const disableMfaDialogOpen = ref(false)
 
 const disableAllMfa = async () => {
-  disablingMfa.value = true
   try {
     const mfa = multiFactor(user.value!)
     for (const factor of [...mfa.enrolledFactors]) {
@@ -606,18 +515,19 @@ const disableAllMfa = async () => {
     mfaVersion.value++
     toast.success(t("settings.account.mfa.disabled"))
   } catch (error) {
-    handleAuthError(error, t("settings.account.mfa.failedDisable"))
-  } finally {
-    disablingMfa.value = false
+    void handleAuthError(error, t("settings.account.mfa.failedDisable"))
+    return false
   }
 }
 
 const handleMfaToggle = (value: boolean) => {
   if (value) {
-    // Can't enable without enrolling a factor — prompt user
+    // Can't enable without enrolling a factor, so prompt the user
     toast.info(t("settings.account.mfa.enrollFirst"))
+  } else {
+    // Turning off goes through the disable confirm
+    disableMfaDialogOpen.value = true
   }
-  // Turning off is handled by the AlertDialog on the switch
 }
 
 // TOTP enrollment
@@ -698,6 +608,7 @@ const startSmsEnrollment = () => {
 }
 
 const sendSmsVerification = async () => {
+  if (smsLoading.value) return
   const phone = smsPhoneNumber.value.trim()
   if (!phone.startsWith("+") || phone.length < 8) {
     toast.error(t("settings.account.mfa.invalidPhoneNumber"))
@@ -746,7 +657,7 @@ const verifySmsEnrollment = async () => {
 }
 
 // Unenroll
-const unenrollingFactorUid = ref<string | null>(null)
+const removeFactorDialog = useConfirmationDialog<MultiFactorInfo>()
 
 const getPhoneFactorNumber = (factor: MultiFactorInfo) =>
   (factor as { phoneNumber?: string }).phoneNumber
@@ -783,8 +694,9 @@ const getFactorDescription = (factor: MultiFactorInfo) => {
   return getFactorTypeLabel(factor)
 }
 
-const unenrollFactor = async (factor: MultiFactorInfo) => {
-  unenrollingFactorUid.value = factor.uid
+const unenrollFactor = async () => {
+  const factor = removeFactorDialog.item.value
+  if (!factor) return false
   try {
     await multiFactor(user.value!).unenroll(factor)
     await user.value!.reload()
@@ -795,9 +707,8 @@ const unenrollFactor = async (factor: MultiFactorInfo) => {
       })
     )
   } catch (error) {
-    handleAuthError(error, t("settings.account.mfa.failedUnenroll"))
-  } finally {
-    unenrollingFactorUid.value = null
+    void handleAuthError(error, t("settings.account.mfa.failedUnenroll"))
+    return false
   }
 }
 
@@ -812,7 +723,10 @@ const {
   revokeSingleSession,
 } = useDeviceSessions()
 
-const { isLoading: isRevoking, withLoadingResult } = useLoadingState<string>()
+const revokeSessionDialog = useConfirmationDialog<{
+  id: string
+  deviceName: string
+}>()
 const sessionNow = useNow({ scheduler: (cb) => useIntervalFn(cb, 60_000) })
 const sessionTimeAgoOptions = computed(() => ({
   locale: locale.value,
@@ -847,34 +761,34 @@ const otherSessionCount = computed(
 )
 
 const handleRevokeAll = async () => {
-  const { data: result, error } = await withLoadingResult("revokeAll", () =>
-    revokeAllOtherSessions()
-  )
-  if (error) {
-    toast.error(t("settings.account.devices.failedLogoutAll"), {
-      description: error.message,
-    })
-  } else if (result) {
+  try {
+    const result = await revokeAllOtherSessions()
     toast.success(t("settings.account.devices.loggedOutAll"), {
       description: t("settings.account.devices.loggedOutAllDesc", {
         count: result.data.count,
       }),
     })
+  } catch (error) {
+    toast.error(t("settings.account.devices.failedLogoutAll"), {
+      description: (error as Error).message,
+    })
+    return false
   }
 }
 
-const handleRevokeSession = async (sessionId: string) => {
-  const { error } = await withLoadingResult(sessionId, () =>
-    revokeSingleSession(sessionId)
-  )
-  if (error) {
-    toast.error(t("settings.account.devices.failedLogoutDevice"), {
-      description: error.message,
-    })
-  } else {
+const handleRevokeSession = async () => {
+  const sessionId = revokeSessionDialog.item.value?.id
+  if (!sessionId) return false
+  try {
+    await revokeSingleSession(sessionId)
     toast.success(t("settings.account.devices.loggedOutDevice"), {
       description: t("settings.account.devices.loggedOutDeviceDesc"),
     })
+  } catch (error) {
+    toast.error(t("settings.account.devices.failedLogoutDevice"), {
+      description: (error as Error).message,
+    })
+    return false
   }
 }
 
@@ -914,50 +828,14 @@ const getDeviceIcon = (deviceType: string) => {
                 {{ t("settings.account.profilePicture.description") }}
               </FieldDescription>
             </FieldContent>
-            <div class="group relative">
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger as-child>
-                    <AppAvatar
-                      class="size-10 cursor-pointer"
-                      :src="uploadError ? null : displayPhotoURL"
-                      :name="user?.displayName"
-                      @click="triggerProfilePhotoUpload"
-                    >
-                      <template #fallback>
-                        <IconAlertTriangle v-if="uploadError" />
-                        <template v-else>{{
-                          getInitials(user?.displayName!)
-                        }}</template>
-                      </template>
-                    </AppAvatar>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    {{
-                      uploadTask
-                        ? `${uploadProgress ? (uploadProgress * 100).toFixed(0) : 0}%`
-                        : t("settings.account.profilePicture.upload")
-                    }}
-                  </TooltipContent>
-                </Tooltip>
-                <Tooltip>
-                  <TooltipTrigger as-child>
-                    <Button
-                      v-if="displayPhotoURL"
-                      variant="secondary"
-                      class="ring-background absolute -top-2 -right-2 size-4 opacity-0 ring-2 transition group-hover:opacity-100"
-                      size="icon"
-                      @click.stop="handleRemoveProfilePicture"
-                    >
-                      <IconX />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    {{ t("settings.account.profilePicture.remove") }}
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-            </div>
+            <PhotoUploadAvatar
+              class="size-10"
+              :src="displayPhotoURL"
+              :name="user?.displayName"
+              :loading="isBusy"
+              @upload="uploadProfilePhoto"
+              @remove="removeProfilePhoto"
+            />
           </Field>
           <Field orientation="horizontal">
             <FieldContent>
@@ -1149,7 +1027,7 @@ const getDeviceIcon = (deviceType: string) => {
               <Spinner v-if="sendingVerificationEmail" />
               {{ t("settings.account.email.verify") }}
             </Button>
-            <Dialog>
+            <Dialog v-model:open="emailDialogOpen">
               <DialogTrigger as-child>
                 <Button variant="outline">
                   {{ t("settings.account.email.change") }}
@@ -1167,11 +1045,19 @@ const getDeviceIcon = (deviceType: string) => {
                 <div>
                   <Input
                     v-model="newEmail"
+                    type="email"
+                    autocomplete="email"
                     :label="t('settings.account.email.newLabel')"
                     :placeholder="t('settings.account.email.newPlaceholder')"
                   />
                 </div>
                 <DialogFooter>
+                  <DialogClose as-child>
+                    <Button variant="outline" :disabled="changingEmail">
+                      {{ t("actions.cancel") }}
+                      <Kbd>Esc</Kbd>
+                    </Button>
+                  </DialogClose>
                   <Button
                     data-dialog-action
                     :disabled="changingEmail || !newEmail"
@@ -1196,7 +1082,7 @@ const getDeviceIcon = (deviceType: string) => {
                 {{ t("settings.account.password.description") }}
               </FieldDescription>
             </FieldContent>
-            <Dialog>
+            <Dialog v-model:open="passwordDialogOpen">
               <DialogTrigger as-child>
                 <Button variant="outline">
                   <span>
@@ -1224,11 +1110,19 @@ const getDeviceIcon = (deviceType: string) => {
                 <div>
                   <Input
                     v-model="newPassword"
+                    type="password"
+                    autocomplete="new-password"
                     :label="t('settings.account.password.newLabel')"
                     :placeholder="t('settings.account.password.newPlaceholder')"
                   />
                 </div>
                 <DialogFooter>
+                  <DialogClose as-child>
+                    <Button variant="outline" :disabled="changingPassword">
+                      {{ t("actions.cancel") }}
+                      <Kbd>Esc</Kbd>
+                    </Button>
+                  </DialogClose>
                   <Button
                     data-dialog-action
                     :disabled="changingPassword || !newPassword"
@@ -1298,58 +1192,12 @@ const getDeviceIcon = (deviceType: string) => {
                 </ItemDescription>
               </ItemContent>
               <ItemActions>
-                <AlertDialog>
-                  <AlertDialogTrigger as-child>
-                    <Button
-                      :disabled="unlinkingProviderMap[provider.providerId]"
-                      variant="secondary"
-                    >
-                      <Spinner
-                        v-if="unlinkingProviderMap[provider.providerId]"
-                      />
-                      <span> {{ t("common.remove") }} </span>
-                    </Button>
-                  </AlertDialogTrigger>
-                  <AlertDialogContent>
-                    <AlertDialogHeader>
-                      <AlertDialogTitle>
-                        {{
-                          t(
-                            "settings.account.identityProviders.removeConfirmTitle"
-                          )
-                        }}
-                      </AlertDialogTitle>
-                      <AlertDialogDescription>
-                        {{
-                          t(
-                            "settings.account.identityProviders.removeConfirmDescription",
-                            {
-                              name: getComputedProviderName(
-                                provider.providerId
-                              ),
-                            }
-                          )
-                        }}
-                      </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                      <AlertDialogCancel>
-                        {{ t("common.cancel") }}
-                        <Kbd>Esc</Kbd>
-                      </AlertDialogCancel>
-                      <AlertDialogAction
-                        :disabled="unlinkingProviderMap[provider.providerId]"
-                        @click="unlinkProvider(provider.providerId)"
-                      >
-                        <Spinner
-                          v-if="unlinkingProviderMap[provider.providerId]"
-                        />
-                        {{ t("common.remove") }}
-                        <Kbd>↩</Kbd>
-                      </AlertDialogAction>
-                    </AlertDialogFooter>
-                  </AlertDialogContent>
-                </AlertDialog>
+                <Button
+                  variant="secondary"
+                  @click="unlinkProviderDialog.open(provider)"
+                >
+                  {{ t("common.remove") }}
+                </Button>
               </ItemActions>
             </Item>
           </ItemGroup>
@@ -1384,65 +1232,28 @@ const getDeviceIcon = (deviceType: string) => {
                 {{ t("settings.account.mfa.description") }}
               </FieldDescription>
             </FieldContent>
-            <ButtonGroup>
-              <ButtonGroup v-if="disablingMfa">
-                <InputGroupButton variant="ghost" size="icon-xs" disabled>
-                  <Spinner />
-                </InputGroupButton>
-              </ButtonGroup>
-              <ButtonGroup>
-                <!-- When enabled, wrap switch in AlertDialog for disable confirmation -->
-                <AlertDialog v-if="isMfaEnabled">
-                  <AlertDialogTrigger as-child>
-                    <span class="inline-block">
-                      <Switch :model-value="true" :disabled="disablingMfa" />
-                    </span>
-                  </AlertDialogTrigger>
-                  <AlertDialogContent>
-                    <AlertDialogHeader>
-                      <AlertDialogTitle>
-                        {{ t("settings.account.mfa.disableConfirmTitle") }}
-                      </AlertDialogTitle>
-                      <AlertDialogDescription>
-                        {{
-                          t("settings.account.mfa.disableConfirmDescription")
-                        }}
-                      </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                      <AlertDialogCancel>
-                        {{ t("common.cancel") }}
-                        <Kbd>Esc</Kbd>
-                      </AlertDialogCancel>
-                      <AlertDialogAction
-                        :disabled="disablingMfa"
-                        @click="disableAllMfa"
-                      >
-                        <Spinner v-if="disablingMfa" />
-                        {{ t("settings.account.mfa.disable") }}
-                        <Kbd>↩</Kbd>
-                      </AlertDialogAction>
-                    </AlertDialogFooter>
-                  </AlertDialogContent>
-                </AlertDialog>
-                <!-- When disabled, switch prompts to enroll first -->
-                <TooltipProvider v-else>
-                  <Tooltip>
-                    <TooltipTrigger as-child>
-                      <span class="inline-block">
-                        <Switch
-                          :model-value="false"
-                          @update:model-value="handleMfaToggle"
-                        />
-                      </span>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      {{ t("settings.account.mfa.enrollFirst") }}
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
-              </ButtonGroup>
-            </ButtonGroup>
+            <!-- Turning it off opens the disable confirm -->
+            <Switch
+              v-if="isMfaEnabled"
+              :model-value="true"
+              @update:model-value="handleMfaToggle"
+            />
+            <!-- When disabled, switch prompts to enroll first -->
+            <TooltipProvider v-else>
+              <Tooltip>
+                <TooltipTrigger as-child>
+                  <span class="inline-block">
+                    <Switch
+                      :model-value="false"
+                      @update:model-value="handleMfaToggle"
+                    />
+                  </span>
+                </TooltipTrigger>
+                <TooltipContent>
+                  {{ t("settings.account.mfa.enrollFirst") }}
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
           </Field>
 
           <!-- Enrolled factors -->
@@ -1459,45 +1270,12 @@ const getDeviceIcon = (deviceType: string) => {
                 {{ getFactorDescription(factor) }}
               </FieldDescription>
             </FieldContent>
-            <AlertDialog>
-              <AlertDialogTrigger as-child>
-                <Button
-                  variant="secondary"
-                  :disabled="unenrollingFactorUid === factor.uid"
-                >
-                  <Spinner v-if="unenrollingFactorUid === factor.uid" />
-                  {{ t("common.remove") }}
-                </Button>
-              </AlertDialogTrigger>
-              <AlertDialogContent>
-                <AlertDialogHeader>
-                  <AlertDialogTitle>
-                    {{ t("settings.account.mfa.removeConfirmTitle") }}
-                  </AlertDialogTitle>
-                  <AlertDialogDescription>
-                    {{
-                      t("settings.account.mfa.removeConfirmDescription", {
-                        name: getFactorTitle(factor),
-                      })
-                    }}
-                  </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                  <AlertDialogCancel>
-                    {{ t("common.cancel") }}
-                    <Kbd>Esc</Kbd>
-                  </AlertDialogCancel>
-                  <AlertDialogAction
-                    :disabled="unenrollingFactorUid === factor.uid"
-                    @click="unenrollFactor(factor)"
-                  >
-                    <Spinner v-if="unenrollingFactorUid === factor.uid" />
-                    {{ t("common.remove") }}
-                    <Kbd>↩</Kbd>
-                  </AlertDialogAction>
-                </AlertDialogFooter>
-              </AlertDialogContent>
-            </AlertDialog>
+            <Button
+              variant="secondary"
+              @click="removeFactorDialog.open(factor)"
+            >
+              {{ t("common.remove") }}
+            </Button>
           </Field>
 
           <!-- Add authenticator app (only if not already enrolled) -->
@@ -1649,9 +1427,6 @@ const getDeviceIcon = (deviceType: string) => {
                   v-model="smsPhoneNumber"
                   :placeholder="t('settings.account.mfa.phonePlaceholder')"
                   type="tel"
-                  @keydown.enter="
-                    smsPhoneNumber && !smsLoading && sendSmsVerification()
-                  "
                 />
               </Field>
               <div :id="smsRecaptchaContainerId" class="hidden" />
@@ -1734,48 +1509,23 @@ const getDeviceIcon = (deviceType: string) => {
                 {{ t("settings.account.devices.logoutAllDescription") }}
               </FieldDescription>
             </FieldContent>
-            <AlertDialog>
-              <AlertDialogTrigger as-child>
-                <Button
-                  variant="outline"
-                  :disabled="isRevoking('revokeAll') || otherSessionCount === 0"
-                >
-                  <Spinner v-if="isRevoking('revokeAll')" />
+            <ConfirmAction
+              :title="t('settings.account.devices.logoutAllConfirmTitle')"
+              :description="
+                t('settings.account.devices.logoutAllConfirmDescription', {
+                  count: otherSessionCount,
+                })
+              "
+              :action-label="t('settings.account.devices.logoutAllButton')"
+              destructive
+              :on-confirm="handleRevokeAll"
+            >
+              <template #trigger>
+                <Button variant="outline" :disabled="otherSessionCount === 0">
                   {{ t("settings.account.devices.logoutAllButton") }}
                 </Button>
-              </AlertDialogTrigger>
-              <AlertDialogContent>
-                <AlertDialogHeader>
-                  <AlertDialogTitle>
-                    {{ t("settings.account.devices.logoutAllConfirmTitle") }}
-                  </AlertDialogTitle>
-                  <AlertDialogDescription>
-                    {{
-                      t(
-                        "settings.account.devices.logoutAllConfirmDescription",
-                        {
-                          count: otherSessionCount,
-                        }
-                      )
-                    }}
-                  </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                  <AlertDialogCancel>
-                    {{ t("common.cancel") }}
-                    <Kbd>Esc</Kbd>
-                  </AlertDialogCancel>
-                  <AlertDialogAction
-                    :disabled="isRevoking('revokeAll')"
-                    @click="handleRevokeAll"
-                  >
-                    <Spinner v-if="isRevoking('revokeAll')" />
-                    {{ t("settings.account.devices.logoutAllButton") }}
-                    <Kbd>↩</Kbd>
-                  </AlertDialogAction>
-                </AlertDialogFooter>
-              </AlertDialogContent>
-            </AlertDialog>
+              </template>
+            </ConfirmAction>
           </Field>
           <ItemGroup v-if="sessionRows.length > 0">
             <Item
@@ -1815,50 +1565,13 @@ const getDeviceIcon = (deviceType: string) => {
                       {{ t("settings.account.devices.logoutDevice") }}
                     </Button>
                   </template>
-                  <AlertDialog v-else>
-                    <AlertDialogTrigger as-child>
-                      <Button
-                        variant="secondary"
-                        :disabled="isRevoking(session.id)"
-                      >
-                        <Spinner v-if="isRevoking(session.id)" />
-                        {{ t("settings.account.devices.logoutDevice") }}
-                      </Button>
-                    </AlertDialogTrigger>
-                    <AlertDialogContent>
-                      <AlertDialogHeader>
-                        <AlertDialogTitle>
-                          {{
-                            t(
-                              "settings.account.devices.logoutDeviceConfirmTitle"
-                            )
-                          }}
-                        </AlertDialogTitle>
-                        <AlertDialogDescription>
-                          {{
-                            t(
-                              "settings.account.devices.logoutDeviceConfirmDescription",
-                              { device: session.deviceName }
-                            )
-                          }}
-                        </AlertDialogDescription>
-                      </AlertDialogHeader>
-                      <AlertDialogFooter>
-                        <AlertDialogCancel>
-                          {{ t("common.cancel") }}
-                          <Kbd>Esc</Kbd>
-                        </AlertDialogCancel>
-                        <AlertDialogAction
-                          :disabled="isRevoking(session.id)"
-                          @click="handleRevokeSession(session.id)"
-                        >
-                          <Spinner v-if="isRevoking(session.id)" />
-                          {{ t("settings.account.devices.logoutDevice") }}
-                          <Kbd>↩</Kbd>
-                        </AlertDialogAction>
-                      </AlertDialogFooter>
-                    </AlertDialogContent>
-                  </AlertDialog>
+                  <Button
+                    v-else
+                    variant="secondary"
+                    @click="revokeSessionDialog.open(session)"
+                  >
+                    {{ t("settings.account.devices.logoutDevice") }}
+                  </Button>
                 </div>
               </ItemActions>
             </Item>
@@ -1894,50 +1607,74 @@ const getDeviceIcon = (deviceType: string) => {
                 {{ t("settings.account.deleteAccount.description") }}
               </FieldDescription>
             </FieldContent>
-            <AlertDialog>
-              <AlertDialogTrigger as-child>
-                <Button>
-                  <Spinner v-if="deletingAccount" />
+            <ConfirmAction
+              :title="t('settings.account.deleteAccount.title')"
+              :description="t('settings.account.deleteAccount.confirm')"
+              :action-label="t('actions.delete')"
+              destructive
+              :confirm-phrase="
+                t('settings.account.deleteAccount.confirmPhrase')
+              "
+              :on-confirm="deleteAccount"
+            >
+              <template #trigger>
+                <Button variant="destructive">
                   {{ t("settings.account.deleteAccount.title") }}
                 </Button>
-              </AlertDialogTrigger>
-              <AlertDialogContent>
-                <AlertDialogHeader>
-                  <AlertDialogTitle>
-                    {{ t("settings.account.deleteAccount.title") }}
-                  </AlertDialogTitle>
-                  <AlertDialogDescription>
-                    {{ t("settings.account.deleteAccount.confirm") }}
-                  </AlertDialogDescription>
-                </AlertDialogHeader>
-                <span class="text-destructive text-xs">
-                  {{ t("settings.account.deleteAccount.confirmLabel") }}
-                </span>
-                <Input
-                  v-model="deleteAccountInput"
-                  :placeholder="'delete my account'"
-                  :disabled="deletingAccount"
-                />
-                <AlertDialogFooter>
-                  <AlertDialogCancel @click="deleteAccountInput = ''">
-                    {{ t("common.cancel") }}
-                    <Kbd>Esc</Kbd>
-                  </AlertDialogCancel>
-                  <AlertDialogAction
-                    :disabled="deletingAccount || !isDeleteAccountInputValid"
-                    @click="deleteAccount"
-                  >
-                    <Spinner v-if="deletingAccount" />
-                    {{ t("common.delete") }}
-                    <Kbd>↩</Kbd>
-                  </AlertDialogAction>
-                </AlertDialogFooter>
-              </AlertDialogContent>
-            </AlertDialog>
+              </template>
+            </ConfirmAction>
           </Field>
         </FieldSet>
       </FieldGroup>
     </div>
+    <ConfirmAction
+      v-model:open="unlinkProviderDialog.isOpen.value"
+      :title="t('settings.account.identityProviders.removeConfirmTitle')"
+      :description="
+        t('settings.account.identityProviders.removeConfirmDescription', {
+          name: getComputedProviderName(
+            unlinkProviderDialog.item.value?.providerId ?? ''
+          ),
+        })
+      "
+      :action-label="t('common.remove')"
+      destructive
+      :on-confirm="unlinkProvider"
+    />
+    <ConfirmAction
+      v-model:open="disableMfaDialogOpen"
+      :title="t('settings.account.mfa.disableConfirmTitle')"
+      :description="t('settings.account.mfa.disableConfirmDescription')"
+      :action-label="t('settings.account.mfa.disable')"
+      destructive
+      :on-confirm="disableAllMfa"
+    />
+    <ConfirmAction
+      v-model:open="removeFactorDialog.isOpen.value"
+      :title="t('settings.account.mfa.removeConfirmTitle')"
+      :description="
+        t('settings.account.mfa.removeConfirmDescription', {
+          name: removeFactorDialog.item.value
+            ? getFactorTitle(removeFactorDialog.item.value)
+            : '',
+        })
+      "
+      :action-label="t('common.remove')"
+      destructive
+      :on-confirm="unenrollFactor"
+    />
+    <ConfirmAction
+      v-model:open="revokeSessionDialog.isOpen.value"
+      :title="t('settings.account.devices.logoutDeviceConfirmTitle')"
+      :description="
+        t('settings.account.devices.logoutDeviceConfirmDescription', {
+          device: revokeSessionDialog.item.value?.deviceName ?? '',
+        })
+      "
+      :action-label="t('settings.account.devices.logoutDevice')"
+      destructive
+      :on-confirm="handleRevokeSession"
+    />
     <Transition
       enter-active-class="transition duration-200 ease-out"
       leave-active-class="transition duration-150 ease-in"

@@ -47,9 +47,11 @@ const {
 
 const openShortcuts = ref(false)
 
-emitter.on("Dialog.Shortcuts.Open", () => {
+const toggleShortcuts = () => {
   openShortcuts.value = !openShortcuts.value
-})
+}
+emitter.on("Dialog.Shortcuts.Open", toggleShortcuts)
+onBeforeUnmount(() => emitter.off("Dialog.Shortcuts.Open", toggleShortcuts))
 
 const search = ref("")
 
@@ -270,7 +272,7 @@ const isEditing = (shortcut: Shortcut): boolean =>
 <template>
   <Sheet v-model:open="openShortcuts">
     <SheetContent
-      class="m-2 mt-[calc(var(--spacing-titlebar-height,0px)+(--spacing(2)))] h-auto! gap-0 overflow-clip rounded-4xl border"
+      class="rounded-surface m-2 mt-[calc(var(--spacing-titlebar-height,0px)+(--spacing(2)))] h-auto! gap-0 overflow-clip border"
       :class="{ 'mt-12': isTauri && !isFullscreen }"
     >
       <SheetHeader class="gap-4">

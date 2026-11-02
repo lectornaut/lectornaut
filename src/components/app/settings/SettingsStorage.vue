@@ -10,6 +10,7 @@ import {
   IconTrash2,
 } from "@/data/icons"
 import { useAuthStore } from "@/stores/authStore"
+import { useWorkspaceStore } from "@/stores/workspaceStore"
 import { ROOT_PARENT_ID, type WorkspaceNodeScope } from "@/types/nodes"
 import { storeToRefs } from "pinia"
 import { computed, ref, watch } from "vue"
@@ -25,6 +26,9 @@ const { t } = useI18n()
 const { currentTeamId, currentWorkspaceId } = storeToRefs(useAuthStore())
 const { canManageWorkspaceStorage: canManage } =
   useCurrentTeamRole(currentTeamId)
+// Every delete here wipes workspace data for all members, so each one asks
+// for the workspace name as its typed confirmation.
+const { currentWorkspace } = storeToRefs(useWorkspaceStore())
 
 const { listChildren, deleteNode, archiveNode } = useNodes()
 
@@ -111,7 +115,7 @@ const refreshAll = async () => {
     writeActiveCount.value = write.active
   } catch (error) {
     console.error("[SettingsStorage] refresh failed:", error)
-    toast.error("Failed to read workspace contents.")
+    toast.error(t("settings.storage.refreshError"))
   } finally {
     isLoadingCounts.value = false
   }
@@ -140,11 +144,13 @@ const openArchiveDialog = (scope: WorkspaceNodeScope) => {
   }
 }
 
+// Resolves on success (ConfirmAction closes); returns `false` on failure so
+// the dialog stays open with the toast explaining why.
 const archiveAllInScope = async (scope: WorkspaceNodeScope) => {
   const teamId = currentTeamId.value
   const workspaceId = currentWorkspaceId.value
-  if (!teamId || !workspaceId) return
-  if (bulkBusy.value) return
+  if (!teamId || !workspaceId) return false
+  if (bulkBusy.value) return false
 
   bulkBusy.value = true
   try {
@@ -169,22 +175,25 @@ const archiveAllInScope = async (scope: WorkspaceNodeScope) => {
       if (!result.hasMore) break
     }
     toast.success(
-      scope === "code"
-        ? "All code documents archived."
-        : "All write documents archived."
+      t(
+        scope === "code"
+          ? "settings.storage.archiveCodes.success"
+          : "settings.storage.archiveWrites.success"
+      )
     )
   } catch (error) {
     console.error(`[SettingsStorage] bulk archive ${scope} failed:`, error)
     toast.error(
-      scope === "code"
-        ? "Failed to archive all code documents."
-        : "Failed to archive all write documents."
+      t(
+        scope === "code"
+          ? "settings.storage.archiveCodes.error"
+          : "settings.storage.archiveWrites.error"
+      )
     )
+    return false
   } finally {
     bulkBusy.value = false
-    archiveCodesDialogOpen.value = false
-    archiveWritesDialogOpen.value = false
-    await refreshAll()
+    void refreshAll()
   }
 }
 
@@ -209,8 +218,8 @@ const openDeleteDialog = (scope: WorkspaceNodeScope) => {
 const deleteAllInScope = async (scope: WorkspaceNodeScope) => {
   const teamId = currentTeamId.value
   const workspaceId = currentWorkspaceId.value
-  if (!teamId || !workspaceId) return
-  if (bulkBusy.value) return
+  if (!teamId || !workspaceId) return false
+  if (bulkBusy.value) return false
 
   bulkBusy.value = true
   try {
@@ -236,22 +245,25 @@ const deleteAllInScope = async (scope: WorkspaceNodeScope) => {
       if (!result.hasMore) break
     }
     toast.success(
-      scope === "code"
-        ? "All code documents deleted."
-        : "All write documents deleted."
+      t(
+        scope === "code"
+          ? "settings.storage.deleteCodes.success"
+          : "settings.storage.deleteWrites.success"
+      )
     )
   } catch (error) {
     console.error(`[SettingsStorage] bulk delete ${scope} failed:`, error)
     toast.error(
-      scope === "code"
-        ? "Failed to delete all code documents."
-        : "Failed to delete all write documents."
+      t(
+        scope === "code"
+          ? "settings.storage.deleteCodes.error"
+          : "settings.storage.deleteWrites.error"
+      )
     )
+    return false
   } finally {
     bulkBusy.value = false
-    deleteCodesDialogOpen.value = false
-    deleteWritesDialogOpen.value = false
-    await refreshAll()
+    void refreshAll()
   }
 }
 
@@ -281,28 +293,26 @@ const archiveMemoriesDialogOpen = ref(false)
 const deleteMemoriesDialogOpen = ref(false)
 
 const submitArchiveMemories = async () => {
-  if (isMutatingMemories.value) return
+  if (isMutatingMemories.value) return false
   try {
     const count = await archiveAllMemories()
     toast.success(t("settings.storage.archiveMemories.success", { count }))
   } catch (error) {
     console.error("[SettingsStorage] archive memories failed:", error)
     toast.error(t("settings.storage.archiveMemories.error"))
-  } finally {
-    archiveMemoriesDialogOpen.value = false
+    return false
   }
 }
 
 const submitDeleteMemories = async () => {
-  if (isMutatingMemories.value) return
+  if (isMutatingMemories.value) return false
   try {
     const count = await purgeAllMemories()
     toast.success(t("settings.storage.deleteMemories.success", { count }))
   } catch (error) {
     console.error("[SettingsStorage] delete memories failed:", error)
     toast.error(t("settings.storage.deleteMemories.error"))
-  } finally {
-    deleteMemoriesDialogOpen.value = false
+    return false
   }
 }
 </script>
@@ -383,6 +393,7 @@ const submitDeleteMemories = async () => {
               </FieldDescription>
             </FieldContent>
             <Button
+              variant="destructive"
               :disabled="isDisabled || writeRootCount === 0"
               @click="openDeleteDialog('write')"
             >
@@ -438,6 +449,7 @@ const submitDeleteMemories = async () => {
               </FieldDescription>
             </FieldContent>
             <Button
+              variant="destructive"
               :disabled="isDisabled || codeRootCount === 0"
               @click="openDeleteDialog('code')"
             >
@@ -493,6 +505,7 @@ const submitDeleteMemories = async () => {
               </FieldDescription>
             </FieldContent>
             <Button
+              variant="destructive"
               :disabled="isMutatingMemories || memoryTotalCount === 0"
               @click="deleteMemoriesDialogOpen = true"
             >
@@ -504,191 +517,87 @@ const submitDeleteMemories = async () => {
       </FieldSet>
     </FieldGroup>
 
-    <AlertDialog v-model:open="archiveCodesDialogOpen">
-      <AlertDialogContent>
-        <AlertDialogHeader>
-          <AlertDialogTitle>
-            {{ t("settings.storage.archiveCodes.confirmTitle") }}
-          </AlertDialogTitle>
-          <AlertDialogDescription>
-            {{
-              t("settings.storage.archiveCodes.confirmBody", {
-                count: codeActiveCount,
-              })
-            }}
-          </AlertDialogDescription>
-        </AlertDialogHeader>
-        <AlertDialogFooter>
-          <AlertDialogCancel :disabled="bulkBusy">
-            {{ t("actions.cancel") }}
-            <Kbd>Esc</Kbd>
-          </AlertDialogCancel>
-          <AlertDialogAction
-            :disabled="bulkBusy || codeActiveCount === 0"
-            @click.prevent="submitArchiveCodes"
-          >
-            <Spinner v-if="bulkBusy" />
-            {{ t("settings.storage.archiveCodes.action") }}
-            <Kbd>↩</Kbd>
-          </AlertDialogAction>
-        </AlertDialogFooter>
-      </AlertDialogContent>
-    </AlertDialog>
+    <ConfirmAction
+      v-model:open="archiveCodesDialogOpen"
+      :title="t('settings.storage.archiveCodes.confirmTitle')"
+      :description="
+        t('settings.storage.archiveCodes.confirmBody', {
+          count: codeActiveCount,
+        })
+      "
+      :action-label="t('settings.storage.archiveCodes.action')"
+      :disabled="codeActiveCount === 0"
+      :on-confirm="submitArchiveCodes"
+    />
 
-    <AlertDialog v-model:open="archiveWritesDialogOpen">
-      <AlertDialogContent>
-        <AlertDialogHeader>
-          <AlertDialogTitle>
-            {{ t("settings.storage.archiveWrites.confirmTitle") }}
-          </AlertDialogTitle>
-          <AlertDialogDescription>
-            {{
-              t("settings.storage.archiveWrites.confirmBody", {
-                count: writeActiveCount,
-              })
-            }}
-          </AlertDialogDescription>
-        </AlertDialogHeader>
-        <AlertDialogFooter>
-          <AlertDialogCancel :disabled="bulkBusy">
-            {{ t("actions.cancel") }}
-            <Kbd>Esc</Kbd>
-          </AlertDialogCancel>
-          <AlertDialogAction
-            :disabled="bulkBusy || writeActiveCount === 0"
-            @click.prevent="submitArchiveWrites"
-          >
-            <Spinner v-if="bulkBusy" />
-            {{ t("settings.storage.archiveWrites.action") }}
-            <Kbd>↩</Kbd>
-          </AlertDialogAction>
-        </AlertDialogFooter>
-      </AlertDialogContent>
-    </AlertDialog>
+    <ConfirmAction
+      v-model:open="archiveWritesDialogOpen"
+      :title="t('settings.storage.archiveWrites.confirmTitle')"
+      :description="
+        t('settings.storage.archiveWrites.confirmBody', {
+          count: writeActiveCount,
+        })
+      "
+      :action-label="t('settings.storage.archiveWrites.action')"
+      :disabled="writeActiveCount === 0"
+      :on-confirm="submitArchiveWrites"
+    />
 
-    <AlertDialog v-model:open="deleteCodesDialogOpen">
-      <AlertDialogContent>
-        <AlertDialogHeader>
-          <AlertDialogTitle>
-            {{ t("settings.storage.deleteCodes.confirmTitle") }}
-          </AlertDialogTitle>
-          <AlertDialogDescription>
-            {{
-              t("settings.storage.deleteCodes.confirmBody", {
-                count: codeRootCount,
-              })
-            }}
-          </AlertDialogDescription>
-        </AlertDialogHeader>
-        <AlertDialogFooter>
-          <AlertDialogCancel :disabled="bulkBusy">
-            {{ t("actions.cancel") }}
-            <Kbd>Esc</Kbd>
-          </AlertDialogCancel>
-          <AlertDialogAction
-            :disabled="bulkBusy || codeRootCount === 0"
-            @click.prevent="submitDeleteCodes"
-          >
-            <Spinner v-if="bulkBusy" />
-            {{ t("settings.storage.deleteCodes.action") }}
-            <Kbd>↩</Kbd>
-          </AlertDialogAction>
-        </AlertDialogFooter>
-      </AlertDialogContent>
-    </AlertDialog>
+    <ConfirmAction
+      v-model:open="deleteCodesDialogOpen"
+      :title="t('settings.storage.deleteCodes.confirmTitle')"
+      :description="
+        t('settings.storage.deleteCodes.confirmBody', { count: codeRootCount })
+      "
+      :action-label="t('settings.storage.deleteCodes.action')"
+      destructive
+      :confirm-phrase="currentWorkspace?.name"
+      :disabled="codeRootCount === 0"
+      :on-confirm="submitDeleteCodes"
+    />
 
-    <AlertDialog v-model:open="deleteWritesDialogOpen">
-      <AlertDialogContent>
-        <AlertDialogHeader>
-          <AlertDialogTitle>
-            {{ t("settings.storage.deleteWrites.confirmTitle") }}
-          </AlertDialogTitle>
-          <AlertDialogDescription>
-            {{
-              t("settings.storage.deleteWrites.confirmBody", {
-                count: writeRootCount,
-              })
-            }}
-          </AlertDialogDescription>
-        </AlertDialogHeader>
-        <AlertDialogFooter>
-          <AlertDialogCancel :disabled="bulkBusy">
-            {{ t("actions.cancel") }}
-            <Kbd>Esc</Kbd>
-          </AlertDialogCancel>
-          <AlertDialogAction
-            :disabled="bulkBusy || writeRootCount === 0"
-            @click.prevent="submitDeleteWrites"
-          >
-            <Spinner v-if="bulkBusy" />
-            {{ t("settings.storage.deleteWrites.action") }}
-            <Kbd>↩</Kbd>
-          </AlertDialogAction>
-        </AlertDialogFooter>
-      </AlertDialogContent>
-    </AlertDialog>
+    <ConfirmAction
+      v-model:open="deleteWritesDialogOpen"
+      :title="t('settings.storage.deleteWrites.confirmTitle')"
+      :description="
+        t('settings.storage.deleteWrites.confirmBody', {
+          count: writeRootCount,
+        })
+      "
+      :action-label="t('settings.storage.deleteWrites.action')"
+      destructive
+      :confirm-phrase="currentWorkspace?.name"
+      :disabled="writeRootCount === 0"
+      :on-confirm="submitDeleteWrites"
+    />
 
     <!-- Archive all memories — reversible, so no "cannot be undone" warning. -->
-    <AlertDialog v-model:open="archiveMemoriesDialogOpen">
-      <AlertDialogContent>
-        <AlertDialogHeader>
-          <AlertDialogTitle>
-            {{ t("settings.storage.archiveMemories.confirmTitle") }}
-          </AlertDialogTitle>
-          <AlertDialogDescription>
-            {{
-              t("settings.storage.archiveMemories.confirmBody", {
-                count: memoryActiveCount,
-              })
-            }}
-          </AlertDialogDescription>
-        </AlertDialogHeader>
-        <AlertDialogFooter>
-          <AlertDialogCancel :disabled="isMutatingMemories">
-            {{ t("actions.cancel") }}
-            <Kbd>Esc</Kbd>
-          </AlertDialogCancel>
-          <AlertDialogAction
-            :disabled="isMutatingMemories || memoryActiveCount === 0"
-            @click.prevent="submitArchiveMemories"
-          >
-            <Spinner v-if="isMutatingMemories" />
-            {{ t("settings.storage.archiveMemories.action") }}
-            <Kbd>↩</Kbd>
-          </AlertDialogAction>
-        </AlertDialogFooter>
-      </AlertDialogContent>
-    </AlertDialog>
+    <ConfirmAction
+      v-model:open="archiveMemoriesDialogOpen"
+      :title="t('settings.storage.archiveMemories.confirmTitle')"
+      :description="
+        t('settings.storage.archiveMemories.confirmBody', {
+          count: memoryActiveCount,
+        })
+      "
+      :action-label="t('settings.storage.archiveMemories.action')"
+      :disabled="memoryActiveCount === 0"
+      :on-confirm="submitArchiveMemories"
+    />
 
-    <AlertDialog v-model:open="deleteMemoriesDialogOpen">
-      <AlertDialogContent>
-        <AlertDialogHeader>
-          <AlertDialogTitle>
-            {{ t("settings.storage.deleteMemories.confirmTitle") }}
-          </AlertDialogTitle>
-          <AlertDialogDescription>
-            {{
-              t("settings.storage.deleteMemories.confirmBody", {
-                count: memoryTotalCount,
-              })
-            }}
-          </AlertDialogDescription>
-        </AlertDialogHeader>
-        <AlertDialogFooter>
-          <AlertDialogCancel :disabled="isMutatingMemories">
-            {{ t("actions.cancel") }}
-            <Kbd>Esc</Kbd>
-          </AlertDialogCancel>
-          <AlertDialogAction
-            :disabled="isMutatingMemories || memoryTotalCount === 0"
-            @click.prevent="submitDeleteMemories"
-          >
-            <Spinner v-if="isMutatingMemories" />
-            {{ t("settings.storage.deleteMemories.action") }}
-            <Kbd>↩</Kbd>
-          </AlertDialogAction>
-        </AlertDialogFooter>
-      </AlertDialogContent>
-    </AlertDialog>
+    <ConfirmAction
+      v-model:open="deleteMemoriesDialogOpen"
+      :title="t('settings.storage.deleteMemories.confirmTitle')"
+      :description="
+        t('settings.storage.deleteMemories.confirmBody', {
+          count: memoryTotalCount,
+        })
+      "
+      :action-label="t('settings.storage.deleteMemories.action')"
+      destructive
+      :confirm-phrase="currentWorkspace?.name"
+      :disabled="memoryTotalCount === 0"
+      :on-confirm="submitDeleteMemories"
+    />
   </div>
 </template>

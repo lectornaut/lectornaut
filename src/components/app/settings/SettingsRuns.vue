@@ -143,7 +143,7 @@ const {
                 :columns="columns"
                 :column-pinning="{ start: ['select'], end: ['actions'] }"
                 data-table-frame
-                class="overflow-clip rounded-4xl border"
+                class="rounded-surface overflow-clip border"
               >
                 <template #expanded="{ row }">
                   <RunDetails :run="row.original.run" />

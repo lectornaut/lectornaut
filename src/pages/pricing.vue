@@ -337,12 +337,12 @@ const comparisonPlans = computed(() => [
     </div>
     <div class="px-8 py-4">
       <Tabs v-model="activeBillingDuration" class="grid w-full gap-10">
-        <TabsList class="bg-input/50 mx-auto h-9! p-0">
+        <TabsList class="bg-input/50 h-control! mx-auto p-0">
           <TabsTrigger
             v-for="item in billingDuration"
             :key="item.value"
             :value="item.value"
-            class="data-[state=active]:border-border! data-[state=active]:bg-background h-9"
+            class="data-[state=active]:border-border! data-[state=active]:bg-background h-control"
           >
             {{ item.title }}
           </TabsTrigger>

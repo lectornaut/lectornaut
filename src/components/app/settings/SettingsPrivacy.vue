@@ -41,22 +41,24 @@ const openArchiveDialog = () => {
 }
 
 const submitArchiveAll = async () => {
-  if (bulkBusy.value) return
+  if (bulkBusy.value) return false
   // Snapshot ids before the loop — the underlying reactive collection
   // mutates as each archive lands (the row moves from `mySessions`
   // into `archivedMySessions`), which would otherwise shift the
   // iteration target out from under us.
   const targets = mySessions.value.map((s) => s.id)
-  if (targets.length === 0) {
-    archiveDialogOpen.value = false
-    return
-  }
+  if (targets.length === 0) return
   bulkBusy.value = true
   try {
+    let failed = false
     for (const id of targets) {
-      await archiveSession(id, true)
+      if (!(await archiveSession(id, true))) failed = true
     }
-    archiveDialogOpen.value = false
+    if (failed) return false
+  } catch (error) {
+    console.error("[SettingsPrivacy] bulk archive chats failed:", error)
+    toast.error(t("settings.privacy.archiveAll.error"))
+    return false
   } finally {
     bulkBusy.value = false
   }
@@ -72,21 +74,23 @@ const openDeleteDialog = () => {
 }
 
 const submitDeleteAll = async () => {
-  if (bulkBusy.value) return
+  if (bulkBusy.value) return false
   const targets = [
     ...mySessions.value.map((s) => s.id),
     ...archivedMySessions.value.map((s) => s.id),
   ]
-  if (targets.length === 0) {
-    deleteDialogOpen.value = false
-    return
-  }
+  if (targets.length === 0) return
   bulkBusy.value = true
   try {
+    let failed = false
     for (const id of targets) {
-      await removeSession(id)
+      if (!(await removeSession(id))) failed = true
     }
-    deleteDialogOpen.value = false
+    if (failed) return false
+  } catch (error) {
+    console.error("[SettingsPrivacy] bulk delete chats failed:", error)
+    toast.error(t("settings.privacy.deleteAll.error"))
+    return false
   } finally {
     bulkBusy.value = false
   }
@@ -115,28 +119,26 @@ const archiveMemoriesDialogOpen = ref(false)
 const deleteMemoriesDialogOpen = ref(false)
 
 const submitArchiveMemories = async () => {
-  if (isMutatingMemories.value) return
+  if (isMutatingMemories.value) return false
   try {
     const count = await archiveMyPrivate()
     toast.success(t("settings.privacy.archiveMemories.success", { count }))
   } catch (error) {
     console.error("[SettingsPrivacy] archive private memories failed:", error)
     toast.error(t("settings.privacy.archiveMemories.error"))
-  } finally {
-    archiveMemoriesDialogOpen.value = false
+    return false
   }
 }
 
 const submitDeleteMemories = async () => {
-  if (isMutatingMemories.value) return
+  if (isMutatingMemories.value) return false
   try {
     const count = await purgeMyPrivate()
     toast.success(t("settings.privacy.deleteMemories.success", { count }))
   } catch (error) {
     console.error("[SettingsPrivacy] delete private memories failed:", error)
     toast.error(t("settings.privacy.deleteMemories.error"))
-  } finally {
-    deleteMemoriesDialogOpen.value = false
+    return false
   }
 }
 </script>
@@ -195,6 +197,7 @@ const submitDeleteMemories = async () => {
             </FieldDescription>
           </FieldContent>
           <Button
+            variant="destructive"
             :disabled="isDisabled || totalOwnedCount === 0"
             @click="openDeleteDialog"
           >
@@ -259,6 +262,7 @@ const submitDeleteMemories = async () => {
             </FieldDescription>
           </FieldContent>
           <Button
+            variant="destructive"
             :disabled="isMutatingMemories || totalMemoryCount === 0"
             @click="deleteMemoriesDialogOpen = true"
           >
@@ -269,129 +273,60 @@ const submitDeleteMemories = async () => {
       </FieldSet>
     </FieldGroup>
 
-    <AlertDialog v-model:open="archiveDialogOpen">
-      <AlertDialogContent>
-        <AlertDialogHeader>
-          <AlertDialogTitle>
-            {{ t("settings.privacy.archiveAll.confirmTitle") }}
-          </AlertDialogTitle>
-          <AlertDialogDescription>
-            {{
-              t("settings.privacy.archiveAll.confirmBody", {
-                count: activeOwnedCount,
-              })
-            }}
-          </AlertDialogDescription>
-        </AlertDialogHeader>
-        <AlertDialogFooter>
-          <AlertDialogCancel :disabled="bulkBusy">
-            {{ t("actions.cancel") }}
-            <Kbd>Esc</Kbd>
-          </AlertDialogCancel>
-          <AlertDialogAction
-            :disabled="bulkBusy || activeOwnedCount === 0"
-            @click.prevent="submitArchiveAll"
-          >
-            <Spinner v-if="bulkBusy" />
-            {{ t("settings.privacy.archiveAll.action") }}
-            <Kbd>↩</Kbd>
-          </AlertDialogAction>
-        </AlertDialogFooter>
-      </AlertDialogContent>
-    </AlertDialog>
+    <ConfirmAction
+      v-model:open="archiveDialogOpen"
+      :title="t('settings.privacy.archiveAll.confirmTitle')"
+      :description="
+        t('settings.privacy.archiveAll.confirmBody', {
+          count: activeOwnedCount,
+        })
+      "
+      :action-label="t('settings.privacy.archiveAll.label')"
+      :disabled="activeOwnedCount === 0"
+      :on-confirm="submitArchiveAll"
+    />
 
-    <AlertDialog v-model:open="deleteDialogOpen">
-      <AlertDialogContent>
-        <AlertDialogHeader>
-          <AlertDialogTitle>
-            {{ t("settings.privacy.deleteAll.confirmTitle") }}
-          </AlertDialogTitle>
-          <AlertDialogDescription>
-            {{
-              t("settings.privacy.deleteAll.confirmBody", {
-                count: totalOwnedCount,
-              })
-            }}
-          </AlertDialogDescription>
-        </AlertDialogHeader>
-        <AlertDialogFooter>
-          <AlertDialogCancel :disabled="bulkBusy">
-            {{ t("actions.cancel") }}
-            <Kbd>Esc</Kbd>
-          </AlertDialogCancel>
-          <AlertDialogAction
-            :disabled="bulkBusy || totalOwnedCount === 0"
-            @click.prevent="submitDeleteAll"
-          >
-            <Spinner v-if="bulkBusy" />
-            {{ t("settings.privacy.deleteAll.action") }}
-            <Kbd>↩</Kbd>
-          </AlertDialogAction>
-        </AlertDialogFooter>
-      </AlertDialogContent>
-    </AlertDialog>
+    <!-- User-scoped (own chats only): destructive, no typed phrase. -->
+    <ConfirmAction
+      v-model:open="deleteDialogOpen"
+      :title="t('settings.privacy.deleteAll.confirmTitle')"
+      :description="
+        t('settings.privacy.deleteAll.confirmBody', {
+          count: totalOwnedCount,
+        })
+      "
+      :action-label="t('settings.privacy.deleteAll.label')"
+      destructive
+      :disabled="totalOwnedCount === 0"
+      :on-confirm="submitDeleteAll"
+    />
 
     <!-- Archive my private memories — reversible, restorable per-row. -->
-    <AlertDialog v-model:open="archiveMemoriesDialogOpen">
-      <AlertDialogContent>
-        <AlertDialogHeader>
-          <AlertDialogTitle>
-            {{ t("settings.privacy.archiveMemories.confirmTitle") }}
-          </AlertDialogTitle>
-          <AlertDialogDescription>
-            {{
-              t("settings.privacy.archiveMemories.confirmBody", {
-                count: activeMemoryCount,
-              })
-            }}
-          </AlertDialogDescription>
-        </AlertDialogHeader>
-        <AlertDialogFooter>
-          <AlertDialogCancel :disabled="isMutatingMemories">
-            {{ t("actions.cancel") }}
-            <Kbd>Esc</Kbd>
-          </AlertDialogCancel>
-          <AlertDialogAction
-            :disabled="isMutatingMemories || activeMemoryCount === 0"
-            @click.prevent="submitArchiveMemories"
-          >
-            <Spinner v-if="isMutatingMemories" />
-            {{ t("settings.privacy.archiveMemories.action") }}
-            <Kbd>↩</Kbd>
-          </AlertDialogAction>
-        </AlertDialogFooter>
-      </AlertDialogContent>
-    </AlertDialog>
+    <ConfirmAction
+      v-model:open="archiveMemoriesDialogOpen"
+      :title="t('settings.privacy.archiveMemories.confirmTitle')"
+      :description="
+        t('settings.privacy.archiveMemories.confirmBody', {
+          count: activeMemoryCount,
+        })
+      "
+      :action-label="t('settings.privacy.archiveMemories.label')"
+      :disabled="activeMemoryCount === 0"
+      :on-confirm="submitArchiveMemories"
+    />
 
-    <AlertDialog v-model:open="deleteMemoriesDialogOpen">
-      <AlertDialogContent>
-        <AlertDialogHeader>
-          <AlertDialogTitle>
-            {{ t("settings.privacy.deleteMemories.confirmTitle") }}
-          </AlertDialogTitle>
-          <AlertDialogDescription>
-            {{
-              t("settings.privacy.deleteMemories.confirmBody", {
-                count: totalMemoryCount,
-              })
-            }}
-          </AlertDialogDescription>
-        </AlertDialogHeader>
-        <AlertDialogFooter>
-          <AlertDialogCancel :disabled="isMutatingMemories">
-            {{ t("actions.cancel") }}
-            <Kbd>Esc</Kbd>
-          </AlertDialogCancel>
-          <AlertDialogAction
-            :disabled="isMutatingMemories || totalMemoryCount === 0"
-            @click.prevent="submitDeleteMemories"
-          >
-            <Spinner v-if="isMutatingMemories" />
-            {{ t("settings.privacy.deleteMemories.action") }}
-            <Kbd>↩</Kbd>
-          </AlertDialogAction>
-        </AlertDialogFooter>
-      </AlertDialogContent>
-    </AlertDialog>
+    <ConfirmAction
+      v-model:open="deleteMemoriesDialogOpen"
+      :title="t('settings.privacy.deleteMemories.confirmTitle')"
+      :description="
+        t('settings.privacy.deleteMemories.confirmBody', {
+          count: totalMemoryCount,
+        })
+      "
+      :action-label="t('settings.privacy.deleteMemories.label')"
+      destructive
+      :disabled="totalMemoryCount === 0"
+      :on-confirm="submitDeleteMemories"
+    />
   </div>
 </template>

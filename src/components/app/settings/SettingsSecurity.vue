@@ -1,6 +1,6 @@
 <script lang="ts" setup>
-import { useConfirmationDialog } from "@/composables/useConfirmationDialog"
 import { useCurrentTeamRole } from "@/composables/useCurrentTeamRole"
+import { useDismissGuard } from "@/composables/useDismissGuard"
 import { useSsoConfig } from "@/composables/useSsoConfig"
 import { useTeamActions } from "@/composables/useTeamActions"
 import {
@@ -168,29 +168,24 @@ const oidcIssuer = ref("")
 const oidcClientId = ref("")
 const oidcClientSecret = ref("")
 
-// Populate form from existing config
-watch(
-  ssoConfig,
-  (config) => {
-    if (!config) return
-    ssoProtocol.value = config.protocol || "saml"
-    ssoDomains.value = config.domains || []
-    ssoEnforced.value = config.enforced || false
-    ssoAutoProvision.value = config.autoProvision || false
-    ssoDefaultRole.value = config.defaultRole || "member"
+// Populate form from existing config (or the empty defaults when none).
+const hydrateSso = (config: typeof ssoConfig.value) => {
+  ssoProtocol.value = config?.protocol || "saml"
+  ssoDomains.value = [...(config?.domains || [])]
+  ssoEnforced.value = config?.enforced || false
+  ssoAutoProvision.value = config?.autoProvision || false
+  ssoDefaultRole.value = config?.defaultRole || "member"
+  samlIdpEntityId.value = config?.saml?.idpEntityId || ""
+  samlSsoUrl.value = config?.saml?.ssoUrl || ""
+  samlCertificate.value = config?.saml?.certificate || ""
+  oidcIssuer.value = config?.oidc?.issuer || ""
+  oidcClientId.value = config?.oidc?.clientId || ""
+  oidcClientSecret.value = ""
+}
 
-    if (config.saml) {
-      samlIdpEntityId.value = config.saml.idpEntityId || ""
-      samlSsoUrl.value = config.saml.ssoUrl || ""
-      samlCertificate.value = config.saml.certificate || ""
-    }
-    if (config.oidc) {
-      oidcIssuer.value = config.oidc.issuer || ""
-      oidcClientId.value = config.oidc.clientId || ""
-    }
-  },
-  { immediate: true }
-)
+watch(ssoConfig, (config) => config && hydrateSso(config), {
+  immediate: true,
+})
 
 const canSaveSso = computed(() => {
   if (ssoDomains.value.length === 0) return false
@@ -225,6 +220,15 @@ const handleTestConnection = async () => {
 }
 
 const handleSaveSso = async () => {
+  try {
+    await persistSso()
+    ssoConfigDialogOpen.value = false
+  } catch {
+    // Already surfaced by the action runner's toast; keep the draft open.
+  }
+}
+
+const persistSso = async () => {
   const base = {
     protocol: ssoProtocol.value,
     domains: ssoDomains.value,
@@ -256,12 +260,61 @@ const handleSaveSso = async () => {
 
 const ssoConfigDialogOpen = ref(false)
 
-const deleteSsoDialog = useConfirmationDialog()
-const handleDeleteSso = () => deleteSsoDialog.confirm(() => deleteSsoConfig())
+// Dirty = the form differs from the saved config it was hydrated from on open.
+const ssoSnapshot = () =>
+  JSON.stringify([
+    ssoProtocol.value,
+    ssoDomains.value,
+    ssoEnforced.value,
+    ssoAutoProvision.value,
+    ssoDefaultRole.value,
+    samlIdpEntityId.value,
+    samlSsoUrl.value,
+    samlCertificate.value,
+    oidcIssuer.value,
+    oidcClientId.value,
+    oidcClientSecret.value,
+  ])
+const ssoBaseline = ref("")
+const ssoGuard = useDismissGuard(
+  ssoConfigDialogOpen,
+  () => ssoSnapshot() !== ssoBaseline.value
+)
+
+// Every open starts from the saved config, so a dismissed draft never
+// lingers into the next open.
+watch(ssoConfigDialogOpen, (isOpen) => {
+  if (!isOpen) return
+  hydrateSso(ssoConfig.value)
+  ssoBaseline.value = ssoSnapshot()
+})
+
+const deleteSsoOpen = ref(false)
+const handleDeleteSso = async () => {
+  await deleteSsoConfig()
+  ssoConfigDialogOpen.value = false
+}
 </script>
 
 <template>
   <div class="p-6">
+    <ConfirmAction
+      v-model:open="deleteSsoOpen"
+      :title="t('settings.security.sso.removeConfirmTitle')"
+      :description="t('settings.security.sso.removeConfirmDescription')"
+      :action-label="t('settings.security.sso.removeLabel')"
+      destructive
+      :on-confirm="handleDeleteSso"
+    />
+    <ConfirmAction
+      v-model:open="ssoGuard.confirmOpen.value"
+      :title="t('common.discardChangesTitle')"
+      :description="t('common.discardChangesDescription')"
+      :action-label="t('common.discard')"
+      :cancel-label="t('common.keepEditing')"
+      destructive
+      :on-confirm="ssoGuard.discard"
+    />
     <FieldGroup v-if="!canManageSecurity">
       <FieldSet>
         <Field orientation="horizontal">
@@ -565,7 +618,12 @@ const handleDeleteSso = () => deleteSsoDialog.confirm(() => deleteSsoConfig())
           </Alert>
         </FieldSet>
         <!-- SSO Configuration Dialog -->
-        <Dialog v-model:open="ssoConfigDialogOpen">
+        <Dialog
+          :open="ssoConfigDialogOpen"
+          @update:open="
+            (next: boolean) => !saving && ssoGuard.onOpenChange(next)
+          "
+        >
           <DialogContent
             class="h-3/4 max-h-3/4! w-3/4 max-w-3/4! overflow-auto overscroll-none scroll-smooth"
           >
@@ -700,8 +758,9 @@ const handleDeleteSso = () => deleteSsoDialog.confirm(() => deleteSsoConfig())
                       </FieldDescription>
                     </FieldContent>
                     <Button
+                      variant="destructive"
                       :disabled="deleting"
-                      @click="deleteSsoDialog.open(null)"
+                      @click="deleteSsoOpen = true"
                     >
                       <Spinner v-if="deleting" />
                       <template v-else>
@@ -892,31 +951,5 @@ const handleDeleteSso = () => deleteSsoDialog.confirm(() => deleteSsoConfig())
         </Dialog>
       </FieldGroup>
     </template>
-    <!-- Delete SSO Confirmation Dialog -->
-    <AlertDialog v-model:open="deleteSsoDialog.isOpen.value">
-      <AlertDialogContent>
-        <AlertDialogHeader>
-          <AlertDialogTitle>{{
-            t("settings.security.sso.removeConfirmTitle")
-          }}</AlertDialogTitle>
-          <AlertDialogDescription>
-            {{ t("settings.security.sso.removeConfirmDescription") }}
-          </AlertDialogDescription>
-        </AlertDialogHeader>
-        <AlertDialogFooter>
-          <AlertDialogCancel
-            >{{ t("actions.cancel") }}<Kbd>Esc</Kbd>
-          </AlertDialogCancel>
-          <AlertDialogAction
-            :disabled="deleting"
-            @click.prevent="handleDeleteSso"
-          >
-            <Spinner v-if="deleting" />
-            {{ t("settings.security.sso.removeLabel") }}
-            <Kbd>↩</Kbd>
-          </AlertDialogAction>
-        </AlertDialogFooter>
-      </AlertDialogContent>
-    </AlertDialog>
   </div>
 </template>

@@ -1,12 +1,8 @@
 <script lang="ts" setup>
 import { usePhotoUpload } from "@/composables/usePhotoUpload"
-import {
-  IconPencil,
-  IconPlus,
-  IconTrash,
-  IconUsers2,
-  IconX,
-} from "@/data/icons"
+import { useConfirmationDialog } from "@/composables/useConfirmationDialog"
+import { withToast } from "@/helpers/toast"
+import { IconPencil, IconPlus, IconTrash, IconUsers2 } from "@/data/icons"
 import { useMembershipStore } from "@/stores/membershipStore"
 import { useTeamGroupsStore } from "@/stores/teamGroupsStore"
 import type { IGroup } from "@/types/domain"
@@ -57,21 +53,37 @@ const openEdit = (group: IGroup) => {
   isDialogOpen.value = true
 }
 
-// ── Photo upload (immediate, straight from the table) ────────────────────────
-const pendingPhotoGroupId = ref<string | null>(null)
+// ── Photo upload/remove (immediate, straight from the table) ────────────────
+// One busy set for BOTH upload and remove drives the avatar spinner, same as
+// the `photo-${id}` loading key Teams/Workspaces share across both actions.
+const photoBusyIds = ref<Set<string>>(new Set())
+const isPhotoBusy = (id: string) => photoBusyIds.value.has(id)
+
+const runPhotoChange = async (
+  id: string,
+  photoFile: File | null,
+  messages: Parameters<typeof withToast>[1]
+) => {
+  photoBusyIds.value = new Set(photoBusyIds.value).add(id)
+  try {
+    await withToast(() => groupsStore.updateGroup(id, { photoFile }), messages)
+  } catch (error) {
+    console.error("[SettingsGroups] Failed to change group photo", error)
+  } finally {
+    const next = new Set(photoBusyIds.value)
+    next.delete(id)
+    photoBusyIds.value = next
+  }
+}
+
 const groupPhotoUpload = usePhotoUpload({
   canUpload: () => canManageMembers.value,
-  onUpload: async (id, file) => {
-    pendingPhotoGroupId.value = id
-    try {
-      await groupsStore.updateGroup(id, { photoFile: file })
-    } catch (error) {
-      console.error("[SettingsGroups] Failed to upload group photo", error)
-      toast.error(t("settings.groups.updateError"))
-    } finally {
-      pendingPhotoGroupId.value = null
-    }
-  },
+  onUpload: (id, file) =>
+    runPhotoChange(id, file, {
+      info: t("settings.groups.photoUploading"),
+      success: t("settings.groups.photoUpdated"),
+      error: t("settings.groups.photoUpdateError"),
+    }),
 })
 
 const handleGroupAvatarClick = (group: IGroup) => {
@@ -79,33 +91,25 @@ const handleGroupAvatarClick = (group: IGroup) => {
   groupPhotoUpload.triggerUpload(group.id)
 }
 
-const isUploadingPhoto = (id: string) =>
-  groupPhotoUpload.isUploading.value && pendingPhotoGroupId.value === id
-
-const removeGroupPhoto = async (group: IGroup) => {
-  try {
-    await groupsStore.updateGroup(group.id, { photoFile: null })
-  } catch (error) {
-    console.error("[SettingsGroups] Failed to remove group photo", error)
-    toast.error(t("settings.groups.updateError"))
-  }
-}
+const removeGroupPhoto = (group: IGroup) =>
+  runPhotoChange(group.id, null, {
+    success: t("settings.groups.photoRemoved"),
+    error: t("settings.groups.photoRemoveError"),
+  })
 
 // ── Delete ──────────────────────────────────────────────────────────────────
-const deletingIds = ref<Set<string>>(new Set())
-const isDeleting = (id: string) => deletingIds.value.has(id)
+const deleteGroupDialog = useConfirmationDialog<IGroup>()
 
-const handleDelete = async (group: IGroup) => {
-  deletingIds.value = new Set(deletingIds.value).add(group.id)
+// Toasts its own failure and returns false so the confirm stays open.
+const handleDelete = async () => {
   try {
-    await groupsStore.deleteGroup(group.id)
+    await deleteGroupDialog.confirm((group) =>
+      groupsStore.deleteGroup(group.id)
+    )
   } catch (error) {
     console.error("[SettingsGroups] Failed to delete group", error)
     toast.error(t("settings.groups.deleteError"))
-  } finally {
-    const next = new Set(deletingIds.value)
-    next.delete(group.id)
-    deletingIds.value = next
+    return false
   }
 }
 
@@ -195,7 +199,7 @@ onMounted(() => {
             <div
               v-else
               data-table-frame
-              class="overflow-clip rounded-4xl border"
+              class="rounded-surface overflow-clip border"
             >
               <Table>
                 <TableHeader>
@@ -253,44 +257,14 @@ onMounted(() => {
                        one long line setting the table's min-content width. -->
                     <TableCell class="whitespace-normal">
                       <Item class="group flex-nowrap p-0" size="xs">
-                        <ItemMedia class="group relative">
-                          <TooltipProvider>
-                            <Tooltip>
-                              <TooltipTrigger as-child>
-                                <AppAvatar
-                                  :class="{
-                                    'cursor-pointer': canManageMembers,
-                                  }"
-                                  :loading="isUploadingPhoto(group.id)"
-                                  :src="group.photoURL"
-                                  :name="group.name"
-                                  @click="handleGroupAvatarClick(group)"
-                                />
-                              </TooltipTrigger>
-                              <TooltipContent>
-                                {{
-                                  isUploadingPhoto(group.id)
-                                    ? t("settings.overview.teamPhoto.uploading")
-                                    : t("settings.groups.uploadPhoto")
-                                }}
-                              </TooltipContent>
-                            </Tooltip>
-                            <Tooltip v-if="group.photoURL">
-                              <TooltipTrigger as-child>
-                                <Button
-                                  variant="secondary"
-                                  class="ring-background absolute -top-2 -right-2 size-4 opacity-0! ring-2 transition group-hover:enabled:opacity-100!"
-                                  size="icon"
-                                  @click.stop="removeGroupPhoto(group)"
-                                >
-                                  <IconX />
-                                </Button>
-                              </TooltipTrigger>
-                              <TooltipContent>
-                                {{ t("settings.groups.removePhoto") }}
-                              </TooltipContent>
-                            </Tooltip>
-                          </TooltipProvider>
+                        <ItemMedia>
+                          <PhotoUploadAvatar
+                            :src="group.photoURL"
+                            :name="group.name"
+                            :loading="isPhotoBusy(group.id)"
+                            @upload="handleGroupAvatarClick(group)"
+                            @remove="removeGroupPhoto(group)"
+                          />
                         </ItemMedia>
                         <SettingsIdentity
                           :title="group.name"
@@ -347,7 +321,6 @@ onMounted(() => {
                               <DropdownMenuTrigger as-child>
                                 <DataTableRowActionsButton
                                   :label="t('actions.moreOptions')"
-                                  :loading="isDeleting(group.id)"
                                 />
                               </DropdownMenuTrigger>
                             </TooltipTrigger>
@@ -360,48 +333,15 @@ onMounted(() => {
                                 {{ t("settings.groups.edit") }}
                                 <DropdownMenuShortcut>E</DropdownMenuShortcut>
                               </DropdownMenuItem>
-                              <AlertDialog>
-                                <AlertDialogTrigger as-child>
-                                  <DropdownMenuItem
-                                    data-hotkey="backspace delete"
-                                    @select.prevent
-                                  >
-                                    <IconTrash />
-                                    {{ t("settings.groups.delete") }}
-                                    <DropdownMenuShortcut>
-                                      ⌫
-                                    </DropdownMenuShortcut>
-                                  </DropdownMenuItem>
-                                </AlertDialogTrigger>
-                                <AlertDialogContent>
-                                  <AlertDialogHeader>
-                                    <AlertDialogTitle>
-                                      {{ t("settings.groups.deleteGroup") }}
-                                    </AlertDialogTitle>
-                                    <AlertDialogDescription>
-                                      {{
-                                        t("settings.groups.deleteConfirm", {
-                                          name: group.name,
-                                        })
-                                      }}
-                                    </AlertDialogDescription>
-                                  </AlertDialogHeader>
-                                  <AlertDialogFooter>
-                                    <AlertDialogCancel>
-                                      {{ t("actions.cancel") }}
-                                      <Kbd>Esc</Kbd>
-                                    </AlertDialogCancel>
-                                    <AlertDialogAction
-                                      :disabled="isDeleting(group.id)"
-                                      @click="handleDelete(group)"
-                                    >
-                                      <Spinner v-if="isDeleting(group.id)" />
-                                      {{ t("settings.groups.delete") }}
-                                      <Kbd>↩</Kbd>
-                                    </AlertDialogAction>
-                                  </AlertDialogFooter>
-                                </AlertDialogContent>
-                              </AlertDialog>
+                              <DropdownMenuItem
+                                variant="destructive"
+                                data-hotkey="backspace delete"
+                                @click="deleteGroupDialog.open(group)"
+                              >
+                                <IconTrash />
+                                {{ t("settings.groups.delete") }}
+                                <DropdownMenuShortcut>⌫</DropdownMenuShortcut>
+                              </DropdownMenuItem>
                             </DropdownMenuContent>
                             <TooltipContent>
                               {{ t("settings.groups.actions") }}
@@ -434,6 +374,24 @@ onMounted(() => {
     </FieldGroup>
   </div>
   <SettingsRestricted v-else />
+
+  <ConfirmAction
+    v-model:open="deleteGroupDialog.isOpen.value"
+    :title="t('settings.groups.deleteGroup')"
+    :action-label="t('actions.delete')"
+    destructive
+    :on-confirm="handleDelete"
+  >
+    <template #description>
+      <i18n-t keypath="settings.groups.deleteConfirm" tag="span">
+        <template #name>
+          <span class="text-foreground font-medium">{{
+            deleteGroupDialog.item.value?.name
+          }}</span>
+        </template>
+      </i18n-t>
+    </template>
+  </ConfirmAction>
 
   <GroupDialog
     v-model:open="isDialogOpen"

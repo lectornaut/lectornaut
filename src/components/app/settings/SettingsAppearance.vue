@@ -239,7 +239,7 @@ const accentSwatchStyle = (option: ColorSwatch<AccentId>) => ({
               id="custom-base-color"
               v-model="selectedCustomBaseColor"
               type="color"
-              class="bg-background aspect-square size-9 cursor-pointer appearance-none rounded-4xl border p-2.75"
+              class="bg-background size-control rounded-control aspect-square cursor-pointer appearance-none border p-[calc((var(--spacing-control)-2px)/2-var(--spacing)*1.5)]"
             />
             <Select id="base" v-model="selectedBase">
               <SelectTrigger>
@@ -255,7 +255,7 @@ const accentSwatchStyle = (option: ColorSwatch<AccentId>) => ({
                     :value="color.id"
                   >
                     <span
-                      class="size-3 rounded-4xl"
+                      class="size-3 rounded-full"
                       :style="baseSwatchStyle(color)"
                     />
                     {{ color.name }}
@@ -272,7 +272,7 @@ const accentSwatchStyle = (option: ColorSwatch<AccentId>) => ({
                     :disabled="color.id === 'accent' && isAccentBaseSelected"
                   >
                     <span
-                      class="size-3 rounded-4xl"
+                      class="size-3 rounded-full"
                       :style="baseSwatchStyle(color)"
                     />
                     {{ color.name }}
@@ -297,7 +297,7 @@ const accentSwatchStyle = (option: ColorSwatch<AccentId>) => ({
               id="custom-accent-color"
               v-model="selectedCustomAccentColor"
               type="color"
-              class="bg-background aspect-square size-9 cursor-pointer appearance-none rounded-4xl border p-2.75"
+              class="bg-background size-control rounded-control aspect-square cursor-pointer appearance-none border p-[calc((var(--spacing-control)-2px)/2-var(--spacing)*1.5)]"
             />
             <Select id="accent" v-model="selectedAccent">
               <SelectTrigger>
@@ -314,7 +314,7 @@ const accentSwatchStyle = (option: ColorSwatch<AccentId>) => ({
                     :disabled="color.id === 'base' && isBaseAccentSelected"
                   >
                     <span
-                      class="size-3 rounded-4xl"
+                      class="size-3 rounded-full"
                       :style="accentSwatchStyle(color)"
                     />
                     {{ color.name }}
@@ -332,7 +332,7 @@ const accentSwatchStyle = (option: ColorSwatch<AccentId>) => ({
                     :value="color.id"
                   >
                     <span
-                      class="size-3 rounded-4xl"
+                      class="size-3 rounded-full"
                       :style="accentSwatchStyle(color)"
                     />
                     {{ color.name }}

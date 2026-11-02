@@ -1,6 +1,9 @@
 <script lang="ts" setup>
 import { useSidebar } from "@/components/ui/sidebar"
-import { SIDEBAR_WIDTH_ICON } from "@/components/ui/sidebar/utils"
+import {
+  SIDEBAR_WIDTH,
+  SIDEBAR_WIDTH_ICON,
+} from "@/components/ui/sidebar/utils"
 import {
   IconArrowLeft,
   IconArrowRight,
@@ -62,25 +65,48 @@ const animatePanels = ref(false)
 // A small fallback is used before the first viewport measurement so the rail
 // doesn't briefly render at 0%.
 const FALLBACK_RAIL_PX = 64
-const SIDEBAR_INSET_PADDING_REM = 0
+// shadcn's inset rail is `--sidebar-width-icon + --spacing(4) + 2px`; the 2px
+// (room for the floating variant's ring) would all land on the right and push
+// the icons off-centre, so the rail is just the icon width plus p-2 each side.
+// MainSidebar's `group-data-[collapsible=icon]:w-full` makes the container match.
+const SIDEBAR_INSET_PADDING_REM = 1
 
 const { width: viewportWidth } = useWindowSize()
 
-const iconRailPanelSize = computed(() => {
-  if (!viewportWidth.value) return 4
-
+const remToPanelPercent = (rem: number, fallbackPx: number) => {
   const rootFontSize =
     Number.parseFloat(getComputedStyle(document.documentElement).fontSize) || 16
-
-  const railPx =
-    rootFontSize *
-    (Number.parseFloat(SIDEBAR_WIDTH_ICON) + SIDEBAR_INSET_PADDING_REM)
-
+  const px = rootFontSize * rem
   return (
-    ((Number.isFinite(railPx) && railPx > 0 ? railPx : FALLBACK_RAIL_PX) /
-      viewportWidth.value) *
+    ((Number.isFinite(px) && px > 0 ? px : fallbackPx) / viewportWidth.value) *
     100
   )
+}
+
+const iconRailPanelSize = computed(() => {
+  if (!viewportWidth.value) return 4
+  return remToPanelPercent(
+    Number.parseFloat(SIDEBAR_WIDTH_ICON) + SIDEBAR_INSET_PADDING_REM,
+    FALLBACK_RAIL_PX
+  )
+})
+
+// The expanded sidebar gets the same treatment: shadcn's `--sidebar-width`
+// (16rem) is the default, with a little drag room either side, so it stays
+// that wide on any window instead of scaling with the viewport. Capped at 40%
+// so a narrow desktop window still leaves room for the content.
+const SIDEBAR_MIN_REM = 14
+const SIDEBAR_MAX_REM = 20
+
+const sidebarPanelSizes = computed(() => {
+  if (!viewportWidth.value) return { min: 16, default: 20, max: 24 }
+  const toPercent = (rem: number) =>
+    Math.min(remToPanelPercent(rem, rem * 16), 40)
+  return {
+    min: toPercent(SIDEBAR_MIN_REM),
+    default: toPercent(Number.parseFloat(SIDEBAR_WIDTH)),
+    max: toPercent(SIDEBAR_MAX_REM),
+  }
 })
 
 // Mobile renders the sidebar as a Sheet portaled out of this panel, so a
@@ -277,6 +303,8 @@ watch(
     // (or any later resize while pinned) leaves the panel at minSize after
     // reka-ui's `reevaluatePanelConstraints` runs.
     sidebarPanelCollapsedSize,
+    // Same for the rem-derived expanded min/max, which reka clamps the panel to.
+    sidebarPanelSizes,
   ],
   () => {
     // Raise the flag *synchronously* in the watcher body. Vue's pre-flush
@@ -335,9 +363,9 @@ const closeTab = (id: string) => {
     <ResizablePanel
       ref="sidebarPanel"
       collapsible
-      :min-size="16"
-      :default-size="20"
-      :max-size="24"
+      :min-size="sidebarPanelSizes.min"
+      :default-size="sidebarPanelSizes.default"
+      :max-size="sidebarPanelSizes.max"
       :collapsed-size="sidebarPanelCollapsedSize"
       :inert="sidebarPanel?.isCollapsed && (!sidebarPinned || isMobile)"
       @collapse="onSidebarPanelCollapse"
@@ -361,7 +389,8 @@ const closeTab = (id: string) => {
         <div class="flex min-h-0 min-w-0 grow flex-col">
           <Tabbar />
           <div
-            class="flex min-h-0 min-w-0 grow self-stretch overscroll-none scroll-smooth px-2"
+            class="flex min-h-0 min-w-0 grow self-stretch overscroll-none scroll-smooth px-2 transition-[padding] duration-200 ease-in-out"
+            :class="{ 'pl-0': effectiveSidebarPinned && !sidebarOpen }"
           >
             <ResizablePanelGroup
               direction="horizontal"
@@ -626,7 +655,7 @@ const closeTab = (id: string) => {
                                           <Tooltip>
                                             <TooltipTrigger as-child>
                                               <Button
-                                                variant="secondary"
+                                                variant="outline"
                                                 size="icon"
                                                 @click="
                                                   topPanel?.isCollapsed
@@ -652,11 +681,10 @@ const closeTab = (id: string) => {
                                               }}
                                             </TooltipContent>
                                           </Tooltip>
-                                          <ButtonGroupSeparator />
                                           <Tooltip>
                                             <TooltipTrigger as-child>
                                               <Button
-                                                variant="secondary"
+                                                variant="outline"
                                                 size="icon"
                                                 @click="bottomPanel?.collapse()"
                                               >

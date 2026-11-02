@@ -1,7 +1,10 @@
 <script lang="ts" setup>
 import { useWorkspaceBotSessions } from "@/composables/useWorkspaceBotSessions"
 import { IconAlertTriangle, IconArchive, IconTrash2 } from "@/data/icons"
+import { useWorkspaceStore } from "@/stores/workspaceStore"
+import { storeToRefs } from "pinia"
 import { computed, ref } from "vue"
+import { toast } from "vue-sonner"
 
 const { t } = useI18n()
 
@@ -23,7 +26,13 @@ const activeCount = computed(
   () => sessions.value.filter((s) => !s.archivedAt).length
 )
 
+// Workspace-scoped bulk wipe: the typed phrase is the workspace being wiped.
+const { currentWorkspace } = storeToRefs(useWorkspaceStore())
+
 const bulkBusy = ref(false)
+
+// Each per-chat call toasts its own failure and returns false; any failure (or
+// anything escaping the loop) returns `false` so ConfirmAction stays open.
 
 // ── Archive all team chats ──────────────────────────────────────────────────
 
@@ -35,21 +44,23 @@ const openArchiveDialog = () => {
 }
 
 const submitArchiveAll = async () => {
-  if (bulkBusy.value) return
+  if (bulkBusy.value) return false
   // Snapshot active ids before mutating — the workspace listener
   // updates as each archive lands, which would otherwise reshuffle
   // the iteration target.
   const targets = sessions.value.filter((s) => !s.archivedAt).map((s) => s.id)
-  if (targets.length === 0) {
-    archiveDialogOpen.value = false
-    return
-  }
+  if (targets.length === 0) return
   bulkBusy.value = true
   try {
+    let failed = false
     for (const id of targets) {
-      await archiveSession(id, true)
+      if (!(await archiveSession(id, true))) failed = true
     }
-    archiveDialogOpen.value = false
+    if (failed) return false
+  } catch (error) {
+    console.error("[SettingsData] bulk archive failed:", error)
+    toast.error(t("settings.data.archiveAll.error"))
+    return false
   } finally {
     bulkBusy.value = false
   }
@@ -65,18 +76,20 @@ const openDeleteDialog = () => {
 }
 
 const submitDeleteAll = async () => {
-  if (bulkBusy.value) return
+  if (bulkBusy.value) return false
   const targets = sessions.value.map((s) => s.id)
-  if (targets.length === 0) {
-    deleteDialogOpen.value = false
-    return
-  }
+  if (targets.length === 0) return
   bulkBusy.value = true
   try {
+    let failed = false
     for (const id of targets) {
-      await removeSession(id)
+      if (!(await removeSession(id))) failed = true
     }
-    deleteDialogOpen.value = false
+    if (failed) return false
+  } catch (error) {
+    console.error("[SettingsData] bulk delete failed:", error)
+    toast.error(t("settings.data.deleteAll.error"))
+    return false
   } finally {
     bulkBusy.value = false
   }
@@ -153,6 +166,7 @@ const isDisabled = computed(() => bulkBusy.value || isMutating.value)
               </FieldDescription>
             </FieldContent>
             <Button
+              variant="destructive"
               :disabled="isDisabled || isLoading || totalCount === 0"
               @click="openDeleteDialog"
             >
@@ -164,64 +178,28 @@ const isDisabled = computed(() => bulkBusy.value || isMutating.value)
       </FieldSet>
     </FieldGroup>
 
-    <AlertDialog v-model:open="archiveDialogOpen">
-      <AlertDialogContent>
-        <AlertDialogHeader>
-          <AlertDialogTitle>
-            {{ t("settings.data.archiveAll.confirmTitle") }}
-          </AlertDialogTitle>
-          <AlertDialogDescription>
-            {{
-              t("settings.data.archiveAll.confirmBody", {
-                count: activeCount,
-              })
-            }}
-          </AlertDialogDescription>
-        </AlertDialogHeader>
-        <AlertDialogFooter>
-          <AlertDialogCancel :disabled="bulkBusy">
-            {{ t("actions.cancel") }}
-            <Kbd>Esc</Kbd>
-          </AlertDialogCancel>
-          <AlertDialogAction
-            :disabled="bulkBusy || activeCount === 0"
-            @click.prevent="submitArchiveAll"
-          >
-            <Spinner v-if="bulkBusy" />
-            {{ t("settings.data.archiveAll.action") }}
-            <Kbd>↩</Kbd>
-          </AlertDialogAction>
-        </AlertDialogFooter>
-      </AlertDialogContent>
-    </AlertDialog>
+    <ConfirmAction
+      v-model:open="archiveDialogOpen"
+      :title="t('settings.data.archiveAll.confirmTitle')"
+      :description="
+        t('settings.data.archiveAll.confirmBody', { count: activeCount })
+      "
+      :action-label="t('settings.data.archiveAll.label')"
+      :disabled="activeCount === 0"
+      :on-confirm="submitArchiveAll"
+    />
 
-    <AlertDialog v-model:open="deleteDialogOpen">
-      <AlertDialogContent>
-        <AlertDialogHeader>
-          <AlertDialogTitle>
-            {{ t("settings.data.deleteAll.confirmTitle") }}
-          </AlertDialogTitle>
-          <AlertDialogDescription>
-            {{
-              t("settings.data.deleteAll.confirmBody", { count: totalCount })
-            }}
-          </AlertDialogDescription>
-        </AlertDialogHeader>
-        <AlertDialogFooter>
-          <AlertDialogCancel :disabled="bulkBusy">
-            {{ t("actions.cancel") }}
-            <Kbd>Esc</Kbd>
-          </AlertDialogCancel>
-          <AlertDialogAction
-            :disabled="bulkBusy || totalCount === 0"
-            @click.prevent="submitDeleteAll"
-          >
-            <Spinner v-if="bulkBusy" />
-            {{ t("settings.data.deleteAll.action") }}
-            <Kbd>↩</Kbd>
-          </AlertDialogAction>
-        </AlertDialogFooter>
-      </AlertDialogContent>
-    </AlertDialog>
+    <ConfirmAction
+      v-model:open="deleteDialogOpen"
+      :title="t('settings.data.deleteAll.confirmTitle')"
+      :description="
+        t('settings.data.deleteAll.confirmBody', { count: totalCount })
+      "
+      :action-label="t('settings.data.deleteAll.label')"
+      destructive
+      :confirm-phrase="currentWorkspace?.name"
+      :disabled="totalCount === 0"
+      :on-confirm="submitDeleteAll"
+    />
   </div>
 </template>

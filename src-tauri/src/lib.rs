@@ -215,26 +215,9 @@ pub fn run() {
 
             let menu = create_tray_menu(app.handle(), false)?;
 
-            let (pixmap_data, width, height) = {
-                let (w, h) = (32, 32);
-                let mut pixmap = tiny_skia::Pixmap::new(w, h).unwrap();
-                let mut paint = tiny_skia::Paint::default();
-                paint.set_color_rgba8(0, 0, 0, 255); // Black for template
-                paint.anti_alias = true;
-
-                let circle = tiny_skia::PathBuilder::from_circle(16.0, 16.0, 8.0).unwrap();
-                pixmap.fill_path(
-                    &circle,
-                    &paint,
-                    tiny_skia::FillRule::Winding,
-                    tiny_skia::Transform::identity(),
-                    None,
-                );
-
-                (pixmap.data().to_vec(), w, h)
-            };
-
-            let tray_icon = tauri::image::Image::new(&pixmap_data, width, height);
+            // Black-on-transparent logo (public/logo.svg) at 44px = 22pt @2x;
+            // decoded at compile time, tinted by macOS via icon_as_template.
+            let tray_icon = tauri::include_image!("icons/tray-template.png");
 
             let _tray = TrayIconBuilder::with_id("main")
                 .icon(tray_icon)

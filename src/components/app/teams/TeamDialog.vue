@@ -1,4 +1,5 @@
 <script lang="ts" setup>
+import { useDismissGuard } from "@/composables/useDismissGuard"
 import { usePhotoUpload } from "@/composables/usePhotoUpload"
 import { useTeamActions } from "@/composables/useTeamActions"
 import { BUILT_IN_AGENTS, isBuiltInAgentId } from "@/data/builtInAgents"
@@ -117,6 +118,27 @@ const user = useCurrentUser()
 // State
 const isOpen = ref(props.open || false)
 const isLoading = ref(false)
+
+// Dirty = the form differs from what it held right after opening. Covers
+// staged invites, role edits and removals, which a stray Escape used to wipe.
+const formSnapshot = () =>
+  JSON.stringify([
+    teamName.value,
+    teamUsername.value,
+    teamIsPublic.value,
+    inviteEmail.value,
+    members.value,
+    agentMembers.value,
+    removedAgentIds.value,
+    removedMemberIds.value,
+    invitationRoleEdits.value,
+    photoPreview.value,
+  ])
+const baseline = ref("")
+const guard = useDismissGuard(
+  isOpen,
+  () => !!baseline.value && formSnapshot() !== baseline.value
+)
 
 // Form State
 const teamName = ref("")
@@ -347,6 +369,7 @@ watch(isOpen, async (val) => {
   emit("update:open", val)
   if (!val) {
     resetForm()
+    baseline.value = ""
   } else {
     // Initialize form when opened
     if (props.mode === "edit" && props.team) {
@@ -388,6 +411,7 @@ watch(isOpen, async (val) => {
       teamUsername.value = ""
       teamIsPublic.value = false
     }
+    baseline.value = formSnapshot()
   }
 })
 
@@ -731,6 +755,7 @@ const addMemberDisabledReason = computed(() => {
 })
 
 const handleSubmit = async () => {
+  if (isLoading.value) return
   if (props.mode !== "invite" && !teamName.value.trim()) return
 
   isLoading.value = true
@@ -1013,11 +1038,14 @@ const handleSubmit = async () => {
 </script>
 
 <template>
-  <Dialog v-model:open="isOpen">
+  <Dialog
+    :open="isOpen"
+    @update:open="(next: boolean) => !isLoading && guard.onOpenChange(next)"
+  >
     <DialogTrigger as-child>
       <slot name="trigger" />
     </DialogTrigger>
-    <DialogContent class="w-2xl max-w-fit">
+    <DialogContent class="sm:max-w-2xl">
       <DialogHeader>
         <DialogTitle>
           {{
@@ -1050,56 +1078,16 @@ const handleSubmit = async () => {
             <FieldLabel>
               {{ t("components.teamDialog.labels.teamPhoto") }}
             </FieldLabel>
-            <div class="group relative">
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger as-child>
-                    <div
-                      :class="[
-                        'bg-input/50 rounded-full p-3',
-                        {
-                          'cursor-not-allowed opacity-50':
-                            !canUpdateTeam && mode === 'edit',
-                        },
-                      ]"
-                    >
-                      <AppAvatar
-                        class="size-16"
-                        :class="{
-                          'cursor-pointer': canUpdateTeam || mode === 'create',
-                        }"
-                        :src="photoPreview"
-                        :name="teamName"
-                        @click="triggerTeamPhotoSelection"
-                      />
-                    </div>
-                  </TooltipTrigger>
-                  <TooltipContent v-if="!canUpdateTeam && mode === 'edit'">
-                    {{ t(getCannotUpdateTeamReason || "") }}
-                  </TooltipContent>
-                  <TooltipContent v-else>
-                    {{ t("components.teamDialog.tooltips.uploadPhoto") }}
-                  </TooltipContent>
-                </Tooltip>
-                <Tooltip
-                  v-if="photoPreview && (canUpdateTeam || mode === 'create')"
-                >
-                  <TooltipTrigger as-child>
-                    <Button
-                      variant="secondary"
-                      class="ring-background absolute top-1 right-1 size-4 opacity-0 ring-2 transition group-hover:opacity-100"
-                      size="icon"
-                      @click.stop="removePhoto"
-                    >
-                      <IconX />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    {{ t("components.teamDialog.tooltips.removePhoto") }}
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-            </div>
+            <PhotoUploadAvatar
+              class="size-16"
+              :src="photoPreview"
+              :name="teamName"
+              :loading="isLoading && !!photoFile"
+              :disabled="isLoading || (!canUpdateTeam && mode === 'edit')"
+              :disabled-reason="t(getCannotUpdateTeamReason || '')"
+              @upload="triggerTeamPhotoSelection"
+              @remove="removePhoto"
+            />
           </div>
         </Field>
 
@@ -1119,7 +1107,6 @@ const handleSubmit = async () => {
                       $t('components.teamDialog.placeholders.teamName')
                     "
                     :disabled="!canUpdateTeam && mode === 'edit'"
-                    @keyup.enter="handleSubmit"
                   />
                 </div>
               </TooltipTrigger>
@@ -1250,24 +1237,24 @@ const handleSubmit = async () => {
         </Field>
 
         <Tabs :default-value="mode === 'edit' ? 'members' : 'invite'">
-          <TabsList class="bg-input/50 h-9! p-0">
+          <TabsList class="bg-input/50 h-control! p-0">
             <TabsTrigger
               v-if="mode === 'edit'"
               value="members"
-              class="data-[state=active]:border-border! data-[state=active]:bg-background h-9"
+              class="data-[state=active]:border-border! data-[state=active]:bg-background h-control"
             >
               {{ t("components.teamDialog.labels.members") }}
             </TabsTrigger>
             <TabsTrigger
               v-if="canShowTeamInvitations"
               value="pending"
-              class="data-[state=active]:border-border! data-[state=active]:bg-background h-9"
+              class="data-[state=active]:border-border! data-[state=active]:bg-background h-control"
             >
               {{ t("components.teamDialog.labels.pending") }}
             </TabsTrigger>
             <TabsTrigger
               value="invite"
-              class="data-[state=active]:border-border! data-[state=active]:bg-background h-9"
+              class="data-[state=active]:border-border! data-[state=active]:bg-background h-control"
             >
               {{ t("components.teamDialog.labels.invite") }}
             </TabsTrigger>
@@ -1295,7 +1282,7 @@ const handleSubmit = async () => {
                   </EmptyTitle>
                 </EmptyHeader>
               </Empty>
-              <ItemGroup v-else class="bg-input/50 rounded-3xl p-3">
+              <ItemGroup v-else class="bg-input/50 rounded-control p-3">
                 <Item
                   v-for="member in activeMembers"
                   :key="member.id"
@@ -1469,7 +1456,7 @@ const handleSubmit = async () => {
                   </EmptyTitle>
                 </EmptyHeader>
               </Empty>
-              <ItemGroup v-else class="bg-input/50 rounded-3xl p-3">
+              <ItemGroup v-else class="bg-input/50 rounded-control p-3">
                 <Item
                   v-for="invite in visibleTeamInvitations"
                   :key="invite.id"
@@ -1582,7 +1569,7 @@ const handleSubmit = async () => {
              until Save; once sent they move to the Pending tab. -->
             <TabsContent value="invite" class="grid grid-cols-1 gap-2 p-0">
               <!-- Email input + agent picker -->
-              <ButtonGroup class="bg-input/50 rounded-3xl p-3">
+              <ButtonGroup class="bg-input/50 rounded-control p-3">
                 <ButtonGroup>
                   <Popover v-model:open="invitePickerOpen">
                     <PopoverAnchor as-child>
@@ -1752,7 +1739,7 @@ const handleSubmit = async () => {
              sent invitations move to the Pending tab. -->
               <ItemGroup
                 v-if="stagedInvites.length > 0 || stagedAgentMembers.length > 0"
-                class="bg-input/50 rounded-3xl p-3"
+                class="bg-input/50 rounded-control p-3"
               >
                 <!-- Staged drafts (not yet sent) -->
                 <Item
@@ -1919,7 +1906,7 @@ const handleSubmit = async () => {
       <DialogFooter>
         <DialogClose as-child>
           <Button variant="outline" :disabled="isLoading">
-            {{ t("common.actions.cancel") }}
+            {{ t("actions.cancel") }}
             <Kbd>Esc</Kbd>
           </Button>
         </DialogClose>
@@ -1941,4 +1928,14 @@ const handleSubmit = async () => {
       </DialogFooter>
     </DialogContent>
   </Dialog>
+
+  <ConfirmAction
+    v-model:open="guard.confirmOpen.value"
+    :title="t('common.discardChangesTitle')"
+    :description="t('common.discardChangesDescription')"
+    :action-label="t('common.discard')"
+    :cancel-label="t('common.keepEditing')"
+    destructive
+    :on-confirm="guard.discard"
+  />
 </template>

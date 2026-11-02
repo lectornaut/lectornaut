@@ -448,6 +448,8 @@ const handleDeleteConfirm = async (attachment: WorkspaceNodeAttachment) => {
       t("components.nodeAttachments.toasts.deleteFailedTitle"),
       (deleteError as Error).message
     )
+    // Rethrow so the confirm dialog stays open with the attachment intact.
+    throw deleteError
   } finally {
     deletingId.value = null
   }
@@ -546,7 +548,7 @@ watch(selectedCreateFiles, async (files) => {
           :label="t('components.nodeAttachments.loadingAttachments')"
         />
 
-        <div v-else-if="error" class="space-y-2 rounded-4xl border p-2">
+        <div v-else-if="error" class="rounded-surface space-y-2 border p-2">
           <div class="text-destructive flex items-start gap-2 text-xs">
             <IconAlertTriangle />
             <span>{{ error }}</span>
@@ -560,7 +562,7 @@ watch(selectedCreateFiles, async (files) => {
 
         <Empty
           v-else-if="attachments.length === 0"
-          class="rounded-4xl border border-dashed p-6"
+          class="rounded-surface border border-dashed p-6"
         >
           <EmptyHeader>
             <EmptyMedia variant="icon">
@@ -683,7 +685,11 @@ watch(selectedCreateFiles, async (files) => {
               </AttachmentDescription>
             </AttachmentContent>
             <AttachmentActions>
-              <Button variant="ghost" @click="clearReplacementFile">
+              <Button
+                type="button"
+                variant="ghost"
+                @click="clearReplacementFile"
+              >
                 {{ t("components.nodeAttachments.clear") }}
               </Button>
             </AttachmentActions>
@@ -711,47 +717,24 @@ watch(selectedCreateFiles, async (files) => {
     </DialogContent>
   </Dialog>
 
-  <AlertDialog
-    :open="isDeleteDialogOpen"
-    @update:open="(value) => !value && closeDeleteDialog()"
+  <ConfirmAction
+    v-model:open="isDeleteDialogOpen"
+    :title="t('components.nodeAttachments.deleteTitle')"
+    :action-label="t('actions.delete')"
+    destructive
+    :disabled="
+      attachmentToDelete ? isAttachmentPending(attachmentToDelete.id) : false
+    "
+    :on-confirm="() => confirmDelete(handleDeleteConfirm)"
   >
-    <AlertDialogContent>
-      <AlertDialogHeader>
-        <AlertDialogTitle>{{
-          t("components.nodeAttachments.deleteTitle")
-        }}</AlertDialogTitle>
-        <AlertDialogDescription>
-          {{ t("components.nodeAttachments.deleteDescriptionPrefix") }}
-          <span class="font-medium">
-            {{ attachmentToDelete?.displayName }}
-          </span>
-          {{ t("components.nodeAttachments.deleteDescriptionSuffix") }}
-        </AlertDialogDescription>
-      </AlertDialogHeader>
-
-      <AlertDialogFooter>
-        <AlertDialogCancel>
-          {{ t("actions.cancel") }}
-          <Kbd>Esc</Kbd>
-        </AlertDialogCancel>
-        <AlertDialogAction
-          :disabled="
-            deletingId === attachmentToDelete?.id ||
-            (attachmentToDelete
-              ? isAttachmentPending(attachmentToDelete.id)
-              : false)
-          "
-          @click="
-            confirmDelete(async (attachment) => {
-              await handleDeleteConfirm(attachment)
-            })
-          "
-        >
-          <Spinner v-if="deletingId === attachmentToDelete?.id" />
-          {{ t("actions.delete") }}
-          <Kbd>↩</Kbd>
-        </AlertDialogAction>
-      </AlertDialogFooter>
-    </AlertDialogContent>
-  </AlertDialog>
+    <template #description>
+      <i18n-t keypath="components.nodeAttachments.deleteDescription" tag="span">
+        <template #name>
+          <span class="text-foreground font-medium">{{
+            attachmentToDelete?.displayName
+          }}</span>
+        </template>
+      </i18n-t>
+    </template>
+  </ConfirmAction>
 </template>

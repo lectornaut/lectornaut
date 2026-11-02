@@ -7,7 +7,7 @@ const { t } = useI18n()
     <DialogTrigger as-child>
       <slot />
     </DialogTrigger>
-    <DialogContent class="w-sm max-w-fit">
+    <DialogContent class="sm:max-w-sm">
       <DialogHeader class="sr-only">
         <DialogTitle>{{ t("enter.title") }}</DialogTitle>
         <DialogDescription>

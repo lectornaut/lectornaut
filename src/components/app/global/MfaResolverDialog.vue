@@ -295,7 +295,7 @@ onUnmounted(() => {
           </Button>
           <DialogClose as-child>
             <Button variant="outline">
-              {{ t("common.cancel") }}
+              {{ t("actions.cancel") }}
               <Kbd>Esc</Kbd>
             </Button>
           </DialogClose>

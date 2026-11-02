@@ -128,42 +128,23 @@ const onVisibilityChange = (value: string) => {
   void botChat?.setActiveVisibility(target)
 }
 
+// Awaited inside the confirm so its pending state shows until the write lands.
 const handleConfirmShare = async () => {
   const target = pendingVisibility.value
-  confirmShareOpen.value = false
-  pendingVisibility.value = null
-  if (!target) return
-  await botChat?.setActiveVisibility(target)
-}
-
-const handleShareDialogOpenChange = (value: boolean) => {
-  confirmShareOpen.value = value
-  if (!value) pendingVisibility.value = null
+  if (target) await botChat?.setActiveVisibility(target)
 }
 
 // ── Rename ───────────────────────────────────────────────────────────────────
 
 const renameDialogOpen = ref(false)
-const renameInput = ref("")
 
 const openRename = () => {
   if (!sessionId.value || !canManage.value) return
-  renameInput.value = activeSession.value?.title ?? ""
-  // Reka-ui's DialogContent autofocuses the first tabbable (the input) on open.
   renameDialogOpen.value = true
 }
 
-const submitRename = async () => {
-  const id = sessionId.value
-  if (!id) return
-  const next = renameInput.value.trim()
-  if (!next || next === (activeSession.value?.title ?? "")) {
-    renameDialogOpen.value = false
-    return
-  }
-  await botChat?.renameSession(id, next)
-  renameDialogOpen.value = false
-}
+const saveRename = async (title: string) =>
+  !!sessionId.value && !!(await botChat?.renameSession(sessionId.value, title))
 
 // ── Archive ──────────────────────────────────────────────────────────────────
 
@@ -184,9 +165,7 @@ const openDelete = () => {
 
 const submitDelete = async () => {
   const id = sessionId.value
-  if (!id) return
-  await botChat?.removeSession(id)
-  deleteDialogOpen.value = false
+  if (!id || !(await botChat?.removeSession(id))) return false
 }
 </script>
 
@@ -308,6 +287,7 @@ const submitDelete = async () => {
             </Button>
             <Button
               class="justify-start"
+              variant="destructive"
               :disabled="!canManage || isMutating"
               @click="openDelete"
             >
@@ -323,99 +303,32 @@ const submitDelete = async () => {
     </ScrollContainer>
   </div>
 
-  <!-- Confirm sharing -->
-  <AlertDialog
-    :open="confirmShareOpen"
-    @update:open="handleShareDialogOpenChange"
+  <ConfirmAction
+    v-model:open="confirmShareOpen"
+    :title="t('ai.sidebar.shareConfirmTitle')"
+    :description="t('ai.sidebar.shareConfirmDescription')"
+    :action-label="t('ai.sidebar.shareConfirmAction')"
+    :on-confirm="handleConfirmShare"
+  />
+
+  <SessionRenameDialog
+    v-model:open="renameDialogOpen"
+    :title="activeSession?.title"
+    :on-save="saveRename"
+  />
+
+  <ConfirmAction
+    v-model:open="deleteDialogOpen"
+    :title="t('ai.deleteChatTitle')"
+    :action-label="t('actions.delete')"
+    destructive
+    :on-confirm="submitDelete"
   >
-    <AlertDialogContent>
-      <AlertDialogHeader>
-        <AlertDialogTitle>
-          {{ t("ai.sidebar.shareConfirmTitle") }}
-        </AlertDialogTitle>
-        <AlertDialogDescription>
-          {{ t("ai.sidebar.shareConfirmDescription") }}
-        </AlertDialogDescription>
-      </AlertDialogHeader>
-      <AlertDialogFooter>
-        <AlertDialogCancel>
-          {{ t("actions.cancel") }}
-          <Kbd>Esc</Kbd>
-        </AlertDialogCancel>
-        <AlertDialogAction
-          :disabled="isUpdatingVisibility"
-          @click.prevent="handleConfirmShare"
-        >
-          <Spinner v-if="isUpdatingVisibility" />
-          {{ t("ai.sidebar.shareConfirmAction") }}
-          <Kbd>↩</Kbd>
-        </AlertDialogAction>
-      </AlertDialogFooter>
-    </AlertDialogContent>
-  </AlertDialog>
-
-  <!-- Rename dialog -->
-  <Dialog v-model:open="renameDialogOpen">
-    <DialogContent>
-      <DialogHeader>
-        <DialogTitle>{{ t("ai.renameChat") }}</DialogTitle>
-        <DialogDescription>
-          {{ t("ai.renameChatHint") }}
-        </DialogDescription>
-      </DialogHeader>
-      <form class="grid gap-2" @submit.prevent="submitRename">
-        <Label for="bot-actions-rename-input">{{ t("ai.chatTitle") }}</Label>
-        <Input
-          id="bot-actions-rename-input"
-          v-model="renameInput"
-          :placeholder="t('ai.chatTitlePlaceholder')"
-          maxlength="120"
-          :disabled="isMutating"
-        />
-      </form>
-      <DialogFooter>
-        <DialogClose as-child>
-          <Button variant="outline" :disabled="isMutating">
-            {{ t("actions.cancel") }}
-            <Kbd>Esc</Kbd>
-          </Button>
-        </DialogClose>
-        <Button
-          data-dialog-action
-          :disabled="isMutating || !renameInput.trim()"
-          @click="submitRename"
-        >
-          <Spinner v-if="isMutating" />
-          {{ t("actions.save") }}
-          <Kbd>↩</Kbd>
-        </Button>
-      </DialogFooter>
-    </DialogContent>
-  </Dialog>
-
-  <!-- Delete confirm -->
-  <AlertDialog v-model:open="deleteDialogOpen">
-    <AlertDialogContent>
-      <AlertDialogHeader>
-        <AlertDialogTitle>{{ t("ai.deleteChatTitle") }}</AlertDialogTitle>
-        <AlertDialogDescription>
-          <span class="text-foreground font-medium">{{
-            activeSession?.title || t("ai.thisChat")
-          }}</span>
-          {{ t("ai.deleteChatConfirm") }}
-        </AlertDialogDescription>
-      </AlertDialogHeader>
-      <AlertDialogFooter>
-        <AlertDialogCancel :disabled="isMutating">
-          {{ t("actions.cancel") }}
-          <Kbd>Esc</Kbd>
-        </AlertDialogCancel>
-        <AlertDialogAction :disabled="isMutating" @click.prevent="submitDelete">
-          <Spinner v-if="isMutating" />
-          {{ t("actions.delete") }}
-          <Kbd>↩</Kbd>
-        </AlertDialogAction>
-      </AlertDialogFooter>
-    </AlertDialogContent>
-  </AlertDialog>
+    <template #description>
+      <span class="text-foreground font-medium">{{
+        activeSession?.title || t("ai.thisChat")
+      }}</span>
+      {{ t("ai.deleteChatConfirm") }}
+    </template>
+  </ConfirmAction>
 </template>

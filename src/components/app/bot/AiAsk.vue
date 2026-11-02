@@ -36,11 +36,7 @@ const openAsk = () => {
         </Button>
       </TooltipTrigger>
       <TooltipContent class="flex items-center gap-2 px-2">
-        <Badge
-          variant="ghost"
-          class="rounded-4xl"
-          @click="isDocked = !isDocked"
-        >
+        <Badge variant="ghost" @click="isDocked = !isDocked">
           <IconPanelRight v-if="!isDocked" />
           <IconPictureInPicture2 v-else />
           {{ t("pages.start.askAi") }}

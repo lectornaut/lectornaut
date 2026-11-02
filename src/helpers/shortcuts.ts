@@ -29,6 +29,7 @@ import {
   formatForDisplay,
   formatHotkey,
   parseHotkey,
+  type DisplayHotkeyChord,
   type HotkeyChord,
 } from "@tanstack/vue-hotkeys"
 import type { Component } from "vue"
@@ -217,12 +218,6 @@ export const getFlatShortcuts = (options?: FilterOptions): Shortcut[] => {
 const DISPLAY_PLATFORM: "mac" | "windows" = IS_APPLE_DEVICE ? "mac" : "windows"
 
 /**
- * Private separator for splitting `formatForDisplay` output into key tokens.
- * Uses the ASCII Unit Separator (U+001F) so it never collides with a key glyph.
- */
-const DISPLAY_SEPARATOR = "\u001f"
-
-/**
  * macOS system shortcuts that cannot be reassigned as app hotkeys, in `Mod`
  * notation (Mod = ⌘ on macOS). Matched against the recorder's normalized
  * output and only enforced on Apple devices (see `useShortcutRecorder`).
@@ -294,12 +289,12 @@ const HOUSE_DISPLAY_GLYPHS: Record<string, string> = {
 export const hotkeyToDisplayKeys = (hotkey: string): string[] => {
   if (!hotkey) return []
   try {
-    return formatForDisplay(hotkey, {
+    // Runtime strings (custom bindings) are validated by the library; a bad
+    // combo throws and falls through to the raw text below.
+    return formatForDisplay(hotkey as DisplayHotkeyChord, {
       platform: DISPLAY_PLATFORM,
-      separatorToken: DISPLAY_SEPARATOR,
-    })
-      .split(DISPLAY_SEPARATOR)
-      .map((token) => HOUSE_DISPLAY_GLYPHS[token] ?? token)
+      parts: true,
+    }).map((token) => HOUSE_DISPLAY_GLYPHS[token] ?? token)
   } catch {
     return [hotkey]
   }

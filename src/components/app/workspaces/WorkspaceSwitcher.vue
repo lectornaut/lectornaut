@@ -22,23 +22,16 @@ const {
 
 const { currentTeam } = useTeamActions()
 
-const isCreateWorkspaceDialogOpen = ref(false)
 const isSwitcherOpen = ref(false)
 
 // External surfaces drive these without re-mounting the component.
 const openSwitcher = () => {
   if (currentTeam.value) isSwitcherOpen.value = true
 }
-const openCreateWorkspace = () => {
-  isCreateWorkspaceDialogOpen.value = true
-}
-
 emitter.on("Workspace.Switch", openSwitcher)
-emitter.on("Dialog.CreateWorkspace.Open", openCreateWorkspace)
 
 onUnmounted(() => {
   emitter.off("Workspace.Switch", openSwitcher)
-  emitter.off("Dialog.CreateWorkspace.Open", openCreateWorkspace)
 })
 </script>
 
@@ -110,7 +103,7 @@ onUnmounted(() => {
                       <div>
                         <DropdownMenuItem
                           :disabled="!canCreateWorkspace"
-                          @click="isCreateWorkspaceDialogOpen = true"
+                          @click="emitter.emit('Dialog.CreateWorkspace.Open')"
                         >
                           <IconCirclePlus />
                           {{
@@ -141,5 +134,4 @@ onUnmounted(() => {
       </ContextMenu>
     </SidebarMenuItem>
   </SidebarMenu>
-  <WorkspaceDialog v-model:open="isCreateWorkspaceDialogOpen" mode="create" />
 </template>

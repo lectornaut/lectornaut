@@ -60,7 +60,6 @@ const activeSessionId = computed(() => botChat?.sessionId.value ?? null)
 const isLoadingSessions = computed(
   () => botChat?.isLoadingSessions.value ?? false
 )
-const isMutating = computed(() => botChat?.isMutatingSession.value ?? false)
 
 // ── Compact search ───────────────────────────────────────────────────────────
 
@@ -176,27 +175,14 @@ const isFilteredEmpty = computed(
 
 const renameDialogOpen = ref(false)
 const renameTarget = ref<IBotSession | null>(null)
-const renameInput = ref("")
 
 const openRename = (session: IBotSession) => {
   renameTarget.value = session
-  renameInput.value = session.title ?? ""
-  // Reka-ui's DialogContent autofocuses the first tabbable (the input) on open.
   renameDialogOpen.value = true
 }
 
-const submitRename = async () => {
-  const target = renameTarget.value
-  if (!target) return
-  const next = renameInput.value.trim()
-  if (!next || next === (target.title ?? "")) {
-    renameDialogOpen.value = false
-    return
-  }
-  await botChat?.renameSession(target.id, next)
-  renameDialogOpen.value = false
-  renameTarget.value = null
-}
+const saveRename = async (title: string) =>
+  !!(await botChat?.renameSession(renameTarget.value!.id, title))
 
 const deleteDialogOpen = ref(false)
 const deleteTarget = ref<IBotSession | null>(null)
@@ -208,10 +194,7 @@ const openDelete = (session: IBotSession) => {
 
 const submitDelete = async () => {
   const target = deleteTarget.value
-  if (!target) return
-  await botChat?.removeSession(target.id)
-  deleteDialogOpen.value = false
-  deleteTarget.value = null
+  if (!target || !(await botChat?.removeSession(target.id))) return false
 }
 
 // ── Row actions ─────────────────────────────────────────────────────────────
@@ -404,7 +387,10 @@ const onPinToggle = (session: IBotSession) => {
                             {{ t("ai.archive") }}
                           </ContextMenuItem>
                           <ContextMenuSeparator />
-                          <ContextMenuItem @click="openDelete(item)">
+                          <ContextMenuItem
+                            variant="destructive"
+                            @click="openDelete(item)"
+                          >
                             <IconTrash2 />
                             {{ t("actions.delete") }}
                           </ContextMenuItem>
@@ -462,6 +448,7 @@ const onPinToggle = (session: IBotSession) => {
                               </DropdownMenuItem>
                               <DropdownMenuSeparator />
                               <DropdownMenuItem
+                                variant="destructive"
                                 data-hotkey="backspace delete"
                                 @click="openDelete(item)"
                               >
@@ -613,7 +600,10 @@ const onPinToggle = (session: IBotSession) => {
                             {{ t("actions.rename") }}
                           </ContextMenuItem>
                           <ContextMenuSeparator />
-                          <ContextMenuItem @click="openDelete(item)">
+                          <ContextMenuItem
+                            variant="destructive"
+                            @click="openDelete(item)"
+                          >
                             <IconTrash2 />
                             {{ t("actions.delete") }}
                           </ContextMenuItem>
@@ -657,6 +647,7 @@ const onPinToggle = (session: IBotSession) => {
                               </DropdownMenuItem>
                               <DropdownMenuSeparator />
                               <DropdownMenuItem
+                                variant="destructive"
                                 data-hotkey="backspace delete"
                                 @click="openDelete(item)"
                               >
@@ -679,69 +670,24 @@ const onPinToggle = (session: IBotSession) => {
     </SidebarContent>
   </Sidebar>
 
-  <!-- Rename dialog -->
-  <Dialog v-model:open="renameDialogOpen">
-    <DialogContent>
-      <DialogHeader>
-        <DialogTitle>{{ t("ai.renameChat") }}</DialogTitle>
-        <DialogDescription>
-          {{ t("ai.renameChatHint") }}
-        </DialogDescription>
-      </DialogHeader>
-      <form @submit.prevent="submitRename">
-        <Field>
-          <FieldLabel for="bot-rename-input">{{
-            t("ai.chatTitle")
-          }}</FieldLabel>
-          <Input
-            id="bot-rename-input"
-            v-model="renameInput"
-            :placeholder="t('ai.chatTitlePlaceholder')"
-            maxlength="120"
-            :disabled="isMutating"
-          />
-        </Field>
-      </form>
-      <DialogFooter>
-        <DialogClose as-child>
-          <Button variant="outline" :disabled="isMutating">
-            {{ t("actions.cancel") }}
-          </Button>
-        </DialogClose>
-        <Button
-          :disabled="isMutating || !renameInput.trim()"
-          @click="submitRename"
-        >
-          <Spinner v-if="isMutating" />
-          {{ t("actions.save") }}
-        </Button>
-      </DialogFooter>
-    </DialogContent>
-  </Dialog>
+  <SessionRenameDialog
+    v-model:open="renameDialogOpen"
+    :title="renameTarget?.title"
+    :on-save="saveRename"
+  />
 
-  <!-- Delete confirm -->
-  <AlertDialog v-model:open="deleteDialogOpen">
-    <AlertDialogContent>
-      <AlertDialogHeader>
-        <AlertDialogTitle>{{ t("ai.deleteChatTitle") }}</AlertDialogTitle>
-        <AlertDialogDescription>
-          <span class="text-foreground font-medium">{{
-            deleteTarget?.title || t("ai.thisChat")
-          }}</span>
-          {{ t("ai.deleteChatConfirm") }}
-        </AlertDialogDescription>
-      </AlertDialogHeader>
-      <AlertDialogFooter>
-        <AlertDialogCancel :disabled="isMutating">
-          {{ t("actions.cancel") }}
-          <Kbd>Esc</Kbd>
-        </AlertDialogCancel>
-        <AlertDialogAction :disabled="isMutating" @click.prevent="submitDelete">
-          <Spinner v-if="isMutating" />
-          {{ t("actions.delete") }}
-          <Kbd>↩</Kbd>
-        </AlertDialogAction>
-      </AlertDialogFooter>
-    </AlertDialogContent>
-  </AlertDialog>
+  <ConfirmAction
+    v-model:open="deleteDialogOpen"
+    :title="t('ai.deleteChatTitle')"
+    :action-label="t('actions.delete')"
+    destructive
+    :on-confirm="submitDelete"
+  >
+    <template #description>
+      <span class="text-foreground font-medium">{{
+        deleteTarget?.title || t("ai.thisChat")
+      }}</span>
+      {{ t("ai.deleteChatConfirm") }}
+    </template>
+  </ConfirmAction>
 </template>

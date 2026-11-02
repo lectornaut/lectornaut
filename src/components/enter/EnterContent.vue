@@ -210,10 +210,10 @@ const authenticateApple = () =>
           </Button>
         </div>
       </TabsContent>
-      <div class="bg-background grid gap-4 rounded-4xl border p-2">
+      <div class="bg-background rounded-surface grid gap-4 border p-2">
         <!-- Email input -->
         <div class="grid gap-2">
-          <InputGroup>
+          <InputGroup class="rounded-in-surface/2.25!">
             <InputGroupAddon align="block-start">
               <Label for="email" class="text-foreground">
                 {{ t("enter.labels.email") }}
@@ -373,7 +373,7 @@ const authenticateApple = () =>
         {{ t("enter.signIn") }}
       </h2>
     </TabsContent>
-    <div class="bg-background grid gap-4 rounded-4xl border p-2">
+    <div class="bg-background rounded-surface grid gap-4 border p-2">
       <div class="flex flex-col gap-2">
         <!-- Email display with back button -->
         <div class="flex items-center gap-2">

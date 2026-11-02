@@ -5,6 +5,7 @@ import {
   type GeneratedTeamWorkflowConfig,
   type WorkflowNodeRefInput,
 } from "@/composables/useFunctions"
+import { useDismissGuard } from "@/composables/useDismissGuard"
 import { useTeamWorkflows } from "@/composables/useTeamWorkflows"
 import {
   DEFAULT_AGENT_DEFINITION,
@@ -143,6 +144,19 @@ const emptyDraft = (): WorkflowFormDraft => ({
 })
 
 const draft = ref<WorkflowFormDraft>(emptyDraft())
+/** Draft as it was when the dialog opened; the dirty baseline. */
+const baseline = ref(JSON.stringify(draft.value))
+const isDirty = computed(() => JSON.stringify(draft.value) !== baseline.value)
+
+const openModel = computed({
+  get: () => props.open,
+  set: (value: boolean) => emit("update:open", value),
+})
+// A typed-but-ungenerated prompt counts as unsaved work too.
+const guard = useDismissGuard(
+  openModel,
+  () => isDirty.value || aiPrompt.value.trim().length > 0
+)
 
 // Mirrors `SettingsWorkflowRow`'s `avatarSeedEffective` so the editor preview
 // renders the exact avatar the list row will show after save: explicit seed
@@ -252,9 +266,14 @@ const generatedModel = ref<string | null>(null)
 /** True once a generation has populated the draft this session. */
 const hasGenerated = ref(false)
 
+// Bumped on every generate and every reset; a generation whose run no longer
+// matches lands after the user moved on and must not touch the draft.
+let generationRun = 0
+
 const resetAiState = (): void => {
   activeTab.value = "prompt"
   aiPrompt.value = ""
+  generationRun++
   isGenerating.value = false
   generateError.value = null
   generatedModel.value = null
@@ -311,6 +330,7 @@ watch(
   (isOpen) => {
     if (!isOpen) return
     initDraft()
+    baseline.value = JSON.stringify(draft.value)
     resetAiState()
   }
 )
@@ -386,18 +406,21 @@ const handleGenerate = async (): Promise<void> => {
   const prompt = aiPrompt.value.trim()
   const teamId = currentTeamId.value
   if (!prompt || !teamId || !canGenerate.value) return
+  const run = ++generationRun
   isGenerating.value = true
   generateError.value = null
   try {
     const { data } = await generateTeamWorkflowConfig({ teamId, prompt })
+    if (run !== generationRun) return
     applyGeneratedConfig(data)
     generatedModel.value = data.model
     hasGenerated.value = true
   } catch (error) {
+    if (run !== generationRun) return
     console.error("[WorkflowEditorDialog] failed to generate config:", error)
     generateError.value = t("settings.workflows.ai.generateError")
   } finally {
-    isGenerating.value = false
+    if (run === generationRun) isGenerating.value = false
   }
 }
 
@@ -450,6 +473,8 @@ const canSave = computed(() => {
   if (!canManage.value || isSaving.value) return false
   if (!d.name.trim() || !d.instructions.trim() || !d.agentId) return false
   if (!editingId.value && !currentWorkspaceId.value) return false
+  // Editing with nothing changed would only re-write the same workflow.
+  if (editingId.value && !isDirty.value) return false
   return true
 })
 
@@ -491,10 +516,11 @@ const handleSave = async (): Promise<void> => {
 <template>
   <Dialog
     :open="props.open"
-    @update:open="(v: boolean) => emit('update:open', v)"
+    @update:open="(next: boolean) => !isSaving && guard.onOpenChange(next)"
   >
     <DialogContent
       class="h-3/4 max-h-3/4! w-3/4 max-w-3/4! grid-rows-[auto_minmax(0,1fr)_auto] overflow-hidden overscroll-none"
+      data-dialog-enter="off"
     >
       <DialogHeader>
         <DialogTitle>{{ dialogTitle }}</DialogTitle>
@@ -504,17 +530,17 @@ const handleSave = async (): Promise<void> => {
       </DialogHeader>
 
       <Tabs v-model="activeTab" class="min-h-0">
-        <TabsList class="bg-input/50 h-9! self-start p-0">
+        <TabsList class="bg-input/50 h-control! self-start p-0">
           <TabsTrigger
             value="prompt"
-            class="data-[state=active]:border-border! data-[state=active]:bg-background h-9"
+            class="data-[state=active]:border-border! data-[state=active]:bg-background h-control"
           >
             <IconSparkles />
             {{ t("settings.workflows.ai.tabPrompt") }}
           </TabsTrigger>
           <TabsTrigger
             value="configure"
-            class="data-[state=active]:border-border! data-[state=active]:bg-background h-9"
+            class="data-[state=active]:border-border! data-[state=active]:bg-background h-control"
           >
             {{ t("settings.workflows.ai.tabConfigure") }}
           </TabsTrigger>
@@ -678,7 +704,7 @@ const handleSave = async (): Promise<void> => {
                       {{ t("settings.workflows.instructions") }}
                     </span>
                     <p
-                      class="bg-background text-foreground/90 max-h-48 overflow-auto rounded-4xl border p-2.5 text-xs whitespace-pre-wrap"
+                      class="bg-background text-foreground/90 rounded-surface max-h-48 overflow-auto border p-2.5 text-xs whitespace-pre-wrap"
                     >
                       {{
                         draft.instructions ||
@@ -991,7 +1017,7 @@ const handleSave = async (): Promise<void> => {
 
               <div
                 v-if="draft.triggerType === 'schedule'"
-                class="flex flex-col gap-2 rounded-4xl border p-3"
+                class="rounded-surface flex flex-col gap-2 border p-3"
               >
                 <Select v-model="draft.scheduleType">
                   <SelectTrigger>
@@ -1066,7 +1092,7 @@ const handleSave = async (): Promise<void> => {
 
               <div
                 v-if="draft.triggerType === 'event'"
-                class="flex flex-col gap-2 rounded-4xl border p-3"
+                class="rounded-surface flex flex-col gap-2 border p-3"
               >
                 <Field>
                   <FieldLabel>{{
@@ -1136,7 +1162,7 @@ const handleSave = async (): Promise<void> => {
                 <div
                   v-for="(n, i) in draft.contextNodes"
                   :key="`${n.scope}:${n.nodeId}`"
-                  class="flex items-center justify-between rounded-4xl border px-2 py-1 text-sm"
+                  class="rounded-surface flex items-center justify-between border px-2 py-1 text-sm"
                 >
                   <span class="truncate">{{ n.scope }} / {{ n.nodeId }}</span>
                   <Button variant="ghost" @click="removeContextNode(i)">
@@ -1236,9 +1262,9 @@ const handleSave = async (): Promise<void> => {
         <Button
           variant="outline"
           :disabled="isSaving"
-          @click="emit('update:open', false)"
+          @click="guard.onOpenChange(false)"
         >
-          {{ t("settings.workflows.cancel") }}
+          {{ t("actions.cancel") }}
           <Kbd>Esc</Kbd>
         </Button>
         <Button data-dialog-action :disabled="!canSave" @click="handleSave">
@@ -1249,4 +1275,14 @@ const handleSave = async (): Promise<void> => {
       </DialogFooter>
     </DialogContent>
   </Dialog>
+
+  <ConfirmAction
+    v-model:open="guard.confirmOpen.value"
+    :title="t('common.discardChangesTitle')"
+    :description="t('common.discardChangesDescription')"
+    :action-label="t('common.discard')"
+    :cancel-label="t('common.keepEditing')"
+    destructive
+    :on-confirm="guard.discard"
+  />
 </template>

@@ -15,9 +15,13 @@ interface UseConfirmationDialogReturn<T> {
 export function useConfirmationDialog<T>(): UseConfirmationDialogReturn<T> {
   const isOpen = ref(false)
   const itemToConfirm = ref<T | null>(null) as Ref<T | null>
+  // Whether a confirm is pending, tracked apart from the item so confirms
+  // that carry no payload (`open(null)`, e.g. "Delete SSO") still fire.
+  let armed = false
 
   const open = (item: T) => {
     itemToConfirm.value = item
+    armed = true
     isOpen.value = true
   }
 
@@ -32,21 +36,25 @@ export function useConfirmationDialog<T>(): UseConfirmationDialogReturn<T> {
     // overlay dismissals. The `isOpen` guard avoids clobbering a fresh item if
     // the dialog was re-opened within the same tick.
     queueMicrotask(() => {
-      if (!isOpen.value) itemToConfirm.value = null
+      if (!isOpen.value) {
+        itemToConfirm.value = null
+        armed = false
+      }
     })
   }
 
   const confirm = async (action: (item: T) => Promise<void>) => {
+    if (!armed) return
     // Snapshot up front so the action keeps the item even if a concurrent
     // close clears `itemToConfirm` mid-flight.
-    const item = itemToConfirm.value
-    if (!item) return
-    try {
-      await action(item)
-      isOpen.value = false
-    } finally {
-      itemToConfirm.value = null
-    }
+    const item = itemToConfirm.value as T
+    // A throw propagates and leaves the dialog open with its item intact,
+    // so the user still sees what failed and can retry or cancel.
+    await action(item)
+    // Keep the item: the dialog is fading out and still renders its name.
+    // The next `open()` overwrites it.
+    isOpen.value = false
+    armed = false
   }
 
   return {

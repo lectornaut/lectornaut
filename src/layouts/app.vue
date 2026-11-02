@@ -15,7 +15,7 @@ const { currentTeam, isLoading: isTeamLoading } = useTeamActions()
 const { currentWorkspace, isBootstrapping: isWorkspaceBootstrapping } =
   useWorkspaceActions()
 const uiPreferencesStore = useUiPreferencesStore()
-const { sidebarOpen } = storeToRefs(uiPreferencesStore)
+const { sidebarOpen, sidebarWidth } = storeToRefs(uiPreferencesStore)
 
 const themeStore = useThemeStore()
 const { themeSettings } = storeToRefs(themeStore)
@@ -98,12 +98,25 @@ emitter.on("Dialog.CustomWorkflow.Open", openWorkflowEditor)
 onBeforeUnmount(() =>
   emitter.off("Dialog.CustomWorkflow.Open", openWorkflowEditor)
 )
+
+// Global "create workspace" dialog. Lives here, not in the sidebar's
+// WorkspaceSwitcher, so ⌘K / the Create menu reach exactly one listener even
+// when the sidebar is unmounted (mobile sheet) or mounted twice (hover peek).
+const createWorkspaceOpen = ref(false)
+const openCreateWorkspace = () => {
+  createWorkspaceOpen.value = true
+}
+emitter.on("Dialog.CreateWorkspace.Open", openCreateWorkspace)
+onBeforeUnmount(() =>
+  emitter.off("Dialog.CreateWorkspace.Open", openCreateWorkspace)
+)
 </script>
 
 <template>
   <SidebarProvider
     v-model:open="sidebarOpen"
     :class="{ 'bg-transparent!': themeSettings.translucentSidebar }"
+    :style="{ '--sidebar-width': `${sidebarWidth}rem` }"
   >
     <div class="flex size-full min-h-0 min-w-0 grow flex-col overflow-clip">
       <div class="flex min-h-0 min-w-0 grow" data-tauri-drag-region>
@@ -141,6 +154,7 @@ onBeforeUnmount(() =>
       agents/tools dialogs above, but mounted lazily (the workflows store is
       heavier) once `Dialog.CustomWorkflow.Open` first fires.
     -->
+    <WorkspaceDialog v-model:open="createWorkspaceOpen" mode="create" />
     <SettingsCustomWorkflow
       v-if="workflowEditorMounted"
       v-model:open="workflowEditorOpen"

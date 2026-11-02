@@ -24,7 +24,7 @@ const { t } = useI18n()
         </div>
       </div>
     </DialogTrigger>
-    <DialogContent class="w-sm max-w-fit">
+    <DialogContent class="sm:max-w-sm">
       <DialogHeader class="items-center">
         <DialogTitle>{{ t("components.landing.qrCode.title") }}</DialogTitle>
         <DialogDescription>

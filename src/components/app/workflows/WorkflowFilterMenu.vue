@@ -56,7 +56,7 @@ const keepMenuOpen = (event: Event): void => {
               <IconListFilter />
               <span
                 v-if="showActiveDot"
-                class="bg-primary absolute -top-0.5 -right-0.5 size-2 rounded-4xl"
+                class="bg-primary absolute -top-0.5 -right-0.5 size-2 rounded-full"
               />
             </InputGroupButton>
           </DropdownMenuTrigger>

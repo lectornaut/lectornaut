@@ -64,11 +64,13 @@ function togglePinned() {
 
 <template>
   <ContextMenu>
-    <ContextMenuTrigger>
+    <!-- Preview (hover card): drop the trigger's span from layout so the
+         card's max-height reaches <Sidebar> and SidebarContent can scroll. -->
+    <ContextMenuTrigger :class="{ contents: props.preview }">
       <Sidebar
         :collapsible="collapsibleMode"
         variant="inset"
-        class="shadow-muted-foreground/5 @container/sidebar relative w-full p-1.25 pt-0 transition-none"
+        class="@container/sidebar relative min-h-0 w-full pt-0 transition-none group-data-[collapsible=icon]:w-full"
         data-tauri-drag-region="deep"
       >
         <!-- <Separator
@@ -84,7 +86,7 @@ function togglePinned() {
           v-motion-fade
           class="flex items-center justify-between gap-2 px-2 pt-2"
           :class="{
-            'pl-[calc(var(--spacing-macos-window-controls)-(--spacing(1.25)))]':
+            'pl-[calc(var(--spacing-macos-window-controls)-(--spacing(2)))]':
               !props.preview && macOSTrafficLightsVisible,
           }"
         >

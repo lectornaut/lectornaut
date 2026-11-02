@@ -307,7 +307,7 @@ const handleToggleEnabled = async (enabled: boolean): Promise<void> => {
   <Sheet v-model:open="open">
     <!-- House floating-sheet idiom (DriveFilePicker / Navigation edit). -->
     <SheetContent
-      class="m-2 mt-[calc(var(--spacing-titlebar-height,0px)+(--spacing(2)))] h-auto! gap-0 overflow-clip rounded-4xl border sm:max-w-md"
+      class="rounded-surface m-2 mt-[calc(var(--spacing-titlebar-height,0px)+(--spacing(2)))] h-auto! gap-0 overflow-clip border sm:max-w-md"
       :class="{ 'mt-12': isTauri && !isFullscreen }"
     >
       <template v-if="activeRow">
@@ -328,16 +328,16 @@ const handleToggleEnabled = async (enabled: boolean): Promise<void> => {
              each ScrollContainer runs edge to edge (scrollbar + fade hints at
              the sheet rim) and its inner content carries the px-6 gutter. -->
         <Tabs v-model="activeTab" class="min-h-0 flex-1">
-          <TabsList class="bg-input/50 mx-6 h-9! p-0">
+          <TabsList class="bg-input/50 h-control! mx-6 p-0">
             <TabsTrigger
               value="overview"
-              class="data-[state=active]:border-border! data-[state=active]:bg-background h-9"
+              class="data-[state=active]:border-border! data-[state=active]:bg-background h-control"
             >
               {{ t("settings.connections.info.tabOverview") }}
             </TabsTrigger>
             <TabsTrigger
               value="accounts"
-              class="data-[state=active]:border-border! data-[state=active]:bg-background h-9"
+              class="data-[state=active]:border-border! data-[state=active]:bg-background h-control"
             >
               {{
                 t("settings.connections.info.tabAccounts", {
@@ -349,7 +349,7 @@ const handleToggleEnabled = async (enabled: boolean): Promise<void> => {
             <TabsTrigger
               v-if="canManage"
               value="settings"
-              class="data-[state=active]:border-border! data-[state=active]:bg-background h-9"
+              class="data-[state=active]:border-border! data-[state=active]:bg-background h-control"
             >
               {{ t("settings.connections.info.tabSettings") }}
             </TabsTrigger>

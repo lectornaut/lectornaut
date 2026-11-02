@@ -31,7 +31,7 @@ const { orientation, canScrollNext, scrollNext } = useCarousel()
       cn(
         'absolute touch-manipulation rounded-full',
         orientation === 'horizontal'
-          ? 'top-1/2 -right-12 -translate-y-1/2'
+          ? 'inset-y-0 -right-12 my-auto'
           : '-bottom-12 left-1/2 -translate-x-1/2 rotate-90',
         props.class
       )

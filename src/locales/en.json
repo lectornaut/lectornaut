@@ -506,7 +506,6 @@
     }
   },
   "common": {
-    "cancel": "Cancel",
     "delete": "Delete",
     "save": "Save",
     "close": "Close",
@@ -522,9 +521,10 @@
     "discard": "Discard",
     "add": "Add",
     "next": "Next",
-    "actions": {
-      "cancel": "Cancel"
-    }
+    "discardChangesTitle": "Discard Changes?",
+    "discardChangesDescription": "Your unsaved changes will be lost.",
+    "keepEditing": "Keep editing",
+    "typeToConfirm": "Type {phrase} to confirm"
   },
   "settings": {
     "connectionResources": {
@@ -783,8 +783,6 @@
       "profilePicture": {
         "label": "Profile picture",
         "description": "Upload or remove your profile photo.",
-        "upload": "Upload",
-        "remove": "Remove",
         "removed": "Profile picture removed",
         "removeFailed": "Couldn't remove profile picture",
         "uploadStartFailed": "Couldn't start profile photo upload.",
@@ -925,8 +923,9 @@
         "confirm": "Delete this account permanently?",
         "deletedDesc": "Your account was deleted.",
         "failed": "Couldn't delete account",
-        "confirmLabel": "Type 'delete my account' to confirm deletion.",
-        "confirmRequired": "Please type 'delete my account' to confirm."
+        "confirmPhrase": "delete my account",
+        "onlyMember": "You're the only member of {team}. Delete the team first.",
+        "soleOwner": "You're the sole owner of {team}. Transfer ownership or delete the team first."
       }
     },
     "preferences": {
@@ -1413,15 +1412,17 @@
         "label": "Archive all my chats",
         "description": "Move every active chat you own out of the sidebar. They stay readable in the Archived group; you can restore them anytime.",
         "action": "Archive all",
-        "confirmTitle": "Archive every chat you own?",
-        "confirmBody": "{count} active chat will be archived. | {count} active chat will be archived. | {count} active chats will be archived."
+        "confirmTitle": "Archive All My Chats",
+        "confirmBody": "{count} active chat will be archived. | {count} active chat will be archived. | {count} active chats will be archived.",
+        "error": "Couldn't archive all your chats."
       },
       "deleteAll": {
         "label": "Delete all my chats",
         "description": "Permanently remove every chat you own, active and archived, along with all their messages. This action cannot be undone.",
         "action": "Delete all",
-        "confirmTitle": "Permanently delete every chat you own?",
-        "confirmBody": "{count} chat will be permanently deleted, including every message. This action cannot be undone. | {count} chat will be permanently deleted, including every message. This action cannot be undone. | {count} chats will be permanently deleted, including every message. This action cannot be undone."
+        "confirmTitle": "Delete All My Chats",
+        "confirmBody": "{count} chat will be permanently deleted, including every message. This action cannot be undone. | {count} chat will be permanently deleted, including every message. This action cannot be undone. | {count} chats will be permanently deleted, including every message. This action cannot be undone.",
+        "error": "Couldn't delete all your chats."
       },
       "memoriesLabel": "Your memories",
       "memoriesDescription": "Bulk actions on the private memories you own in this workspace. Shared memories, yours or anyone else's, are never affected.",
@@ -1430,7 +1431,7 @@
         "label": "Archive all my private memories",
         "description": "Mark every active private memory you own as archived so agents stop recalling it. You can restore each one anytime from Memory settings.",
         "action": "Archive all",
-        "confirmTitle": "Archive every private memory you own?",
+        "confirmTitle": "Archive All My Private Memories",
         "confirmBody": "{count} active private memory will be archived and pulled from agent recall. | {count} active private memory will be archived and pulled from agent recall. | {count} active private memories will be archived and pulled from agent recall.",
         "success": "No private memories to archive. | Archived {count} private memory. | Archived {count} private memories.",
         "error": "Couldn't archive your private memories."
@@ -1439,7 +1440,7 @@
         "label": "Delete all my private memories",
         "description": "Permanently remove every private memory you own, active and archived. Shared memories are not affected. This action cannot be undone.",
         "action": "Delete all",
-        "confirmTitle": "Permanently delete every private memory you own?",
+        "confirmTitle": "Delete All My Private Memories",
         "confirmBody": "{count} private memory will be permanently deleted. This action cannot be undone. | {count} private memory will be permanently deleted. This action cannot be undone. | {count} private memories will be permanently deleted. This action cannot be undone.",
         "success": "No private memories to delete. | Deleted {count} private memory. | Deleted {count} private memories.",
         "error": "Couldn't delete your private memories."
@@ -1455,15 +1456,17 @@
         "label": "Archive all team chats",
         "description": "Move every active chat across all members into their owners' Archived groups. Owners can restore individually.",
         "action": "Archive all",
-        "confirmTitle": "Archive every chat in this workspace?",
-        "confirmBody": "{count} active chat will be archived for every member of this workspace. | {count} active chat will be archived for every member of this workspace. | {count} active chats will be archived for every member of this workspace."
+        "confirmTitle": "Archive All Team Chats",
+        "confirmBody": "{count} active chat will be archived for every member of this workspace. | {count} active chat will be archived for every member of this workspace. | {count} active chats will be archived for every member of this workspace.",
+        "error": "Couldn't archive all team chats."
       },
       "deleteAll": {
         "label": "Delete all team chats",
         "description": "Permanently remove every chat in this workspace, active and archived, across every member. This action cannot be undone.",
         "action": "Delete all",
-        "confirmTitle": "Permanently delete every chat in this workspace?",
-        "confirmBody": "{count} chat will be permanently deleted across every member, including every message. This action cannot be undone. | {count} chat will be permanently deleted across every member, including every message. This action cannot be undone. | {count} chats will be permanently deleted across every member, including every message. This action cannot be undone."
+        "confirmTitle": "Delete All Team Chats",
+        "confirmBody": "{count} chat will be permanently deleted across every member, including every message. This action cannot be undone. | {count} chat will be permanently deleted across every member, including every message. This action cannot be undone. | {count} chats will be permanently deleted across every member, including every message. This action cannot be undone.",
+        "error": "Couldn't delete all team chats."
       }
     },
     "storage": {
@@ -1477,29 +1480,37 @@
         "label": "Archive all code documents",
         "description": "Mark every active top-level file and folder under the Code workspace as archived. Children stay where they are and individual items can be restored later.",
         "action": "Archive all code",
-        "confirmTitle": "Archive every active Code document?",
-        "confirmBody": "{count} active top-level item will be archived. You can restore each one later from its workspace view. | {count} active top-level item will be archived. You can restore each one later from its workspace view. | {count} active top-level items will be archived. You can restore each one later from their workspace view."
+        "confirmTitle": "Archive All Code",
+        "confirmBody": "{count} active top-level item will be archived. You can restore each one later from its workspace view. | {count} active top-level item will be archived. You can restore each one later from its workspace view. | {count} active top-level items will be archived. You can restore each one later from their workspace view.",
+        "success": "All code documents archived.",
+        "error": "Couldn't archive all code documents."
       },
       "deleteCodes": {
         "label": "Delete all code documents",
         "description": "Permanently remove every file and folder under the Code workspace. Cascade delete reaches every descendant.",
         "action": "Delete all code",
-        "confirmTitle": "Delete every Code document?",
-        "confirmBody": "{count} top-level item will be permanently deleted along with every descendant file, folder, and attachment. This action cannot be undone. | {count} top-level item will be permanently deleted along with every descendant file, folder, and attachment. This action cannot be undone. | {count} top-level items will be permanently deleted along with every descendant file, folder, and attachment. This action cannot be undone."
+        "confirmTitle": "Delete All Code",
+        "confirmBody": "{count} top-level item will be permanently deleted along with every descendant file, folder, and attachment. This action cannot be undone. | {count} top-level item will be permanently deleted along with every descendant file, folder, and attachment. This action cannot be undone. | {count} top-level items will be permanently deleted along with every descendant file, folder, and attachment. This action cannot be undone.",
+        "success": "All code documents deleted.",
+        "error": "Couldn't delete all code documents."
       },
       "archiveWrites": {
         "label": "Archive all write documents",
         "description": "Mark every active top-level file and folder under the Write workspace as archived. Children stay where they are and individual items can be restored later.",
         "action": "Archive all writes",
-        "confirmTitle": "Archive every active Write document?",
-        "confirmBody": "{count} active top-level item will be archived. You can restore each one later from its workspace view. | {count} active top-level item will be archived. You can restore each one later from its workspace view. | {count} active top-level items will be archived. You can restore each one later from their workspace view."
+        "confirmTitle": "Archive All Writes",
+        "confirmBody": "{count} active top-level item will be archived. You can restore each one later from its workspace view. | {count} active top-level item will be archived. You can restore each one later from its workspace view. | {count} active top-level items will be archived. You can restore each one later from their workspace view.",
+        "success": "All write documents archived.",
+        "error": "Couldn't archive all write documents."
       },
       "deleteWrites": {
         "label": "Delete all write documents",
         "description": "Permanently remove every file and folder under the Write workspace. Cascade delete reaches every descendant.",
         "action": "Delete all writes",
-        "confirmTitle": "Delete every Write document?",
-        "confirmBody": "{count} top-level item will be permanently deleted along with every descendant file, folder, and attachment. This action cannot be undone. | {count} top-level item will be permanently deleted along with every descendant file, folder, and attachment. This action cannot be undone. | {count} top-level items will be permanently deleted along with every descendant file, folder, and attachment. This action cannot be undone."
+        "confirmTitle": "Delete All Writes",
+        "confirmBody": "{count} top-level item will be permanently deleted along with every descendant file, folder, and attachment. This action cannot be undone. | {count} top-level item will be permanently deleted along with every descendant file, folder, and attachment. This action cannot be undone. | {count} top-level items will be permanently deleted along with every descendant file, folder, and attachment. This action cannot be undone.",
+        "success": "All write documents deleted.",
+        "error": "Couldn't delete all write documents."
       },
       "memoryCount": "No memories | {count} memory | {count} memories",
       "activeMemoryCount": "No active memories | {count} active memory | {count} active memories",
@@ -1507,7 +1518,7 @@
         "label": "Archive all memories",
         "description": "Mark every active memory in this workspace (all members, private and shared) as archived so agents stop recalling them. Individually restorable.",
         "action": "Archive all memories",
-        "confirmTitle": "Archive every active memory?",
+        "confirmTitle": "Archive All Memories",
         "confirmBody": "{count} active memory will be archived for every member of this workspace. | {count} active memory will be archived for every member of this workspace. | {count} active memories will be archived for every member of this workspace.",
         "success": "No memories to archive. | Archived {count} memory. | Archived {count} memories.",
         "error": "Couldn't archive memories."
@@ -1516,11 +1527,12 @@
         "label": "Delete all memories",
         "description": "Permanently remove every memory in this workspace across all members, private and shared. This action cannot be undone.",
         "action": "Delete all memories",
-        "confirmTitle": "Delete every memory in this workspace?",
+        "confirmTitle": "Delete All Memories",
         "confirmBody": "{count} memory will be permanently deleted across every member. This action cannot be undone. | {count} memory will be permanently deleted across every member. This action cannot be undone. | {count} memories will be permanently deleted across every member. This action cannot be undone.",
         "success": "No memories to delete. | Deleted {count} memory. | Deleted {count} memories.",
         "error": "Couldn't delete memories."
-      }
+      },
+      "refreshError": "Couldn't read workspace contents."
     },
     "security": {
       "noPermissionTitle": "Admin access required",
@@ -1697,7 +1709,6 @@
       "eventScope": "Watch which content",
       "scopeWrite": "Write documents",
       "scopeCode": "Code files",
-      "cancel": "Cancel",
       "save": "Save",
       "confirmDelete": "Delete workflow \"{name}\"? This action cannot be undone.",
       "createSuccess": "Workflow created.",
@@ -1800,7 +1811,10 @@
       "customWorkflowsOff": "Custom workflows are turned off for this team. Enable them above to create one.",
       "gateSaveSuccess": "Workflow settings saved.",
       "gateSaveError": "Couldn't save workflow settings.",
-      "gateLoadError": "Couldn't load workflow settings."
+      "gateLoadError": "Couldn't load workflow settings.",
+      "rejectConfirmTitle": "Reject Changes?",
+      "rejectConfirmBody": "The run's proposed changes will be discarded and the run cancelled. This action cannot be undone.",
+      "deleteRunConfirmTitle": "Delete Run?"
     },
     "runs": {
       "dateRange": "Date range",
@@ -2260,10 +2274,7 @@
       },
       "teamPhoto": {
         "label": "Team photo",
-        "description": "Upload a photo for your team.",
-        "upload": "Upload",
-        "uploading": "Uploading...",
-        "remove": "Remove"
+        "description": "Upload a photo for your team."
       },
       "teamName": {
         "label": "Team name",
@@ -2311,8 +2322,6 @@
       "columnCreated": "Created",
       "current": "Current",
       "actionsTooltip": "Actions",
-      "uploadPhoto": "Upload team photo",
-      "removePhoto": "Remove team photo",
       "noTeams": "No teams found.",
       "exitTitle": "Exit Team",
       "exitConfirm": "Are you sure you want to leave {name}? You will lose access to all team resources.",
@@ -2330,8 +2339,6 @@
       "columnCreated": "Created",
       "current": "Current",
       "actionsTooltip": "Actions",
-      "uploadPhoto": "Upload workspace photo",
-      "removePhoto": "Remove workspace photo",
       "noWorkspaces": "No workspaces found.",
       "noDescription": "No description",
       "deleteTitle": "Delete Workspace",
@@ -2367,8 +2374,6 @@
       "title": "Groups",
       "description": "Manage groups to grant roles to multiple members at once.",
       "createGroup": "Create group",
-      "uploadPhoto": "Upload group photo",
-      "removePhoto": "Remove group photo",
       "name": "Name",
       "members": "Members",
       "usedIn": "Used in",
@@ -2384,7 +2389,12 @@
       "empty": "No groups yet. Create one to grant a role to several members at once.",
       "createError": "Couldn't create group",
       "updateError": "Couldn't update group",
-      "deleteError": "Couldn't delete group"
+      "deleteError": "Couldn't delete group",
+      "photoUploading": "Uploading group photo...",
+      "photoUpdated": "Group photo updated",
+      "photoUpdateError": "Couldn't update group photo",
+      "photoRemoved": "Group photo removed",
+      "photoRemoveError": "Couldn't remove group photo"
     },
     "unsavedChanges": "Unsaved changes"
   },
@@ -3163,8 +3173,6 @@
         "invite": "Invite people to this team and manage pending invitations."
       },
       "tooltips": {
-        "uploadPhoto": "Upload photo",
-        "removePhoto": "Remove photo",
         "removeMember": "Remove member",
         "addMember": "Add member",
         "cancelInvitation": "Cancel invitation",
@@ -3372,8 +3380,6 @@
       "createDescription": "Create a new workspace to organize your content within this team.",
       "editDescription": "Update workspace details.",
       "photoLabel": "Photo",
-      "uploadPhoto": "Upload photo",
-      "removePhoto": "Remove photo",
       "nameLabel": "Name",
       "namePlaceholder": "My Workspace",
       "descriptionLabel": "Description",
@@ -3408,8 +3414,6 @@
       "createDescription": "Bundle team members into a reusable group. Grant it a role per workspace later.",
       "editDescription": "Update the group's name, description, and members.",
       "photoLabel": "Photo",
-      "uploadPhoto": "Upload photo",
-      "removePhoto": "Remove photo",
       "nameLabel": "Name",
       "namePlaceholder": "Engineering",
       "descriptionLabel": "Description",
@@ -3443,8 +3447,6 @@
       "fileNamePlaceholder": "Enter a display name",
       "replaceFileLabel": "Replace file",
       "deleteTitle": "Delete attachment",
-      "deleteDescriptionPrefix": "Remove",
-      "deleteDescriptionSuffix": "from this node. The stored file will be deleted as well.",
       "toasts": {
         "archived": "Archived nodes are read-only.",
         "noPermission": "You do not have permission to edit attachments.",
@@ -3463,7 +3465,8 @@
         "renamed": "Attachment renamed",
         "deleted": "Attachment deleted",
         "driveImported": "Imported \"{name}\" from Google Drive."
-      }
+      },
+      "deleteDescription": "Remove {name} from this node. The stored file will be deleted as well."
     },
     "textEditor": {
       "typeForCommands": "Type '/' for commands",
@@ -3783,6 +3786,69 @@
       },
       "selectWorkspace": "Select workspace",
       "tooltip": "Switch workspace"
+    },
+    "photoUpload": {
+      "upload": "Upload photo",
+      "busy": "Updating photo...",
+      "remove": "Remove photo"
+    },
+    "sessionAttachments": {
+      "uploadFiles": "Upload files",
+      "addFromDrive": "Add from Google Drive",
+      "pendingUploadMeta": "{size} · Sent with first message",
+      "pendingDriveMeta": "Google Drive · Sent with first message",
+      "emptyTitle": "No attachments",
+      "emptyPending": "Upload files to send with your first message.",
+      "emptyDescription": "Upload images or PDFs to include them with your messages.",
+      "uploading": "Uploading...",
+      "loading": "Loading attachments...",
+      "includedInNextMessage": "Included in next message",
+      "unknownType": "Unknown type",
+      "includeInNextMessage": "Include {name} in next message",
+      "excludeFromNextMessage": "Remove {name} from next message",
+      "renameTitle": "Rename Attachment",
+      "renameDescription": "Update the display name for this file.",
+      "fileNameLabel": "File name",
+      "deleteTitle": "Delete Attachment",
+      "deleteDescription": "Delete {name}? This can't be undone.",
+      "errors": {
+        "noSession": "Send a message to start this chat first."
+      },
+      "toasts": {
+        "driveBuffered": "\"{name}\" will be sent with your first message.",
+        "driveImported": "Imported \"{name}\" from Google Drive.",
+        "fileTooLargeTitle": "File too large",
+        "fileTooLargeDescription": "{name} is larger than {limit}.",
+        "uploaded": "File uploaded. | {count} files uploaded.",
+        "uploadFailedTitle": "Couldn't upload file | Couldn't upload some files",
+        "uploadFailedDescription": "The file couldn't be uploaded. See the list above for details. | {count} files couldn't be uploaded. See the list above for details.",
+        "downloadFailedTitle": "Couldn't download attachment",
+        "renamed": "Renamed.",
+        "renameFailedTitle": "Couldn't rename attachment",
+        "deleted": "Deleted.",
+        "deleteFailedTitle": "Couldn't delete attachment"
+      }
+    },
+    "driveFilePicker": {
+      "title": "Add from Google Drive",
+      "description": "Pick files from your connected Drive. Docs are imported as markdown, Sheets as CSV.",
+      "searchPlaceholder": "Search your Drive...",
+      "allFiles": "All files",
+      "connectTitle": "Connect Google Drive",
+      "connectDescription": "Link your Google account to browse and import your Drive files here.",
+      "openSettings": "Open settings",
+      "loading": "Loading your Drive...",
+      "tryAgain": "Try again",
+      "nothingFound": "Nothing found",
+      "noSearchResults": "No files matched your search.",
+      "emptyFolder": "No files here yet.",
+      "folder": "Folder",
+      "openFolder": "Open folder {name}",
+      "selectFile": "Select {name}",
+      "unselectFile": "Unselect {name}",
+      "loadMore": "Load more",
+      "addFiles": "Add files",
+      "addCount": "Add {count} file | Add {count} files"
     }
   },
   "accountMenu": {

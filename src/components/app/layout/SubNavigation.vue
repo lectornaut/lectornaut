@@ -78,7 +78,7 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="flex items-center gap-2 overflow-clip p-2">
+  <div class="flex shrink-0 items-center gap-2 overflow-clip p-2">
     <div class="flex items-center gap-2">
       <TooltipProvider>
         <ButtonGroup>

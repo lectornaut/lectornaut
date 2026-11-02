@@ -115,13 +115,20 @@ watch(canPreview, (ok) => {
         <slot><Component :is="icon" /></slot>
       </Button>
     </HoverCardTrigger>
+    <!-- Cap at the main content's bottom edge: reka's available height
+         (trigger → viewport) minus BottomBar (size-8 AiBar + p-2 = 3rem)
+         and a 0.5rem gap matching the 8px side-offset = 3.5rem. -->
     <HoverCardContent
       side="bottom"
       :align="side === 'left' ? 'start' : 'end'"
       :side-offset="8"
-      class="h-[80svh] w-80 overflow-clip p-0"
+      class="flex max-h-[calc(var(--reka-hover-card-content-available-height)-3.5rem)] flex-col overflow-clip p-0"
     >
-      <div :id="previewTargetId" ref="previewEl" class="flex size-full" />
+      <div
+        :id="previewTargetId"
+        ref="previewEl"
+        class="flex min-h-0 w-full flex-1"
+      />
     </HoverCardContent>
   </HoverCard>
 

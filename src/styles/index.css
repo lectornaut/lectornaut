@@ -212,6 +212,17 @@
   --radius-2xl: calc(var(--radius) * 1.8);
   --radius-3xl: calc(var(--radius) * 2.2);
   --radius-4xl: calc(var(--radius) * 2.6);
+
+  /* shadcn style roles (reka-luma). App code uses these, never a style's
+     literal radius; on a style switch, re-point them at the new primitives:
+     surface = DialogContent, overlay = DropdownMenuContent (+ its padding as
+     overlay-inset), item = DropdownMenuItem, control = Input (+ its height). */
+  --radius-surface: var(--radius-4xl);
+  --radius-overlay: var(--radius-3xl);
+  --radius-control: var(--radius-3xl);
+  --radius-item: var(--radius-2xl);
+  --spacing-overlay-inset: calc(var(--spacing) * 1.5);
+  --spacing-control: calc(var(--spacing) * 9);
   --spacing-safe-top: env(safe-area-inset-top);
   --spacing-safe-bottom: env(safe-area-inset-bottom);
   --spacing-safe-left: env(safe-area-inset-left);
@@ -251,6 +262,116 @@
     to {
       height: 0;
     }
+  }
+}
+
+/*
+  Concentric radii
+  - A rounded child hugging a rounded parent's corner shares its corner
+    centre when `inner = max(0, outer - inset)`. The inset is the parent's
+    padding plus its border; a `ring` paints outside the box and doesn't count.
+  - `rounded-in-<outer>/<inset>`: <outer> is the parent's radius token, <inset>
+    the gap in spacing units (a 1px border is 0.25). A panel 2 units inside a
+    `rounded-surface` card is `rounded-in-surface/2`.
+  - Only binds when inset < outer / 2. Farther in, the two curves stop reading
+    as one shape and the child keeps its own radius.
+  - Pill children at an even inset are already concentric with a pill parent,
+    so a single-row bar of pill controls is `rounded-full`.
+*/
+@utility rounded-in-* {
+  border-radius: max(
+    0px,
+    calc(--value(--radius-*) - var(--spacing) * --modifier(number))
+  );
+}
+
+/*
+  The same rule for the vendored primitives, keyed on `data-slot` so ui/* stays
+  stock, and on the style roles so it holds for any shadcn style. Unlayered so
+  it beats the components' layered utilities; a per-instance radius on these
+  slots therefore needs `!`.
+*/
+
+/* Menu rows sit one overlay inset inside the content (select: its group). */
+:is(
+  [data-slot="dropdown-menu-item"],
+  [data-slot="dropdown-menu-checkbox-item"],
+  [data-slot="dropdown-menu-radio-item"],
+  [data-slot="dropdown-menu-sub-trigger"],
+  [data-slot="context-menu-item"],
+  [data-slot="context-menu-checkbox-item"],
+  [data-slot="context-menu-radio-item"],
+  [data-slot="context-menu-sub-trigger"],
+  [data-slot="select-item"]
+) {
+  border-radius: max(
+    0px,
+    calc(var(--radius-overlay) - var(--spacing-overlay-inset))
+  );
+}
+
+/* Attachment media: the media padding plus the 1px border. */
+[data-slot="attachment"].rounded-3xl
+  > [data-slot="attachment-media"].rounded-2xl {
+  @apply rounded-in-3xl/2.25;
+}
+
+[data-slot="attachment"][data-size="sm"].rounded-3xl
+  > [data-slot="attachment-media"].rounded-2xl {
+  @apply rounded-in-3xl/1.75;
+}
+
+[data-slot="attachment"][data-size="xs"].rounded-2xl
+  > [data-slot="attachment-media"].rounded-2xl {
+  @apply rounded-in-2xl/1.25;
+}
+
+/* A kbd tucked into a tooltip's `pr-1.5 py-1.5` corner. */
+[data-slot="tooltip-content"].rounded-xl [data-slot="kbd"] {
+  @apply rounded-in-xl/1.5;
+}
+
+/*
+  Command: one `--radius-command` drives the shell, the search field (p-1 + the
+  input wrapper's p-1) and the rows (p-1 + the group's overlay inset). It
+  defaults to the surface radius, matches a `p-0` popover it fills, and a host
+  that insets it sets the variable itself. A `border` on the shell joins the
+  inset.
+*/
+@layer base {
+  [data-slot="command"] {
+    --radius-command: var(--radius-surface);
+  }
+
+  [data-slot="popover-content"] > [data-slot="command"] {
+    --radius-command: var(--radius-overlay);
+  }
+
+  [data-slot="command"].border {
+    --command-border: 1px;
+  }
+}
+
+[data-slot="command"] {
+  border-radius: var(--radius-command);
+
+  & [data-slot="command-input-wrapper"] > [data-slot="input-group"] {
+    border-radius: max(
+      0px,
+      calc(
+        var(--radius-command) - var(--command-border, 0px) - var(--spacing) * 2
+      )
+    );
+  }
+
+  & [data-slot="command-item"] {
+    border-radius: max(
+      0px,
+      calc(
+        var(--radius-command) - var(--command-border, 0px) - var(--spacing) -
+          var(--spacing-overlay-inset)
+      )
+    );
   }
 }
 
@@ -313,8 +434,16 @@
     pointer-drag the handle is [data-resize-handle-state="drag"]; we drop the
     transition there so the panel tracks the cursor instead of lagging.
   */
+
+  /* One shared timing for every panel: a per-panel transition utility (e.g.
+     `transition-all`) lives in a later layer and wins, desyncing that panel's
+     flex-grow from its siblings so untouched panels shake mid-collapse. Add
+     extra animated properties here instead. */
+
   .animate-layout-panels > [data-panel] {
-    transition: flex-grow 200ms cubic-bezier(0.4, 0, 0.2, 1);
+    transition:
+      flex-grow 200ms cubic-bezier(0.4, 0, 0.2, 1),
+      border-color 200ms cubic-bezier(0.4, 0, 0.2, 1);
   }
 
   .animate-layout-panels:has([data-resize-handle-state="drag"]) > [data-panel] {
@@ -893,6 +1022,13 @@
 */
 [data-slot="sidebar"]:not([data-mobile], [data-variant]) {
   @apply h-full;
+}
+
+/* While MainSidebar's rail is dragged, drop the stock 200ms width transition so
+   the sidebar tracks the pointer instead of trailing it. */
+[data-slot="sidebar"]:has([data-slot="sidebar-rail"][data-resizing])
+  :is([data-slot="sidebar-gap"], [data-slot="sidebar-container"]) {
+  transition: none;
 }
 
 /* [data-tauri-drag-region] {

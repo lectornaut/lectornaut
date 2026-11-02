@@ -1,6 +1,7 @@
 <script lang="ts" setup>
 import DriveFilePicker from "@/components/app/sidebars/DriveFilePicker.vue"
 import { BotChatContextKey } from "@/composables/useBotChat"
+import { useConfirmationDialog } from "@/composables/useConfirmationDialog"
 import { importDriveSessionAttachment } from "@/composables/useFunctions"
 import {
   useSessionAttachmentsState,
@@ -129,53 +130,40 @@ const importDriveFile = async (fileId: string, displayName: string) => {
   }
   const context = attachmentContext.value
   // Unreachable in practice — the button is disabled without a session.
-  if (!context) throw new Error("Send a message to start this chat first.")
+  if (!context) {
+    throw new Error(t("components.sessionAttachments.errors.noSession"))
+  }
   const { data } = await importDriveSessionAttachment({ ...context, fileId })
   return data
 }
 const onDriveImported = (attachmentId: string, displayName: string) => {
   // Buffered for the first message — no live attachment to select yet.
   if (!sessionId.value) {
-    showSuccessToast(`"${displayName}" will be sent with your first message.`)
+    showSuccessToast(
+      t("components.sessionAttachments.toasts.driveBuffered", {
+        name: displayName,
+      })
+    )
     return
   }
   // Auto-include in the next send, mirroring fresh uploads.
   if (!isSelected(attachmentId)) toggleSelected(attachmentId)
-  showSuccessToast(`Imported "${displayName}" from Google Drive.`)
+  showSuccessToast(
+    t("components.sessionAttachments.toasts.driveImported", {
+      name: displayName,
+    })
+  )
 }
-// Close the picker on session switch — the import callable reads
-// `attachmentContext` reactively, so a pick made after a switch would land
-// the file in the NEW chat.
-watch(sessionId, () => {
-  drivePickerOpen.value = false
-})
-
 const editDialogOpen = ref(false)
 const editingAttachment = ref<IBotSessionAttachment | null>(null)
 const editName = ref("")
 const isSavingEdit = ref(false)
 
-// Plain refs (not `useConfirmationDialog`): the AlertDialog's auto-close
-// fires `@update:open(false)` on the same click as the confirm, and the
-// composable nulls its `item` on close — racing the confirm handler and
-// making Delete a silent no-op. `pendingDelete` is cleared only by us, after
-// the handler has captured it, so the close can't pull it out from under us.
-const deleteDialogOpen = ref(false)
-const pendingDelete = ref<IBotSessionAttachment | null>(null)
+const deleteDialog = useConfirmationDialog<IBotSessionAttachment>()
 
 const openDeleteDialog = (attachment: IBotSessionAttachment) => {
   if (!canEdit.value) return
-  pendingDelete.value = attachment
-  deleteDialogOpen.value = true
-}
-
-const onConfirmDelete = async () => {
-  // Capture synchronously up front so it survives the dialog auto-close.
-  const attachment = pendingDelete.value
-  deleteDialogOpen.value = false
-  if (!attachment) return
-  await handleDelete(attachment)
-  pendingDelete.value = null
+  deleteDialog.open(attachment)
 }
 
 const dismissUploadState = (id: string) => {
@@ -194,7 +182,13 @@ const processFiles = async (files: File[]) => {
   if (canBufferPending.value && botChat) {
     for (const file of files) {
       if (file.size > NODE_ATTACHMENT_MAX_FILE_SIZE_BYTES) {
-        showErrorToast("File too large", `${file.name} is larger than 25 MB.`)
+        showErrorToast(
+          t("components.sessionAttachments.toasts.fileTooLargeTitle"),
+          t("components.sessionAttachments.toasts.fileTooLargeDescription", {
+            name: file.name,
+            limit: formatAttachmentSize(NODE_ATTACHMENT_MAX_FILE_SIZE_BYTES),
+          })
+        )
         continue
       }
       botChat.pendingUploadFiles.value.push(file)
@@ -228,15 +222,13 @@ const processFiles = async (files: File[]) => {
   }
   if (success > 0) {
     showSuccessToast(
-      success === 1 ? "File uploaded." : `${success} files uploaded.`
+      t("components.sessionAttachments.toasts.uploaded", success)
     )
   }
   if (failure > 0) {
     showErrorToast(
-      failure === 1 ? "Upload failed" : "Some uploads failed",
-      failure === 1
-        ? "The file couldn't be uploaded — see the list above for details."
-        : `${failure} files couldn't be uploaded — see the list above for details.`
+      t("components.sessionAttachments.toasts.uploadFailedTitle", failure),
+      t("components.sessionAttachments.toasts.uploadFailedDescription", failure)
     )
   }
 }
@@ -262,7 +254,10 @@ const downloadAttachment = async (attachment: IBotSessionAttachment) => {
     anchor.click()
     anchor.remove()
   } catch (downloadError) {
-    showErrorToast("Download failed", (downloadError as Error).message)
+    showErrorToast(
+      t("components.sessionAttachments.toasts.downloadFailedTitle"),
+      (downloadError as Error).message
+    )
   } finally {
     downloadingIds.value = downloadingIds.value.filter(
       (id) => id !== attachment.id
@@ -283,18 +278,31 @@ const closeEditDialog = () => {
   editName.value = ""
 }
 
+// Save is meaningless with an empty or unchanged name.
+const canSaveEdit = computed(() => {
+  const name = editName.value.trim()
+  return (
+    !!editingAttachment.value &&
+    name.length > 0 &&
+    name !== editingAttachment.value.displayName
+  )
+})
+
 const handleEditSubmit = async () => {
-  if (!editingAttachment.value) return
+  if (!editingAttachment.value || !canSaveEdit.value) return
   isSavingEdit.value = true
   try {
     await updateAttachment({
       attachment: editingAttachment.value,
       displayName: editName.value,
     })
-    showSuccessToast("Renamed.")
+    showSuccessToast(t("components.sessionAttachments.toasts.renamed"))
     closeEditDialog()
   } catch (saveError) {
-    showErrorToast("Rename failed", (saveError as Error).message)
+    showErrorToast(
+      t("components.sessionAttachments.toasts.renameFailedTitle"),
+      (saveError as Error).message
+    )
   } finally {
     isSavingEdit.value = false
   }
@@ -305,13 +313,28 @@ const handleDelete = async (attachment: IBotSessionAttachment) => {
   try {
     if (isSelected(attachment.id)) toggleSelected(attachment.id)
     await deleteAttachment(attachment)
-    showSuccessToast("Deleted.")
+    showSuccessToast(t("components.sessionAttachments.toasts.deleted"))
   } catch (deleteError) {
-    showErrorToast("Delete failed", (deleteError as Error).message)
+    showErrorToast(
+      t("components.sessionAttachments.toasts.deleteFailedTitle"),
+      (deleteError as Error).message
+    )
+    // Rethrow so the confirm dialog stays open with the attachment intact.
+    throw deleteError
   } finally {
     deletingId.value = null
   }
 }
+
+// Close the picker and both dialogs on session switch: the import callable
+// reads `attachmentContext` reactively (a pick made after a switch would land
+// the file in the NEW chat), and the rename/delete dialogs would otherwise
+// keep acting on the previous chat's attachment.
+watch(sessionId, () => {
+  drivePickerOpen.value = false
+  closeEditDialog()
+  deleteDialog.close()
+})
 </script>
 
 <template>
@@ -324,7 +347,7 @@ const handleDelete = async (attachment: IBotSessionAttachment) => {
         @click="triggerUpload"
       >
         <IconUpload />
-        <span>Upload files</span>
+        <span>{{ t("components.sessionAttachments.uploadFiles") }}</span>
       </Button>
       <!-- Sheet root + trigger render no wrapper DOM, so the Button stays a
            direct child of ButtonGroup for its joined-corner selectors. -->
@@ -332,7 +355,7 @@ const handleDelete = async (attachment: IBotSessionAttachment) => {
         v-model:open="drivePickerOpen"
         :team-id="currentTeamId ?? null"
         :import-file="importDriveFile"
-        trigger-label="Add from Google Drive"
+        :trigger-label="t('components.sessionAttachments.addFromDrive')"
         @imported="onDriveImported"
       />
     </ButtonGroup>
@@ -352,7 +375,11 @@ const handleDelete = async (attachment: IBotSessionAttachment) => {
             <AttachmentContent>
               <AttachmentTitle>{{ file.name }}</AttachmentTitle>
               <AttachmentDescription>
-                {{ formatAttachmentSize(file.size) }} · Sent with first message
+                {{
+                  t("components.sessionAttachments.pendingUploadMeta", {
+                    size: formatAttachmentSize(file.size),
+                  })
+                }}
               </AttachmentDescription>
             </AttachmentContent>
             <AttachmentActions>
@@ -379,7 +406,7 @@ const handleDelete = async (attachment: IBotSessionAttachment) => {
             <AttachmentContent>
               <AttachmentTitle>{{ file.displayName }}</AttachmentTitle>
               <AttachmentDescription>
-                Google Drive · Sent with first message
+                {{ t("components.sessionAttachments.pendingDriveMeta") }}
               </AttachmentDescription>
             </AttachmentContent>
             <AttachmentActions>
@@ -403,15 +430,17 @@ const handleDelete = async (attachment: IBotSessionAttachment) => {
               pendingUploadFiles.length === 0 &&
               pendingDriveImports.length === 0
             "
-            class="rounded-4xl border border-dashed p-6"
+            class="rounded-surface border border-dashed p-6"
           >
             <EmptyHeader>
               <EmptyMedia variant="icon">
                 <IconUpload />
               </EmptyMedia>
-              <EmptyTitle>No attachments</EmptyTitle>
+              <EmptyTitle>{{
+                t("components.sessionAttachments.emptyTitle")
+              }}</EmptyTitle>
               <EmptyDescription>
-                Upload files to send with your first message.
+                {{ t("components.sessionAttachments.emptyPending") }}
               </EmptyDescription>
             </EmptyHeader>
           </Empty>
@@ -434,7 +463,11 @@ const handleDelete = async (attachment: IBotSessionAttachment) => {
               <AttachmentContent>
                 <AttachmentTitle>{{ item.name }}</AttachmentTitle>
                 <AttachmentDescription>
-                  {{ item.status === "uploading" ? "Uploading…" : item.error }}
+                  {{
+                    item.status === "uploading"
+                      ? t("components.sessionAttachments.uploading")
+                      : item.error
+                  }}
                 </AttachmentDescription>
               </AttachmentContent>
               <AttachmentActions v-if="item.status === 'error'">
@@ -452,29 +485,31 @@ const handleDelete = async (attachment: IBotSessionAttachment) => {
 
           <LoadingState
             v-if="loading && attachments.length === 0"
-            label="Loading attachments…"
+            :label="t('components.sessionAttachments.loading')"
           />
 
-          <div v-else-if="error" class="space-y-2 rounded-4xl border p-2">
+          <div v-else-if="error" class="rounded-surface space-y-2 border p-2">
             <div class="text-destructive flex items-start gap-2 text-xs">
               <IconAlertTriangle />
               <span>{{ error }}</span>
             </div>
             <Button variant="secondary" @click="refresh">
               <IconRefreshCcw />
-              Retry
+              {{ t("actions.retry") }}
             </Button>
           </div>
 
           <Empty
             v-else-if="attachments.length === 0"
-            class="rounded-4xl border border-dashed p-6"
+            class="rounded-surface border border-dashed p-6"
           >
             <EmptyHeader>
               <EmptyMedia variant="icon"><IconUpload /></EmptyMedia>
-              <EmptyTitle>No attachments</EmptyTitle>
+              <EmptyTitle>{{
+                t("components.sessionAttachments.emptyTitle")
+              }}</EmptyTitle>
               <EmptyDescription>
-                Upload images or PDFs to include them with your messages.
+                {{ t("components.sessionAttachments.emptyDescription") }}
               </EmptyDescription>
             </EmptyHeader>
           </Empty>
@@ -495,8 +530,9 @@ const handleDelete = async (attachment: IBotSessionAttachment) => {
                 {{ formatAttachmentSize(attachment.size) }} ·
                 {{
                   isSelected(attachment.id)
-                    ? "Included in next message"
-                    : (attachment.mimeType ?? "unknown type")
+                    ? t("components.sessionAttachments.includedInNextMessage")
+                    : (attachment.mimeType ??
+                      t("components.sessionAttachments.unknownType"))
                 }}
               </AttachmentDescription>
             </AttachmentContent>
@@ -535,8 +571,12 @@ const handleDelete = async (attachment: IBotSessionAttachment) => {
             <AttachmentTrigger
               :aria-label="
                 isSelected(attachment.id)
-                  ? `Remove ${attachment.displayName} from next message`
-                  : `Include ${attachment.displayName} in next message`
+                  ? t('components.sessionAttachments.excludeFromNextMessage', {
+                      name: attachment.displayName,
+                    })
+                  : t('components.sessionAttachments.includeInNextMessage', {
+                      name: attachment.displayName,
+                    })
               "
               :aria-pressed="isSelected(attachment.id)"
               :disabled="!canEdit"
@@ -552,14 +592,18 @@ const handleDelete = async (attachment: IBotSessionAttachment) => {
     >
       <DialogContent class="sm:max-w-lg">
         <DialogHeader>
-          <DialogTitle>Rename attachment</DialogTitle>
+          <DialogTitle>{{
+            t("components.sessionAttachments.renameTitle")
+          }}</DialogTitle>
           <DialogDescription>
-            Update the display name for this file.
+            {{ t("components.sessionAttachments.renameDescription") }}
           </DialogDescription>
         </DialogHeader>
         <form class="space-y-4" @submit.prevent="handleEditSubmit">
           <div class="space-y-2">
-            <Label for="session-attachment-name">File name</Label>
+            <Label for="session-attachment-name">{{
+              t("components.sessionAttachments.fileNameLabel")
+            }}</Label>
             <Input
               id="session-attachment-name"
               v-model="editName"
@@ -569,44 +613,42 @@ const handleDelete = async (attachment: IBotSessionAttachment) => {
           <DialogFooter>
             <DialogClose as-child>
               <Button variant="outline">
-                Cancel
+                {{ t("actions.cancel") }}
                 <Kbd>Esc</Kbd>
               </Button>
             </DialogClose>
-            <Button type="submit" data-dialog-action :disabled="isSavingEdit">
+            <Button
+              type="submit"
+              data-dialog-action
+              :disabled="isSavingEdit || !canSaveEdit"
+            >
               <Spinner v-if="isSavingEdit" />
-              Save
+              {{ t("actions.save") }}
               <Kbd>↩</Kbd>
             </Button>
           </DialogFooter>
         </form>
       </DialogContent>
     </Dialog>
-    <AlertDialog
-      :open="deleteDialogOpen"
-      @update:open="(value) => (deleteDialogOpen = value)"
+    <ConfirmAction
+      v-model:open="deleteDialog.isOpen.value"
+      :title="t('components.sessionAttachments.deleteTitle')"
+      :action-label="t('actions.delete')"
+      destructive
+      :on-confirm="() => deleteDialog.confirm(handleDelete)"
     >
-      <AlertDialogContent>
-        <AlertDialogHeader>
-          <AlertDialogTitle>Delete attachment</AlertDialogTitle>
-          <AlertDialogDescription>
-            Delete
-            <span class="font-medium">{{ pendingDelete?.displayName }}</span>
-            ? This can't be undone.
-          </AlertDialogDescription>
-        </AlertDialogHeader>
-        <AlertDialogFooter>
-          <AlertDialogCancel>Cancel<Kbd>Esc</Kbd> </AlertDialogCancel>
-          <AlertDialogAction
-            :disabled="deletingId === pendingDelete?.id"
-            @click="onConfirmDelete"
-          >
-            <Spinner v-if="deletingId === pendingDelete?.id" />
-            Delete
-            <Kbd>↩</Kbd>
-          </AlertDialogAction>
-        </AlertDialogFooter>
-      </AlertDialogContent>
-    </AlertDialog>
+      <template #description>
+        <i18n-t
+          keypath="components.sessionAttachments.deleteDescription"
+          tag="span"
+        >
+          <template #name>
+            <span class="text-foreground font-medium">{{
+              deleteDialog.item.value?.displayName
+            }}</span>
+          </template>
+        </i18n-t>
+      </template>
+    </ConfirmAction>
   </div>
 </template>

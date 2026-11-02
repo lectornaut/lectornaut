@@ -10,9 +10,11 @@ const { t } = useI18n()
 const openCommand = ref(false)
 const query = ref("")
 
-emitter.on("Dialog.Command.Open", () => {
+const toggleCommand = () => {
   openCommand.value = !openCommand.value
-})
+}
+emitter.on("Dialog.Command.Open", toggleCommand)
+onBeforeUnmount(() => emitter.off("Dialog.Command.Open", toggleCommand))
 
 const { groups } = useCommandPalette()
 
@@ -38,14 +40,20 @@ const runCommand = (command: PaletteCommand) => {
 
 <template>
   <Dialog v-model:open="openCommand">
-    <DialogContent class="bg-secondary min-w-lg p-1" :show-close-button="false">
+    <DialogContent
+      class="bg-secondary p-1 sm:max-w-lg"
+      :show-close-button="false"
+    >
       <DialogTitle class="sr-only">{{
         t("components.global.commandK.tooltip")
       }}</DialogTitle>
       <DialogDescription class="sr-only">{{
         t("components.global.commandK.placeholder")
       }}</DialogDescription>
-      <Command highlight-on-hover class="border">
+      <Command
+        highlight-on-hover
+        class="border [--radius-command:max(0px,calc(var(--radius-surface)-var(--spacing)))]"
+      >
         <CommandKBridge v-model:query="query" />
         <CommandInput
           :placeholder="t('components.global.commandK.placeholder')"

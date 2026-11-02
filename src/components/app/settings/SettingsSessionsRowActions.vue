@@ -54,6 +54,7 @@ const archived = computed(() => !!props.session.archivedAt)
           </DropdownMenuItem>
           <DropdownMenuSeparator />
           <DropdownMenuItem
+            variant="destructive"
             data-hotkey="backspace delete"
             @click="emit('delete', session)"
           >

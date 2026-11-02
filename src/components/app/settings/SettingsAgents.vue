@@ -1,4 +1,5 @@
 <script lang="ts" setup>
+import { useConfirmationDialog } from "@/composables/useConfirmationDialog"
 import { useCanViewTeamSettings } from "@/composables/useCanViewTeamSettings"
 import { useAgentConfig } from "@/composables/useAgentConfig"
 import { useIntegrations } from "@/composables/useIntegrations"
@@ -154,23 +155,17 @@ const openEditBuiltInDialog = (id: string): void => {
 }
 
 /**
- * Reset-to-default confirm state. Resetting discards the team's
- * customization override (irreversible — there's no history of the
- * override), so it goes through an AlertDialog like hard-delete does.
+ * Reset-to-default confirm. Resetting discards the team's customization
+ * override (irreversible: the override isn't versioned), so it confirms
+ * like hard-delete does. The composable keeps the target through the
+ * fade-out so the name doesn't blank while the dialog closes.
  */
-const resetTarget = ref<{ id: string; name: string } | null>(null)
-const resetConfirmOpen = computed({
-  get: () => resetTarget.value !== null,
-  set: (open: boolean) => {
-    if (!open) resetTarget.value = null
-  },
-})
+const resetDialog = useConfirmationDialog<{ id: string; name: string }>()
 
-const handleResetConfirmed = async (): Promise<void> => {
-  const target = resetTarget.value
-  resetTarget.value = null
-  if (target) await resetBuiltIn(target.id)
-}
+const handleResetConfirmed = () =>
+  resetDialog.confirm(async (target) => {
+    await resetBuiltIn(target.id)
+  })
 
 // ── Custom agents (inline list) ─────────────────────────────────────────────
 
@@ -246,9 +241,13 @@ const handleRestoreAgent = async (agent: ITeamAgent): Promise<void> => {
   await restore(agent.id)
 }
 
-const handleRemoveAgent = async (agent: ITeamAgent): Promise<void> => {
-  await remove(agent.id)
-}
+/** One hard-delete confirm for every custom-agent row (rows only emit). */
+const deleteAgentDialog = useConfirmationDialog<ITeamAgent>()
+
+const handleRemoveConfirmed = () =>
+  deleteAgentDialog.confirm(async (agent) => {
+    await remove(agent.id)
+  })
 </script>
 
 <template>
@@ -310,6 +309,9 @@ const handleRemoveAgent = async (agent: ITeamAgent): Promise<void> => {
                       <InputGroupButton
                         variant="ghost"
                         size="icon-xs"
+                        :aria-label="
+                          t('settings.agents.builtInAgents.configure')
+                        "
                         :disabled="!canManage"
                       >
                         <IconSettings />
@@ -330,8 +332,9 @@ const handleRemoveAgent = async (agent: ITeamAgent): Promise<void> => {
                     </DropdownMenuItem>
                     <DropdownMenuItem
                       v-if="row.customized"
+                      variant="destructive"
                       data-hotkey="r"
-                      @select="resetTarget = { id: row.id, name: row.name }"
+                      @select="resetDialog.open({ id: row.id, name: row.name })"
                     >
                       <IconRotateCcw />
                       {{ t("settings.agents.builtInAgents.reset") }}
@@ -368,37 +371,6 @@ const handleRemoveAgent = async (agent: ITeamAgent): Promise<void> => {
           </EmptyHeader>
         </Empty>
       </FieldSet>
-
-      <!--
-        Reset-to-default confirmation, shared across the built-in rows.
-        Required because resetting discards the team's customization
-        override with no way back (the override isn't versioned).
-      -->
-      <AlertDialog v-model:open="resetConfirmOpen">
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>
-              {{ t("settings.agents.builtInAgents.resetConfirmTitle") }}
-            </AlertDialogTitle>
-            <AlertDialogDescription>
-              {{
-                t("settings.agents.builtInAgents.resetConfirmBody", {
-                  name: resetTarget?.name ?? "",
-                })
-              }}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>
-              {{ t("common.cancel") }}<Kbd>Esc</Kbd>
-            </AlertDialogCancel>
-            <AlertDialogAction @click="handleResetConfirmed">
-              {{ t("settings.agents.builtInAgents.reset") }}
-              <Kbd>↩</Kbd>
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
 
       <FieldSeparator />
 
@@ -538,7 +510,7 @@ const handleRemoveAgent = async (agent: ITeamAgent): Promise<void> => {
                     "
                     @archive="handleArchiveAgent(agent)"
                     @restore="handleRestoreAgent(agent)"
-                    @remove="handleRemoveAgent(agent)"
+                    @remove="deleteAgentDialog.open(agent)"
                   />
                 </ItemGroup>
               </CollapsibleContent>
@@ -578,7 +550,7 @@ const handleRemoveAgent = async (agent: ITeamAgent): Promise<void> => {
                     "
                     @archive="handleArchiveAgent(agent)"
                     @restore="handleRestoreAgent(agent)"
-                    @remove="handleRemoveAgent(agent)"
+                    @remove="deleteAgentDialog.open(agent)"
                   />
                 </ItemGroup>
               </CollapsibleContent>
@@ -618,7 +590,7 @@ const handleRemoveAgent = async (agent: ITeamAgent): Promise<void> => {
                     "
                     @archive="handleArchiveAgent(agent)"
                     @restore="handleRestoreAgent(agent)"
-                    @remove="handleRemoveAgent(agent)"
+                    @remove="deleteAgentDialog.open(agent)"
                   />
                 </ItemGroup>
               </CollapsibleContent>
@@ -629,4 +601,30 @@ const handleRemoveAgent = async (agent: ITeamAgent): Promise<void> => {
     </FieldGroup>
   </div>
   <SettingsRestricted v-else />
+
+  <ConfirmAction
+    v-model:open="resetDialog.isOpen.value"
+    :title="t('settings.agents.builtInAgents.resetConfirmTitle')"
+    :description="
+      t('settings.agents.builtInAgents.resetConfirmBody', {
+        name: resetDialog.item.value?.name ?? '',
+      })
+    "
+    :action-label="t('settings.agents.builtInAgents.reset')"
+    destructive
+    :on-confirm="handleResetConfirmed"
+  />
+
+  <ConfirmAction
+    v-model:open="deleteAgentDialog.isOpen.value"
+    :title="t('settings.agents.custom.deleteConfirmTitle')"
+    :description="
+      t('settings.agents.custom.deleteConfirmBody', {
+        name: deleteAgentDialog.item.value?.name ?? '',
+      })
+    "
+    :action-label="t('settings.agents.custom.deleteForever')"
+    destructive
+    :on-confirm="handleRemoveConfirmed"
+  />
 </template>

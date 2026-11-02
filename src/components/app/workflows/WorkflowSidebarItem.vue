@@ -91,7 +91,7 @@ const toggleIcon = computed(() =>
           @click="emit('select')"
         >
           <span
-            class="mt-1.5 size-1.5 shrink-0 rounded-4xl"
+            class="mt-1.5 size-1.5 shrink-0 rounded-full"
             :class="dotClass"
           />
           <span class="flex min-w-0 grow flex-col gap-0.5">

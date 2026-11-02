@@ -1,4 +1,5 @@
 <script lang="ts" setup>
+import { useDismissGuard } from "@/composables/useDismissGuard"
 import {
   assignWorkspaceGroupRole,
   assignWorkspaceRole,
@@ -12,7 +13,6 @@ import {
   IconChevronRight,
   IconUsers2,
   IconUsers,
-  IconX,
   IconUsersRound,
 } from "@/data/icons"
 import { useMembershipStore } from "@/stores/membershipStore"
@@ -63,6 +63,27 @@ const cannotEditThisWorkspaceReason = computed(() =>
 
 const isOpen = ref(props.open || false)
 const isLoading = ref(false)
+
+// Dirty = the fields differ from what they held right after opening, or the
+// access maps differ from the baselines the role loaders already keep.
+const fieldsSnapshot = () =>
+  JSON.stringify([
+    workspaceName.value,
+    workspaceDescription.value,
+    photoPreview.value,
+  ])
+const fieldsBaseline = ref("")
+const guard = useDismissGuard(
+  isOpen,
+  () =>
+    (!!fieldsBaseline.value && fieldsSnapshot() !== fieldsBaseline.value) ||
+    JSON.stringify(workspaceRoleOverrides.value) !==
+      JSON.stringify(baselineRoleOverrides.value) ||
+    JSON.stringify(workspaceExcluded.value) !==
+      JSON.stringify(baselineExcluded.value) ||
+    JSON.stringify(workspaceGroupGrants.value) !==
+      JSON.stringify(baselineGroupGrants.value)
+)
 
 // ── Per-workspace membership + roles ─────────────────────────────────────────
 const membershipStore = useMembershipStore()
@@ -447,10 +468,19 @@ const revokeBlobUrl = () => {
   }
 }
 
+// Why the photo can't be changed in this mode, or null when it can.
+const photoLockedReason = computed(() => {
+  if (props.mode === "create" && !canCreateWorkspace.value) {
+    return t(getCannotCreateWorkspaceReason.value || "")
+  }
+  if (props.mode === "edit" && !canEditThisWorkspace.value) {
+    return t(cannotEditThisWorkspaceReason.value || "")
+  }
+  return null
+})
+
 const workspacePhotoUpload = usePhotoUpload({
-  canUpload: () =>
-    (props.mode === "create" && canCreateWorkspace.value) ||
-    (props.mode === "edit" && canEditThisWorkspace.value),
+  canUpload: () => !photoLockedReason.value,
   onUpload: async (_id, file) => {
     revokeBlobUrl()
     photoFile.value = file
@@ -459,12 +489,6 @@ const workspacePhotoUpload = usePhotoUpload({
 })
 
 const triggerWorkspacePhotoSelection = () => {
-  if (
-    (props.mode === "create" && !canCreateWorkspace.value) ||
-    (props.mode === "edit" && !canEditThisWorkspace.value)
-  ) {
-    return
-  }
   workspacePhotoUpload.triggerUpload(props.workspace?.id || "draft-workspace")
 }
 
@@ -500,6 +524,7 @@ watch(isOpen, (val) => {
   emit("update:open", val)
   if (!val) {
     resetForm()
+    fieldsBaseline.value = ""
   } else {
     // Initialize form when opened
     if (props.mode === "edit" && props.workspace) {
@@ -509,10 +534,12 @@ watch(isOpen, (val) => {
       void loadWorkspaceRoles(props.workspace.id)
       void loadWorkspaceGroupGrants(props.workspace.id)
     }
+    fieldsBaseline.value = fieldsSnapshot()
   }
 })
 
 const handleSubmit = async () => {
+  if (isLoading.value) return
   if (!workspaceName.value.trim()) return
 
   if (props.mode === "create" && !canCreateWorkspace.value) {
@@ -564,6 +591,9 @@ const handleSubmit = async () => {
 
     emit("success")
     isOpen.value = false
+  } catch {
+    // Already surfaced by the action runner's toast; stay open so the user
+    // keeps their edits and can retry.
   } finally {
     isLoading.value = false
   }
@@ -571,11 +601,14 @@ const handleSubmit = async () => {
 </script>
 
 <template>
-  <Dialog v-model:open="isOpen">
+  <Dialog
+    :open="isOpen"
+    @update:open="(next: boolean) => !isLoading && guard.onOpenChange(next)"
+  >
     <DialogTrigger as-child>
       <slot name="trigger" />
     </DialogTrigger>
-    <DialogContent class="w-2xl max-w-fit">
+    <DialogContent class="sm:max-w-2xl">
       <DialogHeader>
         <DialogTitle>
           {{
@@ -603,72 +636,16 @@ const handleSubmit = async () => {
             <FieldLabel>
               {{ t("components.workspaceDialog.photoLabel") }}
             </FieldLabel>
-            <div class="group relative">
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger as-child>
-                    <div
-                      :class="[
-                        'bg-input/50 rounded-full p-3',
-                        {
-                          'cursor-not-allowed opacity-50':
-                            (!canCreateWorkspace && mode === 'create') ||
-                            (!canEditThisWorkspace && mode === 'edit'),
-                        },
-                      ]"
-                    >
-                      <AppAvatar
-                        class="size-16"
-                        :class="{
-                          'cursor-pointer':
-                            (canCreateWorkspace && mode === 'create') ||
-                            (canEditThisWorkspace && mode === 'edit'),
-                        }"
-                        :src="photoPreview"
-                        :name="workspaceName"
-                        @click="triggerWorkspacePhotoSelection"
-                      />
-                    </div>
-                  </TooltipTrigger>
-                  <TooltipContent
-                    v-if="
-                      (!canCreateWorkspace && mode === 'create') ||
-                      (!canEditThisWorkspace && mode === 'edit')
-                    "
-                  >
-                    {{
-                      mode === "create"
-                        ? t(getCannotCreateWorkspaceReason || "")
-                        : t(cannotEditThisWorkspaceReason || "")
-                    }}
-                  </TooltipContent>
-                  <TooltipContent v-else>
-                    {{ t("components.workspaceDialog.uploadPhoto") }}
-                  </TooltipContent>
-                </Tooltip>
-                <Tooltip
-                  v-if="
-                    photoPreview &&
-                    ((canCreateWorkspace && mode === 'create') ||
-                      (canEditThisWorkspace && mode === 'edit'))
-                  "
-                >
-                  <TooltipTrigger as-child>
-                    <Button
-                      variant="secondary"
-                      class="ring-background absolute top-1 right-1 size-4 opacity-0 ring-2 transition group-hover:opacity-100"
-                      size="icon"
-                      @click.stop="removePhoto"
-                    >
-                      <IconX />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    {{ t("components.workspaceDialog.removePhoto") }}
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-            </div>
+            <PhotoUploadAvatar
+              class="size-16"
+              :src="photoPreview"
+              :name="workspaceName"
+              :loading="isLoading && !!photoFile"
+              :disabled="isLoading || !!photoLockedReason"
+              :disabled-reason="photoLockedReason"
+              @upload="triggerWorkspacePhotoSelection"
+              @remove="removePhoto"
+            />
           </div>
         </Field>
 
@@ -691,7 +668,6 @@ const handleSubmit = async () => {
                       (!canCreateWorkspace && mode === 'create') ||
                       (!canEditThisWorkspace && mode === 'edit')
                     "
-                    @keyup.enter="handleSubmit"
                   />
                 </div>
               </TooltipTrigger>
@@ -752,23 +728,26 @@ const handleSubmit = async () => {
         <!-- Per-workspace access (members + groups), elevate-only -->
         <Field v-if="canAssignWorkspaceRoles">
           <Tabs default-value="members">
-            <TabsList class="bg-input/50 h-9! p-0">
+            <TabsList class="bg-input/50 h-control! p-0">
               <TabsTrigger
                 value="members"
-                class="data-[state=active]:border-border! data-[state=active]:bg-background h-9"
+                class="data-[state=active]:border-border! data-[state=active]:bg-background h-control"
               >
                 {{ t("components.workspaceDialog.roles.label") }}
               </TabsTrigger>
               <TabsTrigger
                 value="groups"
-                class="data-[state=active]:border-border! data-[state=active]:bg-background h-9"
+                class="data-[state=active]:border-border! data-[state=active]:bg-background h-control"
               >
                 {{ t("components.workspaceDialog.groups.label") }}
               </TabsTrigger>
             </TabsList>
 
             <!-- Member access -->
-            <TabsContent value="members" class="bg-input/50 rounded-3xl p-3">
+            <TabsContent
+              value="members"
+              class="bg-input/50 rounded-control p-3"
+            >
               <LoadingState v-if="rolesLoading" />
               <template v-else>
                 <Empty
@@ -1039,7 +1018,7 @@ const handleSubmit = async () => {
             </TabsContent>
 
             <!-- Group access -->
-            <TabsContent value="groups" class="bg-input/50 rounded-3xl p-3">
+            <TabsContent value="groups" class="bg-input/50 rounded-control p-3">
               <LoadingState v-if="groupRolesLoading" />
               <template v-else>
                 <Empty
@@ -1130,13 +1109,17 @@ const handleSubmit = async () => {
       <DialogFooter>
         <DialogClose as-child>
           <Button variant="outline" :disabled="isLoading">
-            {{ t("common.actions.cancel") }}
+            {{ t("actions.cancel") }}
             <Kbd>Esc</Kbd>
           </Button>
         </DialogClose>
         <Button
           data-dialog-action
-          :disabled="isLoading || (!canEditThisWorkspace && mode === 'edit')"
+          :disabled="
+            isLoading ||
+            !workspaceName.trim() ||
+            (!canEditThisWorkspace && mode === 'edit')
+          "
           @click="handleSubmit"
         >
           <Spinner v-if="isLoading" />
@@ -1150,4 +1133,14 @@ const handleSubmit = async () => {
       </DialogFooter>
     </DialogContent>
   </Dialog>
+
+  <ConfirmAction
+    v-model:open="guard.confirmOpen.value"
+    :title="t('common.discardChangesTitle')"
+    :description="t('common.discardChangesDescription')"
+    :action-label="t('common.discard')"
+    :cancel-label="t('common.keepEditing')"
+    destructive
+    :on-confirm="guard.discard"
+  />
 </template>

@@ -103,7 +103,7 @@ useResizeObserver(draggableEl, (entries) => {
   <MotionConfig reduced-motion="never">
     <div
       id="right-dock"
-      class="bg-background flex size-full min-h-0 min-w-0 flex-col overflow-clip rounded-3xl"
+      class="bg-background rounded-surface flex size-full min-h-0 min-w-0 flex-col overflow-clip"
     ></div>
     <!-- Teleport moves the existing frame without remounting its chat content. -->
     <Teleport defer to="#right-dock" :disabled="!isDocked">
@@ -168,7 +168,7 @@ useResizeObserver(draggableEl, (entries) => {
                             height: `${observedSize.height}px`,
                           }
                   "
-                  class="bg-background pointer-events-auto flex min-w-0 flex-col rounded-3xl"
+                  class="bg-background rounded-surface pointer-events-auto flex min-w-0 flex-col"
                   :class="
                     isDocked
                       ? 'size-full overflow-clip'

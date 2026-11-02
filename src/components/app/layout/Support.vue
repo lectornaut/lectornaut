@@ -289,7 +289,7 @@ const startOnboarding = () => {
             </DropdownMenuGroup>
           </DropdownMenuContent>
         </DropdownMenu>
-        <DialogContent class="w-sm max-w-fit">
+        <DialogContent class="sm:max-w-sm">
           <DialogHeader>
             <DialogTitle>
               {{ $t("components.support.contactSalesTitle") }}

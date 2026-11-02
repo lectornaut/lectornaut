@@ -1,31 +1,20 @@
 <script lang="ts" setup>
-import { usePhotoUpload } from "@/composables/usePhotoUpload"
-import {
-  IconAlertTriangle,
-  IconAtSign,
-  IconCheck,
-  IconPencil,
-  IconX,
-} from "@/data/icons"
+import { useProfilePhoto } from "@/composables/useProfilePhoto"
+import { IconAtSign, IconCheck, IconPencil } from "@/data/icons"
 import {
   USERNAME_MAX_LENGTH,
   USERNAME_MIN_LENGTH,
   usernamesMatch,
   validateUsername,
 } from "@/helpers/username"
-import { getInitials } from "@/helpers/utilities"
 import { firestore } from "@/modules/firebase"
 import { checkUsernameAvailability, claimUsername } from "@/queries/username"
 import { updateCurrentUserProfileVisibility } from "@/queries/userSettings"
 import { useAuthStore } from "@/stores/authStore"
-import {
-  deleteUserPhotoFile,
-  getUserPhotoStorageRef,
-} from "@/utils/firebase/firebase-helpers"
 import { collection, doc } from "firebase/firestore"
 import { toast } from "vue-sonner"
 import { useDocumentQuery } from "@/utils/firebase/firebase-query"
-import { useCurrentUser, useStorageFile } from "vuefire"
+import { useCurrentUser } from "vuefire"
 
 const { t } = useI18n()
 
@@ -44,7 +33,6 @@ const currentIsPublic = computed(() => userData.value?.isPublic ?? false)
 
 const optimisticUsername = ref<string | null>(null)
 const optimisticIsPublic = ref<boolean | null>(null)
-const optimisticPhotoPreview = ref<string | null>(null)
 
 const effectiveUsername = computed(
   () => optimisticUsername.value ?? currentUsername.value
@@ -221,88 +209,8 @@ const toggleIsPublic = async (value: boolean) => {
   }
 }
 
-const displayPhotoURL = computed(
-  () => optimisticPhotoPreview.value ?? user.value?.photoURL ?? null
-)
-
-const clearOptimisticPhotoPreview = () => {
-  if (optimisticPhotoPreview.value?.startsWith("blob:")) {
-    URL.revokeObjectURL(optimisticPhotoPreview.value)
-  }
-  optimisticPhotoPreview.value = null
-}
-
-onBeforeUnmount(() => {
-  clearOptimisticPhotoPreview()
-})
-
-const profilePhotoFileRef = computed(() => {
-  if (!user.value?.uid) return null
-  return getUserPhotoStorageRef(user.value.uid)
-})
-
-const { url, uploadProgress, uploadError, uploadTask, upload } =
-  useStorageFile(profilePhotoFileRef)
-
-const profilePhotoUpload = usePhotoUpload({
-  canUpload: () => !!user.value?.uid,
-  onUpload: async (_id, file) => {
-    clearOptimisticPhotoPreview()
-    optimisticPhotoPreview.value = URL.createObjectURL(file)
-    toast.info("Uploading profile picture", {
-      description: "Please wait while we upload your profile picture.",
-    })
-    try {
-      await upload(file)
-    } catch (error) {
-      clearOptimisticPhotoPreview()
-      toast.error("Failed to upload profile picture", {
-        description: (error as Error).message,
-      })
-    }
-  },
-})
-
-const triggerProfilePhotoUpload = () => {
-  if (!user.value?.uid) return
-  profilePhotoUpload.triggerUpload(user.value.uid)
-}
-
-watch(
-  () => url.value,
-  async (newVal, oldVal) => {
-    if (oldVal === undefined) return
-    if (!optimisticPhotoPreview.value) return
-    if (!newVal || newVal === oldVal) return
-
-    try {
-      await authStore.updateUserProfile({ photoURL: newVal })
-      clearOptimisticPhotoPreview()
-      toast.success("Profile picture updated", {
-        description: "Your profile picture has been updated successfully.",
-      })
-    } catch (error) {
-      toast.error("Failed to update profile picture", {
-        description: error as string,
-      })
-    }
-  }
-)
-
-const handleRemoveProfilePicture = async () => {
-  if (!user.value?.uid) return
-
-  try {
-    clearOptimisticPhotoPreview()
-    await authStore.updateUserProfile({ photoURL: null })
-    await deleteUserPhotoFile(user.value.uid)
-    toast.success(t("settings.account.profilePicture.removed"))
-  } catch (error) {
-    toast.error(t("settings.account.profilePicture.removeFailed"), {
-      description: (error as Error).message,
-    })
-  }
-}
+const { displayPhotoURL, isBusy, uploadProfilePhoto, removeProfilePhoto } =
+  useProfilePhoto()
 </script>
 
 <template>
@@ -318,50 +226,14 @@ const handleRemoveProfilePicture = async () => {
               {{ t("settings.account.profilePicture.description") }}
             </FieldDescription>
           </FieldContent>
-          <div class="group relative">
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger as-child>
-                  <AppAvatar
-                    class="size-10 cursor-pointer"
-                    :src="uploadError ? null : displayPhotoURL"
-                    :name="user?.displayName"
-                    @click="triggerProfilePhotoUpload"
-                  >
-                    <template #fallback>
-                      <IconAlertTriangle v-if="uploadError" />
-                      <template v-else>{{
-                        getInitials(user?.displayName || "")
-                      }}</template>
-                    </template>
-                  </AppAvatar>
-                </TooltipTrigger>
-                <TooltipContent>
-                  {{
-                    uploadTask
-                      ? `${uploadProgress ? (uploadProgress * 100).toFixed(0) : 0}%`
-                      : t("settings.account.profilePicture.upload")
-                  }}
-                </TooltipContent>
-              </Tooltip>
-              <Tooltip>
-                <TooltipTrigger as-child>
-                  <Button
-                    v-if="displayPhotoURL"
-                    variant="secondary"
-                    class="ring-background absolute -top-2 -right-2 size-4 opacity-0 ring-2 transition group-hover:opacity-100"
-                    size="icon"
-                    @click.stop="handleRemoveProfilePicture"
-                  >
-                    <IconX />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  {{ t("settings.account.profilePicture.remove") }}
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-          </div>
+          <PhotoUploadAvatar
+            class="size-10"
+            :src="displayPhotoURL"
+            :name="user?.displayName"
+            :loading="isBusy"
+            @upload="uploadProfilePhoto"
+            @remove="removeProfilePhoto"
+          />
         </Field>
 
         <Field orientation="horizontal">

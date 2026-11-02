@@ -285,7 +285,7 @@ onMounted(() => {
                 :data="logs"
                 :columns="columns"
                 data-table-frame
-                class="overflow-clip rounded-4xl border"
+                class="rounded-surface overflow-clip border"
               />
             </FieldContent>
           </Field>

@@ -52,9 +52,9 @@ export interface UseWorkspaceBotSessionsReturn {
   canManage: ComputedRef<boolean>
   /** True for the duration of any rename/archive/delete call below. */
   isMutating: Ref<boolean>
-  rename: (id: string, title: string) => Promise<void>
-  archive: (id: string, archived: boolean) => Promise<void>
-  remove: (id: string) => Promise<void>
+  rename: (id: string, title: string) => Promise<boolean>
+  archive: (id: string, archived: boolean) => Promise<boolean>
+  remove: (id: string) => Promise<boolean>
 }
 
 export function useWorkspaceBotSessions(): UseWorkspaceBotSessionsReturn {
@@ -152,16 +152,16 @@ export function useWorkspaceBotSessions(): UseWorkspaceBotSessionsReturn {
     }
   }
 
-  const rename = async (id: string, title: string): Promise<void> => {
+  const rename = async (id: string, title: string): Promise<boolean> => {
     const teamId = currentTeamId.value
     const workspaceId = currentWorkspaceId.value
-    if (!teamId || !workspaceId) return
+    if (!teamId || !workspaceId) return false
     const trimmed = title.trim()
     if (!trimmed) {
       toast.error("Chat title cannot be empty.")
-      return
+      return false
     }
-    if (isMutating.value) return
+    if (isMutating.value) return false
     isMutating.value = true
     try {
       await runSessionWrite(
@@ -177,19 +177,21 @@ export function useWorkspaceBotSessions(): UseWorkspaceBotSessionsReturn {
             title: trimmed,
           })
       )
+      return true
     } catch (error) {
       console.error("[useWorkspaceBotSessions] rename failed:", error)
       toast.error("Failed to rename chat.")
+      return false
     } finally {
       isMutating.value = false
     }
   }
 
-  const archive = async (id: string, archived: boolean): Promise<void> => {
+  const archive = async (id: string, archived: boolean): Promise<boolean> => {
     const teamId = currentTeamId.value
     const workspaceId = currentWorkspaceId.value
-    if (!teamId || !workspaceId) return
-    if (isMutating.value) return
+    if (!teamId || !workspaceId) return false
+    if (isMutating.value) return false
     isMutating.value = true
     try {
       await runSessionWrite(
@@ -204,19 +206,21 @@ export function useWorkspaceBotSessions(): UseWorkspaceBotSessionsReturn {
         () =>
           archiveBotSession({ teamId, workspaceId, sessionId: id, archived })
       )
+      return true
     } catch (error) {
       console.error("[useWorkspaceBotSessions] archive failed:", error)
       toast.error("Failed to update chat.")
+      return false
     } finally {
       isMutating.value = false
     }
   }
 
-  const remove = async (id: string): Promise<void> => {
+  const remove = async (id: string): Promise<boolean> => {
     const teamId = currentTeamId.value
     const workspaceId = currentWorkspaceId.value
-    if (!teamId || !workspaceId) return
-    if (isMutating.value) return
+    if (!teamId || !workspaceId) return false
+    if (isMutating.value) return false
     isMutating.value = true
     try {
       await runSessionWrite(
@@ -225,9 +229,11 @@ export function useWorkspaceBotSessions(): UseWorkspaceBotSessionsReturn {
         (current) => current.filter((s) => s.id !== id),
         () => deleteBotSession({ teamId, workspaceId, sessionId: id })
       )
+      return true
     } catch (error) {
       console.error("[useWorkspaceBotSessions] delete failed:", error)
       toast.error("Failed to delete chat.")
+      return false
     } finally {
       isMutating.value = false
     }

@@ -169,11 +169,11 @@ useInfiniteScroll(
             {{ t("components.notifications.title") }}
           </span>
         </div>
-        <TabsList class="bg-input/50 h-9! p-0">
+        <TabsList class="bg-input/50 h-control! p-0">
           <TabsTrigger
             value="inbox"
             :aria-label="t('components.notifications.inbox')"
-            class="data-[state=active]:border-border! data-[state=active]:bg-background h-9"
+            class="data-[state=active]:border-border! data-[state=active]:bg-background h-control"
           >
             <IconInbox />
             <span class="hidden @min-[480px]/notifications:inline">
@@ -190,7 +190,7 @@ useInfiniteScroll(
           <TabsTrigger
             value="saved"
             :aria-label="t('components.notifications.saved')"
-            class="data-[state=active]:border-border! data-[state=active]:bg-background h-9"
+            class="data-[state=active]:border-border! data-[state=active]:bg-background h-control"
           >
             <IconBookmark />
             <span class="hidden @min-[480px]/notifications:inline">
@@ -207,7 +207,7 @@ useInfiniteScroll(
           <TabsTrigger
             value="done"
             :aria-label="t('components.notifications.done')"
-            class="data-[state=active]:border-border! data-[state=active]:bg-background h-9"
+            class="data-[state=active]:border-border! data-[state=active]:bg-background h-control"
           >
             <IconCheck />
             <span class="hidden @min-[480px]/notifications:inline">
@@ -225,7 +225,7 @@ useInfiniteScroll(
       </div>
       <ScrollContainer
         ref="scrollableContainer"
-        class="bg-sidebar rounded-2xl p-2"
+        class="bg-sidebar rounded-item p-2"
         :class="isDocked ? 'min-h-0 flex-1' : 'aspect-square'"
       >
         <Empty
@@ -378,7 +378,7 @@ useInfiniteScroll(
         <Badge
           v-if="unreadCount > 0"
           variant="secondary"
-          class="bg-sidebar-primary text-sidebar-primary-foreground aspect-square h-4 rounded-3xl px-1"
+          class="bg-sidebar-primary text-sidebar-primary-foreground aspect-square h-4 rounded-full px-1"
         >
           {{ unreadCount }}
         </Badge>

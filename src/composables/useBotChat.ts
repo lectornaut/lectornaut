@@ -273,10 +273,10 @@ export interface BotChatContext {
   selectSession: (id: string) => Promise<void>
   startNewSession: () => void
   setActiveVisibility: (visibility: IBotSessionVisibility) => Promise<void>
-  renameSession: (id: string, title: string) => Promise<void>
-  archiveSession: (id: string, archived: boolean) => Promise<void>
+  renameSession: (id: string, title: string) => Promise<boolean>
+  archiveSession: (id: string, archived: boolean) => Promise<boolean>
   pinSession: (id: string, pinned: boolean) => Promise<void>
-  removeSession: (id: string) => Promise<void>
+  removeSession: (id: string) => Promise<boolean>
   // ── Attached workspace nodes (context) ──────────────────────────────
   /**
    * Workspace nodes the user has attached to the current session. Sent
@@ -1554,28 +1554,23 @@ export function useBotChat(options?: BotChatOptions): BotChatContext {
     }
   }
 
-  const renameSession = async (id: string, title: string): Promise<void> => {
-    await sessionActions.renameSession(id, title)
-  }
+  const renameSession = (id: string, title: string): Promise<boolean> =>
+    sessionActions.renameSession(id, title)
 
-  const archiveSession = async (
-    id: string,
-    archived: boolean
-  ): Promise<void> => {
-    await sessionActions.archiveSession(id, archived)
-  }
+  const archiveSession = (id: string, archived: boolean): Promise<boolean> =>
+    sessionActions.archiveSession(id, archived)
 
   const pinSession = async (id: string, pinned: boolean): Promise<void> => {
     await sessionActions.pinSession(id, pinned)
   }
 
-  const removeSession = async (id: string) => {
+  const removeSession = async (id: string): Promise<boolean> => {
     if (
       !currentTeamId.value ||
       !currentWorkspaceId.value ||
       isMutatingSession.value
     ) {
-      return
+      return false
     }
 
     // Optimistic local reset BEFORE the await: when we're deleting the
@@ -1603,6 +1598,7 @@ export function useBotChat(options?: BotChatOptions): BotChatContext {
     ) {
       await selectSession(id)
     }
+    return removed
   }
 
   const setActiveVisibility = async (visibility: IBotSessionVisibility) => {

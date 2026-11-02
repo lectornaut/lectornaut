@@ -178,8 +178,6 @@ const createName = ref("")
 const isCreating = ref(false)
 const renameName = ref("")
 const isRenaming = ref(false)
-const isArchiving = ref(false)
-const isDeleting = ref(false)
 
 const openCreateDialog = (type: "folder" | "file", parentId: string) => {
   dialogs.create.type = type
@@ -384,7 +382,6 @@ const handleRootDrop = async (event: DragEvent) => {
 const handleArchiveConfirm = async () => {
   if (!dialogs.archive.node) return
 
-  isArchiving.value = true
   try {
     await store.archiveNodeAction(
       props.scope,
@@ -393,18 +390,15 @@ const handleArchiveConfirm = async () => {
       dialogs.archive.node.id
     )
     showSuccessToast(t("fileTree.toast.archived"))
-    dialogs.archive.open = false
   } catch (error) {
     showErrorToast(t("fileTree.toast.archiveFailed"), (error as Error).message)
-  } finally {
-    isArchiving.value = false
+    return false
   }
 }
 
 const handleDeleteConfirm = async () => {
   if (!dialogs.delete.node) return
 
-  isDeleting.value = true
   try {
     await store.deleteNodeAction(
       props.scope,
@@ -413,11 +407,9 @@ const handleDeleteConfirm = async () => {
       dialogs.delete.node.id
     )
     showSuccessToast(t("fileTree.toast.deleted"))
-    dialogs.delete.open = false
   } catch (error) {
     showErrorToast(t("fileTree.toast.deleteFailed"), (error as Error).message)
-  } finally {
-    isDeleting.value = false
+    return false
   }
 }
 
@@ -691,62 +683,24 @@ onBeforeUnmount(() => {
     </DialogContent>
   </Dialog>
 
-  <AlertDialog
-    :open="dialogs.archive.open"
-    @update:open="(value) => (dialogs.archive.open = value)"
-  >
-    <AlertDialogContent>
-      <AlertDialogHeader>
-        <AlertDialogTitle>{{ t("fileTree.archiveTitle") }}</AlertDialogTitle>
-        <AlertDialogDescription>
-          {{
-            t("fileTree.archiveConfirm", {
-              name: dialogs.archive.node?.name ?? "",
-            })
-          }}
-        </AlertDialogDescription>
-      </AlertDialogHeader>
-      <AlertDialogFooter>
-        <AlertDialogCancel>
-          {{ t("actions.cancel") }}
-          <Kbd>Esc</Kbd>
-        </AlertDialogCancel>
-        <AlertDialogAction
-          :disabled="isArchiving"
-          @click="handleArchiveConfirm"
-        >
-          {{ isArchiving ? t("states.archiving") : t("fileTree.archive") }}
-          <Kbd>↩</Kbd>
-        </AlertDialogAction>
-      </AlertDialogFooter>
-    </AlertDialogContent>
-  </AlertDialog>
+  <ConfirmAction
+    v-model:open="dialogs.archive.open"
+    :title="t('fileTree.archiveTitle')"
+    :description="
+      t('fileTree.archiveConfirm', { name: dialogs.archive.node?.name ?? '' })
+    "
+    :action-label="t('fileTree.archive')"
+    :on-confirm="handleArchiveConfirm"
+  />
 
-  <AlertDialog
-    :open="dialogs.delete.open"
-    @update:open="(value) => (dialogs.delete.open = value)"
-  >
-    <AlertDialogContent>
-      <AlertDialogHeader>
-        <AlertDialogTitle>{{ t("fileTree.deleteTitle") }}</AlertDialogTitle>
-        <AlertDialogDescription>
-          {{
-            t("fileTree.deleteConfirm", {
-              name: dialogs.delete.node?.name ?? "",
-            })
-          }}
-        </AlertDialogDescription>
-      </AlertDialogHeader>
-      <AlertDialogFooter>
-        <AlertDialogCancel>
-          {{ t("actions.cancel") }}
-          <Kbd>Esc</Kbd>
-        </AlertDialogCancel>
-        <AlertDialogAction :disabled="isDeleting" @click="handleDeleteConfirm">
-          {{ isDeleting ? t("states.deleting") : t("actions.delete") }}
-          <Kbd>↩</Kbd>
-        </AlertDialogAction>
-      </AlertDialogFooter>
-    </AlertDialogContent>
-  </AlertDialog>
+  <ConfirmAction
+    v-model:open="dialogs.delete.open"
+    :title="t('fileTree.deleteTitle')"
+    :description="
+      t('fileTree.deleteConfirm', { name: dialogs.delete.node?.name ?? '' })
+    "
+    :action-label="t('actions.delete')"
+    destructive
+    :on-confirm="handleDeleteConfirm"
+  />
 </template>

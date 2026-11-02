@@ -40,6 +40,11 @@ export function useDialogActionHotkey() {
       )
       if (!dialog) return
 
+      // Builder-sized dialogs (agent/tool/workflow editors) opt out entirely
+      // with `data-dialog-enter="off"`: Enter in one schema field must never
+      // save a whole multi-section form.
+      if (dialog.dataset.dialogEnter === "off") return
+
       // Enter keeps its native meaning where it already has one: newline in
       // multi-line editors, navigation on links, opening popup triggers
       // (select/combobox/menu). Single-line inputs fall through on purpose —
@@ -48,6 +53,19 @@ export function useDialogActionHotkey() {
       if (
         origin.closest(
           'a[href], textarea, select, [aria-haspopup], [role="combobox"]'
+        )
+      ) {
+        return
+      }
+
+      // A focused control in a regular dialog keeps its own Enter: a button
+      // activates itself, a switch/checkbox/tab stays put. Only alert dialogs
+      // keep the override, because reka focuses their Cancel on open and the
+      // "default button" there must be the proceed action.
+      if (
+        dialog.getAttribute("role") === "dialog" &&
+        origin.closest(
+          'button, [role="button"], [role="switch"], [role="checkbox"], [role="radio"], [role="tab"], [role="option"]'
         )
       ) {
         return

@@ -507,7 +507,7 @@ const getButtonLabel = (planId: BillingPlanKey) => {
                 <CollapsibleContent class="min-w-0">
                   <div
                     data-table-frame
-                    class="overflow-clip rounded-4xl border"
+                    class="rounded-surface overflow-clip border"
                   >
                     <Table class="bg-secondary overflow-clip">
                       <TableHeader class="bg-secondary">

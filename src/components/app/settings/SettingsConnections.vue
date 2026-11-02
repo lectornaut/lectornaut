@@ -348,20 +348,23 @@ const SETTLE_TIMEOUT_MS = 10_000
 const rowFor = (provider: ConnectionProvider): ConnectionAppRow | undefined =>
   connectionRows.value.find((row) => row.app.provider === provider)
 
+/** Resolves `false` when the action failed (already toasted), else `true`. */
 const runLocked = async (
   id: string,
   action: () => Promise<void>,
   settled?: () => boolean
-) => {
-  if (pending.value.has(id)) return
+): Promise<boolean> => {
+  if (pending.value.has(id)) return true
   pending.value = new Set(pending.value).add(id)
   try {
     await action()
     if (settled) {
       await until(settled).toBe(true, { timeout: SETTLE_TIMEOUT_MS })
     }
+    return true
   } catch {
     // Toasted inside useConnections; the row just unlocks.
+    return false
   } finally {
     const next = new Set(pending.value)
     next.delete(id)
@@ -371,13 +374,12 @@ const runLocked = async (
 
 // ── Destructive-action confirms ────────────────────────────────────────────
 // Uninstall and disconnect revoke real Google grants (uninstall: EVERY
-// member's binding on the team), so both detour through an AlertDialog.
+// member's binding on the team), so both detour through a ConfirmAction.
 // Page-level `useConfirmationDialog` singletons (the SettingsWorkspaces
 // pattern) rather than per-row dialogs inside the card v-for: the card
 // panels AND the Manage table both trigger them, and per-row instances
-// would unmount with their TabsContent. The composable snapshots the item
-// and microtask-defers clearing it, so AlertDialogAction's auto-close on
-// the same click can't race confirm() into a no-op.
+// would unmount with their TabsContent. A failed action throws out of
+// `confirm()` so the dialog stays open (the error is already toasted).
 const uninstallDialog = useConfirmationDialog<ConnectionAppDescriptor>()
 const disconnectDialog = useConfirmationDialog<ConnectionAppDescriptor>()
 
@@ -404,13 +406,14 @@ const handleAppAction = (
 }
 
 const handleUninstallConfirmed = (): Promise<void> =>
-  uninstallDialog.confirm((app) =>
-    runLocked(
+  uninstallDialog.confirm(async (app) => {
+    const ok = await runLocked(
       appActionId(app.provider),
       () => connections.uninstall(app.provider),
       () => !rowFor(app.provider)?.installed
     )
-  )
+    if (!ok) throw new Error(`uninstall ${app.provider} failed`)
+  })
 
 // "connect" covers first link AND reconnect (needs_reauth / scope upgrade) —
 // same popup flow; the server overwrites the binding. The promise spans the
@@ -422,13 +425,14 @@ const handleConnect = (provider: ConnectionProvider): void => {
 }
 
 const handleDisconnectConfirmed = (): Promise<void> =>
-  disconnectDialog.confirm((app) => {
-    if (isBindingPending(app.provider)) return Promise.resolve()
-    return runLocked(
+  disconnectDialog.confirm(async (app) => {
+    if (isBindingPending(app.provider)) return
+    const ok = await runLocked(
       disconnectActionId(app.provider),
       () => connections.disconnect(app.provider),
       () => !rowFor(app.provider)?.myBinding
     )
+    if (!ok) throw new Error(`disconnect ${app.provider} failed`)
   })
 
 const openInfoDialog = (provider: ConnectionProvider): void => {
@@ -475,23 +479,23 @@ const openInfoDialog = (provider: ConnectionProvider): void => {
                ancestor group — so its orientation leaks in here (flex-col
                list, left-aligned triggers). Pin the horizontal look back. -->
             <TabsList
-              class="bg-input/50 h-9! flex-row! rounded-full! p-0 *:justify-center! *:rounded-full!"
+              class="bg-input/50 h-control! rounded-control! *:rounded-control! flex-row! p-0 *:justify-center!"
             >
               <TabsTrigger
                 value="discover"
-                class="data-[state=active]:border-border! data-[state=active]:bg-background h-9"
+                class="data-[state=active]:border-border! data-[state=active]:bg-background h-control"
               >
                 {{ t("settings.connections.tabDiscover") }}
               </TabsTrigger>
               <TabsTrigger
                 value="installed"
-                class="data-[state=active]:border-border! data-[state=active]:bg-background h-9"
+                class="data-[state=active]:border-border! data-[state=active]:bg-background h-control"
               >
                 {{ t("settings.connections.tabInstalled") }}
               </TabsTrigger>
               <TabsTrigger
                 value="manage"
-                class="data-[state=active]:border-border! data-[state=active]:bg-background h-9"
+                class="data-[state=active]:border-border! data-[state=active]:bg-background h-control"
               >
                 {{ t("settings.connections.tabManage") }}
               </TabsTrigger>
@@ -558,7 +562,7 @@ const openInfoDialog = (provider: ConnectionProvider): void => {
                             <IconListFilter />
                             <span
                               v-if="isFilterActive"
-                              class="bg-primary absolute -top-0.5 -right-0.5 size-2 rounded-4xl"
+                              class="bg-primary absolute -top-0.5 -right-0.5 size-2 rounded-full"
                             />
                           </InputGroupButton>
                         </DropdownMenuTrigger>
@@ -665,7 +669,7 @@ const openInfoDialog = (provider: ConnectionProvider): void => {
                   <!-- The signed-in member's own account status. -->
                   <ItemFooter v-if="row.installed">
                     <div
-                      class="bg-secondary flex grow flex-col rounded-2xl p-4"
+                      class="bg-secondary rounded-item flex grow flex-col p-4"
                     >
                       <span class="text-muted-foreground text-xs">
                         {{
@@ -826,7 +830,7 @@ const openInfoDialog = (provider: ConnectionProvider): void => {
           <TabsContent value="manage" class="min-w-0">
             <div
               data-table-frame
-              class="min-w-0 overflow-clip rounded-4xl border"
+              class="rounded-surface min-w-0 overflow-clip border"
             >
               <Table>
                 <TableHeader>
@@ -1116,77 +1120,37 @@ const openInfoDialog = (provider: ConnectionProvider): void => {
       @connect="(app) => handleConnect(app.provider)"
     />
 
-    <!-- Confirm dialogs for the two grant-revoking actions — page-level
+    <!-- Confirm dialogs for the two grant-revoking actions: page-level
          singletons (driven by useConfirmationDialog) because the card
          panels AND the Manage table both open them; per-row instances
          would unmount with their TabsContent. The composable's `.value`s
          are explicit: nested refs on a plain object don't auto-unwrap in
          templates. -->
-    <AlertDialog
-      :open="uninstallDialog.isOpen.value"
-      @update:open="
-        (open) => {
-          if (!open) uninstallDialog.close()
-        }
+    <ConfirmAction
+      v-model:open="uninstallDialog.isOpen.value"
+      :title="t('settings.connections.uninstallConfirmTitle')"
+      :description="
+        t('settings.connections.uninstallConfirmBody', {
+          name: uninstallDialog.item.value?.name ?? '',
+        })
       "
-    >
-      <AlertDialogContent>
-        <AlertDialogHeader>
-          <AlertDialogTitle>
-            {{ t("settings.connections.uninstallConfirmTitle") }}
-          </AlertDialogTitle>
-          <AlertDialogDescription>
-            {{
-              t("settings.connections.uninstallConfirmBody", {
-                name: uninstallDialog.item.value?.name ?? "",
-              })
-            }}
-          </AlertDialogDescription>
-        </AlertDialogHeader>
-        <AlertDialogFooter>
-          <AlertDialogCancel>
-            {{ t("actions.cancel") }}<Kbd>Esc</Kbd>
-          </AlertDialogCancel>
-          <AlertDialogAction @click="handleUninstallConfirmed()">
-            {{ t("settings.connections.uninstallApp") }}
-            <Kbd>↩</Kbd>
-          </AlertDialogAction>
-        </AlertDialogFooter>
-      </AlertDialogContent>
-    </AlertDialog>
+      :action-label="t('settings.connections.uninstallApp')"
+      destructive
+      :on-confirm="handleUninstallConfirmed"
+    />
 
-    <AlertDialog
-      :open="disconnectDialog.isOpen.value"
-      @update:open="
-        (open) => {
-          if (!open) disconnectDialog.close()
-        }
+    <ConfirmAction
+      v-model:open="disconnectDialog.isOpen.value"
+      :title="t('settings.connections.disconnectConfirmTitle')"
+      :description="
+        t('settings.connections.disconnectConfirmBody', {
+          name: disconnectDialog.item.value?.name ?? '',
+        })
       "
-    >
-      <AlertDialogContent>
-        <AlertDialogHeader>
-          <AlertDialogTitle>
-            {{ t("settings.connections.disconnectConfirmTitle") }}
-          </AlertDialogTitle>
-          <AlertDialogDescription>
-            {{
-              t("settings.connections.disconnectConfirmBody", {
-                name: disconnectDialog.item.value?.name ?? "",
-              })
-            }}
-          </AlertDialogDescription>
-        </AlertDialogHeader>
-        <AlertDialogFooter>
-          <AlertDialogCancel>
-            {{ t("actions.cancel") }}<Kbd>Esc</Kbd>
-          </AlertDialogCancel>
-          <AlertDialogAction @click="handleDisconnectConfirmed()">
-            {{ t("settings.connections.disconnect") }}
-            <Kbd>↩</Kbd>
-          </AlertDialogAction>
-        </AlertDialogFooter>
-      </AlertDialogContent>
-    </AlertDialog>
+      :action-label="t('settings.connections.disconnect')"
+      destructive
+      :on-confirm="handleDisconnectConfirmed"
+    />
   </div>
   <SettingsRestricted v-else />
 </template>

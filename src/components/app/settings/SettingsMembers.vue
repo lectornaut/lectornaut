@@ -1,10 +1,12 @@
 <script lang="ts" setup>
 import { useCanViewTeamSettings } from "@/composables/useCanViewTeamSettings"
+import { useConfirmationDialog } from "@/composables/useConfirmationDialog"
 import { useTeamActions } from "@/composables/useTeamActions"
 import { IconLogOut, IconPlus, IconTrash, IconUsers } from "@/data/icons"
 import {
   isAgentMembership,
   type IAgentMembership,
+  type IMembership,
   type IMembershipRole,
   type ITeamMember,
 } from "@/types/membership"
@@ -48,8 +50,12 @@ const agentAvatarSeed = (member: IAgentMembership): string =>
 const isAgentRemovalPending = (member: IAgentMembership): boolean =>
   teamLoading.member.isLoading(`agent:${member.agentId}`)
 
-const handleRemoveAgent = (member: IAgentMembership) =>
-  removeAgentMember(member.agentId)
+// One confirm per action, opened from the row menus and mounted as siblings.
+const removeAgentDialog = useConfirmationDialog<IAgentMembership>()
+const removeMemberDialog = useConfirmationDialog<IMembership>()
+
+const handleRemoveAgent = () =>
+  removeAgentDialog.confirm((member) => removeAgentMember(member.agentId))
 
 // Team Dialog for inviting members
 const isTeamDialogOpen = ref(false)
@@ -109,9 +115,12 @@ const handleChangeRole = (userId: string, role: IMembershipRole) => {
   changeRole(userId, role)
 }
 
-const handleRemoveMember = (member: ITeamMember) => {
-  if (!isAgentMembership(member)) removeMember(member.userId)
-}
+const handleRemoveMember = () =>
+  removeMemberDialog.confirm((member) => removeMember(member.userId))
+
+const isRemovingSelf = computed(
+  () => removeMemberDialog.item.value?.userId === user.value?.uid
+)
 
 const formatCreatedAt = (
   value: (typeof teamMembers.value)[number]["createdAt"] | null | undefined
@@ -161,7 +170,7 @@ const formatCreatedAt = (
             <div
               v-else
               data-table-frame
-              class="overflow-clip rounded-4xl border"
+              class="rounded-surface overflow-clip border"
             >
               <Table>
                 <TableHeader>
@@ -356,76 +365,39 @@ const formatCreatedAt = (
                               </TooltipContent>
                             </Tooltip>
                           </TooltipProvider>
-                          <AlertDialog v-else>
-                            <TooltipProvider>
-                              <Tooltip>
-                                <DropdownMenu>
-                                  <TooltipTrigger as-child>
-                                    <DropdownMenuTrigger as-child>
-                                      <DataTableRowActionsButton
-                                        :label="t('settings.members.actions')"
-                                        :loading="isAgentRemovalPending(member)"
-                                      />
-                                    </DropdownMenuTrigger>
-                                  </TooltipTrigger>
-                                  <TooltipContent>
-                                    {{ t("settings.members.actions") }}
-                                  </TooltipContent>
-                                  <DropdownMenuContent align="end">
-                                    <DropdownMenuGroup>
-                                      <AlertDialogTrigger as-child>
-                                        <DropdownMenuItem
-                                          data-hotkey="x"
-                                          :disabled="
-                                            isAgentRemovalPending(member)
-                                          "
-                                          @select.prevent
-                                        >
-                                          <IconTrash />
-                                          {{
-                                            t("settings.members.removeAgent")
-                                          }}
-                                          <DropdownMenuShortcut>
-                                            X
-                                          </DropdownMenuShortcut>
-                                        </DropdownMenuItem>
-                                      </AlertDialogTrigger>
-                                    </DropdownMenuGroup>
-                                  </DropdownMenuContent>
-                                </DropdownMenu>
-                              </Tooltip>
-                            </TooltipProvider>
-                            <AlertDialogContent>
-                              <AlertDialogHeader>
-                                <AlertDialogTitle>
-                                  {{ t("settings.members.removeAgent") }}
-                                </AlertDialogTitle>
-                                <AlertDialogDescription>
-                                  {{
-                                    t("settings.members.removeAgentConfirm", {
-                                      name: member.agent.name,
-                                    })
-                                  }}
-                                </AlertDialogDescription>
-                              </AlertDialogHeader>
-                              <AlertDialogFooter>
-                                <AlertDialogCancel>
-                                  {{ t("actions.cancel") }}
-                                  <Kbd>Esc</Kbd>
-                                </AlertDialogCancel>
-                                <AlertDialogAction
-                                  :disabled="isAgentRemovalPending(member)"
-                                  @click="handleRemoveAgent(member)"
-                                >
-                                  <Spinner
-                                    v-if="isAgentRemovalPending(member)"
-                                  />
-                                  {{ t("settings.members.remove") }}
-                                  <Kbd>↩</Kbd>
-                                </AlertDialogAction>
-                              </AlertDialogFooter>
-                            </AlertDialogContent>
-                          </AlertDialog>
+                          <TooltipProvider v-else>
+                            <Tooltip>
+                              <DropdownMenu>
+                                <TooltipTrigger as-child>
+                                  <DropdownMenuTrigger as-child>
+                                    <DataTableRowActionsButton
+                                      :label="t('settings.members.actions')"
+                                      :loading="isAgentRemovalPending(member)"
+                                    />
+                                  </DropdownMenuTrigger>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  {{ t("settings.members.actions") }}
+                                </TooltipContent>
+                                <DropdownMenuContent align="end">
+                                  <DropdownMenuGroup>
+                                    <DropdownMenuItem
+                                      variant="destructive"
+                                      data-hotkey="x"
+                                      :disabled="isAgentRemovalPending(member)"
+                                      @click="removeAgentDialog.open(member)"
+                                    >
+                                      <IconTrash />
+                                      {{ t("settings.members.removeAgent") }}
+                                      <DropdownMenuShortcut>
+                                        X
+                                      </DropdownMenuShortcut>
+                                    </DropdownMenuItem>
+                                  </DropdownMenuGroup>
+                                </DropdownMenuContent>
+                              </DropdownMenu>
+                            </Tooltip>
+                          </TooltipProvider>
                         </template>
                         <!-- User rows: role/remove/exit dropdown -->
                         <TooltipProvider
@@ -461,78 +433,19 @@ const formatCreatedAt = (
                                 </DropdownMenuTrigger>
                               </TooltipTrigger>
                               <DropdownMenuContent align="end">
-                                <AlertDialog>
-                                  <AlertDialogTrigger as-child>
-                                    <DropdownMenuItem
-                                      data-hotkey="x"
-                                      @select.prevent
-                                    >
-                                      <IconLogOut />
-                                      {{
-                                        member.userId === user?.uid
-                                          ? t("settings.members.exit")
-                                          : t("settings.members.remove")
-                                      }}
-                                      <DropdownMenuShortcut>
-                                        X
-                                      </DropdownMenuShortcut>
-                                    </DropdownMenuItem>
-                                  </AlertDialogTrigger>
-                                  <AlertDialogContent>
-                                    <AlertDialogHeader>
-                                      <AlertDialogTitle>
-                                        {{
-                                          member.userId === user?.uid
-                                            ? t("settings.members.exitTeam")
-                                            : t("settings.members.removeMember")
-                                        }}
-                                      </AlertDialogTitle>
-                                      <AlertDialogDescription>
-                                        {{
-                                          member.userId === user?.uid
-                                            ? t("settings.members.exitConfirm")
-                                            : t(
-                                                "settings.members.removeConfirm",
-                                                {
-                                                  name:
-                                                    member.user?.displayName ||
-                                                    member.user?.email ||
-                                                    "",
-                                                }
-                                              )
-                                        }}
-                                      </AlertDialogDescription>
-                                    </AlertDialogHeader>
-                                    <AlertDialogFooter>
-                                      <AlertDialogCancel>
-                                        {{ t("actions.cancel") }}
-                                        <Kbd>Esc</Kbd>
-                                      </AlertDialogCancel>
-                                      <AlertDialogAction
-                                        :disabled="
-                                          teamLoading.member.isLoading(
-                                            member.userId
-                                          )
-                                        "
-                                        @click="handleRemoveMember(member)"
-                                      >
-                                        <Spinner
-                                          v-if="
-                                            teamLoading.member.isLoading(
-                                              member.userId
-                                            )
-                                          "
-                                        />
-                                        {{
-                                          member.userId === user?.uid
-                                            ? t("settings.members.exit")
-                                            : t("settings.members.remove")
-                                        }}
-                                        <Kbd>↩</Kbd>
-                                      </AlertDialogAction>
-                                    </AlertDialogFooter>
-                                  </AlertDialogContent>
-                                </AlertDialog>
+                                <DropdownMenuItem
+                                  variant="destructive"
+                                  data-hotkey="x"
+                                  @click="removeMemberDialog.open(member)"
+                                >
+                                  <IconLogOut />
+                                  {{
+                                    member.userId === user?.uid
+                                      ? t("settings.members.exit")
+                                      : t("settings.members.remove")
+                                  }}
+                                  <DropdownMenuShortcut>X</DropdownMenuShortcut>
+                                </DropdownMenuItem>
                               </DropdownMenuContent>
                               <TooltipContent>
                                 {{ t("settings.members.actions") }}
@@ -566,6 +479,42 @@ const formatCreatedAt = (
     </FieldGroup>
   </div>
   <SettingsRestricted v-else />
+
+  <ConfirmAction
+    v-model:open="removeAgentDialog.isOpen.value"
+    :title="t('settings.members.removeAgent')"
+    :description="
+      t('settings.members.removeAgentConfirm', {
+        name: removeAgentDialog.item.value?.agent.name ?? '',
+      })
+    "
+    :action-label="t('settings.members.remove')"
+    destructive
+    :on-confirm="handleRemoveAgent"
+  />
+
+  <ConfirmAction
+    v-model:open="removeMemberDialog.isOpen.value"
+    :title="
+      isRemovingSelf
+        ? t('settings.members.exitTeam')
+        : t('settings.members.removeMember')
+    "
+    :description="
+      isRemovingSelf
+        ? t('settings.members.exitConfirm')
+        : t('settings.members.removeConfirm', {
+            name: removeMemberDialog.item.value
+              ? memberDisplayName(removeMemberDialog.item.value)
+              : '',
+          })
+    "
+    :action-label="
+      isRemovingSelf ? t('settings.members.exit') : t('settings.members.remove')
+    "
+    destructive
+    :on-confirm="handleRemoveMember"
+  />
 
   <!-- Team Invite Dialog -->
   <TeamDialog

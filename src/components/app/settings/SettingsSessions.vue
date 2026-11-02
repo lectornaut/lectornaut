@@ -179,7 +179,6 @@ const toUnknownColumn = (
 
 const renameDialogOpen = ref(false)
 const renameTarget = ref<IBotSession | null>(null)
-const renameInput = ref("")
 
 const deleteDialogOpen = ref(false)
 const deleteTarget = ref<IBotSession | null>(null)
@@ -188,8 +187,6 @@ const deleteTarget = ref<IBotSession | null>(null)
 
 const openRename = (session: IBotSession) => {
   renameTarget.value = session
-  renameInput.value = session.title ?? ""
-  // Reka-ui's DialogContent autofocuses the first tabbable (the input) on open.
   renameDialogOpen.value = true
 }
 
@@ -578,19 +575,19 @@ const openBulkDelete = () => {
   bulkDeleteDialogOpen.value = true
 }
 
+// Each failed delete already toasts; any failure keeps the dialog open so the
+// user sees the outcome instead of a silently half-finished wipe.
 const submitBulkDelete = async () => {
-  if (bulkBusy.value) return
+  if (bulkBusy.value) return false
   const targets = selectedSessions.value.map((s) => s.id)
-  if (targets.length === 0) {
-    bulkDeleteDialogOpen.value = false
-    return
-  }
+  if (targets.length === 0) return
   bulkBusy.value = true
   try {
+    let allDeleted = true
     for (const id of targets) {
-      await removeSession(id)
+      if (!(await removeSession(id))) allDeleted = false
     }
-    bulkDeleteDialogOpen.value = false
+    if (!allDeleted) return false
     clearSelection()
   } finally {
     bulkBusy.value = false
@@ -599,25 +596,12 @@ const submitBulkDelete = async () => {
 
 // ── Single-row dialog submit handlers ────────────────────────────────────────
 
-const submitRename = async () => {
-  const target = renameTarget.value
-  if (!target) return
-  const next = renameInput.value.trim()
-  if (!next || next === (target.title ?? "")) {
-    renameDialogOpen.value = false
-    return
-  }
-  await renameSession(target.id, next)
-  renameDialogOpen.value = false
-  renameTarget.value = null
-}
+const saveRename = (title: string) =>
+  renameSession(renameTarget.value!.id, title)
 
 const submitDelete = async () => {
   const target = deleteTarget.value
-  if (!target) return
-  await removeSession(target.id)
-  deleteDialogOpen.value = false
-  deleteTarget.value = null
+  if (!target || !(await removeSession(target.id))) return false
 }
 </script>
 
@@ -687,7 +671,7 @@ const submitDelete = async () => {
                 :columns="columns"
                 :column-pinning="{ start: ['select'], end: ['actions'] }"
                 data-table-frame
-                class="overflow-clip rounded-4xl border"
+                class="rounded-surface overflow-clip border"
               >
                 <!-- Bulk actions for the footer's selected-count chip. Admins -->
                 <!-- can mutate any row, so the whole selection is actionable. -->
@@ -717,6 +701,7 @@ const submitDelete = async () => {
                     {{ t("settings.sessions.bulkRestore") }}
                   </DropdownMenuItem>
                   <DropdownMenuItem
+                    variant="destructive"
                     :disabled="bulkBusy || isMutating"
                     @click="openBulkDelete"
                   >
@@ -739,108 +724,41 @@ const submitDelete = async () => {
       </FieldSet>
     </FieldGroup>
 
-    <!-- Rename dialog -->
-    <Dialog v-model:open="renameDialogOpen">
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>{{ t("ai.renameChat") }}</DialogTitle>
-          <DialogDescription>{{ t("ai.renameChatHint") }}</DialogDescription>
-        </DialogHeader>
-        <form class="grid gap-2" @submit.prevent="submitRename">
-          <Label for="settings-sessions-rename-input">
-            {{ t("ai.chatTitle") }}
-          </Label>
-          <Input
-            id="settings-sessions-rename-input"
-            v-model="renameInput"
-            :placeholder="t('ai.chatTitlePlaceholder')"
-            maxlength="120"
-            :disabled="isMutating"
-          />
-        </form>
-        <DialogFooter>
-          <DialogClose as-child>
-            <Button variant="outline" :disabled="isMutating">
-              {{ t("actions.cancel") }}
-              <Kbd>Esc</Kbd>
-            </Button>
-          </DialogClose>
-          <Button
-            data-dialog-action
-            :disabled="isMutating || !renameInput.trim()"
-            @click="submitRename"
-          >
-            <Spinner v-if="isMutating" />
-            {{ t("actions.save") }}
-            <Kbd>↩</Kbd>
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+    <SessionRenameDialog
+      v-model:open="renameDialogOpen"
+      :title="renameTarget?.title"
+      :on-save="saveRename"
+    />
 
-    <!-- Single-row delete confirm -->
-    <AlertDialog v-model:open="deleteDialogOpen">
-      <AlertDialogContent>
-        <AlertDialogHeader>
-          <AlertDialogTitle>{{ t("ai.deleteChatTitle") }}</AlertDialogTitle>
-          <AlertDialogDescription>
-            <span class="text-foreground font-medium">
-              {{ deleteTarget?.title || t("ai.thisChat") }}
-            </span>
-            {{ t("ai.deleteChatConfirm") }}
-          </AlertDialogDescription>
-        </AlertDialogHeader>
-        <AlertDialogFooter>
-          <AlertDialogCancel :disabled="isMutating">
-            {{ t("actions.cancel") }}
-            <Kbd>Esc</Kbd>
-          </AlertDialogCancel>
-          <AlertDialogAction
-            :disabled="isMutating"
-            @click.prevent="submitDelete"
-          >
-            <Spinner v-if="isMutating" />
-            {{ t("actions.delete") }}
-            <Kbd>↩</Kbd>
-          </AlertDialogAction>
-        </AlertDialogFooter>
-      </AlertDialogContent>
-    </AlertDialog>
+    <ConfirmAction
+      v-model:open="deleteDialogOpen"
+      :title="t('ai.deleteChatTitle')"
+      :action-label="t('actions.delete')"
+      destructive
+      :on-confirm="submitDelete"
+    >
+      <template #description>
+        <span class="text-foreground font-medium">{{
+          deleteTarget?.title || t("ai.thisChat")
+        }}</span>
+        {{ t("ai.deleteChatConfirm") }}
+      </template>
+    </ConfirmAction>
 
-    <!-- Bulk delete confirm -->
-    <AlertDialog v-model:open="bulkDeleteDialogOpen">
-      <AlertDialogContent>
-        <AlertDialogHeader>
-          <AlertDialogTitle>
-            {{ t("settings.sessions.bulkDeleteTitle") }}
-          </AlertDialogTitle>
-          <AlertDialogDescription>
-            <span class="text-foreground font-medium">
-              {{
-                t("settings.sessions.selectedCount", {
-                  count: selectionCount,
-                })
-              }}
-            </span>
-            —
-            {{ t("settings.sessions.bulkDeleteConfirm") }}
-          </AlertDialogDescription>
-        </AlertDialogHeader>
-        <AlertDialogFooter>
-          <AlertDialogCancel :disabled="bulkBusy">
-            {{ t("actions.cancel") }}
-            <Kbd>Esc</Kbd>
-          </AlertDialogCancel>
-          <AlertDialogAction
-            :disabled="bulkBusy || selectionCount === 0"
-            @click.prevent="submitBulkDelete"
-          >
-            <Spinner v-if="bulkBusy" />
-            {{ t("actions.delete") }}
-            <Kbd>↩</Kbd>
-          </AlertDialogAction>
-        </AlertDialogFooter>
-      </AlertDialogContent>
-    </AlertDialog>
+    <ConfirmAction
+      v-model:open="bulkDeleteDialogOpen"
+      :title="t('settings.sessions.bulkDeleteTitle')"
+      :action-label="t('actions.delete')"
+      destructive
+      :disabled="selectionCount === 0"
+      :on-confirm="submitBulkDelete"
+    >
+      <template #description>
+        <span class="text-foreground font-medium">{{
+          t("settings.sessions.selectedCount", { count: selectionCount })
+        }}</span
+        >. {{ t("settings.sessions.bulkDeleteConfirm") }}
+      </template>
+    </ConfirmAction>
   </div>
 </template>

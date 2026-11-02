@@ -374,13 +374,6 @@ const restoreTeamSubscription = async (): Promise<void> => {
   openPlansTab()
 }
 
-const confirmCancelSubscription = async (): Promise<void> => {
-  const didCancel = await cancelTeamSubscription("cancel-dialog")
-  if (didCancel) {
-    isCancelSubscriptionDialogOpen.value = false
-  }
-}
-
 const handleSubscriptionAction = async (): Promise<void> => {
   if (canRestorePlan.value) {
     await restoreTeamSubscription()
@@ -580,36 +573,13 @@ const handleSubscriptionAction = async (): Promise<void> => {
   </div>
   <SettingsRestricted v-else />
 
-  <AlertDialog v-model:open="isCancelSubscriptionDialogOpen">
-    <AlertDialogContent>
-      <AlertDialogHeader>
-        <AlertDialogTitle>{{
-          t("settings.billing.cancelConfirmTitle")
-        }}</AlertDialogTitle>
-        <AlertDialogDescription>
-          {{ cancelSubscriptionConfirmationDescription }}
-        </AlertDialogDescription>
-      </AlertDialogHeader>
-      <AlertDialogFooter>
-        <AlertDialogCancel
-          >{{ t("settings.billing.cancelConfirmKeep") }}<Kbd>Esc</Kbd>
-        </AlertDialogCancel>
-        <AlertDialogAction
-          :disabled="billingAction === 'cancel'"
-          @click.prevent="confirmCancelSubscription"
-        >
-          <Spinner
-            v-if="
-              billingAction === 'cancel' &&
-              activeBillingActionTrigger === 'cancel-dialog'
-            "
-          />
-          <template v-else>{{
-            t("settings.billing.cancelConfirmCancel")
-          }}</template>
-          <Kbd>↩</Kbd>
-        </AlertDialogAction>
-      </AlertDialogFooter>
-    </AlertDialogContent>
-  </AlertDialog>
+  <ConfirmAction
+    v-model:open="isCancelSubscriptionDialogOpen"
+    :title="t('settings.billing.cancelConfirmTitle')"
+    :description="cancelSubscriptionConfirmationDescription"
+    :action-label="t('settings.billing.cancelConfirmCancel')"
+    :cancel-label="t('settings.billing.cancelConfirmKeep')"
+    destructive
+    :on-confirm="() => cancelTeamSubscription('cancel-dialog')"
+  />
 </template>

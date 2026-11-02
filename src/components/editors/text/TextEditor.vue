@@ -1785,7 +1785,7 @@ const scrollToTableOfContentsItem = (item: TableOfContentDataItem) => {
           z-index: 1;
         }
 
-        /* Mirrors ui/checkbox Checkbox.vue: size-4 rounded-[4px] border-input
+        /* Mirrors ui/checkbox Checkbox.vue: size-4 rounded-[5px] border-input
            shadow-xs dark:bg-input/30, checked -> primary with a size-3.5
            lucide check, focus-visible -> 3px ring-ring/50. Only the shadow
            transitions, like the component's `transition-shadow`. */
@@ -1793,7 +1793,7 @@ const scrollToTableOfContentsItem = (item: TableOfContentDataItem) => {
           width: 1rem;
           height: 1rem;
           border: 1px solid var(--input);
-          border-radius: 4px;
+          border-radius: 5px;
           box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
           color: var(--primary-foreground);
           transition: box-shadow 0.15s ease;

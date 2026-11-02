@@ -544,7 +544,11 @@ const expandedCard = ref<number | null>(null)
             <SidebarMenu>
               <SidebarMenuItem v-for="item in favorites" :key="item.name">
                 <SidebarMenuButton>
-                  <AppAvatar variant="beam" :name="item.name" class="size-10" />
+                  <AppAvatar
+                    variant="beam"
+                    :name="item.name"
+                    class="size-4 shrink-0"
+                  />
                   <span>{{ item.name }}</span>
                 </SidebarMenuButton>
                 <DropdownMenu>
@@ -601,13 +605,13 @@ const expandedCard = ref<number | null>(null)
                       <AppAvatar
                         variant="marble"
                         :name="team.name"
-                        class="size-10"
+                        class="size-4 shrink-0"
                       />
                       <span>{{ team.name }}</span>
                     </SidebarMenuButton>
                     <CollapsibleTrigger as-child>
                       <SidebarMenuAction
-                        class="bg-sidebar-accent text-sidebar-accent-foreground left-1.5 data-[state=open]:rotate-90"
+                        class="bg-sidebar-accent text-sidebar-accent-foreground left-2.5 data-[state=open]:rotate-90"
                         show-on-hover
                       >
                         <IconChevronRight />
@@ -626,7 +630,7 @@ const expandedCard = ref<number | null>(null)
                             <AppAvatar
                               variant="marble"
                               :name="page.name"
-                              class="size-10"
+                              class="size-4 shrink-0"
                             />
                             <span>{{ page.name }}</span>
                           </SidebarMenuSubButton>
@@ -730,16 +734,16 @@ const expandedCard = ref<number | null>(null)
             </Tooltip>
           </TooltipProvider>
         </Popover>
-        <TabsList class="bg-input/50 h-9! p-0">
+        <TabsList class="bg-input/50 h-control! p-0">
           <TabsTrigger
             value="overview"
-            class="data-[state=active]:border-border! data-[state=active]:bg-background h-9"
+            class="data-[state=active]:border-border! data-[state=active]:bg-background h-control"
           >
             {{ t("pages.home.tabs.overview") }}
           </TabsTrigger>
           <TabsTrigger
             value="usage"
-            class="data-[state=active]:border-border! data-[state=active]:bg-background h-9"
+            class="data-[state=active]:border-border! data-[state=active]:bg-background h-control"
           >
             {{ t("pages.home.tabs.usage") }}
           </TabsTrigger>

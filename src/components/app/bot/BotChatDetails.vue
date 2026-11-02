@@ -333,7 +333,10 @@ const detailRows = computed<DetailRow[]>(() => {
     <ScrollContainer>
       <SidebarGroup>
         <SidebarGroupContent class="space-y-2">
-          <Empty v-if="!sessionId" class="rounded-4xl border border-dashed p-6">
+          <Empty
+            v-if="!sessionId"
+            class="rounded-surface border border-dashed p-6"
+          >
             <EmptyHeader>
               <EmptyMedia variant="icon">
                 <IconHistory />
@@ -441,7 +444,7 @@ const detailRows = computed<DetailRow[]>(() => {
           </p>
           <Empty
             v-if="availableActionTools.length === 0"
-            class="rounded-4xl border border-dashed p-6"
+            class="rounded-surface border border-dashed p-6"
           >
             <EmptyHeader>
               <EmptyMedia variant="icon">
@@ -454,7 +457,7 @@ const detailRows = computed<DetailRow[]>(() => {
             <li
               v-for="tool in availableActionTools"
               :key="tool.key"
-              class="border-border/60 bg-background/40 rounded-4xl border p-2"
+              class="border-border/60 bg-background/40 rounded-surface border p-2"
             >
               <div class="flex items-center gap-2">
                 <Component :is="tool.icon" />
@@ -506,7 +509,7 @@ const detailRows = computed<DetailRow[]>(() => {
             <li
               v-for="interrupt in availableInterruptTools"
               :key="interrupt.key"
-              class="border-border/60 bg-background/40 rounded-4xl border p-2"
+              class="border-border/60 bg-background/40 rounded-surface border p-2"
             >
               <div class="flex items-center gap-2">
                 <Component :is="interrupt.icon" />

@@ -2,11 +2,14 @@
 import { useMacOSWindowControls } from "@/composables/useMacOSWindowControls"
 import { useMacOSTrafficLightsVisible } from "@/composables/usePlatform"
 import { IconLeaf } from "@/data/icons"
+import { SIDEBAR_MOBILE_BREAKPOINT } from "@/components/ui/sidebar/utils"
 import { useMediaQuery } from "@vueuse/core"
 
 const { t } = useI18n()
 const macOSTrafficLightsVisible = useMacOSTrafficLightsVisible()
-const isMobile = useMediaQuery("(max-width: 768px)")
+const isMobile = useMediaQuery(
+  `(max-width: ${SIDEBAR_MOBILE_BREAKPOINT - 1}px)`
+)
 const windowControlsHeader = useTemplateRef<HTMLElement>("windowControlsHeader")
 useMacOSWindowControls(windowControlsHeader)
 
@@ -42,7 +45,7 @@ const previewOpen = ref(false)
             side="bottom"
             align="start"
             :side-offset="8"
-            class="h-[80svh] overflow-clip p-0"
+            class="flex h-[80svh] flex-col overflow-clip p-0"
           >
             <MainSidebar preview />
           </HoverCardContent>

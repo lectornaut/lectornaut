@@ -281,7 +281,7 @@ const showEmptyState = computed(
               role="radio"
               :aria-checked="isSelected"
               :data-state="isSelected ? 'checked' : 'unchecked'"
-              class="border-input data-[state=checked]:bg-primary data-[state=checked]:border-primary relative flex aspect-square size-4 shrink-0 items-center justify-center rounded-4xl border"
+              class="border-input data-[state=checked]:bg-primary data-[state=checked]:border-primary relative flex aspect-square size-4 shrink-0 items-center justify-center rounded-full border"
             >
               <IconCircle
                 v-if="isSelected"
@@ -360,6 +360,7 @@ const showEmptyState = computed(
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem
+                variant="destructive"
                 data-hotkey="backspace delete"
                 @click="emit('delete', node)"
               >
@@ -433,7 +434,7 @@ const showEmptyState = computed(
             role="radio"
             :aria-checked="isSelected"
             :data-state="isSelected ? 'checked' : 'unchecked'"
-            class="border-input data-[state=checked]:bg-primary data-[state=checked]:border-primary relative flex aspect-square size-4 shrink-0 items-center justify-center rounded-4xl border"
+            class="border-input data-[state=checked]:bg-primary data-[state=checked]:border-primary relative flex aspect-square size-4 shrink-0 items-center justify-center rounded-full border"
           >
             <IconCircle
               v-if="isSelected"
@@ -490,6 +491,7 @@ const showEmptyState = computed(
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem
+              variant="destructive"
               data-hotkey="backspace delete"
               @click="emit('delete', node)"
             >

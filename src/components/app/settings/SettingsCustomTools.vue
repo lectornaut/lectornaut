@@ -12,6 +12,7 @@ import {
   botModels,
   type BotModelEntry,
 } from "@/helpers/defaults"
+import { useDismissGuard } from "@/composables/useDismissGuard"
 import { emitter } from "@/modules/mitt"
 import { useAuthStore } from "@/stores/authStore"
 import type {
@@ -96,6 +97,11 @@ const bounds = botAgentBounds.customTool
 // ── Dialog state ────────────────────────────────────────────────────────────
 
 const open = ref(false)
+// A typed-but-ungenerated prompt counts as unsaved work too.
+const guard = useDismissGuard(
+  open,
+  () => isDirty.value || aiPrompt.value.trim().length > 0
+)
 const editingToolId = ref<string | null>(null)
 
 const editingTool = computed<ITeamCustomTool | null>(() => {
@@ -367,14 +373,20 @@ const canGenerate = computed<boolean>(() => {
   return aiPrompt.value.trim().length > 0
 })
 
+// Bumped on every generate and every (re)open; a generation whose run no
+// longer matches lands after the user moved on and must not touch the draft.
+let generationRun = 0
+
 const handleGenerate = async (): Promise<void> => {
   const prompt = aiPrompt.value.trim()
   const teamId = currentTeamId.value
   if (!prompt || !teamId || !canGenerate.value) return
+  const run = ++generationRun
   isGenerating.value = true
   generateError.value = null
   try {
     const { data } = await generateTeamCustomToolConfig({ teamId, prompt })
+    if (run !== generationRun) return
     // Replace the whole draft. The server returns a fully normalized config
     // (valid identifier name, clamped strings, discriminated-union action),
     // so it drops straight in. Clone the nested arrays/objects so the draft
@@ -395,10 +407,11 @@ const handleGenerate = async (): Promise<void> => {
     generatedModel.value = data.model
     hasGenerated.value = true
   } catch (error) {
+    if (run !== generationRun) return
     console.error("[SettingsCustomTools] failed to generate config:", error)
     generateError.value = t("settings.agents.customTools.ai.generateError")
   } finally {
-    isGenerating.value = false
+    if (run === generationRun) isGenerating.value = false
   }
 }
 
@@ -406,7 +419,13 @@ const handleGenerate = async (): Promise<void> => {
 
 type OpenPayload = { toolId?: string } | "new" | undefined
 
+// Re-opening while the editor holds unsaved edits asks before replacing them.
 const handleOpenEvent = (event: unknown): void => {
+  if (open.value) guard.request(() => openEditor(event))
+  else openEditor(event)
+}
+
+const openEditor = (event: unknown): void => {
   const payload = event as OpenPayload
   let toolId: string | null = null
   if (
@@ -423,6 +442,7 @@ const handleOpenEvent = (event: unknown): void => {
   // preview receipt, or error from a previous session.
   activeTab.value = "prompt"
   aiPrompt.value = ""
+  generationRun++
   isGenerating.value = false
   generateError.value = null
   generatedModel.value = null
@@ -453,9 +473,13 @@ const handleEditorSave = async (): Promise<void> => {
 </script>
 
 <template>
-  <Dialog v-model:open="open">
+  <Dialog
+    :open="open"
+    @update:open="(next: boolean) => !isSaving && guard.onOpenChange(next)"
+  >
     <DialogContent
       class="h-3/4 max-h-3/4! w-3/4 max-w-3/4! grid-rows-[auto_minmax(0,1fr)_auto] overflow-hidden overscroll-none"
+      data-dialog-enter="off"
     >
       <DialogHeader>
         <DialogTitle class="flex items-center gap-2">
@@ -473,17 +497,17 @@ const handleEditorSave = async (): Promise<void> => {
       </DialogHeader>
 
       <Tabs v-model="activeTab" class="min-h-0">
-        <TabsList class="bg-input/50 h-9! self-start p-0">
+        <TabsList class="bg-input/50 h-control! self-start p-0">
           <TabsTrigger
             value="prompt"
-            class="data-[state=active]:border-border! data-[state=active]:bg-background h-9"
+            class="data-[state=active]:border-border! data-[state=active]:bg-background h-control"
           >
             <IconSparkles />
             {{ t("settings.agents.customTools.ai.tabPrompt") }}
           </TabsTrigger>
           <TabsTrigger
             value="configure"
-            class="data-[state=active]:border-border! data-[state=active]:bg-background h-9"
+            class="data-[state=active]:border-border! data-[state=active]:bg-background h-control"
           >
             {{ t("settings.agents.customTools.ai.tabConfigure") }}
           </TabsTrigger>
@@ -626,7 +650,7 @@ const handleEditorSave = async (): Promise<void> => {
                       <div
                         v-for="(field, index) in draft.inputSchema.fields"
                         :key="`prev-in-${index}`"
-                        class="bg-background rounded-4xl border p-2 text-xs"
+                        class="bg-background rounded-surface border p-2 text-xs"
                       >
                         <div class="flex flex-wrap items-center gap-1.5">
                           <span class="font-mono font-medium">
@@ -672,7 +696,7 @@ const handleEditorSave = async (): Promise<void> => {
                       <div
                         v-for="(field, index) in draft.outputSchema.fields"
                         :key="`prev-out-${index}`"
-                        class="bg-background rounded-4xl border p-2 text-xs"
+                        class="bg-background rounded-surface border p-2 text-xs"
                       >
                         <div class="flex flex-wrap items-center gap-1.5">
                           <span class="font-mono font-medium">
@@ -857,7 +881,7 @@ const handleEditorSave = async (): Promise<void> => {
                 <div
                   v-for="(field, index) in draft.inputSchema.fields"
                   :key="`in-${index}`"
-                  class="bg-muted/40 grid gap-2 rounded-4xl border p-3"
+                  class="bg-muted/40 rounded-surface grid gap-2 border p-3"
                 >
                   <div class="grid grid-cols-12 gap-2">
                     <Input
@@ -951,7 +975,7 @@ const handleEditorSave = async (): Promise<void> => {
                 <div
                   v-for="(field, index) in draft.outputSchema.fields"
                   :key="`out-${index}`"
-                  class="bg-muted/40 grid gap-2 rounded-4xl border p-3"
+                  class="bg-muted/40 rounded-surface grid gap-2 border p-3"
                 >
                   <div class="grid grid-cols-12 gap-2">
                     <Input
@@ -1494,7 +1518,7 @@ const handleEditorSave = async (): Promise<void> => {
       <DialogFooter>
         <DialogClose as-child>
           <Button variant="outline" :disabled="isSaving">
-            {{ t("common.cancel") }}
+            {{ t("actions.cancel") }}
             <Kbd>Esc</Kbd>
           </Button>
         </DialogClose>
@@ -1512,4 +1536,14 @@ const handleEditorSave = async (): Promise<void> => {
       </DialogFooter>
     </DialogContent>
   </Dialog>
+
+  <ConfirmAction
+    v-model:open="guard.confirmOpen.value"
+    :title="t('common.discardChangesTitle')"
+    :description="t('common.discardChangesDescription')"
+    :action-label="t('common.discard')"
+    :cancel-label="t('common.keepEditing')"
+    destructive
+    :on-confirm="guard.discard"
+  />
 </template>

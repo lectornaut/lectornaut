@@ -68,6 +68,8 @@ const props = defineProps<{
 
 const open = defineModel<boolean>("open", { default: false })
 
+const { t } = useI18n()
+
 const isFullscreen = useIsFullscreen()
 
 // Three-condition gate (installed + not killed + own account linked); when
@@ -215,12 +217,14 @@ const importSelected = async () => {
 
 const addLabel = computed(() => {
   const count = selected.value.size
-  if (count === 0) return "Add files"
-  return count === 1 ? "Add 1 file" : `Add ${count} files`
+  if (count === 0) return t("components.driveFilePicker.addFiles")
+  return t("components.driveFilePicker.addCount", count)
 })
 
 const emptyHint = computed(() =>
-  search.value.trim() ? "No files matched your search." : "No files here yet."
+  search.value.trim()
+    ? t("components.driveFilePicker.noSearchResults")
+    : t("components.driveFilePicker.emptyFolder")
 )
 </script>
 
@@ -250,14 +254,13 @@ const emptyHint = computed(() =>
          files list scrolls via ScrollContainer, whose viewport resolves
          `height: 100%` against this flex column. -->
     <SheetContent
-      class="m-2 mt-[calc(var(--spacing-titlebar-height,0px)+(--spacing(2)))] h-auto! gap-0 overflow-clip rounded-4xl border"
+      class="rounded-surface m-2 mt-[calc(var(--spacing-titlebar-height,0px)+(--spacing(2)))] h-auto! gap-0 overflow-clip border"
       :class="{ 'mt-12': isTauri && !isFullscreen }"
     >
       <SheetHeader>
-        <SheetTitle>Add from Google Drive</SheetTitle>
+        <SheetTitle>{{ t("components.driveFilePicker.title") }}</SheetTitle>
         <SheetDescription>
-          Pick files from your connected Drive. Docs are imported as markdown,
-          Sheets as CSV.
+          {{ t("components.driveFilePicker.description") }}
         </SheetDescription>
       </SheetHeader>
 
@@ -271,7 +274,7 @@ const emptyHint = computed(() =>
           </InputGroupAddon>
           <InputGroupInput
             v-model="search"
-            placeholder="Search your Drive..."
+            :placeholder="t('components.driveFilePicker.searchPlaceholder')"
             :disabled="!!listError && files.length === 0 && !search"
           />
         </InputGroup>
@@ -283,13 +286,15 @@ const emptyHint = computed(() =>
           </Badge>
           <Button variant="ghost" size="icon" @click="exitFolder">
             <IconX />
-            <span class="sr-only">All files</span>
+            <span class="sr-only">{{
+              t("components.driveFilePicker.allFiles")
+            }}</span>
           </Button>
         </div>
 
         <div
           v-if="importError"
-          class="text-destructive rounded-4xl border p-2 text-xs"
+          class="text-destructive rounded-surface border p-2 text-xs"
         >
           {{ importError }}
         </div>
@@ -306,33 +311,41 @@ const emptyHint = computed(() =>
           <Empty v-if="!driveAvailable" class="border-dashed p-6">
             <EmptyHeader>
               <EmptyMedia variant="icon"><IconLogosGoogleDrive /></EmptyMedia>
-              <EmptyTitle>Connect Google Drive</EmptyTitle>
+              <EmptyTitle>{{
+                t("components.driveFilePicker.connectTitle")
+              }}</EmptyTitle>
               <EmptyDescription>
-                Link your Google account to browse and import your Drive files
-                here.
+                {{ t("components.driveFilePicker.connectDescription") }}
               </EmptyDescription>
             </EmptyHeader>
             <EmptyContent>
               <Button variant="secondary" @click="openConnectionsSettings">
-                Open settings
+                {{ t("components.driveFilePicker.openSettings") }}
               </Button>
             </EmptyContent>
           </Empty>
 
-          <LoadingState v-else-if="loading" label="Loading your Drive..." />
+          <LoadingState
+            v-else-if="loading"
+            :label="t('components.driveFilePicker.loading')"
+          />
 
           <div
             v-else-if="listError"
-            class="text-muted-foreground space-y-2 rounded-4xl border border-dashed p-4 text-sm"
+            class="text-muted-foreground rounded-surface space-y-2 border border-dashed p-4 text-sm"
           >
             <p>{{ listError }}</p>
-            <Button variant="secondary" @click="load()"> Try again </Button>
+            <Button variant="secondary" @click="load()">
+              {{ t("components.driveFilePicker.tryAgain") }}
+            </Button>
           </div>
 
           <Empty v-else-if="files.length === 0" class="border-dashed p-6">
             <EmptyHeader>
               <EmptyMedia variant="icon"><IconSearch /></EmptyMedia>
-              <EmptyTitle>Nothing found</EmptyTitle>
+              <EmptyTitle>{{
+                t("components.driveFilePicker.nothingFound")
+              }}</EmptyTitle>
               <EmptyDescription>{{ emptyHint }}</EmptyDescription>
             </EmptyHeader>
           </Empty>
@@ -358,16 +371,26 @@ const emptyHint = computed(() =>
               <AttachmentContent>
                 <AttachmentTitle>{{ file.name }}</AttachmentTitle>
                 <AttachmentDescription>
-                  {{ isFolder(file) ? "Folder" : rowMeta(file) }}
+                  {{
+                    isFolder(file)
+                      ? t("components.driveFilePicker.folder")
+                      : rowMeta(file)
+                  }}
                 </AttachmentDescription>
               </AttachmentContent>
               <AttachmentTrigger
                 :aria-label="
                   isFolder(file)
-                    ? `Open folder ${file.name}`
+                    ? t('components.driveFilePicker.openFolder', {
+                        name: file.name,
+                      })
                     : isPicked(file)
-                      ? `Unselect ${file.name}`
-                      : `Select ${file.name}`
+                      ? t('components.driveFilePicker.unselectFile', {
+                          name: file.name,
+                        })
+                      : t('components.driveFilePicker.selectFile', {
+                          name: file.name,
+                        })
                 "
                 :aria-pressed="isFolder(file) ? undefined : isPicked(file)"
                 :disabled="importing"
@@ -382,7 +405,7 @@ const emptyHint = computed(() =>
               @click="load(true)"
             >
               <Spinner v-if="loadingMore" />
-              Load more
+              {{ t("components.driveFilePicker.loadMore") }}
             </Button>
           </div>
         </div>

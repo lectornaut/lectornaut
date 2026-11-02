@@ -1,4 +1,5 @@
 <script lang="ts" setup>
+import { useConfirmationDialog } from "@/composables/useConfirmationDialog"
 import { useCanViewTeamSettings } from "@/composables/useCanViewTeamSettings"
 import { useAgentConfig } from "@/composables/useAgentConfig"
 import { useIntegrations } from "@/composables/useIntegrations"
@@ -205,9 +206,13 @@ const handleRestoreTool = async (tool: ITeamCustomTool): Promise<void> => {
   await restoreTool(tool.id)
 }
 
-const handleRemoveTool = async (tool: ITeamCustomTool): Promise<void> => {
-  await removeTool(tool.id)
-}
+/** One hard-delete confirm for every custom-tool row (rows only emit). */
+const deleteToolDialog = useConfirmationDialog<ITeamCustomTool>()
+
+const handleRemoveConfirmed = () =>
+  deleteToolDialog.confirm(async (tool) => {
+    await removeTool(tool.id)
+  })
 </script>
 
 <template>
@@ -478,7 +483,7 @@ const handleRemoveTool = async (tool: ITeamCustomTool): Promise<void> => {
                     "
                     @archive="handleArchiveTool(tool)"
                     @restore="handleRestoreTool(tool)"
-                    @remove="handleRemoveTool(tool)"
+                    @remove="deleteToolDialog.open(tool)"
                   />
                 </ItemGroup>
               </CollapsibleContent>
@@ -518,7 +523,7 @@ const handleRemoveTool = async (tool: ITeamCustomTool): Promise<void> => {
                     "
                     @archive="handleArchiveTool(tool)"
                     @restore="handleRestoreTool(tool)"
-                    @remove="handleRemoveTool(tool)"
+                    @remove="deleteToolDialog.open(tool)"
                   />
                 </ItemGroup>
               </CollapsibleContent>
@@ -558,7 +563,7 @@ const handleRemoveTool = async (tool: ITeamCustomTool): Promise<void> => {
                     "
                     @archive="handleArchiveTool(tool)"
                     @restore="handleRestoreTool(tool)"
-                    @remove="handleRemoveTool(tool)"
+                    @remove="deleteToolDialog.open(tool)"
                   />
                 </ItemGroup>
               </CollapsibleContent>
@@ -569,4 +574,20 @@ const handleRemoveTool = async (tool: ITeamCustomTool): Promise<void> => {
     </FieldGroup>
   </div>
   <SettingsRestricted v-else />
+
+  <ConfirmAction
+    v-model:open="deleteToolDialog.isOpen.value"
+    :title="t('settings.agents.customTools.deleteConfirmTitle')"
+    :description="
+      t('settings.agents.customTools.deleteConfirmBody', {
+        name:
+          deleteToolDialog.item.value?.displayName.trim() ||
+          deleteToolDialog.item.value?.name ||
+          '',
+      })
+    "
+    :action-label="t('settings.agents.customTools.deleteForever')"
+    destructive
+    :on-confirm="handleRemoveConfirmed"
+  />
 </template>

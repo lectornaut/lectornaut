@@ -1,4 +1,5 @@
 <script lang="ts" setup>
+import { useConfirmationDialog } from "@/composables/useConfirmationDialog"
 import { useCanViewTeamSettings } from "@/composables/useCanViewTeamSettings"
 import { useAgentConfig } from "@/composables/useAgentConfig"
 import { useTeamWorkflows } from "@/composables/useTeamWorkflows"
@@ -21,7 +22,7 @@ import { computed, ref } from "vue"
 import { CONNECTION_RESOURCES } from "@lectornaut/shared/connectionResources"
 import { useConnectionStatus } from "@/composables/useConnectionStatus"
 
-const { t } = useI18n()
+const { t, locale } = useI18n()
 
 const openIntegrations = (): void => {
   emitter.emit("Dialog.Settings.Open", "integrations")
@@ -263,34 +264,41 @@ const editPreset = (preset: WorkflowPreset): void => {
 // is immutable and `enabled` is the row Switch's axis, so both stay put).
 // Confirm-gated: it overwrites whatever the team customized in the editor,
 // and there's no history of those edits to recover.
-const resetWorkflowTarget = ref<WorkflowPreset | null>(null)
-const resetWorkflowConfirmOpen = computed({
-  get: () => resetWorkflowTarget.value !== null,
-  set: (open: boolean) => {
-    if (!open) resetWorkflowTarget.value = null
-  },
-})
+// The composable keeps the target through the fade-out so the name doesn't
+// blank while the dialog closes.
+const resetWorkflowDialog = useConfirmationDialog<WorkflowPreset>()
 
-const handleResetWorkflowConfirmed = async (): Promise<void> => {
-  const preset = resetWorkflowTarget.value
-  resetWorkflowTarget.value = null
-  if (!preset) return
-  const wf = presetActiveWorkflow(preset.key)
-  if (!wf) return
-  await update(wf.id, {
-    name: preset.name,
-    description: preset.description,
-    avatarSeed: preset.avatarSeed,
-    instructions: preset.instructions,
-    additionalPrompt: preset.additionalPrompt ?? "",
-    targetScope: preset.defaultTargetScope,
-    trigger: preset.defaultTrigger,
-    updateMode: preset.defaultUpdateMode,
+const handleResetWorkflowConfirmed = () =>
+  resetWorkflowDialog.confirm(async (preset) => {
+    const wf = presetActiveWorkflow(preset.key)
+    if (!wf) return
+    await update(wf.id, {
+      name: preset.name,
+      description: preset.description,
+      avatarSeed: preset.avatarSeed,
+      instructions: preset.instructions,
+      additionalPrompt: preset.additionalPrompt ?? "",
+      targetScope: preset.defaultTargetScope,
+      trigger: preset.defaultTrigger,
+      updateMode: preset.defaultUpdateMode,
+    })
   })
-}
+
+// ── Hard-delete a custom workflow ─────────────────────────────────────────────
+// One confirm for every custom row (active, disabled, archived): rows only emit
+// `remove`, so the dialog isn't mounted once per row.
+const deleteWorkflowDialog = useConfirmationDialog<IWorkflow>()
+
+const handleDeleteWorkflowConfirmed = () =>
+  deleteWorkflowDialog.confirm((wf) => remove(wf.id))
 
 // ── Row description (trigger · mode) — used by custom + archived rows ─────────
-const dayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
+// Localized short weekday (0 = Sunday); 1970-01-04 was a Sunday.
+const dayName = (dayOfWeek: number): string =>
+  new Intl.DateTimeFormat(locale.value, {
+    weekday: "short",
+    timeZone: "UTC",
+  }).format(new Date(Date.UTC(1970, 0, 4 + dayOfWeek)))
 const minuteToTime = (min: number): string =>
   `${String(Math.floor(min / 60)).padStart(2, "0")}:${String(min % 60).padStart(2, "0")}`
 const triggerSummary = (wf: IWorkflow): string => {
@@ -304,7 +312,7 @@ const triggerSummary = (wf: IWorkflow): string => {
   if (s.type === "daily")
     return t("settings.workflows.daily", { time: minuteToTime(s.atMinuteUTC) })
   return t("settings.workflows.weekly", {
-    day: dayNames[s.dayOfWeek],
+    day: dayName(s.dayOfWeek),
     time: minuteToTime(s.atMinuteUTC),
   })
 }
@@ -325,7 +333,7 @@ const rowDescription = (wf: IWorkflow): string =>
            every preset toggle read OFF, with no clue why. -->
     <div
       v-else-if="loadError"
-      class="text-destructive border-destructive/30 rounded-4xl border p-4 text-sm"
+      class="text-destructive border-destructive/30 rounded-surface border p-4 text-sm"
     >
       {{ t("settings.workflows.loadError") }}
       <span class="text-muted-foreground mt-1 block text-xs">
@@ -380,6 +388,7 @@ const rowDescription = (wf: IWorkflow): string =>
                       <InputGroupButton
                         variant="ghost"
                         size="icon-xs"
+                        :aria-label="t('settings.workflows.configure')"
                         :disabled="isPresetEditDisabled(preset)"
                       >
                         <IconSettings />
@@ -399,8 +408,9 @@ const rowDescription = (wf: IWorkflow): string =>
                       <DropdownMenuShortcut>E</DropdownMenuShortcut>
                     </DropdownMenuItem>
                     <DropdownMenuItem
+                      variant="destructive"
                       data-hotkey="r"
-                      @select="resetWorkflowTarget = preset"
+                      @select="resetWorkflowDialog.open(preset)"
                     >
                       <IconRotateCcw />
                       {{ t("settings.workflows.reset") }}
@@ -439,37 +449,6 @@ const rowDescription = (wf: IWorkflow): string =>
           </EmptyHeader>
         </Empty>
       </FieldSet>
-
-      <!--
-        Reset-to-default confirmation, shared across the preset rows.
-        Overwrites the team's edits to the materialized workflow with the
-        catalog defaults — there's no history of those edits to recover.
-      -->
-      <AlertDialog v-model:open="resetWorkflowConfirmOpen">
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>
-              {{ t("settings.workflows.resetConfirmTitle") }}
-            </AlertDialogTitle>
-            <AlertDialogDescription>
-              {{
-                t("settings.workflows.resetConfirmBody", {
-                  name: resetWorkflowTarget?.name ?? "",
-                })
-              }}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>
-              {{ t("common.cancel") }}<Kbd>Esc</Kbd>
-            </AlertDialogCancel>
-            <AlertDialogAction @click="handleResetWorkflowConfirmed">
-              {{ t("settings.workflows.reset") }}
-              <Kbd>↩</Kbd>
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
 
       <FieldSeparator />
 
@@ -591,7 +570,7 @@ const rowDescription = (wf: IWorkflow): string =>
                   @edit="openEdit(wf)"
                   @toggle-enabled="(v) => setEnabled(wf.id, v)"
                   @archive="archive(wf.id, true)"
-                  @remove="remove(wf.id)"
+                  @remove="deleteWorkflowDialog.open(wf)"
                 />
               </ItemGroup>
             </CollapsibleContent>
@@ -636,7 +615,7 @@ const rowDescription = (wf: IWorkflow): string =>
                   @edit="openEdit(wf)"
                   @toggle-enabled="(v) => setEnabled(wf.id, v)"
                   @archive="archive(wf.id, true)"
-                  @remove="remove(wf.id)"
+                  @remove="deleteWorkflowDialog.open(wf)"
                 />
               </ItemGroup>
             </CollapsibleContent>
@@ -650,7 +629,7 @@ const rowDescription = (wf: IWorkflow): string =>
             @edit="openEdit"
             @toggle-enabled="(wf, enabled) => setEnabled(wf.id, enabled)"
             @restore="(wf) => archive(wf.id, false)"
-            @remove="(wf) => remove(wf.id)"
+            @remove="deleteWorkflowDialog.open"
           />
         </div>
       </FieldSet>
@@ -662,4 +641,30 @@ const rowDescription = (wf: IWorkflow): string =>
     />
   </div>
   <SettingsRestricted v-else />
+
+  <ConfirmAction
+    v-model:open="resetWorkflowDialog.isOpen.value"
+    :title="t('settings.workflows.resetConfirmTitle')"
+    :description="
+      t('settings.workflows.resetConfirmBody', {
+        name: resetWorkflowDialog.item.value?.name ?? '',
+      })
+    "
+    :action-label="t('settings.workflows.reset')"
+    destructive
+    :on-confirm="handleResetWorkflowConfirmed"
+  />
+
+  <ConfirmAction
+    v-model:open="deleteWorkflowDialog.isOpen.value"
+    :title="t('settings.workflows.deleteConfirmTitle')"
+    :description="
+      t('settings.workflows.confirmDelete', {
+        name: deleteWorkflowDialog.item.value?.name ?? '',
+      })
+    "
+    :action-label="t('settings.workflows.delete')"
+    destructive
+    :on-confirm="handleDeleteWorkflowConfirmed"
+  />
 </template>

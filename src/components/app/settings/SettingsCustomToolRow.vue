@@ -25,6 +25,8 @@ const { t } = useI18n()
  *   - Description renders the model-facing copy so admins see what
  *     the model sees — important for tuning when calls aren't
  *     happening as expected.
+ *   - Delete only emits `remove`; the parent list owns the one
+ *     confirm dialog.
  *   - The avatar reuses `vue-boring-avatars` + chart-N palette so
  *     tools and agents have visually-consistent identity chips.
  */
@@ -70,13 +72,6 @@ const actionKindLabel = computed(() =>
   t(`settings.agents.customTools.action.kinds.${props.tool.action.kind}`)
 )
 
-const deleteConfirmOpen = ref(false)
-
-const handleDeleteConfirmed = (): void => {
-  deleteConfirmOpen.value = false
-  emit("remove")
-}
-
 const handleArchiveFromMenu = (): void => {
   if (isArchived.value) emit("restore")
   else emit("archive")
@@ -93,7 +88,7 @@ const onToggleEnabled = (value: boolean | string): void => {
     class="flex-nowrap"
     :class="{ 'opacity-70': statusBadgeKey !== null }"
   >
-    <ItemMedia variant="image" class="rounded-4xl">
+    <ItemMedia variant="image" class="rounded-full">
       <AppAvatar
         variant="marble"
         :name="avatarSeedEffective"
@@ -124,6 +119,7 @@ const onToggleEnabled = (value: boolean | string): void => {
                 <InputGroupButton
                   variant="ghost"
                   size="icon-xs"
+                  :aria-label="t('settings.agents.customTools.actions')"
                   :disabled="!canManage || isSaving"
                 >
                   <IconSettings />
@@ -150,8 +146,9 @@ const onToggleEnabled = (value: boolean | string): void => {
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem
+                variant="destructive"
                 data-hotkey="backspace delete"
-                @select="deleteConfirmOpen = true"
+                @select="emit('remove')"
               >
                 <IconTrash />
                 {{ t("settings.agents.customTools.deleteForever") }}
@@ -184,30 +181,4 @@ const onToggleEnabled = (value: boolean | string): void => {
       </TooltipProvider>
     </ItemActions>
   </Item>
-
-  <AlertDialog v-model:open="deleteConfirmOpen">
-    <AlertDialogContent>
-      <AlertDialogHeader>
-        <AlertDialogTitle>
-          {{ t("settings.agents.customTools.deleteConfirmTitle") }}
-        </AlertDialogTitle>
-        <AlertDialogDescription>
-          {{
-            t("settings.agents.customTools.deleteConfirmBody", {
-              name: titleText,
-            })
-          }}
-        </AlertDialogDescription>
-      </AlertDialogHeader>
-      <AlertDialogFooter>
-        <AlertDialogCancel
-          >{{ t("common.cancel") }}<Kbd>Esc</Kbd>
-        </AlertDialogCancel>
-        <AlertDialogAction @click="handleDeleteConfirmed">
-          {{ t("settings.agents.customTools.deleteForever") }}
-          <Kbd>↩</Kbd>
-        </AlertDialogAction>
-      </AlertDialogFooter>
-    </AlertDialogContent>
-  </AlertDialog>
 </template>

@@ -198,7 +198,9 @@ const openShortcutsDemo = () => {
                 <DialogDescription class="sr-only">{{
                   t("pages.welcome.onboarding.appFlow.commandPlaceholder")
                 }}</DialogDescription>
-                <Command class="border">
+                <Command
+                  class="border [--radius-command:max(0px,calc(var(--radius-surface)-var(--spacing)*1.5))]"
+                >
                   <CommandInput
                     :placeholder="
                       t('pages.welcome.onboarding.appFlow.commandPlaceholder')

@@ -3,6 +3,7 @@ import { generateTeamAgentConfig } from "@/composables/useFunctions"
 import { useTeamAgents } from "@/composables/useTeamAgents"
 import { BOT_TOOL_CATALOG } from "@/data/botTools"
 import { IconAlertTriangle, IconSparkles } from "@/data/icons"
+import { useDismissGuard } from "@/composables/useDismissGuard"
 import { emitter } from "@/modules/mitt"
 import { useAgentConfigStore } from "@/stores/agentConfigStore"
 import { useAuthStore } from "@/stores/authStore"
@@ -105,6 +106,11 @@ const customToolsFeatureOn = computed<boolean>(
 // ── Dialog state ────────────────────────────────────────────────────────────
 
 const open = ref(false)
+// A typed-but-ungenerated prompt counts as unsaved work too.
+const guard = useDismissGuard(
+  open,
+  () => isDirty.value || aiPrompt.value.trim().length > 0
+)
 const editingAgentId = ref<string | null>(null)
 
 // Resolve the agent by id across all three lifecycle buckets so editing
@@ -442,14 +448,20 @@ const canGenerate = computed<boolean>(() => {
   return aiPrompt.value.trim().length > 0
 })
 
+// Bumped on every generate and every (re)open; a generation whose run no
+// longer matches lands after the user moved on and must not touch the draft.
+let generationRun = 0
+
 const handleGenerate = async (): Promise<void> => {
   const prompt = aiPrompt.value.trim()
   const teamId = currentTeamId.value
   if (!prompt || !teamId || !canGenerate.value) return
+  const run = ++generationRun
   isGenerating.value = true
   generateError.value = null
   try {
     const { data } = await generateTeamAgentConfig({ teamId, prompt })
+    if (run !== generationRun) return
     // Merge into the single source of truth. Preserve the per-custom-tool
     // overrides plus the non-dispatchable `customAgents` / `customTools`
     // keys the model doesn't generate; override the text fields and the
@@ -466,10 +478,11 @@ const handleGenerate = async (): Promise<void> => {
     generatedModel.value = data.model
     hasGenerated.value = true
   } catch (error) {
+    if (run !== generationRun) return
     console.error("[SettingsCustomAgents] failed to generate config:", error)
     generateError.value = t("settings.agents.custom.ai.generateError")
   } finally {
-    isGenerating.value = false
+    if (run === generationRun) isGenerating.value = false
   }
 }
 
@@ -487,7 +500,13 @@ type OpenPayload = { agentId?: string } | "new" | undefined
  * the same agent or with no agent (create) would otherwise reuse stale
  * draft state from a previous session.
  */
+// Re-opening while the editor holds unsaved edits asks before replacing them.
 const handleOpenEvent = (event: unknown): void => {
+  if (open.value) guard.request(() => openEditor(event))
+  else openEditor(event)
+}
+
+const openEditor = (event: unknown): void => {
   const payload = event as OpenPayload
   let agentId: string | null = null
   if (
@@ -504,6 +523,7 @@ const handleOpenEvent = (event: unknown): void => {
   // preview receipt, or error from a previous session.
   activeTab.value = "prompt"
   aiPrompt.value = ""
+  generationRun++
   isGenerating.value = false
   generateError.value = null
   generatedModel.value = null
@@ -543,9 +563,13 @@ const handleEditorSave = async (): Promise<void> => {
 </script>
 
 <template>
-  <Dialog v-model:open="open">
+  <Dialog
+    :open="open"
+    @update:open="(next: boolean) => !isSaving && guard.onOpenChange(next)"
+  >
     <DialogContent
       class="h-3/4 max-h-3/4! w-3/4 max-w-3/4! grid-rows-[auto_minmax(0,1fr)_auto] overflow-hidden overscroll-none"
+      data-dialog-enter="off"
     >
       <DialogHeader>
         <DialogTitle class="flex items-center gap-2">
@@ -566,17 +590,17 @@ const handleEditorSave = async (): Promise<void> => {
       </DialogHeader>
 
       <Tabs v-model="activeTab" class="min-h-0">
-        <TabsList class="bg-input/50 h-9! self-start p-0">
+        <TabsList class="bg-input/50 h-control! self-start p-0">
           <TabsTrigger
             value="prompt"
-            class="data-[state=active]:border-border! data-[state=active]:bg-background h-9"
+            class="data-[state=active]:border-border! data-[state=active]:bg-background h-control"
           >
             <IconSparkles />
             {{ t("settings.agents.custom.ai.tabPrompt") }}
           </TabsTrigger>
           <TabsTrigger
             value="configure"
-            class="data-[state=active]:border-border! data-[state=active]:bg-background h-9"
+            class="data-[state=active]:border-border! data-[state=active]:bg-background h-control"
           >
             {{ t("settings.agents.custom.ai.tabConfigure") }}
           </TabsTrigger>
@@ -712,7 +736,7 @@ const handleEditorSave = async (): Promise<void> => {
                       {{ t("settings.agents.custom.ai.previewSystemPrompt") }}
                     </span>
                     <p
-                      class="bg-background text-foreground/90 max-h-48 overflow-auto rounded-4xl border p-2.5 text-xs whitespace-pre-wrap"
+                      class="bg-background text-foreground/90 rounded-surface max-h-48 overflow-auto border p-2.5 text-xs whitespace-pre-wrap"
                     >
                       {{ draft.systemPromptBase }}
                     </p>
@@ -1114,16 +1138,8 @@ const handleEditorSave = async (): Promise<void> => {
 
       <DialogFooter>
         <DialogClose as-child>
-          <!--
-            Disable cancel while saving so the dialog can't be closed
-            mid-`create()` / `update()`. Without this guard the user
-            could dismiss before the callable resolves, leaving the
-            toast / state to fire against an unmounted form. Matches
-            the inline-panel Discard guard in `SettingsAi` /
-            `SettingsAgents`.
-          -->
           <Button variant="outline" :disabled="isSaving">
-            {{ t("common.cancel") }}
+            {{ t("actions.cancel") }}
             <Kbd>Esc</Kbd>
           </Button>
         </DialogClose>
@@ -1146,4 +1162,14 @@ const handleEditorSave = async (): Promise<void> => {
       </DialogFooter>
     </DialogContent>
   </Dialog>
+
+  <ConfirmAction
+    v-model:open="guard.confirmOpen.value"
+    :title="t('common.discardChangesTitle')"
+    :description="t('common.discardChangesDescription')"
+    :action-label="t('common.discard')"
+    :cancel-label="t('common.keepEditing')"
+    destructive
+    :on-confirm="guard.discard"
+  />
 </template>

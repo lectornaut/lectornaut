@@ -17,7 +17,8 @@ const workflowExists = computed(() =>
 )
 
 const busy = ref(false)
-const confirmOpen = ref(false)
+const deleteConfirmOpen = ref(false)
+const rejectConfirmOpen = ref(false)
 
 /** Serialize actions + swallow rejections (the composable already toasts). */
 const wrap = async (fn: () => Promise<unknown>): Promise<void> => {
@@ -32,12 +33,27 @@ const wrap = async (fn: () => Promise<unknown>): Promise<void> => {
   }
 }
 
+/**
+ * Confirmed actions: hold the row lock but RETHROW (the composable already
+ * toasts) so ConfirmAction stays open on failure and closes only on success.
+ */
+const locked = async (fn: () => Promise<unknown>): Promise<void> => {
+  busy.value = true
+  try {
+    await fn()
+  } finally {
+    busy.value = false
+  }
+}
+
 const onApprove = (): Promise<void> =>
   wrap(() => reviewRun(props.run.id, "approve"))
+// Reject cancels the run and discards its staged edits for good (the server
+// moves it to `cancelled`; it can't return to review), so it confirms first.
 const onReject = (): Promise<void> =>
-  wrap(() => reviewRun(props.run.id, "reject"))
+  locked(() => reviewRun(props.run.id, "reject"))
 const onRunAgain = (): Promise<void> => wrap(() => runNow(props.run.workflowId))
-const onDelete = (): Promise<void> => wrap(() => removeRun(props.run.id))
+const onDelete = (): Promise<void> => locked(() => removeRun(props.run.id))
 </script>
 
 <template>
@@ -68,9 +84,10 @@ const onDelete = (): Promise<void> => wrap(() => removeRun(props.run.id))
                 <DropdownMenuShortcut>A</DropdownMenuShortcut>
               </DropdownMenuItem>
               <DropdownMenuItem
+                variant="destructive"
                 :disabled="!canManage || busy"
                 data-hotkey="x"
-                @click="onReject"
+                @click="rejectConfirmOpen = true"
               >
                 <IconX />
                 {{ t("settings.workflows.reject") }}
@@ -92,9 +109,10 @@ const onDelete = (): Promise<void> => wrap(() => removeRun(props.run.id))
             <DropdownMenuSeparator />
 
             <DropdownMenuItem
+              variant="destructive"
               :disabled="!canManage || busy"
               data-hotkey="backspace delete"
-              @click="confirmOpen = true"
+              @click="deleteConfirmOpen = true"
             >
               <IconTrash2 />
               {{ t("settings.workflows.deleteRun") }}
@@ -105,26 +123,22 @@ const onDelete = (): Promise<void> => wrap(() => removeRun(props.run.id))
       </Tooltip>
     </TooltipProvider>
 
-    <AlertDialog v-model:open="confirmOpen">
-      <AlertDialogContent>
-        <AlertDialogHeader>
-          <AlertDialogTitle>
-            {{ t("settings.workflows.deleteRun") }}
-          </AlertDialogTitle>
-          <AlertDialogDescription>
-            {{ t("settings.workflows.confirmDeleteRun") }}
-          </AlertDialogDescription>
-        </AlertDialogHeader>
-        <AlertDialogFooter>
-          <AlertDialogCancel
-            >{{ t("actions.cancel") }}<Kbd>Esc</Kbd>
-          </AlertDialogCancel>
-          <AlertDialogAction variant="destructive" @click="onDelete">
-            {{ t("actions.delete") }}
-            <Kbd>↩</Kbd>
-          </AlertDialogAction>
-        </AlertDialogFooter>
-      </AlertDialogContent>
-    </AlertDialog>
+    <ConfirmAction
+      v-model:open="rejectConfirmOpen"
+      :title="t('settings.workflows.rejectConfirmTitle')"
+      :description="t('settings.workflows.rejectConfirmBody')"
+      :action-label="t('settings.workflows.reject')"
+      destructive
+      :on-confirm="onReject"
+    />
+
+    <ConfirmAction
+      v-model:open="deleteConfirmOpen"
+      :title="t('settings.workflows.deleteRunConfirmTitle')"
+      :description="t('settings.workflows.confirmDeleteRun')"
+      :action-label="t('actions.delete')"
+      destructive
+      :on-confirm="onDelete"
+    />
   </div>
 </template>

@@ -17,16 +17,16 @@ const { t } = useI18n()
 <template>
   <div class="mx-auto my-32 flex max-w-4xl flex-col gap-32">
     <Tabs default-value="you" class="grid w-full">
-      <TabsList class="bg-input/50 mx-auto h-9! p-0">
+      <TabsList class="bg-input/50 h-control! mx-auto p-0">
         <TabsTrigger
           value="you"
-          class="data-[state=active]:border-border! data-[state=active]:bg-background h-9"
+          class="data-[state=active]:border-border! data-[state=active]:bg-background h-control"
         >
           {{ t("pages.home.forYou") }}
         </TabsTrigger>
         <TabsTrigger
           value="team"
-          class="data-[state=active]:border-border! data-[state=active]:bg-background h-9"
+          class="data-[state=active]:border-border! data-[state=active]:bg-background h-control"
         >
           {{ t("pages.home.forTeam") }}
         </TabsTrigger>

@@ -11,7 +11,6 @@ import {
   IconSwitchHorizontal,
   IconTrash,
   IconUsersRound,
-  IconX,
 } from "@/data/icons"
 import type { ITeam } from "@/types/domain"
 import type { IMembership } from "@/types/membership"
@@ -166,7 +165,7 @@ const formatCreatedAt = (
             <div
               v-else
               data-table-frame
-              class="overflow-clip rounded-4xl border"
+              class="rounded-surface overflow-clip border"
             >
               <Table>
                 <TableHeader>
@@ -210,63 +209,22 @@ const formatCreatedAt = (
                        one long line setting the table's min-content width. -->
                     <TableCell class="whitespace-normal">
                       <Item class="group flex-nowrap p-0" size="xs">
-                        <ItemMedia class="group relative">
-                          <TooltipProvider>
-                            <Tooltip>
-                              <TooltipTrigger as-child>
-                                <AppAvatar
-                                  :class="{
-                                    'cursor-pointer': canEditTeam(membership),
-                                    'cursor-not-allowed opacity-60':
-                                      !canEditTeam(membership),
-                                  }"
-                                  :loading="
-                                    teamLoading.team.isLoading(
-                                      `photo-${membership.teamId}`
-                                    )
-                                  "
-                                  :src="membership.team?.photoURL"
-                                  :name="membership.team?.name"
-                                  @click="handleTeamAvatarClick(membership)"
-                                />
-                              </TooltipTrigger>
-                              <TooltipContent>
-                                {{
-                                  canEditTeam(membership)
-                                    ? teamLoading.team.isLoading(
-                                        `photo-${membership.teamId}`
-                                      )
-                                      ? t(
-                                          "settings.overview.teamPhoto.uploading"
-                                        )
-                                      : t("settings.teamsList.uploadPhoto")
-                                    : getCannotEditTeamReason(membership)
-                                }}
-                              </TooltipContent>
-                            </Tooltip>
-                            <Tooltip v-if="membership.team?.photoURL">
-                              <TooltipTrigger as-child>
-                                <Button
-                                  variant="secondary"
-                                  class="ring-background absolute -top-2 -right-2 size-4 opacity-0! ring-2 transition group-hover:enabled:opacity-100!"
-                                  size="icon"
-                                  :disabled="!canEditTeam(membership)"
-                                  @click.stop="
-                                    removeTeamPhoto(membership.teamId)
-                                  "
-                                >
-                                  <IconX />
-                                </Button>
-                              </TooltipTrigger>
-                              <TooltipContent>
-                                {{
-                                  canEditTeam(membership)
-                                    ? t("settings.teamsList.removePhoto")
-                                    : getCannotEditTeamReason(membership)
-                                }}
-                              </TooltipContent>
-                            </Tooltip>
-                          </TooltipProvider>
+                        <ItemMedia>
+                          <PhotoUploadAvatar
+                            :src="membership.team?.photoURL"
+                            :name="membership.team?.name"
+                            :loading="
+                              teamLoading.team.isLoading(
+                                `photo-${membership.teamId}`
+                              )
+                            "
+                            :disabled="!canEditTeam(membership)"
+                            :disabled-reason="
+                              getCannotEditTeamReason(membership)
+                            "
+                            @upload="handleTeamAvatarClick(membership)"
+                            @remove="removeTeamPhoto(membership.teamId)"
+                          />
                         </ItemMedia>
                         <SettingsIdentity
                           :title="membership.team?.name ?? ''"
@@ -382,6 +340,7 @@ const formatCreatedAt = (
                                     <TooltipTrigger as-child>
                                       <div>
                                         <DropdownMenuItem
+                                          variant="destructive"
                                           :disabled="!canDeleteTeam(membership)"
                                           data-hotkey="backspace delete"
                                           @click="
@@ -441,91 +400,42 @@ const formatCreatedAt = (
   </div>
   <SettingsRestricted v-else />
 
-  <!-- Exit Team Dialog -->
-  <AlertDialog v-model:open="exitTeamDialog.isOpen.value">
-    <AlertDialogContent>
-      <AlertDialogHeader>
-        <AlertDialogTitle>{{
-          t("settings.teamsList.exitTitle")
-        }}</AlertDialogTitle>
-        <AlertDialogDescription>
-          <i18n-t keypath="settings.teamsList.exitConfirm" tag="span">
-            <template #name>
-              <span class="text-foreground font-medium">{{
-                exitTeamDialog.item.value?.name
-              }}</span>
-            </template>
-          </i18n-t>
-        </AlertDialogDescription>
-      </AlertDialogHeader>
-      <AlertDialogFooter>
-        <AlertDialogCancel
-          >{{ t("actions.cancel") }}<Kbd>Esc</Kbd>
-        </AlertDialogCancel>
-        <AlertDialogAction
-          :disabled="
-            exitTeamDialog.item.value &&
-            teamLoading.team.isLoading(`exit-${exitTeamDialog.item.value.id}`)
-          "
-          @click.prevent="handleExitTeam"
-        >
-          <Spinner
-            v-if="
-              exitTeamDialog.item.value &&
-              teamLoading.team.isLoading(`exit-${exitTeamDialog.item.value.id}`)
-            "
-          />
-          {{ t("settings.teamsList.exitTitle") }}
-          <Kbd>↩</Kbd>
-        </AlertDialogAction>
-      </AlertDialogFooter>
-    </AlertDialogContent>
-  </AlertDialog>
+  <ConfirmAction
+    v-model:open="exitTeamDialog.isOpen.value"
+    :title="t('settings.teamsList.exitTitle')"
+    :action-label="t('settings.members.exit')"
+    destructive
+    :on-confirm="handleExitTeam"
+  >
+    <template #description>
+      <i18n-t keypath="settings.teamsList.exitConfirm" tag="span">
+        <template #name>
+          <span class="text-foreground font-medium">{{
+            exitTeamDialog.item.value?.name
+          }}</span>
+        </template>
+      </i18n-t>
+    </template>
+  </ConfirmAction>
 
-  <!-- Delete Team Dialog -->
-  <AlertDialog v-model:open="deleteTeamDialog.isOpen.value">
-    <AlertDialogContent>
-      <AlertDialogHeader>
-        <AlertDialogTitle>{{
-          t("settings.teamsList.deleteTitle")
-        }}</AlertDialogTitle>
-        <AlertDialogDescription>
-          <i18n-t keypath="settings.teamsList.deleteConfirm" tag="span">
-            <template #name>
-              <span class="text-foreground font-medium">{{
-                deleteTeamDialog.item.value?.name
-              }}</span>
-            </template>
-          </i18n-t>
-        </AlertDialogDescription>
-      </AlertDialogHeader>
-      <AlertDialogFooter>
-        <AlertDialogCancel
-          >{{ t("actions.cancel") }}<Kbd>Esc</Kbd>
-        </AlertDialogCancel>
-        <AlertDialogAction
-          :disabled="
-            deleteTeamDialog.item.value &&
-            teamLoading.team.isLoading(
-              `delete-${deleteTeamDialog.item.value.id}`
-            )
-          "
-          @click.prevent="handleDeleteTeam"
-        >
-          <Spinner
-            v-if="
-              deleteTeamDialog.item.value &&
-              teamLoading.team.isLoading(
-                `delete-${deleteTeamDialog.item.value.id}`
-              )
-            "
-          />
-          {{ t("settings.teamsList.deleteTitle") }}
-          <Kbd>↩</Kbd>
-        </AlertDialogAction>
-      </AlertDialogFooter>
-    </AlertDialogContent>
-  </AlertDialog>
+  <ConfirmAction
+    v-model:open="deleteTeamDialog.isOpen.value"
+    :title="t('settings.teamsList.deleteTitle')"
+    :action-label="t('actions.delete')"
+    destructive
+    :confirm-phrase="deleteTeamDialog.item.value?.name"
+    :on-confirm="handleDeleteTeam"
+  >
+    <template #description>
+      <i18n-t keypath="settings.teamsList.deleteConfirm" tag="span">
+        <template #name>
+          <span class="text-foreground font-medium">{{
+            deleteTeamDialog.item.value?.name
+          }}</span>
+        </template>
+      </i18n-t>
+    </template>
+  </ConfirmAction>
 
   <!-- Team Create/Edit/Invite Dialog -->
   <TeamDialog
