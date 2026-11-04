@@ -486,6 +486,9 @@ export function buildTurnConfig(opts: {
       : undefined
 
   if (opts.provider === "google") {
+    // @genkit-ai/google-genai 1.43+ routes Gemini through the Interactions
+    // API, whose generation_config has no `top_k` (400 "Unknown parameter").
+    delete sampling.topK
     const thinkingConfig: Record<string, unknown> = {
       ...(thinkingOn ? { includeThoughts: true } : {}),
       ...(effort ? { thinkingLevel: effort.toUpperCase() } : {}),

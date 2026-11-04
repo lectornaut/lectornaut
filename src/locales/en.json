@@ -998,6 +998,10 @@
         "label": "Menu bar",
         "description": "Show app in the menu bar."
       },
+      "confirmClose": {
+        "label": "Confirm before closing",
+        "description": "Ask before a keyboard shortcut closes or quits the app."
+      },
       "badgeCount": {
         "label": "Badge count",
         "description": "Show unread count on the app icon."
@@ -1629,6 +1633,18 @@
         "label": "Reduce motion",
         "description": "Minimize animations and transitions across the app. Leave off for default animations."
       },
+      "pointerCursors": {
+        "label": "Use pointer cursors",
+        "description": "Change the cursor to a pointer when hovering over interactive elements"
+      },
+      "fontSmoothing": {
+        "label": "Font smoothing",
+        "description": "Use native macOS font anti-aliasing"
+      },
+      "dockIcon": {
+        "label": "Dock icon",
+        "description": "Choose the icon the app will use in the dock"
+      },
       "notificationsMode": {
         "label": "Notifications mode",
         "description": "Show notifications in a popover or pin them in the left sidebar.",
@@ -1637,7 +1653,7 @@
       },
       "chatWindowMode": {
         "label": "Chat window mode",
-        "description": "Show Ask AI and pinned chats in a floating window or the right sidebar. This preference syncs with your account.",
+        "description": "Show Ask AI and pinned chats in a floating window or the right sidebar.",
         "floating": "Floating window",
         "sidebar": "Sidebar dock"
       }
@@ -2727,7 +2743,8 @@
     },
     "changelog": {
       "title": "Changelog",
-      "subtitle": "The latest changes and improvements."
+      "subtitle": "The latest changes and improvements.",
+      "permalink": "Link to version {version}"
     },
     "agents": {
       "title": "Agents",
@@ -3267,6 +3284,16 @@
         "online": "You are online",
         "offline": "You are offline"
       }
+    },
+    "closeConfirm": {
+      "closeTitle": "Close Window?",
+      "quitTitle": "Quit Lectornaut?",
+      "closeDescription": "Lectornaut keeps running in the background.",
+      "quitDescription": "Your tabs reopen next time.",
+      "busyDescription": "A reply, upload or unsaved change is still in progress and will be lost.",
+      "closeAction": "Close window",
+      "quitAction": "Quit",
+      "dontAskAgain": "Don't ask again"
     },
     "fileDropOverlay": {
       "empty": {

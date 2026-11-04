@@ -1,6 +1,8 @@
 import App from "@/App.vue"
 import { preloadActiveCodeTheme } from "@/components/editors/text/shiki"
-import { isMainTauriWindow } from "@/composables/usePlatform"
+import { isMainTauriWindow, isTauri } from "@/composables/usePlatform"
+import type { DockIconId } from "@/helpers/defaults"
+import { defaultDockIcon } from "@/helpers/defaults"
 import { createAppCheckModule } from "@/modules/appCheck"
 import "@/modules/connectionCallbackRelay"
 import { initDeepLink } from "@/modules/deepLink"
@@ -19,6 +21,7 @@ import { setSchemaViolationSink } from "@/schemas"
 import "@/styles/index.css"
 import { initSync } from "@/utils/firebase/firebase-sync-engine"
 import { VueQueryPlugin } from "@tanstack/vue-query"
+import { invoke } from "@tauri-apps/api/core"
 import { createHead } from "@unhead/vue/client"
 import { MotionPlugin } from "@vueuse/motion"
 import {
@@ -70,10 +73,9 @@ initSync()
 enableKatex()
 enableMermaid()
 
-// Warm the Shiki code-block language icons off the critical path so the
-// first fenced code block in a chat bubble or changelog entry doesn't pay
-// the cold-start cost. Code blocks render via the Shiki MarkdownCodeBlockNode
-// (see registerMarkdownOverrides); the highlighter loads grammars on demand.
+// Warm markstream's less common code-block language icons off the critical
+// path (they ship as an async chunk) so the first fenced code block in a chat
+// bubble or changelog entry doesn't flash the fallback icon.
 void preloadExtendedLanguageIcons()
 
 // Order matters: authReady must resolve before router.isReady() so the
@@ -123,7 +125,37 @@ setSchemaViolationSink((violation) => {
   }
 })
 
+// Every desktop window (pop-outs included), so not gated on the main one.
+// `data-native-font-smoothing` lifts the base `antialiased` rule in
+// index.css. Shares the key with appPreferencesStore for live changes.
+if (isTauri.value) {
+  watch(
+    useStorage<boolean>("nativeFontSmoothing", false),
+    (enabled) => {
+      document.documentElement.toggleAttribute(
+        "data-native-font-smoothing",
+        enabled
+      )
+    },
+    { immediate: true, flush: "sync" }
+  )
+}
+
 if (isMainTauriWindow.value) {
+  // Re-apply a non-default choice on launch: the Dock tile override only
+  // lasts for the process, and an update replacing the .app drops the custom
+  // bundle icon. The default needs nothing (the bundled icon, with its system
+  // light/dark rendering, is already in place). Shares the `dockIcon` key
+  // with appPreferencesStore for live changes.
+  const dockIcon = useStorage<DockIconId>("dockIcon", defaultDockIcon)
+  const applyDockIcon = (variant: DockIconId) => {
+    void invoke("set_dock_icon", { variant }).catch((error: unknown) => {
+      console.error("[main] Failed to apply dock icon:", error)
+    })
+  }
+  if (dockIcon.value !== defaultDockIcon) applyDockIcon(dockIcon.value)
+  watch(dockIcon, applyDockIcon)
+
   const automaticUpdates = useStorage<boolean>("automaticUpdates", true)
   if (automaticUpdates.value) {
     const lastUpdateCheck = useStorage<number>("lastUpdateCheck", 0)

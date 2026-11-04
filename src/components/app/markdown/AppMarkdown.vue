@@ -22,7 +22,11 @@ import {
   activeCodeThemeColors,
   startCodeThemeColorSync,
 } from "@/components/editors/text/shiki"
-import { useCodeFontSize } from "@/composables/useCodeFont"
+import {
+  CODE_FONT_FAMILY,
+  CODE_FONT_WEIGHT,
+  useCodeFontSize,
+} from "@/composables/useCodeFont"
 import { editorThemes } from "@/helpers/defaults"
 import { editorTheme, state as resolvedTheme } from "@/modules/theme"
 import MarkdownRender from "markstream-vue"
@@ -56,17 +60,16 @@ const customHtmlTags = computed(() =>
   props.surface === "chat" ? ["thinking"] : undefined
 )
 
-// Virtualization caps how many nodes render live. The streaming chat tail
-// (final=false) uses 0 — incremental/typewriter mode — so freshly streamed
-// text is never hidden behind a windowing measurement pass. Every other
-// case falls back to the library default (320) so a single very long doc
-// (e.g. a huge code/JSON dump) windows instead of mounting every node at
-// once. Finalized chat history passes the default too, but the deferral
-// switch below turns the windowing path off for chat regardless, so the
-// cap is effectively inert there.
-const maxLiveNodes = computed(() =>
-  props.surface === "chat" && !props.final ? 0 : undefined
-)
+// Renderer preset, per the docs: `chat` for AI/SSE output, `docs` for rich
+// long-form content. A preset only fills in defaults — every prop passed
+// explicitly below still wins. `chat` brings incremental rendering
+// (`maxLiveNodes: 0`, so streamed text is never hidden behind a windowing
+// pass), smaller/faster render batches, and no tooltips; `docs` keeps
+// virtualization so a very long changelog windows instead of mounting every
+// node at once. The mode is fixed per surface, never switched on `final` —
+// the docs warn that `docs` changes layout strategy mid-message; streaming
+// vs history is handled by the pacing/fade props instead.
+const mode = computed(() => (props.surface === "chat" ? "chat" : "docs"))
 
 // Viewport-based node deferral (library default ON) unmounts nodes that
 // aren't near the viewport and re-runs that pass on every container resize
@@ -134,36 +137,37 @@ const codeBlockThemePair = computed<[dark: string, light: string]>(() => [
 ])
 
 // Code blocks get a header strip with a copy button — same on every
-// surface. The library handles the DOM; we just turn it on. Every other
-// header action defaults to ON in markstream, so the ones we don't want
-// (expand, font-size steppers, HTML preview) must be explicitly opted out.
-const codeBlockProps = {
+// surface. Every other header action defaults to ON in markstream, so the
+// ones we don't want (expand, font-size steppers, HTML preview) must be
+// explicitly opted out. `theme` is the documented v2 way to hand the
+// renderer its light/dark pair (the top-level `code-block-*-theme` props
+// feed CodeBlockNode's deprecated `lightTheme`/`darkTheme`).
+const codeBlockProps = computed(() => ({
   showHeader: true,
   showCopyButton: true,
   showExpandButton: false,
   showFontSizeButtons: false,
   showPreviewButton: false,
-} as const
+  theme: {
+    light: codeBlockThemes.value.light,
+    dark: codeBlockThemes.value.dark,
+  },
+}))
 
-// Code blocks render through markstream's Shiki node (CodeBlockNode,
-// wired in registerMarkdownOverrides) — driven by the same Shiki themes the
-// CodeMirror and Tiptap surfaces use, so all three match. Display-only: the
-// node emits static highlighted HTML, with no editor runtime.
-//
-// Font family + weight and the tall-payload height cap live in CSS (the
-// "markstream-vue surface overrides" block in @/styles/index.css). Font SIZE
-// rides in as the `--vscode-editor-font-size` custom property — set via the
-// `:style` fallthrough on `<MarkdownRender>` so it lands on `.markstream-vue`
-// and cascades down to `.code-block-content`. A `!important` rule in that
-// same overrides block then forces it onto `.code-block-content`, because the
-// library hard-binds an inline `style="font-size: 14px"` from a local ref
-// with no prop to override it — making its own `font-size:
-// var(--vscode-editor-font-size)` CSS rule dead code. `!important` beats the
-// unimportant inline style.
+// Code blocks render through markstream's built-in code_block node (the
+// lazy, viewport-deferred CodeBlockNode backed by the `stream-diffs` peer),
+// driven by the same Shiki themes the CodeMirror and Tiptap surfaces use, so
+// all three match. Typography goes through `code-block-options` — the
+// documented v2 surface — because the highlighted output is drawn by
+// stream-diffs inside a shadow root, out of reach of page CSS. Weight has no
+// dedicated option, so it rides in through `unsafeCSS` (injected into that
+// shadow root); bold Shiki tokens carry their own weight and stay bold.
 const codeBlockFontSize = useCodeFontSize()
 
-const codeBlockFontVars = computed(() => ({
-  "--vscode-editor-font-size": `${codeBlockFontSize.value}px`,
+const codeBlockOptions = computed(() => ({
+  fontSize: codeBlockFontSize.value,
+  fontFamily: CODE_FONT_FAMILY,
+  unsafeCSS: `pre { font-weight: ${CODE_FONT_WEIGHT}; }`,
 }))
 
 // Match the outer `.code-block-container` to the ACTIVE Shiki theme's own
@@ -205,7 +209,8 @@ const smoothStreamingOptions = {
 
 // Link previews in chat would be noisy (every bot reply often has
 // multiple URLs); changelog pages benefit from full-URL hover. Off
-// for the sheet to match its compact density.
+// for the sheet to match its compact density — explicit because the
+// sheet's `docs` preset would otherwise turn them on.
 const showTooltips = computed(() => props.surface === "changelog-page")
 
 // Surfaces parse/render timing and virtualization stats to the console.
@@ -217,22 +222,21 @@ const isDev = import.meta.env.DEV
 <template>
   <MarkdownRender
     :custom-id="surface"
+    :mode="mode"
     :content="content"
     :final="final"
     :is-dark="isDark"
     :html-policy="htmlPolicy"
-    :code-block-light-theme="codeBlockThemes.light"
-    :code-block-dark-theme="codeBlockThemes.dark"
     :themes="codeBlockThemePair"
     :code-block-props="codeBlockProps"
-    :style="[codeBlockFontVars, codeBlockColorVars]"
+    :code-block-options="codeBlockOptions"
+    :style="codeBlockColorVars"
     :mermaid-props="mermaidProps"
     :custom-html-tags="customHtmlTags"
     :smooth-streaming="streaming ? 'auto' : false"
     :smooth-streaming-options="smoothStreamingOptions"
     :fade="!streaming"
     :typewriter="false"
-    :max-live-nodes="maxLiveNodes"
     :defer-nodes-until-visible="deferNodesUntilVisible"
     :show-tooltips="showTooltips"
     :debug-performance="isDev"

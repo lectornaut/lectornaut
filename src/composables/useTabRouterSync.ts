@@ -18,6 +18,8 @@
  * component (it owns the input ref + local draft state); we reach it through
  * the injected {@link UseTabRouterSyncOptions.beginRename} callback.
  */
+import { requestAppClose } from "@/composables/useCloseConfirmation"
+import { isMainTauriWindow } from "@/composables/usePlatform"
 import { resolveRouteName } from "@/helpers/breadcrumber"
 import { emitter } from "@/modules/mitt"
 import { useTabsStore } from "@/stores/tabsStore"
@@ -305,6 +307,17 @@ export function useTabRouterSync({ beginRename }: UseTabRouterSyncOptions) {
   }
 
   function onTabsClose(id?: unknown) {
+    // ⌘W with no tab left to close (or on the last one) closes the desktop
+    // window like a browser would. An explicit id is a click on one tab's
+    // own close action, which only ever closes that tab.
+    if (
+      typeof id !== "string" &&
+      isMainTauriWindow.value &&
+      (!activeTabId.value || tabs.value.length === 1)
+    ) {
+      requestAppClose("close")
+      return
+    }
     handleCloseTab(
       (typeof id === "string" ? id : activeTabId.value) || undefined
     )

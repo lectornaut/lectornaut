@@ -42,6 +42,7 @@ import {
   defaultEditorTheme,
   defaultFont,
   defaultLanguage,
+  defaultPointerCursors,
   defaultReducedMotion,
   defaultSize,
   defaultTheme,
@@ -110,6 +111,10 @@ export const useThemeStore = defineStore("theme", () => {
     "reducedMotion",
     defaultReducedMotion
   )
+  const pointerCursors = useStorage<boolean>(
+    "pointerCursors",
+    defaultPointerCursors
+  )
   const chatWindowMode = useStorage<ChatWindowMode>(
     "chatWindowMode",
     "floating"
@@ -138,6 +143,7 @@ export const useThemeStore = defineStore("theme", () => {
     editorFontSize,
     translucentSidebar,
     reducedMotion,
+    pointerCursors,
     leftDockPinned,
     leftDockOpen,
     rightDockPinned,
@@ -174,6 +180,7 @@ export const useThemeStore = defineStore("theme", () => {
         editorFontSize: editorFontSize.value,
         translucentSidebar: translucentSidebar.value,
         reducedMotion: reducedMotion.value,
+        pointerCursors: pointerCursors.value,
         chatWindowMode: chatWindowMode.value,
         leftDockVisible: leftDockPinned.value,
         leftDockOpen: leftDockOpen.value,
@@ -304,6 +311,13 @@ export const useThemeStore = defineStore("theme", () => {
       ) {
         reducedMotion.value = themeDoc.reducedMotion
       }
+      if (
+        "pointerCursors" in themeDoc &&
+        typeof themeDoc.pointerCursors === "boolean" &&
+        themeDoc.pointerCursors !== pointerCursors.value
+      ) {
+        pointerCursors.value = themeDoc.pointerCursors
+      }
     },
     { immediate: true }
   )
@@ -368,6 +382,7 @@ export const useThemeStore = defineStore("theme", () => {
       editorFontSize,
       translucentSidebar,
       reducedMotion,
+      pointerCursors,
       chatWindowMode,
       leftDockPinned,
       leftDockOpen,

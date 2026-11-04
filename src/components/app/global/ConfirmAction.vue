@@ -105,6 +105,7 @@ const proceed = async () => {
           :disabled="pending"
         />
       </Field>
+      <slot />
       <AlertDialogFooter>
         <AlertDialogCancel :disabled="pending">
           {{ cancelLabel ?? t("actions.cancel") }}

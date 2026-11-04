@@ -1,5 +1,6 @@
 <script lang="ts" setup>
 import DriveFilePicker from "@/components/app/sidebars/DriveFilePicker.vue"
+import { trackCloseGuard } from "@/composables/useCloseConfirmation"
 import { useConfirmationDialog } from "@/composables/useConfirmationDialog"
 import { importDriveNodeAttachment } from "@/composables/useFunctions"
 import {
@@ -337,10 +338,12 @@ const downloadAttachmentInTauri = async (
 
   const downloadUrl = await getAttachmentDownloadUrl(attachment.storagePath)
 
-  await invoke("download_url_to_path", {
-    url: downloadUrl,
-    targetPath,
-  })
+  await trackCloseGuard(
+    invoke("download_url_to_path", {
+      url: downloadUrl,
+      targetPath,
+    })
+  )
   await revealItemInDir(targetPath)
   showSuccessToast(t("components.nodeAttachments.toasts.downloaded"))
 }

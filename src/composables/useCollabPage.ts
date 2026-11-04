@@ -1,4 +1,5 @@
 import { useActiveTabIndicator } from "@/composables/useActiveTabIndicator"
+import { useCloseGuard } from "@/composables/useCloseConfirmation"
 import { showErrorToast, showSuccessToast } from "@/helpers/toast"
 import { useAuthStore } from "@/stores/authStore"
 import { useFileTreeStore } from "@/stores/fileTreeStore"
@@ -145,6 +146,7 @@ export function useCollabPage(
   // doubles as the dedup key for external content writes.
   const lastSyncedContent = ref<string>("")
   const isDirty = ref(false)
+  useCloseGuard(() => isDirty.value)
   const isSaving = ref(false)
   const collabSession = shallowRef<YjsCollabSession | null>(null)
   const collabRole = ref<"editor" | "viewer" | null>(null)

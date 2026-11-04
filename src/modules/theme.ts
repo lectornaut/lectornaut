@@ -122,6 +122,14 @@ export const initTheme = () => {
     { immediate: true, flush: "sync" }
   )
 
+  watch(
+    () => themeSettings.value.pointerCursors,
+    (enabled) => {
+      document.documentElement.toggleAttribute("data-pointer-cursors", enabled)
+    },
+    { immediate: true, flush: "sync" }
+  )
+
   if (isTauri.value) {
     watch(
       store,

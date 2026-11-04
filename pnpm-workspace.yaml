@@ -87,3 +87,18 @@ minimumReleaseAgeExclude:
   - "@firebase/storage@0.14.6"
   - firebase@13.0.0
   - unplugin-turbo-console@3.0.0
+  - stylelint-config-recommended@19.0.0
+  - stylelint-config-standard@41.0.0
+  - stylelint@18.0.0
+
+permissions:
+  '@tanstack/vue-hotkeys':
+    skills: true
+  '@tanstack/vue-table':
+    skills: true
+  '@unhead/vue':
+    skills: true
+
+skills:
+  dirs:
+    - .claude/skills

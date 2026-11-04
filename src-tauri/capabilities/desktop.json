@@ -6,6 +6,7 @@
     "positioner:default",
     "window-state:default",
     "updater:default",
+    "process:allow-exit",
     "autostart:allow-enable",
     "autostart:allow-disable",
     "autostart:allow-is-enabled",

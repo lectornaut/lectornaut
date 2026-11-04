@@ -1569,8 +1569,8 @@ const handleSubmit = async () => {
              until Save; once sent they move to the Pending tab. -->
             <TabsContent value="invite" class="grid grid-cols-1 gap-2 p-0">
               <!-- Email input + agent picker -->
-              <ButtonGroup class="bg-input/50 rounded-control p-3">
-                <ButtonGroup>
+              <ButtonGroup class="bg-input/50 rounded-control w-full p-3">
+                <ButtonGroup class="flex-1">
                   <Popover v-model:open="invitePickerOpen">
                     <PopoverAnchor as-child>
                       <InputGroup>

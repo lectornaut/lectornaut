@@ -1,5 +1,9 @@
 <script lang="ts" setup>
-import { getCurrentTauriWindow, isTauri } from "@/composables/usePlatform"
+import {
+  getCurrentTauriWindow,
+  isMainTauriWindow,
+  isTauri,
+} from "@/composables/usePlatform"
 import { FILE_CAPTURE_WINDOW_LABEL } from "@/modules/fileCapture"
 import { emitter } from "@/modules/mitt"
 import { state, store } from "@/modules/theme"
@@ -120,5 +124,6 @@ onMounted(() => {
   <ExitTrigger />
   <SessionRevokedDialog />
   <MfaResolverDialog />
+  <CloseConfirmDialog v-if="isMainTauriWindow" />
   <FileDropOverlay v-if="!isFileCaptureWindow" />
 </template>

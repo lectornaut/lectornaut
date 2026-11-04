@@ -1,4 +1,5 @@
 <script lang="ts" setup>
+import { useCloseConfirmation } from "@/composables/useCloseConfirmation"
 import { resumeSessionWatcher } from "@/composables/useDeviceSessions"
 import { useDialogActionHotkey } from "@/composables/useDialogActionHotkey"
 import { useGlobalHotkeys } from "@/composables/useGlobalHotkeys"
@@ -25,6 +26,10 @@ useDialogActionHotkey()
 // Bare keys fire the [data-hotkey] item of whichever open menu the
 // keystroke originates in (the menu-item counterpart of the above).
 useMenuActionHotkey()
+
+// Confirm before a keyboard shortcut (desktop) or a browser tab close with
+// work in flight (web) ends the app; see the composable for exact paths.
+useCloseConfirmation()
 
 // Desktop main window only: surface server-routed alerts as OS notifications.
 useNativeNotificationDelivery()

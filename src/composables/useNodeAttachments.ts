@@ -1,3 +1,4 @@
+import { trackCloseGuard } from "@/composables/useCloseConfirmation"
 import {
   createWorkspaceNodeAttachment as createWorkspaceNodeAttachmentCallable,
   deleteWorkspaceNodeAttachment as deleteWorkspaceNodeAttachmentCallable,
@@ -194,10 +195,12 @@ export const uploadNodeAttachmentBlob = async (
     fileName: sanitizeAttachmentFileName(file.name),
   })
 
-  await uploadBytes(
-    getStorageFileRef(storagePath),
-    file,
-    contentType ? { contentType } : undefined
+  await trackCloseGuard(
+    uploadBytes(
+      getStorageFileRef(storagePath),
+      file,
+      contentType ? { contentType } : undefined
+    )
   )
   return storagePath
 }

@@ -15,6 +15,7 @@
  * blob is best-effort deleted so storage doesn't leak.
  */
 
+import { trackCloseGuard } from "@/composables/useCloseConfirmation"
 import {
   createBotSessionAttachment,
   deleteBotSessionAttachment,
@@ -98,10 +99,12 @@ const uploadBlob = async (
     version: generateId(),
     fileName: sanitizeAttachmentFileName(file.name),
   })
-  await uploadBytes(
-    getStorageFileRef(storagePath),
-    file,
-    contentType ? { contentType } : undefined
+  await trackCloseGuard(
+    uploadBytes(
+      getStorageFileRef(storagePath),
+      file,
+      contentType ? { contentType } : undefined
+    )
   )
   return storagePath
 }

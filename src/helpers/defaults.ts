@@ -210,114 +210,116 @@ export const defaultSize: SizeId = "base"
 // resolved mode — we never branch on mode here. Families that only ship a
 // dark theme (Dracula, Nord, Monokai, Tokyo Night, Vesper, Synthwave '84, …)
 // are intentionally excluded: with a light app theme they'd have nothing to
-// fall back to. Variant names must exist in shiki@4 (the stream-markdown
-// runtime); see `@shikijs/themes`. `id`s mirror `editorThemeIdSchema` in
-// `src/schemas/settings.ts` — keep them in sync.
+// fall back to. Variant names must exist in shiki@4 (used by the app's own
+// Shiki highlighter and markstream's stream-diffs code blocks); see
+// `@shikijs/themes`. `id`s mirror `editorThemeIdSchema` in
+// `src/schemas/settings.ts` — keep them in sync. `swatch` is each variant's
+// keyword color (from the Shiki theme JSON), painted as the picker dot.
 export const editorThemes = [
   {
     id: "default",
     name: "Default",
     light: "light-plus",
     dark: "dark-plus",
-    icon: IconPalette,
+    swatch: { light: "#0000ff", dark: "#569cd6" },
   },
   {
     id: "ayu",
     name: "Ayu",
     light: "ayu-light",
     dark: "ayu-dark",
-    icon: IconPalette,
+    swatch: { light: "#fa8532", dark: "#ff8f40" },
   },
   {
     id: "catppuccin",
     name: "Catppuccin",
     light: "catppuccin-latte",
     dark: "catppuccin-mocha",
-    icon: IconPalette,
+    swatch: { light: "#8839ef", dark: "#cba6f7" },
   },
   {
     id: "everforest",
     name: "Everforest",
     light: "everforest-light",
     dark: "everforest-dark",
-    icon: IconPalette,
+    swatch: { light: "#f85552", dark: "#e67e80" },
   },
   {
     id: "github",
     name: "GitHub",
     light: "github-light",
     dark: "github-dark",
-    icon: IconPalette,
+    swatch: { light: "#d73a49", dark: "#f97583" },
   },
   {
     id: "gruvbox",
     name: "Gruvbox",
     light: "gruvbox-light-medium",
     dark: "gruvbox-dark-medium",
-    icon: IconPalette,
+    swatch: { light: "#9d0006", dark: "#fb4934" },
   },
   {
     id: "kanagawa",
     name: "Kanagawa",
     light: "kanagawa-lotus",
     dark: "kanagawa-wave",
-    icon: IconPalette,
+    swatch: { light: "#624c83", dark: "#957fb8" },
   },
   {
     id: "material",
     name: "Material",
     light: "material-theme-lighter",
     dark: "material-theme",
-    icon: IconPalette,
+    swatch: { light: "#39adb5", dark: "#89ddff" },
   },
   {
     id: "min",
     name: "Min",
     light: "min-light",
     dark: "min-dark",
-    icon: IconPalette,
+    swatch: { light: "#d32f2f", dark: "#f97583" },
   },
   {
     id: "night-owl",
     name: "Night Owl",
     light: "night-owl-light",
     dark: "night-owl",
-    icon: IconPalette,
+    swatch: { light: "#994cc3", dark: "#c792ea" },
   },
   {
     id: "one",
     name: "One",
     light: "one-light",
     dark: "one-dark-pro",
-    icon: IconPalette,
+    swatch: { light: "#a626a4", dark: "#c678dd" },
   },
   {
     id: "rose-pine",
     name: "Rosé Pine",
     light: "rose-pine-dawn",
     dark: "rose-pine",
-    icon: IconPalette,
+    swatch: { light: "#286983", dark: "#31748f" },
   },
   {
     id: "slack",
     name: "Slack",
     light: "slack-ochin",
     dark: "slack-dark",
-    icon: IconPalette,
+    swatch: { light: "#7b30d0", dark: "#569cd6" },
   },
   {
     id: "solarized",
     name: "Solarized",
     light: "solarized-light",
     dark: "solarized-dark",
-    icon: IconPalette,
+    swatch: { light: "#859900", dark: "#859900" },
   },
   {
     id: "vitesse",
     name: "Vitesse",
     light: "vitesse-light",
     dark: "vitesse-dark",
-    icon: IconPalette,
+    swatch: { light: "#1e754f", dark: "#4d9375" },
   },
 ] as const
 
@@ -385,6 +387,25 @@ export const defaultTranslucentSidebar = true
 // `prefers-reduced-motion` but under explicit user control. Off by default:
 // motion is part of the default experience, so this is an opt-out.
 export const defaultReducedMotion = false
+
+// Shows the pointer (hand) cursor over buttons, menu items and other
+// controls instead of the platform-default arrow. Off by default to match
+// native desktop conventions, where only links get the hand.
+export const defaultPointerCursors = false
+
+// macOS app icon variants (desktop app only), applied by the `set_dock_icon`
+// command to the live Dock tile AND the .app bundle (Finder, Launchpad,
+// Mission Control). Assets live apart from the app/favicon icons: `src` is
+// public/dock-icons/{id}.svg (picker preview) and the native image is
+// src-tauri/icons/dock/{id}.icns, rendered from that SVG; keep them in sync.
+export const dockIcons = [
+  { id: "light", name: "Light", src: "/dock-icons/light.svg" },
+  { id: "dark", name: "Dark", src: "/dock-icons/dark.svg" },
+] as const
+
+export type DockIconId = (typeof dockIcons)[number]["id"]
+
+export const defaultDockIcon: DockIconId = "light"
 
 // ────────────────────────────────────────────────────────────────────────────
 // Bot agent (workspace AI client) — model catalog + per-workspace defaults.

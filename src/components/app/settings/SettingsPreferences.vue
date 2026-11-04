@@ -30,6 +30,7 @@ const appPreferencesStore = useAppPreferencesStore()
 const {
   runOnStartup,
   menuBar,
+  confirmClose,
   badgeCount,
   automaticUpdates,
   lastUpdateCheck,
@@ -53,6 +54,7 @@ const toBoolean = (value: unknown): boolean => value === true
 const localPreferenceRefs = {
   runOnStartup,
   menuBar,
+  confirmClose,
   openInDesktopApp,
   automaticUpdates,
 }
@@ -179,6 +181,21 @@ const restoreDefaultShortcut = () => {
             id="run-on-startup"
             :model-value="runOnStartup"
             @update:model-value="updateLocalPreference('runOnStartup', $event)"
+          />
+        </Field>
+        <Field v-if="isTauri" orientation="horizontal">
+          <FieldContent>
+            <FieldLabel for="confirm-close">
+              {{ t("settings.preferences.confirmClose.label") }}
+            </FieldLabel>
+            <FieldDescription>
+              {{ t("settings.preferences.confirmClose.description") }}
+            </FieldDescription>
+          </FieldContent>
+          <Switch
+            id="confirm-close"
+            :model-value="confirmClose"
+            @update:model-value="updateLocalPreference('confirmClose', $event)"
           />
         </Field>
         <Field v-if="isTauri" orientation="horizontal">

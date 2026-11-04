@@ -12,6 +12,7 @@
  * `DocumentReference<T>` generic is identical to the previous hand-cast version.
  */
 
+import { trackCloseGuard } from "@/composables/useCloseConfirmation"
 import { firestore, storage } from "@/modules/firebase"
 import { zodConverter } from "@/schemas/_utils"
 import {
@@ -290,7 +291,7 @@ export const getUserPhotoStorageRef = (userId: string): StorageReference =>
  */
 export async function uploadFile(path: string, file: File): Promise<string> {
   const fileRef = getStorageFileRef(path)
-  await uploadBytes(fileRef, file)
+  await trackCloseGuard(uploadBytes(fileRef, file))
   return getDownloadURL(fileRef)
 }
 

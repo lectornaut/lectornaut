@@ -60,6 +60,15 @@
     @apply antialiased;
   }
 
+  /*
+    Desktop-app opt-in (Appearance → Font smoothing, macOS only): drop the
+    grayscale override and let macOS render text natively. Toggled on <html>
+    from `src/main.ts`.
+  */
+  :root[data-native-font-smoothing] body {
+    @apply subpixel-antialiased;
+  }
+
   @media (prefers-contrast: more) {
     body {
       --grade-axis: 700;
@@ -476,6 +485,35 @@
   }
 }
 
+@layer base {
+  /*
+    User opt-in hand cursor on controls. The Appearance setting toggles
+    `data-pointer-cursors` on <html> (see `src/modules/theme.ts`).
+    `!important` from @layer base beats the `cursor-default` utilities the
+    shadcn primitives (menu/select items) carry in the later utilities layer.
+  */
+  :root[data-pointer-cursors]
+    :is(
+      button,
+      select,
+      summary,
+      label[for],
+      input:is([type="checkbox"], [type="radio"], [type="color"]),
+      [role="button"],
+      [role="checkbox"],
+      [role="combobox"],
+      [role="menuitem"],
+      [role="menuitemcheckbox"],
+      [role="menuitemradio"],
+      [role="option"],
+      [role="radio"],
+      [role="switch"],
+      [role="tab"]
+    ):not(:disabled, [aria-disabled="true"], [data-disabled]) {
+    cursor: pointer !important;
+  }
+}
+
 /*
   The scroll-fade-* and shimmer utilities come from `shadcn-vue/tailwind.css`
 */
@@ -628,12 +666,11 @@
   --ms-leading-body: 1.5;
 
   /* Mono font for code, app-wide. `--ms-font-mono` styles markstream's
-   * inline `code`; `--markstream-code-font-family` styles the Shiki code
-   * BLOCK surface (MarkdownCodeBlockNode). Both point at the app stack so
-   * chat/changelog code matches the CodeMirror + Tiptap surfaces —
-   * markstream's own defaults are platform mono stacks. `--ms-font-weight-code`
-   * covers inline code; the block weight is set on `.code-block-content`
-   * below (markstream leaves that element without a weight). */
+   * inline `code`; `--markstream-code-font-family` styles the streaming
+   * `<pre>` a code BLOCK shows before stream-diffs takes over (the finished
+   * block gets its font + size from AppMarkdown's `code-block-options`).
+   * Both point at the app stack so chat/changelog code matches the
+   * CodeMirror + Tiptap surfaces. `--ms-font-weight-code` covers inline code. */
   --ms-font-mono: var(--font-mono);
   --markstream-code-font-family: var(--font-mono);
   --ms-font-weight-code: 500;
@@ -647,9 +684,7 @@
   --inline-code-bg: hsl(var(--ms-foreground) / 6%);
 
   /* Cap tall code payloads (long JSON / tool output) so one block can't
-   * dominate a chat bubble. The Shiki code surface reads this via
-   * `max-height: min(70vh, var(--ms-size-code-max-height))` and scrolls past
-   * it — mirrors the 320px cap the prior Monaco renderer enforced. */
+   * dominate a chat bubble; the code-block surface scrolls past it. */
   --ms-size-code-max-height: 20rem;
 
   /* Block-to-block gaps. 1.25em base so a paragraph break reads as clearly
@@ -770,55 +805,6 @@
 .markstream-vue[data-custom-id="chat"] .inline-code,
 .markstream-vue[data-custom-id="changelog-sheet"] .inline-code {
   font-size: 0.875em;
-}
-
-/* Shiki code BLOCK weight + size.
- *
- * Weight: markstream leaves `.code-block-content` without a font-weight (it
- * inherits prose ~400), so set it to match the CodeMirror + Tiptap code
- * surfaces (CODE_FONT_WEIGHT = 500). Bold Shiki tokens carry their own inline
- * weight, so this only shifts normal tokens.
- *
- * Size: `MarkdownCodeBlockNode` (Shiki node) hard-binds an inline
- * `style="font-size: 14px"` on `.code-block-content` from a local ref that
- * starts at 14 with no prop to override it from outside — so the library's
- * own `font-size: var(--vscode-editor-font-size, 14px)` CSS rule is dead code
- * (inline always wins). The only way to drive font size from the user's
- * Appearance setting is to BEAT that inline declaration with `!important`,
- * pointing at our reactive CSS var. `.code-block-content`'s child `pre` /
- * `.shiki` use `font-size: inherit`, so this single override cascades through
- * the whole block. Child elements pick up the var via the wrapper in
- * AppMarkdown.vue. */
-.markstream-vue[data-custom-id="chat"] .code-block-content,
-.markstream-vue[data-custom-id="changelog-sheet"] .code-block-content,
-.markstream-vue[data-custom-id="changelog-page"] .code-block-content {
-  font-weight: var(--ms-font-weight-code, 500);
-  font-size: var(--vscode-editor-font-size, 14px) !important;
-}
-
-/* Themed code background must span the FULL horizontal scroll width.
- *
- * The Shiki `<pre>` carries the theme background, but markstream lays it out
- * inside a `display:grid` scroll viewport (`.code-block-content`, overflow:auto)
- * whose grid item (`.code-block-render`) is pinned to the visible width via
- * `min-width:0`. A long, non-wrapping line overflows that width and the viewport
- * scrolls — but a `width:auto` block paints its background only to the visible
- * edge, so the overflowing region beyond it shows the container's `--code-bg`
- * (and, on overscroll, the page) instead of the themed surface: the dark band
- * that appears when you scroll a wide code/JSON block right.
- *
- * Forcing the `<pre>` to `min-width: max-content` grows its box to the longest
- * line, so the theme background covers the entire scrollable region. It's a
- * floor, not a fixed width: a block narrower than the viewport keeps
- * `width:auto` = full container, so there's no gap at rest either. This is the
- * structural complement to the `--code-bg` match in AppMarkdown.vue (which
- * handles the VERTICAL rubber-band and the container border/rounding). Sibling
- * to the Tiptap surface, where the `<pre>` is itself the scroller so its
- * background never scrolls away. */
-.markstream-vue[data-custom-id="chat"] .code-block-content pre,
-.markstream-vue[data-custom-id="changelog-sheet"] .code-block-content pre,
-.markstream-vue[data-custom-id="changelog-page"] .code-block-content pre {
-  min-width: max-content;
 }
 
 /* List items render their own paragraph wrapper which picks up the

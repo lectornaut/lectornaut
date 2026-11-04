@@ -24,7 +24,15 @@ const { t } = useI18n()
         {{ t("pages.changelog.subtitle") }}
       </p>
     </div>
-    <div v-for="entry in changelog" :key="entry.id" class="px-8 py-4">
+    <!-- Each entry is addressable by its version: /changelog#2.9.0. The
+         router's scrollBehavior scrolls it into view (cold load and clicks
+         alike); scroll-mt clears the landing nav so the title isn't hidden. -->
+    <div
+      v-for="entry in changelog"
+      :id="entry.id"
+      :key="entry.id"
+      class="scroll-mt-32 px-8 py-4"
+    >
       <div class="relative flex flex-col gap-4 md:flex-row">
         <div
           class="top-32 flex h-min w-64 shrink-0 items-center gap-4 md:sticky"
@@ -38,9 +46,18 @@ const { t } = useI18n()
         </div>
         <div class="flex flex-col">
           <h2
-            class="text-foreground mb-4 text-lg leading-tight font-bold md:text-2xl"
+            class="group text-foreground mb-4 text-lg leading-tight font-bold md:text-2xl"
           >
             {{ entry.title }}
+            <RouterLink
+              :to="{ hash: `#${entry.id}` }"
+              :aria-label="
+                t('pages.changelog.permalink', { version: entry.id })
+              "
+              class="text-muted-foreground hover:text-foreground ml-1 font-normal no-underline opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100"
+            >
+              #
+            </RouterLink>
           </h2>
           <div
             class="changelog-markdown text-muted-foreground text-sm md:text-base"

@@ -23,7 +23,9 @@
  *    run-on-startup (this machine's autostart), menu-bar/tray visibility,
  *    automatic updates + last-check (this install's updater), and
  *    open-in-desktop-app (this browser's link handling, read pre-auth by
- *    `deepLink.ts`). All per-machine/per-browser semantics.
+ *    `deepLink.ts`), the macOS dock icon variant (applied natively by
+ *    `main.ts`), native macOS font smoothing (also applied by `main.ts`), and
+ *    the confirm-before-closing prompt (`useCloseConfirmation`). All per-machine/per-browser semantics.
  *
  * Extracted from the former `settingsStore` monolith as phase 3 of its split.
  * Store consumers: `SettingsPreferences.vue`, `useDictation`, `useReadAloud`.
@@ -33,7 +35,11 @@
  */
 
 import { isMainTauriWindow } from "@/composables/usePlatform"
-import { defaultFileDropOverlayShortcutKeys } from "@/helpers/defaults"
+import type { DockIconId } from "@/helpers/defaults"
+import {
+  defaultDockIcon,
+  defaultFileDropOverlayShortcutKeys,
+} from "@/helpers/defaults"
 import { firestore } from "@/modules/firebase"
 import { getErrorMessage } from "@/utils/firebase/firebase-errors"
 import { useDocumentQuery } from "@/utils/firebase/firebase-query"
@@ -86,6 +92,10 @@ export const useAppPreferencesStore = defineStore("appPreferences", () => {
   )
 
   const openInDesktopApp = useStorage<boolean>("openInDesktopApp", true)
+  const dockIcon = useStorage<DockIconId>("dockIcon", defaultDockIcon)
+  const nativeFontSmoothing = useStorage<boolean>("nativeFontSmoothing", false)
+  // Ask before ⌘W on the last tab / ⌘Q ends the desktop app. Work in flight prompts regardless (`useCloseConfirmation`).
+  const confirmClose = useStorage<boolean>("confirmClose", true)
 
   // Speech features (read-aloud playback, voice dictation). User-level intent,
   // synced via the preferences doc like badgeCount; whether the feature can
@@ -395,6 +405,9 @@ export const useAppPreferencesStore = defineStore("appPreferences", () => {
     fileDropOverlayShortcut,
     fileDropOverlayShortcutKeys,
     openInDesktopApp,
+    dockIcon,
+    nativeFontSmoothing,
+    confirmClose,
     readAloudEnabled,
     dictationEnabled,
     isUpdatingPreferences,

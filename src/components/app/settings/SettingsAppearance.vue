@@ -14,6 +14,7 @@ import {
   bases,
   defaultCustomAccentColor,
   defaultCustomBaseColor,
+  dockIcons,
   editorFontSizes,
   editorThemes,
   fonts,
@@ -21,6 +22,9 @@ import {
   sizes,
   themes,
 } from "@/helpers/defaults"
+import { isTauri, platform } from "@/composables/usePlatform"
+import { state as resolvedTheme } from "@/modules/theme"
+import { useAppPreferencesStore } from "@/stores/appPreferencesStore"
 import { useThemeStore } from "@/stores/themeStore"
 import type { ChatWindowMode, ThemeMode } from "@/types/settings"
 import { normalizeHexColor } from "@/utils/theme/customTheme"
@@ -31,6 +35,7 @@ const { t } = useI18n()
 
 const themeStore = useThemeStore()
 const { themeSettings } = storeToRefs(themeStore)
+const { dockIcon, nativeFontSmoothing } = storeToRefs(useAppPreferencesStore())
 
 const selectedTheme = computed({
   get: () => themeSettings.value.mode,
@@ -122,6 +127,13 @@ const selectedReducedMotion = computed({
   },
 })
 
+const selectedPointerCursors = computed({
+  get: () => themeSettings.value.pointerCursors,
+  set: (value: boolean) => {
+    themeSettings.value.pointerCursors = value
+  },
+})
+
 const selectedChatWindowMode = computed({
   get: () => (themeSettings.value.rightDockPinned ? "sidebar" : "floating"),
   set: (value: ChatWindowMode) => {
@@ -145,6 +157,16 @@ const handleToggleDisableTranslucency = (value: unknown) => {
 
 const handleToggleReducedMotion = (value: unknown) => {
   selectedReducedMotion.value = value === true
+  toast.success(t("settings.appearance.updateSuccess"))
+}
+
+const handleToggleFontSmoothing = (value: unknown) => {
+  nativeFontSmoothing.value = value === true
+  toast.success(t("settings.appearance.updateSuccess"))
+}
+
+const handleTogglePointerCursors = (value: unknown) => {
+  selectedPointerCursors.value = value === true
   toast.success(t("settings.appearance.updateSuccess"))
 }
 
@@ -347,6 +369,74 @@ const accentSwatchStyle = (option: ColorSwatch<AccentId>) => ({
       <FieldSet>
         <Field orientation="horizontal">
           <FieldContent>
+            <FieldLabel for="editor-theme">{{
+              t("settings.preferences.editorTheme.label")
+            }}</FieldLabel>
+            <FieldDescription>
+              {{ t("settings.preferences.editorTheme.description") }}
+            </FieldDescription>
+          </FieldContent>
+          <Select id="editor-theme" v-model="selectedEditorTheme">
+            <SelectTrigger>
+              <SelectValue
+                :placeholder="t('settings.preferences.editorTheme.placeholder')"
+              />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectGroup>
+                <SelectItem
+                  v-for="theme in editorThemes"
+                  :key="theme.id"
+                  :value="theme.id"
+                >
+                  <span
+                    class="size-3 rounded-full"
+                    :style="{ backgroundColor: theme.swatch[resolvedTheme] }"
+                  />
+                  {{ theme.name }}
+                </SelectItem>
+              </SelectGroup>
+            </SelectContent>
+          </Select>
+        </Field>
+        <Field orientation="horizontal">
+          <FieldContent>
+            <FieldLabel for="editor-font-size">{{
+              t("settings.preferences.editorFontSize.label")
+            }}</FieldLabel>
+            <FieldDescription>
+              {{ t("settings.preferences.editorFontSize.description") }}
+            </FieldDescription>
+          </FieldContent>
+          <Select id="editor-font-size" v-model="selectedEditorFontSize">
+            <SelectTrigger>
+              <SelectValue
+                :placeholder="
+                  t('settings.preferences.editorFontSize.placeholder')
+                "
+              />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectGroup>
+                <SelectItem
+                  v-for="fontSize in editorFontSizes"
+                  :key="fontSize.id"
+                  :value="fontSize.id"
+                >
+                  <Component :is="fontSize.icon" />
+                  <span :class="fontSize.style">
+                    {{ fontSize.name }}
+                  </span>
+                </SelectItem>
+              </SelectGroup>
+            </SelectContent>
+          </Select>
+        </Field>
+      </FieldSet>
+      <FieldSeparator />
+      <FieldSet>
+        <Field orientation="horizontal">
+          <FieldContent>
             <FieldLabel for="font">{{
               t("settings.preferences.font.label")
             }}</FieldLabel>
@@ -407,70 +497,68 @@ const accentSwatchStyle = (option: ColorSwatch<AccentId>) => ({
             </SelectContent>
           </Select>
         </Field>
+        <Field v-if="isTauri && platform === 'macos'" orientation="horizontal">
+          <FieldContent>
+            <FieldLabel for="font-smoothing">
+              {{ t("settings.appearance.fontSmoothing.label") }}
+            </FieldLabel>
+            <FieldDescription>
+              {{ t("settings.appearance.fontSmoothing.description") }}
+            </FieldDescription>
+          </FieldContent>
+          <Switch
+            id="font-smoothing"
+            :model-value="nativeFontSmoothing"
+            @update:model-value="handleToggleFontSmoothing"
+          />
+        </Field>
       </FieldSet>
       <FieldSeparator />
       <FieldSet>
         <Field orientation="horizontal">
           <FieldContent>
-            <FieldLabel for="editor-theme">{{
-              t("settings.preferences.editorTheme.label")
-            }}</FieldLabel>
+            <FieldLabel for="disable-translucency">
+              {{ t("settings.appearance.translucentSidebar.label") }}
+            </FieldLabel>
             <FieldDescription>
-              {{ t("settings.preferences.editorTheme.description") }}
+              {{ t("settings.appearance.translucentSidebar.description") }}
             </FieldDescription>
           </FieldContent>
-          <Select id="editor-theme" v-model="selectedEditorTheme">
-            <SelectTrigger>
-              <SelectValue
-                :placeholder="t('settings.preferences.editorTheme.placeholder')"
-              />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectGroup>
-                <SelectItem
-                  v-for="theme in editorThemes"
-                  :key="theme.id"
-                  :value="theme.id"
-                >
-                  <Component :is="theme.icon" />
-                  {{ theme.name }}
-                </SelectItem>
-              </SelectGroup>
-            </SelectContent>
-          </Select>
+          <Switch
+            id="disable-translucency"
+            :model-value="selectedDisableTranslucency"
+            @update:model-value="handleToggleDisableTranslucency"
+          />
         </Field>
         <Field orientation="horizontal">
           <FieldContent>
-            <FieldLabel for="editor-font-size">{{
-              t("settings.preferences.editorFontSize.label")
-            }}</FieldLabel>
+            <FieldLabel for="reduced-motion">
+              {{ t("settings.appearance.reducedMotion.label") }}
+            </FieldLabel>
             <FieldDescription>
-              {{ t("settings.preferences.editorFontSize.description") }}
+              {{ t("settings.appearance.reducedMotion.description") }}
             </FieldDescription>
           </FieldContent>
-          <Select id="editor-font-size" v-model="selectedEditorFontSize">
-            <SelectTrigger>
-              <SelectValue
-                :placeholder="
-                  t('settings.preferences.editorFontSize.placeholder')
-                "
-              />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectGroup>
-                <SelectItem
-                  v-for="fontSize in editorFontSizes"
-                  :key="fontSize.id"
-                  :value="fontSize.id"
-                >
-                  <Component :is="fontSize.icon" />
-                  <span :class="fontSize.style">
-                    {{ fontSize.name }}
-                  </span>
-                </SelectItem>
-              </SelectGroup>
-            </SelectContent>
-          </Select>
+          <Switch
+            id="reduced-motion"
+            :model-value="selectedReducedMotion"
+            @update:model-value="handleToggleReducedMotion"
+          />
+        </Field>
+        <Field orientation="horizontal">
+          <FieldContent>
+            <FieldLabel for="pointer-cursors">
+              {{ t("settings.appearance.pointerCursors.label") }}
+            </FieldLabel>
+            <FieldDescription>
+              {{ t("settings.appearance.pointerCursors.description") }}
+            </FieldDescription>
+          </FieldContent>
+          <Switch
+            id="pointer-cursors"
+            :model-value="selectedPointerCursors"
+            @update:model-value="handleTogglePointerCursors"
+          />
         </Field>
       </FieldSet>
       <FieldSeparator />
@@ -525,35 +613,32 @@ const accentSwatchStyle = (option: ColorSwatch<AccentId>) => ({
             </SelectContent>
           </Select>
         </Field>
-        <Field orientation="horizontal">
+        <Field v-if="isTauri && platform === 'macos'" orientation="horizontal">
           <FieldContent>
-            <FieldLabel for="disable-translucency">
-              {{ t("settings.appearance.translucentSidebar.label") }}
+            <FieldLabel for="dock-icon">
+              {{ t("settings.appearance.dockIcon.label") }}
             </FieldLabel>
             <FieldDescription>
-              {{ t("settings.appearance.translucentSidebar.description") }}
+              {{ t("settings.appearance.dockIcon.description") }}
             </FieldDescription>
           </FieldContent>
-          <Switch
-            id="disable-translucency"
-            :model-value="selectedDisableTranslucency"
-            @update:model-value="handleToggleDisableTranslucency"
-          />
-        </Field>
-        <Field orientation="horizontal">
-          <FieldContent>
-            <FieldLabel for="reduced-motion">
-              {{ t("settings.appearance.reducedMotion.label") }}
-            </FieldLabel>
-            <FieldDescription>
-              {{ t("settings.appearance.reducedMotion.description") }}
-            </FieldDescription>
-          </FieldContent>
-          <Switch
-            id="reduced-motion"
-            :model-value="selectedReducedMotion"
-            @update:model-value="handleToggleReducedMotion"
-          />
+          <Select v-model="dockIcon">
+            <SelectTrigger id="dock-icon">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectGroup>
+                <SelectItem
+                  v-for="icon in dockIcons"
+                  :key="icon.id"
+                  :value="icon.id"
+                >
+                  <img :src="icon.src" alt="" class="size-5" />
+                  {{ icon.name }}
+                </SelectItem>
+              </SelectGroup>
+            </SelectContent>
+          </Select>
         </Field>
       </FieldSet>
       <FieldSeparator />

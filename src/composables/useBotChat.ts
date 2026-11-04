@@ -22,6 +22,7 @@
  */
 
 import { useBotSessionActions } from "@/composables/useBotSessionActions"
+import { useCloseGuard } from "@/composables/useCloseConfirmation"
 import { useCurrentTeamRole } from "@/composables/useCurrentTeamRole"
 import {
   findBotSessionByPinnedNode,
@@ -727,6 +728,7 @@ export function useBotChat(options?: BotChatOptions): BotChatContext {
   // prevents zombie streams from billing tokens after the user has moved
   // on, and keeps the local message list in sync with what's visible.
   let inflightController: AbortController | null = null
+  useCloseGuard(() => inflightController !== null)
   const abortInflightSend = () => {
     if (inflightController) {
       inflightController.abort()

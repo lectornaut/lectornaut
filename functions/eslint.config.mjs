@@ -1,5 +1,4 @@
 import js from "@eslint/js"
-import tsParser from "@typescript-eslint/parser"
 import eslintConfigPrettier from "eslint-config-prettier"
 import eslintPluginPrettierRecommended from "eslint-plugin-prettier/recommended"
 import { defineConfig } from "eslint/config"
@@ -15,7 +14,7 @@ export default defineConfig([
   {
     files: ["**/*.{js,ts,cjs,mjs}"],
     languageOptions: {
-      parser: tsParser,
+      parser: ts.parser,
       globals: globals.node,
       parserOptions: {
         ecmaVersion: "latest",

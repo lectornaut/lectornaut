@@ -1,7 +1,6 @@
 import css from "@eslint/css"
 import js from "@eslint/js"
 import vueI18n from "@intlify/eslint-plugin-vue-i18n"
-import tsParser from "@typescript-eslint/parser"
 import eslintConfigPrettier from "eslint-config-prettier"
 import eslintPluginPrettierRecommended from "eslint-plugin-prettier/recommended"
 import eslintPluginVue from "eslint-plugin-vue"
@@ -38,7 +37,7 @@ export default defineConfig([
       parser: vueParser,
       globals: globals.browser,
       parserOptions: {
-        parser: tsParser,
+        parser: ts.parser,
         tsconfigRootDir: import.meta.dirname,
       },
     },

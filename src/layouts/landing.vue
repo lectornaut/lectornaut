@@ -1,6 +1,8 @@
 <template>
   <div class="flex grow flex-col">
-    <ScrollContainer>
+    <!-- data-route-scroller: this scroller outlives navigations between
+         landing pages, so the router resets / restores it (see router.ts). -->
+    <ScrollContainer data-route-scroller>
       <div
         class="pointer-events-none absolute top-0 left-0 z-0 size-full bg-black opacity-15 dark:bg-white"
         style="

@@ -23,6 +23,87 @@ fn set_tray_visible(app: tauri::AppHandle, visible: bool) -> Result<(), String> 
     }
 }
 
+// Applies the chosen app icon variant on macOS, in two places:
+//
+// 1. The running app's Dock / Cmd-Tab tile (`setApplicationIconImage`). Both
+//    variants paint explicitly: passing nil does not reliably restore the
+//    bundled icon once overridden. Lasts only while the process runs.
+// 2. The .app bundle itself (`NSWorkspace setIcon:forFile:`), which is what
+//    Finder, Launchpad, Mission Control and the not-running Dock tile read.
+//    macOS has no alternate-icon API for apps; a custom bundle icon is the
+//    supported equivalent. "light" removes it (nil), restoring the bundled
+//    AppIcon with its system light/dark/tinted rendering. Skipped when not
+//    running from a .app (`tauri dev`). The write adds an `Icon\r` file to
+//    the bundle root, which unseals the code signature; launches are fine,
+//    and an update replacing the bundle drops it, so the client re-applies a
+//    non-default variant on every launch.
+//
+// Sync commands already run on the main thread, so this dispatches rather
+// than blocks, and reports bundle-write failures to the log.
+#[tauri::command]
+fn set_dock_icon(app: tauri::AppHandle, variant: String) -> Result<(), String> {
+    let dark = match variant.as_str() {
+        "light" => false,
+        "dark" => true,
+        _ => return Err(format!("Unknown dock icon variant: {variant}")),
+    };
+    #[cfg(target_os = "macos")]
+    app.run_on_main_thread(move || {
+        use objc2::{AllocAnyThread, MainThreadMarker};
+        use objc2_app_kit::{NSApplication, NSImage, NSWorkspace, NSWorkspaceIconCreationOptions};
+        use objc2_foundation::{NSBundle, NSData};
+
+        let Some(mtm) = MainThreadMarker::new() else {
+            return;
+        };
+        let bytes: &[u8] = if dark {
+            include_bytes!("../icons/dock/dark.icns")
+        } else {
+            include_bytes!("../icons/dock/light.icns")
+        };
+        let image = NSImage::initWithData(NSImage::alloc(), &NSData::with_bytes(bytes));
+        unsafe { NSApplication::sharedApplication(mtm).setApplicationIconImage(image.as_deref()) };
+
+        let bundle_path = NSBundle::mainBundle().bundlePath();
+        if bundle_path.pathExtension().to_string() != "app" {
+            return;
+        }
+        let bundle_image = if dark { image.as_deref() } else { None };
+        let applied = NSWorkspace::sharedWorkspace().setIcon_forFile_options(
+            bundle_image,
+            &bundle_path,
+            NSWorkspaceIconCreationOptions(0),
+        );
+        if !applied {
+            log::warn!("Couldn't set the {variant} app icon on {bundle_path}");
+        }
+    })
+    .map_err(|e| e.to_string())?;
+    #[cfg(not(target_os = "macos"))]
+    let _ = (app, dark);
+    Ok(())
+}
+
+// Whether the menu event being handled came from its key equivalent rather
+// than a click: the shortcut is the accidental path (⌘W/⌘Q fat-fingered),
+// a click on Quit / Close Window is deliberate. AppKit keeps the keyDown as
+// `currentEvent` while the menu event is dispatched (Chrome's ⌘Q warning
+// uses the same check).
+#[cfg(target_os = "macos")]
+fn is_key_equivalent() -> bool {
+    use objc2::MainThreadMarker;
+    use objc2_app_kit::{NSApplication, NSEventType};
+
+    MainThreadMarker::new()
+        .and_then(|mtm| NSApplication::sharedApplication(mtm).currentEvent())
+        .is_some_and(|event| event.r#type() == NSEventType::KeyDown)
+}
+
+#[cfg(not(target_os = "macos"))]
+fn is_key_equivalent() -> bool {
+    false
+}
+
 #[derive(Clone, serde::Serialize)]
 struct Payload {
     args: Vec<String>,
@@ -130,7 +211,16 @@ fn create_app_menu<R: tauri::Runtime>(handle: &tauri::AppHandle<R>) -> tauri::Re
             &PredefinedMenuItem::minimize(handle, None)?,
             &PredefinedMenuItem::maximize(handle, None)?,
             &PredefinedMenuItem::separator(handle)?,
-            &PredefinedMenuItem::close_window(handle, None)?,
+            // Custom item instead of `PredefinedMenuItem::close_window` so the
+            // ⌘W key equivalent reaches the webview's close-tab logic (it only
+            // fires when the webview didn't handle ⌘W, e.g. focus in an input).
+            &MenuItem::with_id(
+                handle,
+                "close-window",
+                "Close Window",
+                true,
+                Some("CmdOrCtrl+W"),
+            )?,
         ],
     )?;
 
@@ -204,7 +294,8 @@ pub fn run() {
             file_capture::set_file_capture_drag_enabled,
             file_capture::preview_file_path,
             window_controls::align_macos_window_controls,
-            set_tray_visible
+            set_tray_visible,
+            set_dock_icon
         ])
         .setup(|app| {
             #[cfg(any(target_os = "linux", all(debug_assertions, windows)))]
@@ -225,8 +316,31 @@ pub fn run() {
                 .menu(&menu)
                 .show_menu_on_left_click(true)
                 .on_menu_event(|app, event| match event.id.as_ref() {
-                    "quit" => {
-                        app.exit(0);
+                    // Shortcuts hand off to the webview's close confirmation
+                    // (`useCloseConfirmation`); clicks act immediately.
+                    "quit" => match app.get_webview_window("main") {
+                        // ponytail: a hidden main window quits unprompted
+                        // (no dialog to show); show it first if that matters.
+                        Some(window)
+                            if is_key_equivalent() && window.is_visible().unwrap_or(false) =>
+                        {
+                            let _ = window.set_focus();
+                            let _ = window.emit_to("main", "close-shortcut", "quit");
+                        }
+                        _ => app.exit(0),
+                    },
+                    "close-window" => {
+                        let focused = app
+                            .webview_windows()
+                            .into_values()
+                            .find(|w| w.is_focused().unwrap_or(false));
+                        if let Some(window) = focused {
+                            if window.label() == "main" && is_key_equivalent() {
+                                let _ = window.emit_to("main", "close-shortcut", "close");
+                            } else {
+                                let _ = window.close();
+                            }
+                        }
                     }
                     "show" => {
                         if let Some(window) = app.get_webview_window("main") {
