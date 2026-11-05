@@ -40,6 +40,7 @@
  */
 
 import type { Part, ResumeOptions } from "genkit/beta"
+import type { GenerationUsage } from "genkit/model"
 
 import type { AiProvider, BotChatEffort } from "./domain.js"
 
@@ -523,4 +524,23 @@ export function buildTurnConfig(opts: {
   // neither a thinking toggle nor an effort knob maps here yet (see
   // `modelSupportsEffort`). Kept total so the function never falls through.
   return { ...sampling }
+}
+
+/**
+ * A model response's usage as billed input/output tokens. Gemini reports
+ * thinking and grounding/tool-use tokens OUTSIDE input/output (billed as
+ * output and input respectively). Only the google-genai plugin sets these;
+ * Anthropic/OpenAI already fold reasoning into outputTokens, so adding them
+ * never double-counts.
+ */
+export function billableUsage(usage: GenerationUsage): {
+  inputTokens: number
+  outputTokens: number
+} {
+  const toolUse = usage.custom?.toolUseTokens
+  return {
+    inputTokens:
+      (usage.inputTokens ?? 0) + (typeof toolUse === "number" ? toolUse : 0),
+    outputTokens: (usage.outputTokens ?? 0) + (usage.thoughtsTokens ?? 0),
+  }
 }

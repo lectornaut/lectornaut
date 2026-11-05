@@ -147,7 +147,7 @@ import {
   isAiModelProviderConfigured,
   resolveModel,
 } from "./genkitClient.js"
-import { aiMiddlewares } from "./genkitMiddleware.js"
+import { aiMiddlewares, type TurnUsage } from "./genkitMiddleware.js"
 import {
   addGitHubCommentTool,
   createGitHubIssueTool,
@@ -3416,7 +3416,19 @@ async function prepareChatTurn(opts: {
   // `BotActionContext.transferRequest` for the full rationale.
   // `effectiveModel` lets promptTemplate custom tools fall back to the
   // chat's current model when no admin override is set.
+  // One meter for every model call this turn makes (the turn itself, the
+  // permission evaluator, and tools that generate on their own, via context):
+  // the team-monthly hard-cap counter (interactive + headless alike) and, for
+  // a Workflows run, the per-run accumulator persisted as `usage` + cost.
+  const meterUsage = (
+    model: string,
+    { inputTokens, outputTokens }: TurnUsage
+  ) => {
+    void incrementTeamTokenUsage(teamId, model, inputTokens, outputTokens)
+    onUsage?.({ model, inputTokens, outputTokens })
+  }
   const actionContext: BotActionContext = {
+    meterUsage,
     // For a user principal this is the human's uid (audit `userId`). For an
     // agent principal there is no human, so the uid is empty — the node-tool
     // audit actor then carries only `agentId`/`agentName` (see the optional
@@ -3453,15 +3465,7 @@ async function prepareChatTurn(opts: {
           }),
         },
         use: aiMiddlewares({
-          onUsage: ({ inputTokens, outputTokens }) => {
-            void incrementTeamTokenUsage(
-              teamId,
-              effectiveModel,
-              inputTokens,
-              outputTokens
-            )
-            onUsage?.({ model: effectiveModel, inputTokens, outputTokens })
-          },
+          onUsage: (u) => meterUsage(effectiveModel, u),
         }),
       })
       if (!result.output)
@@ -3629,18 +3633,7 @@ async function prepareChatTurn(opts: {
     // tool-iteration round trip) into the team's monthly counter. Metering
     // is fire-and-forget — it never blocks or fails the turn.
     use: aiMiddlewares({
-      onUsage: ({ inputTokens, outputTokens }) => {
-        // Team-monthly hard-cap counter (interactive + headless alike)…
-        void incrementTeamTokenUsage(
-          teamId,
-          effectiveModel,
-          inputTokens,
-          outputTokens
-        )
-        // …and, for a Workflows run, the per-run accumulator the worker
-        // persists as `usage` + estimated cost.
-        onUsage?.({ model: effectiveModel, inputTokens, outputTokens })
-      },
+      onUsage: (u) => meterUsage(effectiveModel, u),
     }),
   }
   const runtime: TurnRuntime = { gen, persist }

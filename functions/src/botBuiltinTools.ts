@@ -41,6 +41,7 @@ import { googleAI } from "@genkit-ai/google-genai"
 import { z } from "genkit/beta"
 import { resolveTransferOutcome } from "./botTurn.js"
 import { ai, isAiModelProviderConfigured } from "./genkitClient.js"
+import { aiMiddlewares, type TurnUsage } from "./genkitMiddleware.js"
 // Type-only imports (erased at runtime — no import cycle with botNodeTools).
 import type { CapturedNodeChange } from "./botNodeTools.js"
 import type { ToolPermissionEvaluator } from "./botToolPermissions.js"
@@ -94,6 +95,13 @@ export interface BotActionContext {
    * — handlers fall back to a hardcoded default model in that case.
    */
   effectiveModel?: string
+  /**
+   * Records a model call's usage against the team's monthly counter (and a
+   * Workflows run's accumulator). Tools that make their OWN `ai.generate`
+   * call (e.g. `browseInternet`) pass it to `aiMiddlewares({ onUsage })`,
+   * since the turn's metering middleware never sees nested generations.
+   */
+  meterUsage?: (model: string, usage: TurnUsage) => void
   /**
    * OUTPUT slot — the tool handler writes `.agentId` here when the model
    * decides to hand off. The dispatcher reads it after
@@ -333,7 +341,8 @@ export const browseInternetTool = ai.defineTool(
     inputSchema: browseInternetInputSchema,
     outputSchema: browseInternetOutputSchema,
   },
-  async (input) => {
+  async (input, { context }) => {
+    const meterUsage = (context as BotActionContext | undefined)?.meterUsage
     const retrievedAt = new Date().toISOString()
 
     // Belt-and-suspenders: `pickChatTools` already gates registration on
@@ -376,6 +385,11 @@ export const browseInternetTool = ai.defineTool(
           "the sources conflict or the answer is uncertain, say so " +
           "plainly rather than guessing.\n\nQuery: " +
           input.query,
+        // Grounded search is billed (search tool-use tokens included), so
+        // it counts toward the team cap like the turn that called it.
+        use: aiMiddlewares({
+          onUsage: meterUsage && ((u) => meterUsage(WEB_SEARCH_MODEL, u)),
+        }),
       })
 
       const answer = response.text.trim()

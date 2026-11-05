@@ -627,7 +627,7 @@ const openInfoDialog = (provider: ConnectionProvider): void => {
 
             <ItemGroup
               v-else
-              class="grid grid-cols-1 gap-2 xl:grid-cols-2 2xl:grid-cols-3"
+              class="grid grid-cols-1 gap-2 @2xl:grid-cols-2 @4xl:grid-cols-3"
             >
               <template v-for="row in rowsByTab[tab]" :key="row.app.provider">
                 <!-- content-between: grid rows stretch cards to equal height,

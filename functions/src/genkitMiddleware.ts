@@ -34,6 +34,7 @@
 import * as logger from "firebase-functions/logger"
 import { HttpsError } from "firebase-functions/v2/https"
 import type { ModelMiddleware } from "genkit/model"
+import { billableUsage } from "./botTurn.js"
 import { generateId } from "./utilities.js"
 
 /**
@@ -207,13 +208,7 @@ export function meteringMiddleware(
   return async (req, next) => {
     const resp = await next(req)
     try {
-      const usage = (resp as { usage?: Partial<TurnUsage> } | undefined)?.usage
-      if (usage) {
-        onUsage({
-          inputTokens: usage.inputTokens ?? 0,
-          outputTokens: usage.outputTokens ?? 0,
-        })
-      }
+      if (resp?.usage) onUsage(billableUsage(resp.usage))
     } catch {
       // Metering is best-effort — never let it disturb the turn.
     }
