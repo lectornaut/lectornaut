@@ -27,6 +27,7 @@ import {
   IconFolder,
   IconLogosGoogleDrive,
   IconMic,
+  IconPencil,
   IconPlus,
   IconReply,
   IconUpload,
@@ -674,6 +675,15 @@ const isDisabled = computed(
 const handleSend = async () => {
   if (isDisabled.value || !botChat) return
   stopDictation()
+  // Edit-and-resend replaces an earlier bubble instead of appending a turn.
+  const edit = editContext.value
+  if (edit) {
+    const edited = userInput.value
+    userInput.value = ""
+    botChat.editContext.value = null
+    await botChat.editAndResend(edit.userIndex, edited)
+    return
+  }
   // Fold the reply (if any) into the message as quoted context ahead of the
   // user's text. The server sees one message; no separate context field.
   const reply = replyContext.value
@@ -773,6 +783,22 @@ const handleKeydown = (event: KeyboardEvent) => {
 // textarea stays clean (just what the user types); focus lands there when a
 // reply is staged so they can start typing immediately.
 const replyContext = computed(() => botChat?.replyContext.value ?? null)
+
+// ── Edit context ─────────────────────────────────────────────────────────────
+//
+// `AiChat` sets `editContext` when the user edits one of their earlier
+// bubbles. Prefill its text, focus, and show an "Editing" banner; `handleSend`
+// routes through `editAndResend`. Cancel restores an empty composer.
+const editContext = computed(() => botChat?.editContext.value ?? null)
+const cancelEdit = () => {
+  if (botChat) botChat.editContext.value = null
+  userInput.value = ""
+}
+watch(editContext, (next) => {
+  if (next === null) return
+  userInput.value = next.text
+  nextTick(() => textareaRef.value?.$el?.focus())
+})
 const clearReply = () => {
   if (botChat) botChat.replyContext.value = null
 }
@@ -1049,6 +1075,33 @@ const onToolMenuCloseAutoFocus = (event: Event) => {
         :disabled="isSending || isReadOnly"
         @keydown="handleKeydown"
       />
+      <InputGroupAddon v-if="editContext" align="block-start">
+        <Item variant="muted" size="xs" class="w-full">
+          <ItemMedia variant="icon">
+            <IconPencil />
+          </ItemMedia>
+          <ItemContent>
+            <ItemTitle>{{ t("ai.editingMessage") }}</ItemTitle>
+            <ItemDescription>{{ t("ai.editingMessageHint") }}</ItemDescription>
+          </ItemContent>
+          <ItemActions>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger as-child>
+                  <InputGroupButton
+                    size="icon-xs"
+                    :disabled="isSending"
+                    @click="cancelEdit"
+                  >
+                    <IconX />
+                  </InputGroupButton>
+                </TooltipTrigger>
+                <TooltipContent>{{ t("actions.cancel") }}</TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          </ItemActions>
+        </Item>
+      </InputGroupAddon>
       <InputGroupAddon v-if="replyContext" align="block-start">
         <Item variant="muted" size="xs" class="w-full">
           <ItemMedia variant="icon">

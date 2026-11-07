@@ -255,8 +255,14 @@ export interface BotChatContext {
       newSessionId?: string
       pendingAttachments?: BotSessionPendingAttachment[]
       pendingDriveImports?: string[]
+      editFromUserIndex?: number
     }
-  ) => Promise<void>
+  ) => Promise<boolean>
+  /**
+   * Edit-and-resend: replace the `userIndex`-th user bubble with `text` and
+   * answer it afresh. Everything after it is dropped server-side.
+   */
+  editAndResend: (userIndex: number, text: string) => Promise<void>
   /**
    * Resume a chat that's paused on an interrupt. The `messageId` + `ref`
    * locate the tool segment (so the UI can mutate it in place); `answer` is
@@ -364,6 +370,17 @@ export interface BotChatContext {
    * event bus.
    */
   replyContext: Ref<string | null>
+  /**
+   * The user bubble being edited, or `null`. Set by the in-chat "Edit"
+   * action (`AiChat`); the composer prefills `text`, shows an "Editing"
+   * banner, and sends through `editAndResend`. Same lifecycle as
+   * `replyContext`.
+   */
+  editContext: Ref<{
+    messageId: string
+    userIndex: number
+    text: string
+  } | null>
 }
 
 export const BotChatContextKey: InjectionKey<BotChatContext> =
@@ -452,6 +469,7 @@ export function useBotChat(options?: BotChatOptions): BotChatContext {
   // the shared BotChatContext. Persistent (unlike a one-shot prefill), so
   // it's cleared on session switches below.
   const replyContext = ref<string | null>(null)
+  const editContext = ref<BotChatContext["editContext"]["value"]>(null)
 
   const canAttachMoreNodes = computed(
     () => attachedNodes.value.length < BOT_CHAT_MAX_ATTACHED_NODES
@@ -1021,6 +1039,7 @@ export function useBotChat(options?: BotChatOptions): BotChatContext {
     // A pending reply is scoped to the abandoned draft — drop it so the
     // banner doesn't linger into an unrelated new chat.
     replyContext.value = null
+    editContext.value = null
   }
 
   /**
@@ -1185,23 +1204,24 @@ export function useBotChat(options?: BotChatOptions): BotChatContext {
       newSessionId?: string
       pendingAttachments?: BotSessionPendingAttachment[]
       pendingDriveImports?: string[]
+      editFromUserIndex?: number
     }
-  ) => {
+  ): Promise<boolean> => {
     const trimmed = text.trim()
-    if (!trimmed) return
+    if (!trimmed) return false
 
     const teamId = currentTeamId.value
     const workspaceId = currentWorkspaceId.value
     if (!teamId || !workspaceId) {
       toast.error("Select a team and workspace before chatting.")
-      return
+      return false
     }
-    if (isSending.value) return
+    if (isSending.value) return false
     // Silent guard — the composer is `:disabled` for non-editors, so
     // reaching this branch means a programmatic call slipped through.
     // No toast: a user who legitimately shouldn't be sending shouldn't
     // see a "this is read-only" error narrated at them.
-    if (!canEditActive.value) return
+    if (!canEditActive.value) return false
 
     // Tag the optimistic user bubble with the current user's uid so the
     // avatar renders correctly from frame one. The server will write the
@@ -1275,6 +1295,9 @@ export function useBotChat(options?: BotChatOptions): BotChatContext {
             ? { pendingDriveImports: opts.pendingDriveImports }
             : {}),
           ...(pinnedNode ? { pinnedNode } : {}),
+          ...(opts?.editFromUserIndex !== undefined
+            ? { editFromUserIndex: opts.editFromUserIndex }
+            : {}),
           // Always send `activeAgentId` (even when null) so the server
           // knows the user's intent for this turn. Omitting the field
           // is reserved for "use whatever the session already had" —
@@ -1315,6 +1338,7 @@ export function useBotChat(options?: BotChatOptions): BotChatContext {
       // call should surface as a send error.
       if (isNewSession && options?.autoPin)
         void pinSession(final.sessionId, true)
+      return true
     } catch (error) {
       // A user-driven cancel (session switch / unmount) lands here as an
       // AbortError — silent rollback, no toast.
@@ -1327,12 +1351,33 @@ export function useBotChat(options?: BotChatOptions): BotChatContext {
       // pushed. Using splice (not two pops) so we only mutate the slice we
       // own, even if a snapshot reconciliation snuck a write in between.
       messages.value.splice(agentIndex - 1, 2)
+      return false
     } finally {
       // Only clear the controller if it's still ours — a later send may
       // have already swapped a new one in (e.g., abort + immediate retry).
       if (inflightController === controller) inflightController = null
       isSending.value = false
     }
+  }
+
+  // Edit-and-resend. Drop the edited bubble and everything after it locally,
+  // then send the new text with `editFromUserIndex` — the server cuts its
+  // thread at the same bubble (counted the same way: user bubbles only) and
+  // answers afresh. On failure, resync from the session doc: the server may
+  // or may not have cut before the turn failed, and the doc says which.
+  const editAndResend = async (userIndex: number, text: string) => {
+    if (isSending.value || !sessionId.value || !canEditActive.value) return
+    let seen = -1
+    const at = messages.value.findIndex(
+      (m) => m.role === "user" && ++seen === userIndex
+    )
+    if (at < 0) return
+    const previous = messages.value
+    messages.value = previous.slice(0, at)
+    const ok = await sendMessage(text, { editFromUserIndex: userIndex })
+    if (ok) return
+    const server = activeSessionQuery.data.value?.messages
+    messages.value = server ? server.map(createMessage) : previous
   }
 
   // Resume a paused chat by submitting the user's answer to an interrupt.
@@ -1532,6 +1577,7 @@ export function useBotChat(options?: BotChatOptions): BotChatContext {
       pendingPinnedNode.value = null
       // A reply staged against the previous chat doesn't belong here.
       replyContext.value = null
+      editContext.value = null
     } catch (error) {
       console.error("[useBotChat] loadBotSession failed:", error)
       // If the session is gone (deleted from another tab, the user
@@ -1677,6 +1723,7 @@ export function useBotChat(options?: BotChatOptions): BotChatContext {
     canChangeVisibilityActive,
     canManageActive,
     sendMessage,
+    editAndResend,
     respondToInterrupt,
     selectSession,
     startNewSession,
@@ -1699,5 +1746,6 @@ export function useBotChat(options?: BotChatOptions): BotChatContext {
     startNewPinnedNodeSession,
     pendingPinnedNode,
     replyContext,
+    editContext,
   }
 }

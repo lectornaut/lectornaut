@@ -31,11 +31,19 @@
  * conversation messages.
  */
 
+import { fallback, retry } from "@genkit-ai/middleware"
 import * as logger from "firebase-functions/logger"
 import { HttpsError } from "firebase-functions/v2/https"
-import type { ModelMiddleware } from "genkit/model"
+import { GenkitError } from "genkit"
+import type {
+  ModelMiddleware,
+  ModelMiddlewareArgument,
+  ModelMiddlewareWithOptions,
+} from "genkit/model"
 import { billableUsage } from "./botTurn.js"
 import { generateId } from "./utilities.js"
+
+type GenerateMiddlewareRef = ReturnType<typeof retry>
 
 /**
  * Bytes-to-tokens approximation used by `tokenBudgetMiddleware`. Lower
@@ -217,32 +225,100 @@ export function meteringMiddleware(
 }
 
 /**
+ * Mid-stream failure guard (innermost). `retry` / `fallback` re-run the model
+ * call, but chunks an attempt already streamed have reached the client — a
+ * re-run would append a second copy. A failure after the first chunk is
+ * re-thrown as status `UNKNOWN`, which neither retries nor falls back.
+ */
+export const streamedFailureGuard: ModelMiddlewareWithOptions = async (
+  req,
+  options,
+  next
+) => {
+  const onChunk = options?.onChunk
+  let streamed = false
+  try {
+    return await next(
+      req,
+      onChunk
+        ? {
+            ...options,
+            onChunk: (chunk) => {
+              streamed = true
+              onChunk(chunk)
+            },
+          }
+        : options
+    )
+  } catch (e) {
+    if (!streamed) throw e
+    throw new GenkitError({
+      status: "UNKNOWN",
+      // `.message` of a GenkitError already carries its "STATUS: " prefix.
+      message: `Model failed mid-stream (${e instanceof Error ? e.message : String(e)})`,
+      detail: e,
+    })
+  }
+}
+
+/**
+ * Transient-error retry, short enough for the 90s turn deadline.
+ * `RESOURCE_EXHAUSTED` (429) is left to `fallback`: retry honors the
+ * provider's `retry-after` uncapped, which can sleep through the deadline.
+ * ponytail: retry also re-tries non-GenkitError throws (Genkit's rule), so a
+ * provider 400 surfaced as a plain Error costs ~2 short retries before failing.
+ */
+const transientRetry = () =>
+  retry({
+    maxRetries: 2,
+    initialDelayMs: 500,
+    maxDelayMs: 4_000,
+    statuses: ["UNAVAILABLE", "DEADLINE_EXCEEDED", "ABORTED", "INTERNAL"],
+  })
+
+/**
  * The stack we apply to every AI call in this package. Order matters:
- * Genkit invokes the array left-to-right as outer-to-inner, so the
- * logging layer wraps the budget check, followed by optional metering,
- * then the provider. Message content is not rewritten.
+ * Genkit invokes the array left-to-right as outer-to-inner:
  *
- * Per-call overrides (e.g. a stricter budget for a constrained
- * surface) can append extra entries — Genkit composes them in
- * declared order.
+ *   logging → token budget → metering → fallback → retry → guard → provider
+ *
+ * - The budget gate sits OUTSIDE retry so a deterministic over-budget
+ *   rejection is never retried.
+ * - Metering sits OUTSIDE fallback because `fallback` calls the fallback model
+ *   directly (skipping every layer inside it), so only an outer layer sees its
+ *   usage. ponytail: a fallback-served call is metered at the PRIMARY model's
+ *   rates (the meter is bound to the turn's model); tokens still count toward
+ *   the cap. Bind the meter per model if fallback traffic ever matters.
+ * - Retry is inside fallback: a blip retries the primary first; a persistent
+ *   failure (or 429) then switches provider.
+ *
+ * Message content is not rewritten. Per-call overrides can append entries.
  */
 export function aiMiddlewares(
   opts: {
     maxInputTokens?: number
     /**
-     * When provided, a metering layer is appended (innermost, closest to the
-     * model) so it observes the raw response usage. Used by chat turns to feed
-     * per-team token accounting; omit for surfaces that shouldn't meter.
+     * When provided, a metering layer joins the stack so it observes response
+     * usage. Used by chat turns to feed per-team token accounting; omit for
+     * surfaces that shouldn't meter.
      */
     onUsage?: (usage: TurnUsage) => void
+    /**
+     * Model to switch to when the primary fails with a fallback-able status
+     * (see `resolveFallbackModel`). `config` replaces the request's config —
+     * provider-specific thinking/sampling shapes don't transfer.
+     */
+    fallback?: { name: string; config?: unknown } | null
   } = {}
-): ModelMiddleware[] {
-  const stack: ModelMiddleware[] = [
+): (ModelMiddlewareArgument | GenerateMiddlewareRef)[] {
+  return [
     loggingMiddleware,
     tokenBudgetMiddleware(opts.maxInputTokens ?? DEFAULT_MAX_INPUT_TOKENS),
+    ...(opts.onUsage ? [meteringMiddleware(opts.onUsage)] : []),
+    ...(opts.fallback
+      ? [fallback({ models: [opts.fallback], isolateConfig: true })]
+      : []),
+    transientRetry(),
+    streamedFailureGuard,
   ]
-  if (opts.onUsage) {
-    stack.push(meteringMiddleware(opts.onUsage))
-  }
-  return stack
 }

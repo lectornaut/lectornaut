@@ -15,6 +15,23 @@
     "./domain": {
       "types": "./domain.ts",
       "default": "./domain.ts"
+    },
+    "./markdownToTiptap": {
+      "types": "./markdownToTiptap.ts",
+      "default": "./markdownToTiptap.ts"
     }
+  },
+  "dependencies": {
+    "@tiptap/core": "^3.33.0",
+    "@tiptap/extension-details": "^3.33.0",
+    "@tiptap/extension-emoji": "^3.33.0",
+    "@tiptap/extension-highlight": "^3.33.0",
+    "@tiptap/extension-image": "^3.33.0",
+    "@tiptap/extension-list": "^3.33.0",
+    "@tiptap/extension-mathematics": "^3.33.0",
+    "@tiptap/extension-table": "^3.33.0",
+    "@tiptap/markdown": "^3.33.0",
+    "@tiptap/pm": "^3.33.0",
+    "@tiptap/starter-kit": "^3.33.0"
   }
 }

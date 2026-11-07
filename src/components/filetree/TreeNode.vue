@@ -124,9 +124,9 @@ const handleToggle = (open: boolean) => {
   }
 }
 
-const handleRowClick = () => {
+const handleRowClick = (event: MouseEvent) => {
   if (!node.value) return
-  selection?.onRowClick(node.value)
+  selection?.onRowClick(node.value, event)
 }
 
 const handleDragStart = (event: DragEvent) => {

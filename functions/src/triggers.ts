@@ -682,7 +682,14 @@ export const onUserSignedIn = beforeUserSignedIn(
     if (!domainSnap.exists) return
 
     const domainData = domainSnap.data()
-    if (!domainData?.teamId || !domainData?.providerId) return
+    // Only DNS-verified claims (verifySsoDomain) may enforce or auto-provision.
+    if (
+      !domainData?.teamId ||
+      !domainData?.providerId ||
+      domainData.verified !== true
+    ) {
+      return
+    }
 
     const teamId = domainData.teamId as string
     const expectedProviderId = domainData.providerId as string

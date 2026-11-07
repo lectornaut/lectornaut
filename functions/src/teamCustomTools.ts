@@ -21,6 +21,7 @@ import {
   isAiModelProviderConfigured,
   resolveModel,
 } from "./genkitClient.js"
+import { BlockedDestinationError, safeFetch } from "./safeFetch.js"
 import type { WorkspaceNodeScope } from "./types.js"
 
 // ─── Types ──────────────────────────────────────────────────────────────────
@@ -115,7 +116,8 @@ function fieldsToZodObject(
  */
 function interpolateTemplate(
   template: string,
-  input: Record<string, unknown>
+  input: Record<string, unknown>,
+  encode: (s: string) => string = (s) => s
 ): string {
   return template.replace(
     /\{\{\s*([a-zA-Z_][a-zA-Z0-9_]*)\s*\}\}/g,
@@ -124,12 +126,12 @@ function interpolateTemplate(
       if (value === undefined || value === null) return ""
       if (typeof value === "object") {
         try {
-          return JSON.stringify(value)
+          return encode(JSON.stringify(value))
         } catch {
           return ""
         }
       }
-      return String(value)
+      return encode(String(value))
     }
   )
 }
@@ -144,28 +146,27 @@ async function executeHttpWebhook(
   for (const h of action.headers) {
     headers[h.name] = interpolateTemplate(h.value, input)
   }
-  const init: RequestInit & { signal?: AbortSignal } = {
-    method: action.method,
-    headers,
-  }
+  let body: string | undefined
   if (action.method !== "GET") {
-    init.body = interpolateTemplate(action.bodyTemplate, input)
+    body = interpolateTemplate(action.bodyTemplate, input)
     if (!headers["Content-Type"] && !headers["content-type"]) {
       headers["Content-Type"] = "application/json"
     }
   }
   const controller = new AbortController()
   const timer = setTimeout(() => controller.abort(), action.timeoutMs)
-  init.signal = controller.signal
   try {
-    const url = interpolateTemplate(action.url, input)
-    const res = await fetch(url, init)
-    const buf = await res.arrayBuffer()
-    const limited =
-      buf.byteLength > action.maxResponseBytes
-        ? buf.slice(0, action.maxResponseBytes)
-        : buf
-    const text = new TextDecoder().decode(limited)
+    // Model-supplied values are URL-encoded so they can only ever fill a
+    // path/query slot — never change the scheme, host or port.
+    const url = interpolateTemplate(action.url, input, encodeURIComponent)
+    const res = await safeFetch(url, {
+      method: action.method,
+      headers,
+      body,
+      signal: controller.signal,
+      maxBytes: action.maxResponseBytes,
+    })
+    const text = new TextDecoder().decode(res.body)
     // Best-effort JSON parse — if the response is plain text the model
     // gets the string verbatim, which is usually what it wants for
     // text-returning APIs (status pages, weather, etc.).
@@ -174,17 +175,20 @@ async function executeHttpWebhook(
         status: res.status,
         ok: res.ok,
         body: JSON.parse(text),
-        truncated: buf.byteLength > action.maxResponseBytes,
+        truncated: res.truncated,
       }
     } catch {
       return {
         status: res.status,
         ok: res.ok,
         body: text,
-        truncated: buf.byteLength > action.maxResponseBytes,
+        truncated: res.truncated,
       }
     }
   } catch (err) {
+    if (err instanceof BlockedDestinationError) {
+      throw new HttpsError("permission-denied", err.message)
+    }
     if (err instanceof Error && err.name === "AbortError") {
       throw new HttpsError(
         "deadline-exceeded",

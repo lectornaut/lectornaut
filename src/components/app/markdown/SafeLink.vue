@@ -12,9 +12,10 @@
  *                bare relative) → `<RouterLink>`.
  *   • external — cross-origin http(s) (incl. protocol-relative `//host`)
  *                → new tab with `rel="noopener noreferrer"`.
- *   • plain    — in-page anchors (`#section`), non-http(s) schemes
- *                (`mailto:`, `tel:`, …), empty, or unparseable → native
- *                `<a>` with no `target`. This is what makes `#section`
+ *   • plain    — in-page anchors (`#section`), `mailto:`/`tel:`, or
+ *                empty → native `<a>` with no `target`.
+ *   • text     — every other scheme (`javascript:`, `data:`, `file:`, …)
+ *                or an unparseable href → rendered as text, no link. This is what makes `#section`
  *                actually scroll (a `<RouterLink to="#section">` would
  *                treat the hash as a route and not scroll) and lets
  *                `mailto:`/`tel:` open the OS handler without a blank tab.
@@ -29,7 +30,12 @@ const props = defineProps<LinkNodeProps>()
 
 const href = computed(() => props.node.href ?? "")
 
-const linkMode = computed<"router" | "external" | "plain">(() => {
+// Schemes a plain <a> may carry. Anything else (javascript:, data:,
+// vbscript:, file:, …) renders as text — raw-HTML anchors in chat reach
+// here with their href unsanitized, so this is the only scheme gate.
+const PLAIN_SCHEMES = new Set(["mailto:", "tel:"])
+
+const linkMode = computed<"router" | "external" | "plain" | "text">(() => {
   const h = href.value
   // In-page anchors and empty hrefs: native <a> so the browser does its
   // built-in scroll-to-id (RouterLink would treat "#x" as a route).
@@ -38,12 +44,15 @@ const linkMode = computed<"router" | "external" | "plain">(() => {
   // relative "//host" URLs, which are cross-origin.
   if (h.startsWith("/") && !h.startsWith("//")) return "router"
   try {
+    // URL parsing normalizes case, whitespace and control chars the same
+    // way the browser does, so " JaVa\tScRiPt:" is caught as javascript:.
     const url = new URL(h, window.location.origin)
-    // Non-http(s) schemes (mailto:, tel:, …) go to the OS via a plain <a>.
-    if (url.protocol !== "http:" && url.protocol !== "https:") return "plain"
-    return url.origin === window.location.origin ? "router" : "external"
+    if (url.protocol === "http:" || url.protocol === "https:") {
+      return url.origin === window.location.origin ? "router" : "external"
+    }
+    return PLAIN_SCHEMES.has(url.protocol) ? "plain" : "text"
   } catch {
-    return "plain"
+    return "text"
   }
 })
 
@@ -69,6 +78,9 @@ const title = computed(() => props.node.title || props.node.href)
   >
     <slot>{{ node.text }}</slot>
   </a>
+  <span v-else-if="linkMode === 'text'" :title="title" class="break-all">
+    <slot>{{ node.text }}</slot>
+  </span>
   <a
     v-else
     :href="href"

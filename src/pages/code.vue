@@ -95,6 +95,8 @@ useHead(() => ({
           </SidebarGroup>
         </ScrollContainer>
       </SidebarContent>
+      <!-- FileTree teleports its "N selected" bulk menu here. -->
+      <SidebarFooter id="file-tree-footer" class="empty:hidden" />
     </Sidebar>
   </SidebarSlot>
   <div class="flex grow flex-col overflow-auto overscroll-none scroll-smooth">

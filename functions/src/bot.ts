@@ -31,13 +31,17 @@
  */
 
 import { cacheControl } from "@genkit-ai/anthropic"
+import { agents } from "@genkit-ai/middleware"
 import { getConnectionResourceProvider } from "@lectornaut/shared/connectionResources"
 import { FieldValue, Timestamp } from "firebase-admin/firestore"
 import { onCallGenkit } from "firebase-functions/https"
 import * as logger from "firebase-functions/logger"
 import { HttpsError, type CallableRequest } from "firebase-functions/v2/https"
-import { type MessageData } from "genkit"
+import { GenkitError, type MessageData } from "genkit"
 import {
+  CommittedTurnError,
+  GenerationAbortedError,
+  GenerationResponseError,
   z,
   type GenerateOptions,
   type Part,
@@ -59,6 +63,7 @@ import {
   loadTeamAgentConfig,
   PREVIEW_MAX_LENGTH,
   resolveEffectiveModel,
+  resolveFallbackModel,
   TITLE_MAX_LENGTH,
   type BotAgentModel,
   type ChatToolName,
@@ -99,8 +104,11 @@ import {
 } from "./botRag.js"
 import { summarizeNodeTool } from "./botSummarize.js"
 import {
+  abortedTurnError,
+  appendTurnError,
   buildTransferRoster,
   buildTurnConfig,
+  committedToolRounds,
   deliveryToAgentInput,
   getMissingToolName,
   isToolInputValidationError,
@@ -129,6 +137,7 @@ import {
   BOT_CHAT_MESSAGE_STATUSES,
   BOT_TOOL_PERMISSION_MODES,
   CONNECTION_WRITE_TOOL_NAMES,
+  delegateToolName,
   GITHUB_TOOL_KEY,
   GOOGLE_CALENDAR_TOOL_KEY,
   GOOGLE_DRIVE_TOOL_KEY,
@@ -413,6 +422,27 @@ function createThinkingFolder(emit: (text: string) => void) {
  * so a single user prompt that triggers two tool calls renders as one
  * bubble, not two. A new user message closes the open agent.
  */
+/**
+ * The text a thread `user` message shows as its chat bubble. Flagged parts
+ * carry inlined attachment BODIES (model-facing context); the bubble shows only
+ * the user's own text plus the short `[Uploaded file …]` labels. Media parts
+ * have no `text`, so they drop out of the same map. A message whose bubble text
+ * is blank renders no bubble — `truncateSessionAtUserBubble` counts bubbles the
+ * same way.
+ */
+function userBubbleText(content: unknown): string {
+  if (typeof content === "string") return content
+  if (!Array.isArray(content)) return ""
+  return content
+    .map((part) =>
+      typeof part?.text === "string" &&
+      !part.metadata?.[ATTACHMENT_CONTENT_PART_FLAG]
+        ? part.text
+        : ""
+    )
+    .join("")
+}
+
 export function extractMessagesFromSessionData(
   data: StoredSessionBlob | undefined
 ): ChatMessage[] {
@@ -459,23 +489,7 @@ export function extractMessagesFromSessionData(
 
     if (role === "user") {
       closeAgent()
-      let text = ""
-      if (typeof content === "string") {
-        text = content
-      } else if (Array.isArray(content)) {
-        // Flagged parts carry inlined attachment BODIES (model-facing
-        // context); the bubble shows only the user's own text plus the
-        // short `[Uploaded file …]` labels. Media parts have no `text`,
-        // so they drop out of the same map.
-        text = content
-          .map((part) =>
-            typeof part?.text === "string" &&
-            !part.metadata?.[ATTACHMENT_CONTENT_PART_FLAG]
-              ? part.text
-              : ""
-          )
-          .join("")
-      }
+      const text = userBubbleText(content)
       if (text.trim()) {
         // User messages are flat strings on the wire — no segments field.
         messages.push({ role: "user", content: text })
@@ -724,6 +738,14 @@ interface TurnRuntime {
   gen: GenerateOptions
   persist: SessionPersistInfo
   abort?: AbortSignal
+  /** This turn's inputs, re-run per target by delegated sub-agents. */
+  delegate?: Parameters<typeof prepareChatTurn>[0]
+  /**
+   * Set by the handler when a failed turn committed its complete tool rounds
+   * (a `failed`/`aborted` snapshot), so `persistTurnError` stacks the error
+   * reply on them instead of re-adding the user message.
+   */
+  committedFailure?: boolean
 }
 const turnRuntime = new AsyncLocalStorage<TurnRuntime>()
 
@@ -741,8 +763,16 @@ const turnRuntime = new AsyncLocalStorage<TurnRuntime>()
  *
  * Snapshot model: ONE snapshot per session with `snapshotId === sessionId`
  * (the doc id) and last-write-wins — the single-doc semantics the bot already
- * relied on. Turns are serialized by `acquireSessionTurnLock`, so the
- * read→mutate→write needs no extra transaction.
+ * relied on. Turns are serialized by `acquireSessionTurnLock`; the
+ * read→mutate→write still runs in a transaction, as the session-store
+ * contract requires (`saveSnapshot()` must be atomic), so a late write from
+ * an unwinding turn can't interleave with another save.
+ *
+ * Status: the snapshot `status` Genkit passes (`completed` | `failed` |
+ * `aborted`) persists as `lastTurnStatus` and reads back from `getSnapshot`.
+ * A failed turn that committed tool rounds writes `failed`/`aborted`; one
+ * that committed nothing writes nothing (no snapshot chain — the doc is also
+ * the app's chat record).
  */
 class FirestoreBotSessionStore implements SessionStore {
   private docRef(p: SessionPersistInfo) {
@@ -763,9 +793,11 @@ class FirestoreBotSessionStore implements SessionStore {
       // Required by the type but never read back in this single-snapshot store
       // (resolveSession checks only `status` + `state.messages`).
       createdAt: new Date().toISOString(),
-      // Only `completed` snapshots are resumable; ours always are (a failed
-      // turn never reaches the write).
-      status: "completed",
+      // `completed`, `failed` and `aborted` are all resume points; legacy docs
+      // (no field) were only ever written by completed turns.
+      status:
+        (doc?.lastTurnStatus as SessionSnapshot["status"] | undefined) ??
+        "completed",
       state: {
         sessionId: p.sessionId,
         messages: blob?.threads?.[MAIN_THREAD] ?? [],
@@ -791,34 +823,56 @@ class FirestoreBotSessionStore implements SessionStore {
     mutator: SnapshotMutator,
     _options?: { context?: unknown }
   ): Promise<string | null> {
-    const p = turnRuntime.getStore()?.persist
+    const rt = turnRuntime.getStore()
+    const p = rt?.persist
     if (!p) return null
     const ref = this.docRef(p)
-    const snap = await ref.get()
-    const isNew = !snap.exists
-    const priorDoc = snap.data()
+    return db.runTransaction(async (tx) => {
+      const snap = await tx.get(ref)
+      const update = this.buildSave(p, snap.exists, snap.data(), mutator, rt)
+      if (!update) return null
+      tx.set(ref, update, { merge: true })
+      return p.sessionId
+    })
+  }
+
+  /**
+   * The doc update for one save, or null to skip it. Pure apart from the
+   * mutator (itself side-effect free), so a transaction retry can re-run it.
+   */
+  private buildSave(
+    p: SessionPersistInfo,
+    exists: boolean,
+    priorDoc: Record<string, unknown> | undefined,
+    mutator: SnapshotMutator,
+    rt: TurnRuntime | undefined
+  ): Record<string, unknown> | null {
+    const isNew = !exists
+    const prior = isNew ? undefined : this.snapshotFromDoc(p, priorDoc)
+    // ponytail: one row per session, so `current` is always the PREVIOUS
+    // turn's row, never a concurrent abort of this one. Genkit's abort guard
+    // (`abortAwareMutator`) skips writes over an `aborted` row, which would
+    // freeze the session after any aborted turn — show it as `failed` (also a
+    // settled resume point). Add real per-turn rows if we ever detach runs.
     const result = mutator(
-      isNew ? undefined : this.snapshotFromDoc(p, priorDoc)
+      prior?.status === "aborted" ? { ...prior, status: "failed" } : prior
     )
-    // The framework's abort-guard mutator returns null when the snapshot was
-    // concurrently aborted (inert for this store — concurrency is actually
-    // guarded by `acquireSessionTurnLock`); skip the write either way.
     if (result === null) return null
+
+    // A turn the deadline already gave up on must not land a late `completed`
+    // write (the provider ignored the abort): the user saw the fallback, and
+    // `persistTurnError` owns this turn's record.
+    if (result.status === "completed" && rt?.abort?.aborted) return null
 
     // The framework hands us the full post-turn thread as `state.messages`.
     const thread = (result.state?.messages ?? []) as MessageData[]
 
-    // Don't persist a turn that produced no assistant reply. The handler runs
-    // `setMessages` only AFTER `generate` resolves, so a failed/aborted turn
-    // (recoverable tool error, or a deadline that aborted the model) leaves the
-    // thread ending on the framework-auto-added USER message. The framework
-    // still fires `maybeSnapshot` (per-turn `failed` AND a post-invocation
-    // `completed`), which — without this guard — would persist `[…prior, user]`
-    // with no agent bubble (read back as `completed`, so re-opening shows an
-    // unanswered message) and, on a timed-out turn, could land AFTER the lock
-    // released and clobber a concurrent turn. Skipping here keeps the documented
-    // invariant true: a failed turn never reaches the write. A real reply (or an
-    // interrupt) always ends the thread on a `model` message.
+    // The no-commit case: a turn that failed before completing any tool round
+    // leaves the thread ending on the framework-auto-added USER message (the
+    // handler only `setMessages` on success or on a committed failure). Don't
+    // persist `[…prior, user]` with no agent bubble — `persistTurnError` writes
+    // the turn instead. A committed failure ends on a `tool` message, a real
+    // reply (or an interrupt) on a `model` message, so neither trips this.
     if (thread.length > 0 && thread[thread.length - 1]?.role === "user") {
       return null
     }
@@ -952,8 +1006,9 @@ class FirestoreBotSessionStore implements SessionStore {
       }
     }
 
-    await ref.set(update, { merge: true })
-    return p.sessionId
+    // The snapshot status Genkit passed (read back by `getSnapshot`).
+    update.lastTurnStatus = result.status ?? "completed"
+    return update
   }
 }
 
@@ -990,11 +1045,16 @@ const botChatAgent = ai.defineCustomAgent(
       // would otherwise produce a SECOND, non-leading system message the
       // Anthropic adapter can reject — and the heal only lands on the next
       // successful write. Filtering here closes that window on read too.
+      const history = sess.getMessages().filter((m) => m.role !== "system")
       const gen = ai.generateStream({
         ...rt.gen,
-        messages: sess.getMessages().filter((m) => m.role !== "system"),
+        messages: history,
         abortSignal: signal,
         ...(input.resume ? { resume: input.resume } : {}),
+        // A failure once the request resolved comes back as a partial
+        // response ending at a turn seam instead of a throw — the same path
+        // Genkit's prompt-backed agent uses to commit failed turns.
+        throwOnError: false,
       })
       // Forward raw model chunks; the client stream pump reads
       // `chunk.raw.modelChunk.content` off the wrapped AgentChunk.
@@ -1002,6 +1062,30 @@ const botChatAgent = ai.defineCustomAgent(
         sendChunk({ modelChunk: chunk })
       }
       const res = await gen.response
+      if (res.error && res.finishReason !== "interrupted" && !res.isValid()) {
+        // Rebuild the error the throwing path would have raised (Genkit's own
+        // `generationError`), so the AgentError keeps the status/message the
+        // `streamChatToClientInner` classifiers match on.
+        const Failure =
+          res.finishReason === "aborted"
+            ? GenerationAbortedError
+            : GenerationResponseError
+        const failure = new Failure(
+          res,
+          res.error.message,
+          res.error.status as ConstructorParameters<typeof Failure>[2]
+        )
+        // Commit the complete tool rounds so their side effects stay in the
+        // thread (Genkit writes a `failed`/`aborted` snapshot). Prompt turns
+        // only: `continue`/`resume` deliveries own their thread shape (see
+        // `persistTurnError`). No complete round → plain throw, the turn rolls
+        // back and the previous snapshot stays the resume point.
+        const rounds = input.message ? committedToolRounds(res.messages) : []
+        if (!rounds.length) throw failure
+        rt.committedFailure = true
+        sess.setMessages([...history, ...rounds])
+        throw new CommittedTurnError(failure)
+      }
       // `res.messages` is the full post-turn thread — but Genkit PREPENDS the
       // system prompt (from `gen.system`) as `res.messages[0]`. Strip it before
       // persisting: keeping it would write a `system` message into the thread
@@ -1020,6 +1104,170 @@ const botChatAgent = ai.defineCustomAgent(
     return { message: msgs.at(-1), finishReason: sess.lastTurnFinishReason }
   }
 )
+
+// ===========================================================================
+// Sub-agent delegation — "ask that agent, then come back"
+// ===========================================================================
+//
+// Genkit's `agents()` middleware (`@genkit-ai/middleware`) gives the active
+// agent one `ask_<agentId>` tool per transfer-roster agent. Calling it runs the
+// target as a sub-agent and returns its answer as the tool result; the active
+// agent keeps the conversation (vs `transferToAgent`, which hands it over).
+//
+// The middleware resolves sub-agents from the registry by name, so each roster
+// agent gets a STORE-LESS custom agent registered on first use (team agents are
+// Firestore docs, not module constants). Store-less = client-managed: the
+// middleware forwards recent history as state, nothing is persisted, and no
+// stray botSessions doc is created.
+//
+// The handler builds the target persona exactly like the transfer second turn
+// does — `prepareChatTurn` with the parent turn's inputs (from the ambient
+// `turnRuntime.delegate`) and the target's agent id — so permissions (user ∩
+// agent), tool toggles, prompt, metering, and audit attribution all match a
+// real turn by that agent. Sub-agents get no transfer/delegation (one hop) and
+// no interrupt tools (there's no user to answer them mid-delegation).
+
+const subAgents = new Set<string>()
+
+/**
+ * Runs a callback in the module-load async context. Genkit refuses to define
+ * actions inside a running action ("Cannot define new actions at runtime" —
+ * every `onCallGenkit` request runs in one), but roster agents are Firestore
+ * docs only known per turn. Registering from the startup context, captured
+ * here before any action runs, passes that guard; the handler still reads the
+ * caller's `turnRuntime` when it is INVOKED.
+ * ponytail: one registration per agent per instance, never removed; fine for
+ * team-sized rosters.
+ */
+const outsideGenkitRuntime = AsyncLocalStorage.snapshot()
+
+function ensureSubAgent(agentId: string): string {
+  const name = delegateToolName(agentId)
+  if (subAgents.has(name)) return name
+  outsideGenkitRuntime(() => defineSubAgent(name, agentId))
+  subAgents.add(name)
+  return name
+}
+
+function defineSubAgent(name: string, agentId: string) {
+  ai.defineCustomAgent({ name }, async (sess, { abortSignal }) => {
+    await sess.run(async () => {
+      const rt = turnRuntime.getStore()
+      if (!rt?.delegate) throw new Error("Sub-agent ran outside a chat turn.")
+      const messages = sess.getMessages().filter((m) => m.role !== "system")
+      const task = [...messages]
+        .reverse()
+        .find((m) => m.role === "user")
+        ?.content.map((p) => p.text ?? "")
+        .join("\n")
+      const { runtime } = await prepareChatTurn({
+        ...rt.delegate,
+        activeAgentId: agentId,
+        message: task,
+        disableTransfer: true,
+        allowInterrupts: false,
+      })
+      const res = await ai.generate({
+        ...runtime.gen,
+        messages,
+        abortSignal: rt.abort
+          ? AbortSignal.any([abortSignal!, rt.abort])
+          : abortSignal,
+      })
+      sess.setMessages(res.messages.filter((m) => m.role !== "system"))
+      return { finishReason: res.finishReason }
+    })
+    return {
+      message: sess.getMessages().at(-1),
+      finishReason: sess.lastTurnFinishReason,
+    }
+  })
+}
+
+/** `agents()` middleware for a turn's roster — one `ask_*` tool per target. */
+function delegationMiddleware(
+  roster: ReadonlyArray<{ id: string; name: string; description?: string }>
+) {
+  return agents({
+    agents: roster.map((r) => ({
+      name: ensureSubAgent(r.id),
+      description:
+        `Ask ${r.name} a self-contained question and get its answer back; ` +
+        "you keep the conversation. Use transferToAgent instead when the " +
+        `user should continue with ${r.name}.` +
+        (r.description ? ` ${r.name}: ${r.description}` : ""),
+    })),
+    toolPrefix: "",
+    historyLength: 6,
+    maxDelegations: 3,
+  })
+}
+
+/**
+ * Cut a session back to just before its Nth user bubble (0-based, counted the
+ * way the chat renders them — see {@link userBubbleText}) for edit-and-resend.
+ * Writes the truncated thread AND the denormalized `messages` in one update:
+ * trimming `messages` keeps the earlier bubbles' stamped authors, and lets the
+ * end-of-turn save stamp the edited bubble with the editor (its author index
+ * is new again). Everything after the cut — replies, tool calls, a paused
+ * question — is dropped; no branch is kept. Returns the cut blob so the caller
+ * builds the turn on it.
+ */
+async function truncateSessionAtUserBubble(
+  teamId: string,
+  workspaceId: string,
+  sessionId: string,
+  data: StoredSessionBlob | undefined,
+  userIndex: number
+): Promise<StoredSessionBlob> {
+  const thread = (data?.threads?.[MAIN_THREAD] ?? []) as MessageData[]
+  let seen = -1
+  const cut = thread.findIndex(
+    (m) =>
+      m?.role === "user" &&
+      userBubbleText(m.content).trim() !== "" &&
+      ++seen === userIndex
+  )
+  if (cut < 0) {
+    throw new HttpsError(
+      "failed-precondition",
+      "That message is no longer in this chat."
+    )
+  }
+  const truncated = thread.slice(0, cut)
+  const ref = db.doc(
+    `teams/${teamId}/workspaces/${workspaceId}/botSessions/${sessionId}`
+  )
+  const prior = (await ref.get()).data()?.messages
+  const blob: StoredSessionBlob = {
+    ...data,
+    threads: { ...data?.threads, [MAIN_THREAD]: truncated },
+  }
+  // Trim the stamped `messages` at the same bubble; if they disagree with the
+  // thread (legacy docs), rebuild from the cut thread instead (authors drop).
+  let users = 0
+  const priorCut = Array.isArray(prior)
+    ? (prior as ChatMessage[]).findIndex(
+        (m) => m?.role === "user" && users++ === userIndex
+      )
+    : -1
+  const messages =
+    priorCut >= 0
+      ? (prior as ChatMessage[]).slice(0, priorCut)
+      : extractMessagesFromSessionData(blob)
+  await ref.set(
+    {
+      data: {
+        threads: { [MAIN_THREAD]: JSON.parse(JSON.stringify(truncated)) },
+      },
+      messages: JSON.parse(JSON.stringify(messages)),
+      messageCount: messages.length,
+      updatedAt: FieldValue.serverTimestamp(),
+    },
+    { merge: true }
+  )
+  return blob
+}
 
 /**
  * Overwrite ONLY the persisted model thread (`data.threads.main`) on a session
@@ -1519,6 +1767,9 @@ async function runTransferTurnIfRequested(opts: {
   // session, there's no doc at all (empty thread). A GROWN thread can also be a
   // failed turn now: `persistTurnError` writes prompt-delivery fallbacks as
   // tagged error turns, so the tail message's marker is checked too. All of
+  // A failed turn that committed tool rounds grows the thread too; its tail is
+  // the marked error reply, or a `tool` message if that best-effort write
+  // failed — so a tail that isn't a `model` message also bails. All of
   // these say "don't run a second turn": there's nothing to hand off, and a
   // missing-doc resume would throw `not-found`. Bail; the agent-id commit in
   // the caller's `finally` (`commitTransferIfRequested`) still routes the next
@@ -1531,6 +1782,7 @@ async function runTransferTurnIfRequested(opts: {
   const serverThreadTail = serverThread[serverThread.length - 1]
   if (
     serverThread.length <= opts.preTurnThreadLength + 1 ||
+    serverThreadTail?.role !== "model" ||
     !!serverThreadTail?.metadata?.[TURN_ERROR_METADATA_KEY]
   ) {
     return opts.firstFinal
@@ -2053,6 +2305,12 @@ const SendBotMessageInput = z.object({
    */
   pendingDriveImports: z.array(z.string().min(1).max(2048)).max(6).default([]),
   /**
+   * Edit-and-resend: 0-based index of the user bubble `message` replaces.
+   * The chat is cut back to just before it, then answered afresh. Requires an
+   * existing session the caller may edit (see `truncateSessionAtUserBubble`).
+   */
+  editFromUserIndex: z.number().int().min(0).optional(),
+  /**
    * Set only when creating a new session, to bind it to a specific
    * workspace node. Enables `findBotSessionByPinnedNode` to resume the
    * same chat the next time the node's inspector tab opens. Ignored on
@@ -2126,7 +2384,12 @@ type SendBotMessageStreamPayload = z.infer<typeof SendBotMessageStream>
  */
 interface ChatStreamResult {
   stream: AsyncIterable<{ raw?: { modelChunk?: { content?: PartLike[] } } }>
-  response: Promise<{ text: string; messages?: MessageLike[] }>
+  response: Promise<{
+    text: string
+    messages?: MessageLike[]
+    finishReason?: string
+    raw?: { error?: { status?: string; message?: string } }
+  }>
 }
 
 /**
@@ -2297,6 +2560,9 @@ const getTurnError = (
  * it into a user-visible fallback chunk. Identity-based detection
  * (`instanceof`) is more robust than string matching.
  */
+/** How long a timed-out turn gets to unwind its abort (see `streamChatToClient`). */
+const TURN_ABORT_SETTLE_MS = 5_000
+
 class TurnTimeoutError extends Error {
   constructor() {
     super(`Turn exceeded deadline of ${TURN_DEADLINE_MS}ms.`)
@@ -2331,18 +2597,20 @@ async function streamChatToClient(
   // On timeout we abort the turn's `AbortController` (which the handler folds
   // into `ai.generateStream` via the ALS, so the provider call is actually
   // cancelled), send a graceful fallback chunk, and return a stub response so
-  // the function returns cleanly. The aborted turn fails fast, leaving its
-  // thread ending on the user message, which the store's save-guard then skips —
-  // so a timed-out turn persists nothing and can't clobber a later turn. Late
-  // chunks from the unwinding stream are ignored by the guarded sender below.
+  // the function returns cleanly. The aborted turn fails fast: it commits its
+  // complete tool rounds (an `aborted` snapshot) or, with none, persists
+  // nothing; the store refuses any late `completed` write once the turn is
+  // aborted, so it can't clobber a later turn. Late chunks from the unwinding
+  // stream are ignored by the guarded sender below.
   let timer: NodeJS.Timeout | undefined
   let timedOut = false
   const guardedSendChunk = (chunk: SendBotMessageStreamPayload) => {
     if (!timedOut) sendChunk(chunk)
   }
+  const inner = streamChatToClientInner(result, guardedSendChunk, options)
   try {
     return await Promise.race([
-      streamChatToClientInner(result, guardedSendChunk, options),
+      inner,
       new Promise<never>((_, reject) => {
         timer = setTimeout(() => {
           timedOut = true
@@ -2361,6 +2629,13 @@ async function streamChatToClient(
       const fallback =
         "The model is taking longer than usual to reply. Please try sending your message again — provider hiccups usually clear within a minute."
       sendChunk({ chunk: fallback, status: "error" })
+      // Let the aborted turn unwind first, so a committed-rounds snapshot
+      // lands BEFORE `persistTurnError` stacks the reply on it. Bounded: a
+      // provider that ignores the abort must not hold the function open.
+      await Promise.race([
+        inner.catch(() => undefined),
+        new Promise((resolve) => setTimeout(resolve, TURN_ABORT_SETTLE_MS)),
+      ])
       // Stub return — same pattern as the tool-iterations fallback
       // below. The client's streaming side already saw the fallback
       // chunk; the unary echo just mirrors it.
@@ -2483,13 +2758,23 @@ async function streamChatToClientInner(
     // Close a reasoning run the model didn't follow with any answer text.
     thinking.close()
     final = await result.response
+    // Genkit's agent REJECTS only `failed` turns; an `aborted` one (the
+    // tool-iteration cap, a cancellation) resolves with the error on `raw`,
+    // committed rounds or not. Re-raise it so the fallbacks below classify it
+    // like every other failed turn.
+    const aborted = abortedTurnError(final)
+    if (aborted) {
+      throw new GenkitError(
+        aborted as ConstructorParameters<typeof GenkitError>[0]
+      )
+    }
   } catch (err) {
     // Close any reasoning fold the abort interrupted mid-run, so the
     // fallback below isn't swallowed into a never-closed <thinking> block.
     thinking.close()
     if (isToolIterationsExceededError(err)) {
       const fallback =
-        "I tried a few searches but couldn't pin down what you're after. Could you give me more specific terms — a document name or a phrase from inside it — or attach the file to this turn so I can read it directly?"
+        'I reached my step limit for one reply before finishing. The steps above are done and saved. Say "continue" and I\'ll pick up from there, or narrow the request if I was going in circles.'
       sendChunk({ chunk: fallback, status: "error" })
       // Stub return — caller only uses `final.text` for the unary reply;
       // the streaming protocol with the client already concluded
@@ -2700,7 +2985,9 @@ async function runChatTurn(
  * next reconcile/reload, leaving the user's message with no reply at all.
  * This writes the turn explicitly instead: the user message (rebuilt from
  * the delivery — the framework's own copy died with the declined snapshot)
- * plus the fallback text as a `model` message tagged with
+ * plus the fallback text. When the turn committed complete tool rounds first
+ * (a `failed`/`aborted` snapshot already holds user + rounds), only the reply
+ * is appended. The reply is a `model` message tagged with
  * {@link TURN_ERROR_METADATA_KEY}, which the extractor projects as a
  * `status: "error"` bubble. Routing through `saveSnapshot` (inside the
  * turn's ALS) buys the full derived-field pipeline for free: projection,
@@ -2722,7 +3009,8 @@ async function persistTurnError(
   kind: TurnErrorKind
 ): Promise<void> {
   if (!("prompt" in delivery)) return
-  const p = turnRuntime.getStore()?.persist
+  const rt = turnRuntime.getStore()
+  const p = rt?.persist
   if (!p) return
   try {
     const userMessage: MessageData = {
@@ -2737,18 +3025,25 @@ async function persistTurnError(
       content: [{ text: fallbackText }],
       metadata: { [TURN_ERROR_METADATA_KEY]: kind },
     }
+    // Deadline and tool cap are caller-set stops (Genkit reports `aborted`);
+    // the rest broke (`failed`).
+    const status =
+      kind === "deadline" || kind === "toolIterations" ? "aborted" : "failed"
     await botSessionStore.saveSnapshot(p.sessionId, (snap) => ({
       snapshotId: p.sessionId,
       sessionId: p.sessionId,
       createdAt: new Date().toISOString(),
-      status: "completed",
+      status,
       state: {
         sessionId: p.sessionId,
-        messages: [
-          ...((snap?.state?.messages ?? []) as MessageData[]),
+        // On a committed failure the user message + complete tool rounds are
+        // already on the doc; otherwise the turn wrote nothing.
+        messages: appendTurnError(
+          (snap?.state?.messages ?? []) as MessageData[],
+          !!rt.committedFailure,
           userMessage,
-          errorReply,
-        ],
+          errorReply
+        ),
       },
     }))
   } catch (err) {
@@ -2908,6 +3203,12 @@ async function prepareChatTurn(opts: {
    * `BotActionContext.connectionsActsAsUid`.
    */
   connectionsActsAsUid?: string
+  /**
+   * Edit-and-resend: the 0-based index of the user bubble being replaced. The
+   * session is cut back to just before it (after the edit-permission gate),
+   * then this turn answers the edited `message` in its place.
+   */
+  editFromUserIndex?: number
 }): Promise<PreparedChatTurn> {
   const {
     principal,
@@ -3016,6 +3317,26 @@ async function prepareChatTurn(opts: {
     // Interrupt-response flow can't operate without a session — the
     // pending interrupt lives inside the SessionData blob.
     throw new HttpsError("invalid-argument", "sessionId is required.")
+  }
+
+  // Edit-and-resend. Runs after the edit gate above (only editors may cut) and
+  // before anything reads the thread — the store's snapshot, prior tool refs,
+  // the transfer base — so the whole turn builds on the cut history. The turn
+  // lock taken in `runAgentTurn` covers this write.
+  if (opts.editFromUserIndex !== undefined) {
+    if (!sessionId || !existingSession) {
+      throw new HttpsError(
+        "invalid-argument",
+        "Only a saved chat can be edited."
+      )
+    }
+    existingSession.data = await truncateSessionAtUserBubble(
+      teamId,
+      workspaceId,
+      sessionId,
+      existingSession.data,
+      opts.editFromUserIndex
+    )
   }
 
   // Pending uploads (brand-new-chat single-send path). The client uploaded
@@ -3269,6 +3590,15 @@ async function prepareChatTurn(opts: {
   // `session.chat({ model })` and the SessionStore so the dispatched
   // model and the persisted `lastModel` field can't diverge.
   const effectiveModel = resolveEffectiveModel(opts.model, agentConfig)
+  // Cross-provider target for the `fallback` layer in `aiMiddlewares` (null =
+  // single-provider team). Its config is rebuilt for ITS provider — thinking
+  // and sampling shapes don't transfer between providers.
+  const fallbackModel = resolveFallbackModel(
+    effectiveModel,
+    agentConfig,
+    isAiModelProviderConfigured
+  )
+  const fallbackName = fallbackModel ? resolveModel(fallbackModel).name : null
 
   // Pinned-node key only flows in when creating a new session — the
   // store writes it once on `isNew` and never again, so dropping it on
@@ -3466,6 +3796,8 @@ async function prepareChatTurn(opts: {
         },
         use: aiMiddlewares({
           onUsage: (u) => meterUsage(effectiveModel, u),
+          // The evaluator runs on default config, so the name alone.
+          fallback: fallbackName ? { name: fallbackName } : null,
         }),
       })
       if (!result.output)
@@ -3632,11 +3964,54 @@ async function prepareChatTurn(opts: {
     // the metering layer records this turn's token usage (including each
     // tool-iteration round trip) into the team's monthly counter. Metering
     // is fire-and-forget — it never blocks or fails the turn.
-    use: aiMiddlewares({
-      onUsage: (u) => meterUsage(effectiveModel, u),
-    }),
+    use: [
+      ...aiMiddlewares({
+        onUsage: (u) => meterUsage(effectiveModel, u),
+        fallback:
+          fallbackModel && fallbackName
+            ? {
+                name: fallbackName,
+                config: buildTurnConfig({
+                  provider: getModelProvider(fallbackModel),
+                  model: fallbackModel,
+                  sampling: {
+                    temperature: agentConfig.temperature,
+                    topP: agentConfig.topP,
+                    topK: agentConfig.topK,
+                    maxOutputTokens: agentConfig.maxOutputTokens,
+                  },
+                  thinkingEnabled: agentConfig.thinking,
+                  effort: opts.effort,
+                }),
+              }
+            : null,
+      }),
+      // "Ask, then come back" alongside transferToAgent's hand-over — same
+      // roster, so `disableTransfer` (second turns, sub-agents, headless)
+      // switches both off.
+      ...(transferRoster.length > 0
+        ? [delegationMiddleware(transferRoster)]
+        : []),
+    ],
   }
-  const runtime: TurnRuntime = { gen, persist }
+  const runtime: TurnRuntime = {
+    gen,
+    persist,
+    // Sub-agents rebuild a persona from these inputs. One-shot fields
+    // (uploads, imports, pin) were consumed by this turn; a brand-new
+    // session has no doc yet, so the delegate builds as an unsaved chat.
+    delegate: {
+      ...opts,
+      sessionId: existingSession ? resolvedSessionId : null,
+      attachmentIds: undefined,
+      pendingAttachments: undefined,
+      pendingDriveImports: undefined,
+      pinnedNode: undefined,
+      requireExistingSession: false,
+      // The cut already happened; re-applying it would cut again.
+      editFromUserIndex: undefined,
+    },
+  }
 
   // Agent chat bound to this session id. The handler's `getMessages()` is
   // hydrated from the store's `getSnapshot` on the first stream pull (empty for
@@ -3664,6 +4039,8 @@ interface RunAgentTurnOptions {
   sessionId: string | null
   /** Already-trimmed, non-empty prompt the principal sends this turn. */
   message: string
+  /** Edit-and-resend — forwarded to {@link prepareChatTurn}. */
+  editFromUserIndex?: number
   mode: BotChatMode
   toolPermissionMode?: BotToolPermissionMode
   model: BotAgentModel | undefined
@@ -3778,6 +4155,7 @@ async function runAgentTurn(
       attachmentIds: opts.attachmentIds,
       pendingAttachments: opts.pendingAttachments,
       pendingDriveImports: opts.pendingDriveImports,
+      editFromUserIndex: opts.editFromUserIndex,
       activeAgentId: opts.activeAgentId,
       model: opts.model,
       effort: opts.effort,
@@ -4067,6 +4445,7 @@ const sendBotMessageFlow = ai.defineFlow(
       attachmentIds: input.attachmentIds,
       pendingAttachments: input.pendingAttachments,
       pendingDriveImports: input.pendingDriveImports,
+      editFromUserIndex: input.editFromUserIndex,
       sendChunk,
       archivedSessionMessage:
         "This chat is archived. Restore it before sending new messages.",

@@ -28,7 +28,7 @@ defineExpose({
        so slot layouts (grow/stretch children) behave identically. -->
   <div
     ref="viewport"
-    class="relative flex size-full min-h-0 min-w-0 grow scrollbar-thin scrollbar-gutter-stable flex-col overflow-auto overscroll-contain [contain:layout_style]"
+    class="relative flex size-full min-h-0 min-w-0 grow scrollbar-thin scrollbar-gutter-stable flex-col overflow-auto overscroll-none contain-[layout_style]"
     :class="{
       'scroll-fade': props.showBlockHints && props.showInlineHints,
       'scroll-fade-y': props.showBlockHints && !props.showInlineHints,

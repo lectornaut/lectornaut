@@ -504,6 +504,7 @@ declare module 'vue' {
     TextEditorCommandPanel: typeof import('./src/components/editors/text/components/TextEditorCommandPanel.vue')['default']
     TextEditorImageDialog: typeof import('./src/components/editors/text/components/TextEditorImageDialog.vue')['default']
     TextEditorLinkDialog: typeof import('./src/components/editors/text/components/TextEditorLinkDialog.vue')['default']
+    TextEditorMathDialog: typeof import('./src/components/editors/text/components/TextEditorMathDialog.vue')['default']
     Toggle: typeof import('./src/components/ui/toggle/Toggle.vue')['default']
     ToggleGroup: typeof import('./src/components/ui/toggle-group/ToggleGroup.vue')['default']
     ToggleGroupItem: typeof import('./src/components/ui/toggle-group/ToggleGroupItem.vue')['default']

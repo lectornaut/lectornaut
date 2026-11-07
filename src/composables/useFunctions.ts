@@ -876,6 +876,8 @@ export interface SendBotMessageRequest {
    * `importDriveSessionAttachment` callable instead.
    */
   pendingDriveImports?: string[]
+  /** Edit-and-resend: 0-based index of the user bubble `message` replaces. */
+  editFromUserIndex?: number
 }
 
 export interface SendBotMessageResponse {
@@ -1758,6 +1760,15 @@ export interface ConfigureSsoResponse {
   providerId: string
 }
 
+export interface VerifySsoDomainRequest {
+  teamId: string
+  domain: string
+}
+
+export interface VerifySsoDomainResponse {
+  verified: boolean
+}
+
 export interface DeleteSsoRequest {
   teamId: string
 }
@@ -1826,6 +1837,11 @@ export const configureSso = createTypedCallable<
   ConfigureSsoRequest,
   ConfigureSsoResponse
 >("configureSso")
+
+export const verifySsoDomain = createTypedCallable<
+  VerifySsoDomainRequest,
+  VerifySsoDomainResponse
+>("verifySsoDomain")
 
 export const deleteSso = createTypedCallable<
   DeleteSsoRequest,

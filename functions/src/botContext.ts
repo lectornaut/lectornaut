@@ -277,7 +277,16 @@ async function fetchNodeContext(
       : "file"
   const name = typeof data.name === "string" ? data.name : ref.nodeId
 
-  const rawContent = typeof data.content === "string" ? data.content : ""
+  // `write` nodes store Tiptap JSON; hand the model the same markdown that
+  // readNode returns and updateNodeContent accepts, so it never edits from
+  // (or gets truncated mid-) a JSON tree.
+  const stored = typeof data.content === "string" ? data.content : ""
+  const rawContent =
+    ref.scope === "write" && stored
+      ? (
+          await import("@lectornaut/shared/markdownToTiptap")
+        ).tiptapJsonToMarkdown(stored)
+      : stored
   let content: string | undefined
   let contentTruncated = false
   if (rawContent.length > 0) {
@@ -360,7 +369,12 @@ function buildContextPromptBlockFromEntries(
     } else if (entry.content) {
       const fence = pickCodeFence(entry.content)
       lines.push(fence, entry.content, fence)
-      if (entry.contentTruncated) lines.push("_(content truncated)_")
+      if (entry.contentTruncated) {
+        lines.push(
+          "_(content truncated — NOT the full file; call `readNode` before " +
+            "any `updateNodeContent`)_"
+        )
+      }
     } else {
       lines.push("_(empty file)_")
     }

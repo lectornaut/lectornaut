@@ -1,6 +1,8 @@
 <script lang="ts" setup>
 import { IconCheck, IconX } from "@/data/icons"
 
+const { t } = useI18n()
+
 export interface ColorOption {
   id: string
   name: string
@@ -36,6 +38,8 @@ const emit = defineEmits<{
         variant="outline"
         size="icon"
         :disabled="disabled"
+        :aria-label="title"
+        :title="title"
         class="data-[state=open]:bg-accent"
       >
         <slot name="trigger" />
@@ -64,7 +68,13 @@ const emit = defineEmits<{
             <IconCheck />
           </span>
         </Button>
-        <Button variant="ghost" size="icon" @click="emit('clear')">
+        <Button
+          variant="ghost"
+          size="icon"
+          :aria-label="t('components.textEditor.clearColor')"
+          :title="t('components.textEditor.clearColor')"
+          @click="emit('clear')"
+        >
           <IconX />
         </Button>
       </div>

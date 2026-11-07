@@ -156,6 +156,8 @@ useHead(() => ({
           </SidebarGroup>
         </ScrollContainer>
       </SidebarContent>
+      <!-- FileTree teleports its "N selected" bulk menu here. -->
+      <SidebarFooter id="file-tree-footer" class="empty:hidden" />
     </Sidebar>
   </SidebarSlot>
   <div class="flex grow flex-col overflow-auto overscroll-none scroll-smooth">
@@ -166,26 +168,36 @@ useHead(() => ({
       open (and risked dropping keystrokes typed into the throwaway local
       instance). Keying on the file id alone remounts only on a real file switch.
     -->
-    <ScrollContainer
+    <div
       v-if="
         teamId && workspaceId && selectedFile && (collabReady || collabError)
       "
+      class="relative flex min-h-0 grow flex-col"
     >
-      <div class="container mx-auto flex max-w-4xl grow flex-col">
-        <TextEditor
-          ref="editorRef"
-          :key="selectedFile.id"
-          v-model="editorContent"
-          :read-only="editorReadOnly"
-          :collaboration-doc="collabDoc"
-          :collaboration-awareness="collabAwareness"
-          :applier-status="collabSession?.isAgentApplier"
-          :upload-image="uploadEditorImage"
-          @baseline="adoptEditorBaseline"
-          @adapter="registerEditorAdapter"
-        />
-      </div>
-    </ScrollContainer>
+      <ScrollContainer>
+        <div class="container mx-auto flex max-w-4xl grow flex-col">
+          <TextEditor
+            ref="editorRef"
+            :key="selectedFile.id"
+            v-model="editorContent"
+            :read-only="editorReadOnly"
+            :collaboration-doc="collabDoc"
+            :collaboration-awareness="collabAwareness"
+            :applier-status="collabSession?.isAgentApplier"
+            :upload-image="uploadEditorImage"
+            toc-target="#write-editor-overlay"
+            @baseline="adoptEditorBaseline"
+            @adapter="registerEditorAdapter"
+          />
+        </div>
+      </ScrollContainer>
+      <!-- Non-scrolling layer over the pane: the editor's TOC rail teleports
+           here so it pins to the pane edge with plain CSS. -->
+      <div
+        id="write-editor-overlay"
+        class="pointer-events-none absolute inset-0 z-20"
+      />
+    </div>
     <LoadingState v-else-if="teamId && workspaceId && selectedFile" />
     <Empty v-else>
       <EmptyHeader>

@@ -27,6 +27,10 @@ export const ssoConfigSchema = z.object({
   protocol: ssoProtocolSchema,
   providerId: z.string(),
   domains: z.array(z.string()),
+  /** Domains proven via DNS TXT — only these enforce SSO or route logins. */
+  verifiedDomains: z.array(z.string()).optional(),
+  /** Per-domain TXT token: `lectornaut-domain-verification=<token>`. */
+  verificationTokens: z.record(z.string(), z.string()).optional(),
   enforced: z.boolean(),
   autoProvision: z.boolean(),
   defaultRole: z.enum(["member", "guest"]),

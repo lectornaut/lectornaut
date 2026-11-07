@@ -4,10 +4,13 @@ import {
   BOT_CHAT_MODE_OPTIONS,
   type BotChatMode,
 } from "@/composables/useBotChat"
+import { copyText } from "@/composables/useCopy"
 import {
   IconArchive,
   IconBolt,
   IconBot,
+  IconCopy,
+  IconDownload,
   IconGlobe,
   IconLock,
   IconMessageCircle,
@@ -16,8 +19,11 @@ import {
   IconTrash2,
   IconUsers,
 } from "@/data/icons"
+import { chatToMarkdown } from "@/helpers/botChatStream"
+import { saveTextFile } from "@/helpers/saveTextFile"
 import type { IBotSessionVisibility } from "@/types/domain"
 import { computed, inject, ref, type Component } from "vue"
+import { toast } from "vue-sonner"
 
 const botChat = inject(BotChatContextKey)
 const { t } = useI18n()
@@ -132,6 +138,49 @@ const onVisibilityChange = (value: string) => {
 const handleConfirmShare = async () => {
   const target = pendingVisibility.value
   if (target) await botChat?.setActiveVisibility(target)
+}
+
+// ── Copy / export ────────────────────────────────────────────────────────────
+//
+// Read-only, so anyone who can open the chat can take it with them — not
+// gated on canManage like the mutations below.
+
+const hasMessages = computed(() => (botChat?.messages.value.length ?? 0) > 0)
+const chatTitle = computed(
+  () => activeSession.value?.title || t("ai.untitledChat")
+)
+const transcript = () =>
+  chatToMarkdown(botChat?.messages.value ?? [], chatTitle.value)
+
+const onCopyChat = async () => {
+  try {
+    await copyText(transcript())
+    toast.success(t("ai.messageCopied"))
+  } catch (err) {
+    console.error("[BotChatActions] copy failed:", err)
+    toast.error(t("ai.sidebar.copyChatError"))
+  }
+}
+
+const onExportChat = async () => {
+  // ponytail: Markdown only — it's what the bubbles already are. Add JSON
+  // (tool calls, authors) if someone needs a machine-readable export.
+  const name =
+    chatTitle.value
+      .replace(/[\\/:*?"<>|]+/g, "")
+      .trim()
+      .slice(0, 80) || "chat"
+  try {
+    const saved = await saveTextFile(
+      `${name}.md`,
+      transcript(),
+      "text/markdown"
+    )
+    if (saved) toast.success(t("ai.sidebar.exportChatSuccess"))
+  } catch (err) {
+    console.error("[BotChatActions] export failed:", err)
+    toast.error(t("ai.sidebar.exportChatError"))
+  }
 }
 
 // ── Rename ───────────────────────────────────────────────────────────────────
@@ -263,6 +312,24 @@ const submitDelete = async () => {
             {{ t("ai.sidebar.noSessionActions") }}
           </p>
           <template v-else>
+            <Button
+              variant="secondary"
+              class="justify-start"
+              :disabled="!hasMessages"
+              @click="onCopyChat"
+            >
+              <IconCopy />
+              {{ t("ai.sidebar.copyChat") }}
+            </Button>
+            <Button
+              variant="secondary"
+              class="justify-start"
+              :disabled="!hasMessages"
+              @click="onExportChat"
+            >
+              <IconDownload />
+              {{ t("ai.sidebar.exportChat") }}
+            </Button>
             <Button
               variant="secondary"
               class="justify-start"

@@ -6,11 +6,14 @@ import {
   HttpsError,
   onCall,
 } from "firebase-functions/v2/https"
+import { createHash } from "node:crypto"
+import { resolveTxt } from "node:dns/promises"
 import { logEvent } from "./audit.js"
 import { assertAuthenticated } from "./auth.js"
 import { auth, db } from "./firebase.js"
 import { can } from "./permissions.js"
 import { CALLABLE_OPTS } from "./runtimeConfig.js"
+import { safeFetch } from "./safeFetch.js"
 import { Actor, Capabilities, type IMembershipRole } from "./types.js"
 
 // ============================================================================
@@ -105,6 +108,52 @@ async function requireEnterprisePlan(teamId: string) {
   }
 }
 
+/**
+ * Domain ownership proof. A domain only enters the global `sso-domains`
+ * index — the thing that blocks non-SSO sign-in and routes logins to a
+ * team's IdP for every user at that domain — after the team publishes
+ * `lectornaut-domain-verification=<token>` as a DNS TXT record on it.
+ * The token is derived from (teamId, domain) so it's stable across
+ * re-saves and one team can't overwrite another's pending claim; it isn't
+ * secret, the proof is control of the domain's DNS.
+ */
+export const DOMAIN_VERIFICATION_PREFIX = "lectornaut-domain-verification="
+
+export function domainVerificationToken(teamId: string, domain: string) {
+  return createHash("sha256")
+    .update(`${teamId}:${domain}`)
+    .digest("hex")
+    .slice(0, 32)
+}
+
+/**
+ * Create-or-update an Identity Platform provider. Only "not found" falls
+ * through to create; anything else (bad cert, bad issuer, bad ID) surfaces
+ * as invalid-argument with Auth's message instead of an opaque INTERNAL.
+ */
+async function upsertProviderConfig(
+  providerId: string,
+  config: Parameters<typeof auth.createProviderConfig>[0]
+) {
+  try {
+    const exists = await auth.getProviderConfig(providerId).then(
+      () => true,
+      (e: { code?: string }) => {
+        if (e?.code === "auth/configuration-not-found") return false
+        throw e
+      }
+    )
+    if (exists) await auth.updateProviderConfig(providerId, config)
+    else await auth.createProviderConfig(config)
+  } catch (e) {
+    logger.error("SSO provider upsert failed", { providerId, error: e })
+    throw new HttpsError(
+      "invalid-argument",
+      `Identity provider rejected the configuration: ${(e as Error).message}`
+    )
+  }
+}
+
 function isValidDomain(domain: string): boolean {
   return /^[a-z0-9]([a-z0-9-]*[a-z0-9])?(\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)+$/.test(
     domain
@@ -167,7 +216,12 @@ export const configureSso = onCall({ ...CALLABLE_OPTS }, async (request) => {
   const { actor } = await requireTeamAdmin(teamId, request.auth.uid)
   await requireEnterprisePlan(teamId)
 
-  const providerId = protocol === "saml" ? `saml.${teamId}` : `oidc.${teamId}`
+  // Identity Platform requires the part after "saml."/"oidc." to start with a
+  // lowercase letter; Firestore auto-IDs are mixed-case. Teams whose ID
+  // already qualifies keep the original `<protocol>.<teamId>` so existing
+  // provider configs stay addressable.
+  const providerSlug = /^[a-z]/.test(teamId) ? teamId : `team-${teamId}`
+  const providerId = `${protocol}.${providerSlug}`
 
   // Register or update the Firebase Auth provider (idempotent, outside transaction)
   let ssoDoc: Record<string, unknown>
@@ -205,12 +259,7 @@ export const configureSso = onCall({ ...CALLABLE_OPTS }, async (request) => {
       callbackURL: `https://${projectId}.firebaseapp.com/__/auth/handler`,
     }
 
-    try {
-      await auth.getProviderConfig(providerId)
-      await auth.updateProviderConfig(providerId, samlConfig)
-    } catch {
-      await auth.createProviderConfig(samlConfig)
-    }
+    await upsertProviderConfig(providerId, samlConfig)
 
     ssoDoc = {
       loginMethods: {
@@ -257,12 +306,7 @@ export const configureSso = onCall({ ...CALLABLE_OPTS }, async (request) => {
       responseType: { idToken: true },
     }
 
-    try {
-      await auth.getProviderConfig(providerId)
-      await auth.updateProviderConfig(providerId, oidcConfig)
-    } catch {
-      await auth.createProviderConfig(oidcConfig)
-    }
+    await upsertProviderConfig(providerId, oidcConfig)
 
     ssoDoc = {
       loginMethods: {
@@ -288,23 +332,40 @@ export const configureSso = onCall({ ...CALLABLE_OPTS }, async (request) => {
     }
   }
 
-  // Atomic transaction: domain conflict check + security doc + domain index writes
+  const verificationTokens = Object.fromEntries(
+    domains.map((d) => [d, domainVerificationToken(teamId, d)])
+  )
+
+  // Atomic transaction: domain conflict check + security doc + domain index writes.
+  // Only domains this team has already proven (verifiedDomains) are written
+  // to the global index; new domains stay pending until verifySsoDomain.
   await db.runTransaction(async (transaction) => {
-    // Read security doc first (for stale domain cleanup)
     const existingSecuritySnap = await transaction.get(
       db.doc(`teams/${teamId}/settings/security`)
     )
-    const previousDomains: string[] =
-      existingSecuritySnap.data()?.sso?.domains ?? []
+    const previous = existingSecuritySnap.data()?.sso
+    const previousDomains: string[] = previous?.domains ?? []
+    const previousVerified: string[] = previous?.verifiedDomains ?? []
+    const keptVerified = domains.filter((d) => previousVerified.includes(d))
+    const removedDomains = previousDomains.filter((d) => !domains.includes(d))
 
-    // Batch-read all domain docs in one round-trip
-    const domainRefs = domains.map((d) => db.doc(`sso-domains/${d}`))
-    const domainSnaps = await transaction.getAll(...domainRefs)
+    // All reads before any write: current + removed index docs.
+    const domainSnaps = domains.length
+      ? await transaction.getAll(
+          ...domains.map((d) => db.doc(`sso-domains/${d}`))
+        )
+      : []
+    const removedSnaps = removedDomains.length
+      ? await transaction.getAll(
+          ...removedDomains.map((d) => db.doc(`sso-domains/${d}`))
+        )
+      : []
 
-    // Check domain conflicts inside the transaction
+    // A domain another team has *verified* can't be claimed. Unverified
+    // (legacy) index entries don't block: DNS proof decides ownership.
     for (let i = 0; i < domainSnaps.length; i++) {
-      const snap = domainSnaps[i]
-      if (snap.exists && snap.data()?.teamId !== teamId) {
+      const data = domainSnaps[i].data()
+      if (data && data.teamId !== teamId && data.verified === true) {
         throw new HttpsError(
           "already-exists",
           `Domain "${domains[i]}" is already claimed by another team.`
@@ -312,25 +373,32 @@ export const configureSso = onCall({ ...CALLABLE_OPTS }, async (request) => {
       }
     }
 
-    // Write security doc
-    transaction.set(db.doc(`teams/${teamId}/settings/security`), ssoDoc, {
-      merge: true,
-    })
+    transaction.set(
+      db.doc(`teams/${teamId}/settings/security`),
+      {
+        ...ssoDoc,
+        sso: {
+          ...(ssoDoc.sso as Record<string, unknown>),
+          verifiedDomains: keptVerified,
+          verificationTokens,
+        },
+      },
+      { merge: true }
+    )
 
-    // Write domain index documents
-    for (const domain of domains) {
+    for (const domain of keptVerified) {
       transaction.set(db.doc(`sso-domains/${domain}`), {
         teamId,
         providerId,
         enforced,
+        verified: true,
       })
     }
 
-    // Remove stale domain index docs (domains previously assigned but now removed)
-    const removedDomains = previousDomains.filter((d) => !domains.includes(d))
-    for (const domain of removedDomains) {
-      transaction.delete(db.doc(`sso-domains/${domain}`))
-    }
+    // Remove this team's index docs for domains it dropped — never another team's.
+    removedSnaps.forEach((snap) => {
+      if (snap.data()?.teamId === teamId) transaction.delete(snap.ref)
+    })
   })
 
   // Audit log
@@ -353,6 +421,88 @@ export const configureSso = onCall({ ...CALLABLE_OPTS }, async (request) => {
   })
 
   return { success: true, providerId }
+})
+
+// ============================================================================
+// verifySsoDomain
+// ============================================================================
+
+export const verifySsoDomain = onCall({ ...CALLABLE_OPTS }, async (request) => {
+  assertAuthenticated(request)
+
+  const teamId = assertString(request.data?.teamId, "teamId")
+  const domain = assertString(request.data?.domain, "domain").toLowerCase()
+
+  const { actor } = await requireTeamAdmin(teamId, request.auth.uid)
+  await requireEnterprisePlan(teamId)
+
+  const securityRef = db.doc(`teams/${teamId}/settings/security`)
+  const sso = (await securityRef.get()).data()?.sso
+  if (
+    !sso?.enabled ||
+    !sso.providerId ||
+    !(sso.domains ?? []).includes(domain)
+  ) {
+    throw new HttpsError(
+      "not-found",
+      `Domain "${domain}" is not part of this team's SSO configuration.`
+    )
+  }
+
+  const expected =
+    DOMAIN_VERIFICATION_PREFIX + domainVerificationToken(teamId, domain)
+  let records: string[][] = []
+  try {
+    records = await resolveTxt(domain)
+  } catch {
+    // NXDOMAIN / no TXT records — falls through to the not-found error.
+  }
+  if (!records.some((chunks) => chunks.join("").trim() === expected)) {
+    throw new HttpsError(
+      "failed-precondition",
+      `TXT record not found on ${domain}. DNS changes can take a while to propagate.`
+    )
+  }
+
+  await db.runTransaction(async (transaction) => {
+    const indexRef = db.doc(`sso-domains/${domain}`)
+    const [indexSnap, securitySnap] = await transaction.getAll(
+      indexRef,
+      securityRef
+    )
+    const existing = indexSnap.data()
+    if (existing && existing.teamId !== teamId && existing.verified === true) {
+      throw new HttpsError(
+        "already-exists",
+        `Domain "${domain}" is already claimed by another team.`
+      )
+    }
+    const current = securitySnap.data()?.sso
+    if (!current?.providerId || !(current.domains ?? []).includes(domain)) {
+      throw new HttpsError("aborted", "SSO configuration changed. Try again.")
+    }
+    transaction.set(indexRef, {
+      teamId,
+      providerId: current.providerId,
+      enforced: Boolean(current.enforced),
+      verified: true,
+    })
+    transaction.update(securityRef, {
+      "sso.verifiedDomains": FieldValue.arrayUnion(domain),
+      updatedAt: FieldValue.serverTimestamp(),
+    })
+  })
+
+  await logEvent({
+    teamId,
+    actor,
+    action: "sso.domain_verified",
+    resource: { type: "security", id: teamId },
+    context: buildContext(request),
+    changes: { after: { domain }, fields: ["verifiedDomains"] },
+  })
+
+  return { verified: true }
 })
 
 // ============================================================================
@@ -385,17 +535,23 @@ export const deleteSso = onCall({ ...CALLABLE_OPTS }, async (request) => {
     )
   }
 
-  // Delete domain index docs and clear SSO config
+  // Delete this team's domain index docs and clear SSO config. Listed
+  // domains may be unverified and indexed by another team — leave those.
   const batch = db.batch()
   const domains: string[] = ssoConfig.domains ?? []
-  for (const domain of domains) {
-    batch.delete(db.doc(`sso-domains/${domain}`))
+  const domainSnaps = domains.length
+    ? await db.getAll(...domains.map((d) => db.doc(`sso-domains/${d}`)))
+    : []
+  for (const snap of domainSnaps) {
+    if (snap.data()?.teamId === teamId) batch.delete(snap.ref)
   }
 
   batch.update(db.doc(`teams/${teamId}/settings/security`), {
     "sso.enabled": false,
     "sso.providerId": "",
     "sso.domains": [],
+    "sso.verifiedDomains": [],
+    "sso.verificationTokens": FieldValue.delete(),
     "sso.enforced": false,
     "sso.autoProvision": false,
     "sso.saml": FieldValue.delete(),
@@ -465,8 +621,9 @@ export const testSsoConnection = onCall(
       try {
         const wellKnownUrl =
           issuer.replace(/\/$/, "") + "/.well-known/openid-configuration"
-        const response = await fetch(wellKnownUrl, {
+        const response = await safeFetch(wellKnownUrl, {
           signal: controller.signal,
+          maxBytes: 256 * 1024,
         })
         if (!response.ok) {
           return {
@@ -474,7 +631,10 @@ export const testSsoConnection = onCall(
             error: `OIDC discovery failed: HTTP ${response.status}`,
           }
         }
-        const data = (await response.json()) as Record<string, unknown>
+        const data = JSON.parse(response.body.toString("utf8")) as Record<
+          string,
+          unknown
+        >
         if (!data.issuer || !data.authorization_endpoint || !data.jwks_uri) {
           return {
             valid: false,
@@ -539,7 +699,7 @@ export const resolveSsoProvider = onCall(
     }
 
     const data = domainSnap.data()
-    if (!data?.providerId || !data?.teamId) {
+    if (!data?.providerId || !data?.teamId || data.verified !== true) {
       return { sso: false }
     }
 

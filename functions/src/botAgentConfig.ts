@@ -645,6 +645,33 @@ export function resolveEffectiveModel(
   return agentConfig.model
 }
 
+/**
+ * The one model `fallback()` switches to when the turn's model errors out
+ * (provider outage, rate limit, model gone). Outages are per provider, so it
+ * must be on ANOTHER provider: the team default when it qualifies, else the
+ * first enabled model elsewhere. Same admin + plan toggles as
+ * `resolveEffectiveModel` (loaded toggles are already plan-clamped), plus a
+ * configured key. `null` when the team runs a single provider.
+ */
+export function resolveFallbackModel(
+  primary: BotAgentModel,
+  agentConfig: BotAgentConfig,
+  isProviderConfigured: (provider: BotModelProvider) => boolean
+): BotAgentModel | null {
+  const primaryProvider = BOT_MODEL_PROVIDER_BY_MODEL[primary]
+  const usable = (model: BotAgentModel) => {
+    const provider = BOT_MODEL_PROVIDER_BY_MODEL[model]
+    return (
+      provider !== primaryProvider &&
+      agentConfig.providers[provider] &&
+      agentConfig.models[model] &&
+      isProviderConfigured(provider)
+    )
+  }
+  if (usable(agentConfig.model)) return agentConfig.model
+  return BOT_AGENT_MODELS.find(usable) ?? null
+}
+
 function normalizeModelToggles(raw: unknown): BotAgentModelToggles {
   const rawModels = isRecord(raw) ? raw : {}
   const models: BotAgentModelToggles = { ...DEFAULT_BOT_AGENT_MODEL_TOGGLES }

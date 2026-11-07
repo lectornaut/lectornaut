@@ -35,14 +35,17 @@ import {
   IconLink2,
   IconList,
   IconListChecks,
+  IconListCollapse,
   IconListOrdered,
+  IconMinus,
   IconPaintBucket,
   IconPalette,
   IconQuote,
-  IconRefreshCw,
-  IconRotateCcw,
+  IconSigma,
+  IconSquareSigma,
   IconStrikethrough,
   IconTable,
+  IconText,
   IconUnderline,
   IconUnlink,
 } from "@/data/icons"
@@ -91,10 +94,12 @@ import Typography from "@tiptap/extension-typography"
 import { UniqueID } from "@tiptap/extension-unique-id"
 import { CharacterCount } from "@tiptap/extensions/character-count"
 import { Placeholder } from "@tiptap/extensions/placeholder"
+import { Markdown } from "@tiptap/markdown"
 import { Selection } from "@tiptap/extensions/selection"
 import StarterKit from "@tiptap/starter-kit"
 import { EditorContent, useEditor } from "@tiptap/vue-3"
 import { BubbleMenu } from "@tiptap/vue-3/menus"
+import type { Component } from "vue"
 import type { Awareness } from "y-protocols/awareness"
 import type { Doc as YDoc } from "yjs"
 
@@ -119,6 +124,12 @@ const props = withDefaults(
      * doc content lives in a Firestore document with a 1 MB cap.
      */
     uploadImage?: ((file: File) => Promise<string>) | null
+    /**
+     * Selector of a non-scrolling, positioned layer over the editor's pane.
+     * The TOC rail teleports there and pins to its left edge with plain CSS;
+     * without one it renders inline.
+     */
+    tocTarget?: string | null
   }>(),
   {
     modelValue: "",
@@ -127,6 +138,7 @@ const props = withDefaults(
     collaborationAwareness: null,
     applierStatus: null,
     uploadImage: null,
+    tocTarget: null,
   }
 )
 
@@ -165,13 +177,6 @@ const HIGHLIGHT_COLORS: ColorOption[] = EDITOR_COLORS.map((accent) => ({
   value: `var(--color-${accent.id}-300)`,
 }))
 
-const DEFAULT_TEXT_COLOR =
-  TEXT_COLORS.find((color) => color.id === "blue")?.value ??
-  TEXT_COLORS[0]!.value
-const DEFAULT_HIGHLIGHT_COLOR =
-  HIGHLIGHT_COLORS.find((color) => color.id === "yellow")?.value ??
-  HIGHLIGHT_COLORS[0]!.value
-
 const FONT_SIZES = ["12px", "14px", "16px", "18px", "24px", "32px"]
 
 // Values are the app's own font tokens, so families follow the brand.
@@ -195,16 +200,97 @@ const FONT_FAMILIES = [
 
 const LINE_HEIGHTS = ["1", "1.25", "1.5", "2"]
 
-const TABLE_PICKER_MAX_ROWS = 8
-const TABLE_PICKER_MAX_COLS = 8
-const TABLE_PICKER_ROWS = Array.from(
-  { length: TABLE_PICKER_MAX_ROWS },
-  (_, index) => index + 1
-)
-const TABLE_PICKER_COLS = Array.from(
-  { length: TABLE_PICKER_MAX_COLS },
-  (_, index) => index + 1
-)
+const IMAGE_WIDTHS = ["25%", "33%", "50%", "75%", "100%"]
+
+/**
+ * Block types for the bubble menu's selector. Labels reuse the slash-menu
+ * titles. Containers come after Text so `findLast` over `isActive` reports
+ * "Bullet list" (not "Text") for a paragraph inside a list or quote.
+ */
+const BLOCK_TYPES: {
+  id: string
+  icon: Component
+  labelKey: string
+  isActive: (e: TiptapEditor) => boolean
+  apply: (e: TiptapEditor) => void
+}[] = [
+  {
+    id: "text",
+    icon: IconText,
+    labelKey: "components.textEditor.slash.textTitle",
+    isActive: (e) => e.isActive("paragraph"),
+    apply: (e) => e.chain().focus().setParagraph().run(),
+  },
+  ...([1, 2, 3] as const).map((level) => ({
+    id: `heading-${level}`,
+    icon: [IconHeading1, IconHeading2, IconHeading3][level - 1]!,
+    labelKey: `components.textEditor.slash.heading${level}Title`,
+    isActive: (e: TiptapEditor) => e.isActive("heading", { level }),
+    apply: (e: TiptapEditor) =>
+      e.chain().focus().toggleHeading({ level }).run(),
+  })),
+  {
+    id: "bullet-list",
+    icon: IconList,
+    labelKey: "components.textEditor.slash.bulletListTitle",
+    isActive: (e) => e.isActive("bulletList"),
+    apply: (e) => e.chain().focus().toggleBulletList().run(),
+  },
+  {
+    id: "ordered-list",
+    icon: IconListOrdered,
+    labelKey: "components.textEditor.slash.orderedListTitle",
+    isActive: (e) => e.isActive("orderedList"),
+    apply: (e) => e.chain().focus().toggleOrderedList().run(),
+  },
+  {
+    id: "task-list",
+    icon: IconListChecks,
+    labelKey: "components.textEditor.slash.taskListTitle",
+    isActive: (e) => e.isActive("taskList"),
+    apply: (e) => e.chain().focus().toggleTaskList().run(),
+  },
+  {
+    id: "blockquote",
+    icon: IconQuote,
+    labelKey: "components.textEditor.slash.blockquoteTitle",
+    isActive: (e) => e.isActive("blockquote"),
+    apply: (e) => e.chain().focus().toggleBlockquote().run(),
+  },
+  {
+    id: "code-block",
+    icon: IconCode,
+    labelKey: "components.textEditor.slash.codeBlockTitle",
+    isActive: (e) => e.isActive("codeBlock"),
+    apply: (e) => e.chain().focus().toggleCodeBlock().run(),
+  },
+]
+
+const MARK_TOGGLES = [
+  { name: "bold", icon: IconBold, labelKey: "components.textEditor.bold" },
+  {
+    name: "italic",
+    icon: IconItalic,
+    labelKey: "components.textEditor.italic",
+  },
+  {
+    name: "underline",
+    icon: IconUnderline,
+    labelKey: "components.textEditor.underline",
+  },
+  {
+    name: "strike",
+    icon: IconStrikethrough,
+    labelKey: "components.textEditor.strike",
+  },
+  { name: "code", icon: IconBraces, labelKey: "components.textEditor.code" },
+]
+
+// Plain-text paste that starts like markdown (heading, list, quote, fence,
+// task box) or carries inline markdown (bold, code, link) is converted.
+// ponytail: heuristic, misfires only on plain text that genuinely looks like md.
+const MARKDOWN_HINT =
+  /^(#{1,6}\s|[-*+]\s|\d+\.\s|>\s|```|- \[[ xX]\]\s)|\*\*[^*]+\*\*|`[^`]+`|\[[^\]]+\]\([^)]+\)/m
 
 const READING_WORDS_PER_MINUTE = 200
 const MODEL_EMIT_DEBOUNCE_MS = 120
@@ -347,55 +433,21 @@ const isLinkDialogOpen = ref(false)
 const linkDialogHref = ref<string | null>(null)
 const isImageDialogOpen = ref(false)
 const slashPanelState = ref<SlashCommandPanelState | null>(null)
-const isTablePickerOpen = ref(false)
 const dragHandleNodePos = ref<number | null>(null)
 const dragHandleBlockId = ref<string | null>(null)
-const tablePickerSelection = ref<{ rows: number; cols: number }>({
-  rows: 0,
-  cols: 0,
-})
+const isMathDialogOpen = ref(false)
+/** `pos === null` inserts a new node; a number edits the node there. */
+const mathTarget = ref<{
+  kind: "inline" | "block"
+  pos: number | null
+  latex: string
+}>({ kind: "inline", pos: null, latex: "" })
 const tableOfContentsItems = shallowRef<TableOfContentData>([])
 let tableOfContentsScrollParent: HTMLElement | Window = window
 
-const getPanelPosition = (rect: DOMRect | null) => {
-  if (!rect || typeof window === "undefined") {
-    return { x: 0, y: 0 }
-  }
-
-  const panelWidth = 320
-  const panelHeight = 280
-  const x = Math.min(
-    Math.max(8, rect.left),
-    Math.max(8, window.innerWidth - panelWidth - 8)
-  )
-  const y = Math.min(
-    rect.bottom + 8,
-    Math.max(8, window.innerHeight - panelHeight - 8)
-  )
-
-  return { x, y }
-}
-
-const slashPanelPosition = computed(() =>
-  getPanelPosition(slashPanelState.value?.clientRect ?? null)
-)
-
 const emojiPanelState = ref<EmojiPanelState | null>(null)
-const emojiPanelPosition = computed(() =>
-  getPanelPosition(emojiPanelState.value?.clientRect ?? null)
-)
-
-const selectEmojiSuggestion = (index: number) => {
-  emojiPanelState.value?.execute(index)
-}
-
-const hoverEmojiSuggestion = (index: number) => {
-  if (!emojiPanelState.value) {
-    return
-  }
-
-  emojiPanelState.value = { ...emojiPanelState.value, selectedIndex: index }
-}
+const slashPanelId = useId()
+const emojiPanelId = useId()
 
 const tiptapCollab =
   props.collaborationDoc && props.collaborationAwareness
@@ -460,31 +512,63 @@ const insertImageFromDialog = (attrs: {
     .run()
 }
 
-const updateTablePickerSelection = (rows: number, cols: number) => {
-  tablePickerSelection.value = { rows, cols }
+const openMathDialog = (
+  kind: "inline" | "block",
+  pos: number | null = null,
+  latex = ""
+) => {
+  mathTarget.value = { kind, pos, latex }
+  isMathDialogOpen.value = true
 }
 
-const clearTablePickerSelection = () => {
-  tablePickerSelection.value = { rows: 0, cols: 0 }
+const applyMathFromDialog = (latex: string) => {
+  const currentEditor = editor.value
+  if (!currentEditor) return
+  const { kind, pos } = mathTarget.value
+  const chain = currentEditor.chain().focus()
+
+  if (pos === null) {
+    if (!latex) return
+    if (kind === "inline") chain.insertInlineMath({ latex }).run()
+    else chain.insertBlockMath({ latex }).run()
+    return
+  }
+
+  if (!latex) {
+    removeMathFromDialog()
+    return
+  }
+  if (kind === "inline") chain.updateInlineMath({ latex, pos }).run()
+  else chain.updateBlockMath({ latex, pos }).run()
 }
 
-const insertTableFromPicker = (rows: number, cols: number) => {
-  editor.value
-    ?.chain()
-    .focus()
-    .insertTable({ rows, cols, withHeaderRow: true })
-    .run()
-
-  isTablePickerOpen.value = false
-  clearTablePickerSelection()
+const removeMathFromDialog = () => {
+  const { kind, pos } = mathTarget.value
+  if (pos === null) return
+  const chain = editor.value?.chain().focus()
+  if (kind === "inline") chain?.deleteInlineMath({ pos }).run()
+  else chain?.deleteBlockMath({ pos }).run()
 }
 
 const createSlashCommands = (): SlashCommandItem[] => [
   {
+    id: "text",
+    title: t("components.textEditor.slash.textTitle"),
+    description: t("components.textEditor.slash.textDescription"),
+    group: t("components.textEditor.slash.basicGroup"),
+    icon: IconText,
+    keywords: ["paragraph", "plain", "p"],
+    run: (activeEditor) => {
+      activeEditor.chain().focus().setParagraph().run()
+    },
+  },
+  {
     id: "heading-1",
     title: t("components.textEditor.slash.heading1Title"),
     description: t("components.textEditor.slash.heading1Description"),
-    group: t("components.textEditor.slash.headingsGroup"),
+    group: t("components.textEditor.slash.basicGroup"),
+    icon: IconHeading1,
+    shortcut: "#",
     keywords: ["h1", "title"],
     run: (activeEditor) => {
       activeEditor.chain().focus().toggleHeading({ level: 1 }).run()
@@ -494,7 +578,9 @@ const createSlashCommands = (): SlashCommandItem[] => [
     id: "heading-2",
     title: t("components.textEditor.slash.heading2Title"),
     description: t("components.textEditor.slash.heading2Description"),
-    group: t("components.textEditor.slash.headingsGroup"),
+    group: t("components.textEditor.slash.basicGroup"),
+    icon: IconHeading2,
+    shortcut: "##",
     keywords: ["h2", "subtitle"],
     run: (activeEditor) => {
       activeEditor.chain().focus().toggleHeading({ level: 2 }).run()
@@ -504,7 +590,9 @@ const createSlashCommands = (): SlashCommandItem[] => [
     id: "heading-3",
     title: t("components.textEditor.slash.heading3Title"),
     description: t("components.textEditor.slash.heading3Description"),
-    group: t("components.textEditor.slash.headingsGroup"),
+    group: t("components.textEditor.slash.basicGroup"),
+    icon: IconHeading3,
+    shortcut: "###",
     keywords: ["h3"],
     run: (activeEditor) => {
       activeEditor.chain().focus().toggleHeading({ level: 3 }).run()
@@ -515,6 +603,8 @@ const createSlashCommands = (): SlashCommandItem[] => [
     title: t("components.textEditor.slash.bulletListTitle"),
     description: t("components.textEditor.slash.bulletListDescription"),
     group: t("components.textEditor.slash.listsGroup"),
+    icon: IconList,
+    shortcut: "-",
     keywords: ["list", "ul"],
     run: (activeEditor) => {
       activeEditor.chain().focus().toggleBulletList().run()
@@ -525,6 +615,8 @@ const createSlashCommands = (): SlashCommandItem[] => [
     title: t("components.textEditor.slash.orderedListTitle"),
     description: t("components.textEditor.slash.orderedListDescription"),
     group: t("components.textEditor.slash.listsGroup"),
+    icon: IconListOrdered,
+    shortcut: "1.",
     keywords: ["list", "ol", "numbered"],
     run: (activeEditor) => {
       activeEditor.chain().focus().toggleOrderedList().run()
@@ -535,6 +627,8 @@ const createSlashCommands = (): SlashCommandItem[] => [
     title: t("components.textEditor.slash.taskListTitle"),
     description: t("components.textEditor.slash.taskListDescription"),
     group: t("components.textEditor.slash.listsGroup"),
+    icon: IconListChecks,
+    shortcut: "[ ]",
     keywords: ["todo", "checklist", "task"],
     run: (activeEditor) => {
       activeEditor.chain().focus().toggleTaskList().run()
@@ -545,6 +639,8 @@ const createSlashCommands = (): SlashCommandItem[] => [
     title: t("components.textEditor.slash.blockquoteTitle"),
     description: t("components.textEditor.slash.blockquoteDescription"),
     group: t("components.textEditor.slash.blocksGroup"),
+    icon: IconQuote,
+    shortcut: ">",
     keywords: ["quote"],
     run: (activeEditor) => {
       activeEditor.chain().focus().toggleBlockquote().run()
@@ -555,9 +651,58 @@ const createSlashCommands = (): SlashCommandItem[] => [
     title: t("components.textEditor.slash.codeBlockTitle"),
     description: t("components.textEditor.slash.codeBlockDescription"),
     group: t("components.textEditor.slash.blocksGroup"),
+    icon: IconCode,
+    shortcut: "```",
     keywords: ["code", "snippet"],
     run: (activeEditor) => {
       activeEditor.chain().focus().toggleCodeBlock().run()
+    },
+  },
+  {
+    id: "details",
+    title: t("components.textEditor.slash.detailsTitle"),
+    description: t("components.textEditor.slash.detailsDescription"),
+    group: t("components.textEditor.slash.blocksGroup"),
+    icon: IconListCollapse,
+    keywords: ["toggle", "collapse", "details", "accordion"],
+    run: (activeEditor) => {
+      activeEditor.chain().focus().setDetails().run()
+    },
+  },
+  {
+    id: "math-block",
+    title: t("components.textEditor.slash.mathBlockTitle"),
+    description: t("components.textEditor.slash.mathBlockDescription"),
+    group: t("components.textEditor.slash.blocksGroup"),
+    icon: IconSquareSigma,
+    shortcut: "$$$x$$$",
+    keywords: ["math", "latex", "equation", "formula"],
+    run: () => {
+      openMathDialog("block")
+    },
+  },
+  {
+    id: "divider",
+    title: t("components.textEditor.slash.dividerTitle"),
+    description: t("components.textEditor.slash.dividerDescription"),
+    group: t("components.textEditor.slash.insertGroup"),
+    icon: IconMinus,
+    shortcut: "---",
+    keywords: ["hr", "rule", "separator", "line"],
+    run: (activeEditor) => {
+      activeEditor.chain().focus().setHorizontalRule().run()
+    },
+  },
+  {
+    id: "math-inline",
+    title: t("components.textEditor.slash.mathInlineTitle"),
+    description: t("components.textEditor.slash.mathInlineDescription"),
+    group: t("components.textEditor.slash.insertGroup"),
+    icon: IconSigma,
+    shortcut: "$$x$$",
+    keywords: ["math", "latex", "equation", "inline"],
+    run: () => {
+      openMathDialog("inline")
     },
   },
   {
@@ -565,6 +710,7 @@ const createSlashCommands = (): SlashCommandItem[] => [
     title: t("components.textEditor.slash.imageTitle"),
     description: t("components.textEditor.slash.imageDescription"),
     group: t("components.textEditor.slash.insertGroup"),
+    icon: IconImage,
     keywords: ["image", "url", "media", "embed"],
     run: () => {
       openImageDialog()
@@ -575,6 +721,7 @@ const createSlashCommands = (): SlashCommandItem[] => [
     title: t("components.textEditor.slash.tableTitle"),
     description: t("components.textEditor.slash.tableDescription"),
     group: t("components.textEditor.slash.insertGroup"),
+    icon: IconTable,
     keywords: ["table", "grid"],
     run: (activeEditor) => {
       activeEditor
@@ -585,34 +732,11 @@ const createSlashCommands = (): SlashCommandItem[] => [
     },
   },
   {
-    id: "format-highlight",
-    title: t("components.textEditor.slash.highlightTitle"),
-    description: t("components.textEditor.slash.highlightDescription"),
-    group: t("components.textEditor.slash.formattingGroup"),
-    keywords: ["highlight", "mark"],
-    run: (activeEditor) => {
-      activeEditor
-        .chain()
-        .focus()
-        .setHighlight({ color: DEFAULT_HIGHLIGHT_COLOR })
-        .run()
-    },
-  },
-  {
-    id: "format-text-color",
-    title: t("components.textEditor.slash.textColorTitle"),
-    description: t("components.textEditor.slash.textColorDescription"),
-    group: t("components.textEditor.slash.formattingGroup"),
-    keywords: ["color", "text"],
-    run: (activeEditor) => {
-      activeEditor.chain().focus().setColor(DEFAULT_TEXT_COLOR).run()
-    },
-  },
-  {
     id: "align-left",
     title: t("components.textEditor.slash.alignLeftTitle"),
     description: t("components.textEditor.slash.alignLeftDescription"),
     group: t("components.textEditor.slash.formattingGroup"),
+    icon: IconAlignLeft,
     keywords: ["align", "left"],
     run: (activeEditor) => {
       activeEditor.chain().focus().setTextAlign("left").run()
@@ -623,6 +747,7 @@ const createSlashCommands = (): SlashCommandItem[] => [
     title: t("components.textEditor.slash.alignCenterTitle"),
     description: t("components.textEditor.slash.alignCenterDescription"),
     group: t("components.textEditor.slash.formattingGroup"),
+    icon: IconAlignCenter,
     keywords: ["align", "center"],
     run: (activeEditor) => {
       activeEditor.chain().focus().setTextAlign("center").run()
@@ -633,6 +758,7 @@ const createSlashCommands = (): SlashCommandItem[] => [
     title: t("components.textEditor.slash.alignRightTitle"),
     description: t("components.textEditor.slash.alignRightDescription"),
     group: t("components.textEditor.slash.formattingGroup"),
+    icon: IconAlignRight,
     keywords: ["align", "right"],
     run: (activeEditor) => {
       activeEditor.chain().focus().setTextAlign("right").run()
@@ -701,9 +827,10 @@ const extensions = [
   // Stable block ids for future anchors/deep links. Skips Yjs-remote
   // transactions per the official collab integration. Known ceiling: an agent
   // rewrite drops the ids (the markdown converter strips attrs), so ids are
-  // stable only between agent edits.
+  // stable only between agent edits. Headings are left to TableOfContents:
+  // both extensions own an `id` attr, and TOC re-stamps it on first text.
   UniqueID.configure({
-    types: ["heading", "paragraph"],
+    types: ["paragraph"],
     filterTransaction: (transaction) => !isChangeOrigin(transaction),
   }),
   Details.configure({
@@ -711,7 +838,14 @@ const extensions = [
   }),
   DetailsSummary,
   DetailsContent,
-  Mathematics.configure({}),
+  Mathematics.configure({
+    inlineOptions: {
+      onClick: (node, pos) => openMathDialog("inline", pos, node.attrs.latex),
+    },
+    blockOptions: {
+      onClick: (node, pos) => openMathDialog("block", pos, node.attrs.latex),
+    },
+  }),
   RichImage,
   Emoji.configure({
     emojis,
@@ -724,6 +858,7 @@ const extensions = [
     }),
   }),
   slashCommandExtension,
+  Markdown,
 ]
 
 if (tiptapCollab) {
@@ -845,6 +980,14 @@ const updateEditorStats = (currentEditor: TiptapEditor) => {
   }
 }
 
+/** Nearest ancestor that actually scrolls vertically (native ScrollContainer). */
+const findScrollParent = (el: HTMLElement): HTMLElement | Window => {
+  for (let node = el.parentElement; node; node = node.parentElement) {
+    if (/(auto|scroll)/.test(getComputedStyle(node).overflowY)) return node
+  }
+  return window
+}
+
 const syncTableOfContentsScrollParent = (currentEditor: TiptapEditor) => {
   const storage = currentEditor.storage.tableOfContents as
     TableOfContentsStorage | undefined
@@ -853,9 +996,7 @@ const syncTableOfContentsScrollParent = (currentEditor: TiptapEditor) => {
     return
   }
 
-  const nextScrollParent =
-    (currentEditor.view.dom.closest(".os-viewport") as HTMLElement | null) ??
-    window
+  const nextScrollParent = findScrollParent(currentEditor.view.dom)
 
   if (nextScrollParent === tableOfContentsScrollParent) {
     return
@@ -900,7 +1041,25 @@ const editor = useEditor({
   editorProps: {
     attributes: {
       class:
-        "tiptap prose prose-sm max-w-none dark:prose-invert p-16 focus:outline-none",
+        "tiptap prose prose-sm max-w-none dark:prose-invert px-6 py-10 sm:p-16 focus:outline-none",
+    },
+    // Rich (HTML) pastes keep ProseMirror's default handling; plain text that
+    // looks like markdown is parsed by the official Markdown extension, using
+    // this editor's own extensions (same format agents read and write).
+    handlePaste: (_view, event) => {
+      const currentEditor = editor.value
+      const data = event.clipboardData
+      if (!currentEditor || !data || data.types.includes("text/html")) {
+        return false
+      }
+      if (currentEditor.isActive("codeBlock")) return false
+
+      const text = data.getData("text/plain")
+      if (!MARKDOWN_HINT.test(text)) return false
+
+      return currentEditor.commands.insertContent(text, {
+        contentType: "markdown",
+      })
     },
   },
   extensions,
@@ -970,9 +1129,12 @@ const editor = useEditor({
   },
 })
 
-onMounted(() => {
+onMounted(async () => {
+  // EditorContent moves the editor DOM into place on its own nextTick, so the
+  // scroll container is only findable one tick after this component mounts.
+  await nextTick()
   const currentEditor = editor.value
-  if (!currentEditor) {
+  if (!currentEditor || currentEditor.isDestroyed) {
     return
   }
 
@@ -1059,57 +1221,33 @@ onBeforeUnmount(() => {
   editor.value?.destroy()
 })
 
-const selectSlashCommand = (index: number) => {
-  slashPanelState.value?.execute(index)
-}
-
-const hoverSlashCommand = (index: number) => {
-  if (!slashPanelState.value) {
-    return
+// Screen readers: focus stays in the editor, so point it at the highlighted
+// option of whichever suggestion panel is open.
+watchEffect(() => {
+  const dom = editor.value?.view.dom
+  if (!dom) return
+  const [panelId, state] = slashPanelState.value
+    ? [slashPanelId, slashPanelState.value]
+    : [emojiPanelId, emojiPanelState.value]
+  if (state?.items.length) {
+    dom.setAttribute("aria-controls", panelId)
+    dom.setAttribute(
+      "aria-activedescendant",
+      `${panelId}-${state.selectedIndex}`
+    )
+  } else {
+    dom.removeAttribute("aria-controls")
+    dom.removeAttribute("aria-activedescendant")
   }
-
-  slashPanelState.value = {
-    ...slashPanelState.value,
-    selectedIndex: index,
-  }
-}
-
-const tablePickerLabel = computed(() => {
-  const { rows, cols } = tablePickerSelection.value
-  if (!rows || !cols) {
-    return t("components.textEditor.tableSelectLabel")
-  }
-
-  return t("components.textEditor.tablePickerLabel", { cols, rows })
 })
 
-const currentBlockLabel = computed(() => {
-  const activeEditor = editor.value
-  if (!activeEditor) {
-    return t("components.textEditor.blockText")
-  }
-
-  if (activeEditor.isActive("heading", { level: 1 })) {
-    return t("components.textEditor.blockH1")
-  }
-
-  if (activeEditor.isActive("heading", { level: 2 })) {
-    return t("components.textEditor.blockH2")
-  }
-
-  if (activeEditor.isActive("heading", { level: 3 })) {
-    return t("components.textEditor.blockH3")
-  }
-
-  if (activeEditor.isActive("blockquote")) {
-    return t("components.textEditor.blockQuote")
-  }
-
-  if (activeEditor.isActive("codeBlock")) {
-    return t("components.textEditor.blockCode")
-  }
-
-  return t("components.textEditor.blockText")
+const activeBlock = computed(() => {
+  const currentEditor = editor.value
+  return (
+    (currentEditor &&
+      BLOCK_TYPES.findLast((block) => block.isActive(currentEditor))) ??
+    BLOCK_TYPES[0]!
+  )
 })
 
 const applyImageAttrs = (attrs: Record<string, unknown>) => {
@@ -1168,8 +1306,10 @@ const scrollToHashBlock = (currentEditor: TiptapEditor): boolean => {
     return true
   }
 
+  // Paragraphs carry UniqueID's `data-id`; headings TableOfContents' `id`.
+  const escaped = CSS.escape(hash)
   const target = currentEditor.view.dom.querySelector(
-    `[data-id="${CSS.escape(hash)}"]`
+    `[data-id="${escaped}"], [id="${escaped}"]`
   )
   if (!target) {
     return false
@@ -1179,8 +1319,15 @@ const scrollToHashBlock = (currentEditor: TiptapEditor): boolean => {
   return true
 }
 
-const getTableOfContentsItemIndent = (level: number) =>
-  `${Math.max(level - 1, 0) * 0.5 + 0.5}rem`
+// Wider = more important: H1 1.5rem, H2 1rem, H3 0.5rem. Uses the heading's
+// own level (`originalLevel`), not its relative nesting depth (`level`).
+const getTableOfContentsItemWidth = (headingLevel: number) =>
+  `${Math.max(4 - headingLevel, 1) * 0.5}rem`
+
+// Outline indent follows nesting (`level`), so an H3 directly under an H1
+// sits one step in, like Notion. Base 0.75rem matches menu row padding.
+const getTableOfContentsItemIndent = (nestingLevel: number) =>
+  `${0.75 + Math.max(nestingLevel - 1, 0) * 0.75}rem`
 
 const scrollToTableOfContentsItem = (item: TableOfContentDataItem) => {
   item.dom.scrollIntoView({
@@ -1192,10 +1339,79 @@ const scrollToTableOfContentsItem = (item: TableOfContentDataItem) => {
 </script>
 
 <template>
+  <Teleport defer :to="tocTarget ?? 'body'" :disabled="!tocTarget">
+    <div
+      v-if="tableOfContentsItems.length"
+      class="pointer-events-none absolute inset-y-0 left-2 flex items-center"
+    >
+      <!-- Notion-style: the bars are an overview; hovering opens the outline
+         (indented by nesting, current section highlighted, click to jump). -->
+      <HoverCard :open-delay="100" :close-delay="150">
+        <HoverCardTrigger as-child>
+          <aside
+            class="pointer-events-auto flex max-h-full flex-col items-start overflow-y-auto py-2 pr-2"
+          >
+            <button
+              v-for="item in tableOfContentsItems"
+              :key="item.id"
+              type="button"
+              class="group flex cursor-pointer py-0.5"
+              :aria-label="item.textContent"
+              @click="scrollToTableOfContentsItem(item)"
+            >
+              <span
+                class="bg-sidebar-primary h-1 rounded-full opacity-25 group-hover:opacity-75"
+                :class="{ 'opacity-75': item.isActive }"
+                :style="{
+                  width: getTableOfContentsItemWidth(item.originalLevel),
+                }"
+              />
+            </button>
+          </aside>
+        </HoverCardTrigger>
+        <HoverCardContent
+          side="right"
+          align="center"
+          :side-offset="4"
+          class="max-h-[min(28rem,var(--reka-hover-card-content-available-height))] w-64 overflow-y-auto p-1.5"
+        >
+          <nav
+            :aria-label="t('components.textEditor.tableOfContents')"
+            class="flex flex-col"
+          >
+            <button
+              v-for="item in tableOfContentsItems"
+              :key="item.id"
+              type="button"
+              class="hover:bg-accent hover:text-accent-foreground w-full truncate rounded-2xl py-2 pr-3 text-left text-sm"
+              :class="
+                item.isActive
+                  ? 'text-foreground font-medium'
+                  : 'text-muted-foreground'
+              "
+              :aria-current="item.isActive ? 'location' : undefined"
+              :style="{ paddingLeft: getTableOfContentsItemIndent(item.level) }"
+              @click="scrollToTableOfContentsItem(item)"
+            >
+              {{
+                item.textContent || t("components.textEditor.untitledHeading")
+              }}
+            </button>
+          </nav>
+        </HoverCardContent>
+      </HoverCard>
+    </div>
+  </Teleport>
+
   <TooltipProvider>
     <Tooltip>
       <TooltipTrigger as-child>
-        <Button variant="outline" size="icon" class="sticky top-2 left-2 z-10">
+        <Button
+          variant="outline"
+          size="icon"
+          class="sticky top-2 left-2 z-10"
+          :aria-label="t('components.textEditor.statsLabel')"
+        >
           <IconInfo />
         </Button>
       </TooltipTrigger>
@@ -1210,89 +1426,42 @@ const scrollToTableOfContentsItem = (item: TableOfContentDataItem) => {
       </TooltipContent>
     </Tooltip>
   </TooltipProvider>
-  <div class="absolute top-0 right-0 z-20 h-full p-2">
-    <aside
-      class="sticky top-1/2 ml-auto flex h-max w-max -translate-y-1/2 flex-col items-end gap-2 overflow-auto p-2"
-    >
-      <div
-        v-if="tableOfContentsItems.length"
-        class="absolute top-1/2 flex -translate-y-1/2 flex-col items-end"
-      >
-        <div
-          v-for="item in tableOfContentsItems"
-          :key="item.id"
-          class="group flex cursor-pointer py-1"
-          @click="scrollToTableOfContentsItem(item)"
-        >
-          <span
-            class="bg-sidebar-primary h-1opacity-25 group-hover:opacity-75"
-            :style="{ width: getTableOfContentsItemIndent(item.level) }"
-          >
-          </span>
-        </div>
-      </div>
-    </aside>
-  </div>
 
   <EditorContent :editor="editor" />
 
+  <!-- Selection formatting only: block types, inserts and alignment live in
+       the slash menu. Table/image controls appear only when relevant. -->
   <BubbleMenu
     v-if="editor && !isReadOnly"
     :editor="editor"
-    :tippy-options="{
-      duration: 100,
-      interactive: true,
-      maxWidth: 'none',
-      placement: 'top-start',
-      offset: [0, 10],
-    }"
+    :options="{ placement: 'top-start', offset: 10 }"
   >
+    <!-- Same surface as the app's dropdowns/popovers (DropdownMenuContent). -->
     <div
-      class="bg-background/50 flex items-center gap-1 overflow-x-auto border p-1 shadow-xl backdrop-blur-2xl"
+      class="bg-popover text-popover-foreground cn-menu-translucent ring-foreground/5 dark:ring-foreground/10 flex max-w-[calc(100vw-2rem)] items-center gap-1 overflow-x-auto rounded-3xl p-1.5 shadow-lg ring-1"
     >
       <DropdownMenu>
         <DropdownMenuTrigger as-child>
-          <Button variant="outline" class="h-8 px-2.5 text-xs">
-            {{ currentBlockLabel }}
-            <IconChevronDown />
+          <Button
+            variant="ghost"
+            :aria-label="t('components.textEditor.blockType')"
+            :title="t('components.textEditor.blockType')"
+          >
+            <component :is="activeBlock.icon" />
+            {{ t(activeBlock.labelKey) }}
+            <IconChevronDown class="opacity-60" />
           </Button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent>
+        <DropdownMenuContent align="start">
           <DropdownMenuItem
-            @click="editor?.chain().focus().setParagraph().run()"
+            v-for="block in BLOCK_TYPES"
+            :key="block.id"
+            :data-active="block.id === activeBlock.id || undefined"
+            class="data-active:bg-accent"
+            @click="editor && block.apply(editor)"
           >
-            {{ t("components.textEditor.blockText") }}
-          </DropdownMenuItem>
-          <DropdownMenuItem
-            @click="editor?.chain().focus().toggleHeading({ level: 1 }).run()"
-          >
-            <IconHeading1 />
-            {{ t("components.textEditor.heading1") }}
-          </DropdownMenuItem>
-          <DropdownMenuItem
-            @click="editor?.chain().focus().toggleHeading({ level: 2 }).run()"
-          >
-            <IconHeading2 />
-            {{ t("components.textEditor.heading2") }}
-          </DropdownMenuItem>
-          <DropdownMenuItem
-            @click="editor?.chain().focus().toggleHeading({ level: 3 }).run()"
-          >
-            <IconHeading3 />
-            {{ t("components.textEditor.heading3") }}
-          </DropdownMenuItem>
-          <DropdownMenuSeparator />
-          <DropdownMenuItem
-            @click="editor?.chain().focus().toggleBlockquote().run()"
-          >
-            <IconQuote />
-            {{ t("components.textEditor.blockquote") }}
-          </DropdownMenuItem>
-          <DropdownMenuItem
-            @click="editor?.chain().focus().toggleCodeBlock().run()"
-          >
-            <IconCode />
-            {{ t("components.textEditor.codeBlock") }}
+            <component :is="block.icon" />
+            {{ t(block.labelKey) }}
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
@@ -1300,87 +1469,15 @@ const scrollToTableOfContentsItem = (item: TableOfContentDataItem) => {
       <Separator orientation="vertical" />
 
       <Toggle
+        v-for="mark in MARK_TOGGLES"
+        :key="mark.name"
         variant="outline"
-        :pressed="editor?.isActive('bold')"
-        @click="editor?.chain().focus().toggleBold().run()"
+        :aria-label="t(mark.labelKey)"
+        :title="t(mark.labelKey)"
+        :pressed="editor?.isActive(mark.name)"
+        @click="editor?.chain().focus().toggleMark(mark.name).run()"
       >
-        <IconBold />
-      </Toggle>
-      <Toggle
-        variant="outline"
-        :pressed="editor?.isActive('italic')"
-        @click="editor?.chain().focus().toggleItalic().run()"
-      >
-        <IconItalic />
-      </Toggle>
-      <Toggle
-        variant="outline"
-        :pressed="editor?.isActive('underline')"
-        @click="editor?.chain().focus().toggleUnderline().run()"
-      >
-        <IconUnderline />
-      </Toggle>
-      <Toggle
-        variant="outline"
-        :pressed="editor?.isActive('strike')"
-        @click="editor?.chain().focus().toggleStrike().run()"
-      >
-        <IconStrikethrough />
-      </Toggle>
-      <Toggle
-        variant="outline"
-        :pressed="editor?.isActive('code')"
-        @click="editor?.chain().focus().toggleCode().run()"
-      >
-        <IconBraces />
-      </Toggle>
-
-      <Separator orientation="vertical" />
-
-      <Toggle
-        variant="outline"
-        :pressed="editor?.isActive('bulletList')"
-        @click="editor?.chain().focus().toggleBulletList().run()"
-      >
-        <IconList />
-      </Toggle>
-      <Toggle
-        variant="outline"
-        :pressed="editor?.isActive('orderedList')"
-        @click="editor?.chain().focus().toggleOrderedList().run()"
-      >
-        <IconListOrdered />
-      </Toggle>
-      <Toggle
-        variant="outline"
-        :pressed="editor?.isActive('taskList')"
-        @click="editor?.chain().focus().toggleTaskList().run()"
-      >
-        <IconListChecks />
-      </Toggle>
-
-      <Separator orientation="vertical" />
-
-      <Toggle
-        variant="outline"
-        :pressed="editor?.isActive({ textAlign: 'left' })"
-        @click="editor?.chain().focus().setTextAlign('left').run()"
-      >
-        <IconAlignLeft />
-      </Toggle>
-      <Toggle
-        variant="outline"
-        :pressed="editor?.isActive({ textAlign: 'center' })"
-        @click="editor?.chain().focus().setTextAlign('center').run()"
-      >
-        <IconAlignCenter />
-      </Toggle>
-      <Toggle
-        variant="outline"
-        :pressed="editor?.isActive({ textAlign: 'right' })"
-        @click="editor?.chain().focus().setTextAlign('right').run()"
-      >
-        <IconAlignRight />
+        <component :is="mark.icon" />
       </Toggle>
 
       <Separator orientation="vertical" />
@@ -1432,7 +1529,12 @@ const scrollToTableOfContentsItem = (item: TableOfContentDataItem) => {
 
       <DropdownMenu>
         <DropdownMenuTrigger as-child>
-          <Button variant="outline" size="icon">
+          <Button
+            variant="outline"
+            size="icon"
+            :aria-label="t('components.textEditor.textStyle')"
+            :title="t('components.textEditor.textStyle')"
+          >
             <IconALargeSmall />
           </Button>
         </DropdownMenuTrigger>
@@ -1500,16 +1602,37 @@ const scrollToTableOfContentsItem = (item: TableOfContentDataItem) => {
               </DropdownMenuItem>
             </DropdownMenuSubContent>
           </DropdownMenuSub>
+          <DropdownMenuSeparator />
+          <DropdownMenuCheckboxItem
+            :model-value="editor?.isActive('subscript')"
+            @select="editor?.chain().focus().toggleSubscript().run()"
+          >
+            {{ t("components.textEditor.subscript") }}
+          </DropdownMenuCheckboxItem>
+          <DropdownMenuCheckboxItem
+            :model-value="editor?.isActive('superscript')"
+            @select="editor?.chain().focus().toggleSuperscript().run()"
+          >
+            {{ t("components.textEditor.superscript") }}
+          </DropdownMenuCheckboxItem>
         </DropdownMenuContent>
       </DropdownMenu>
 
-      <Button variant="outline" size="icon" @click="openLinkDialog">
+      <Button
+        variant="outline"
+        size="icon"
+        :aria-label="t('components.textEditor.link')"
+        :title="t('components.textEditor.link')"
+        @click="openLinkDialog"
+      >
         <IconLink />
       </Button>
       <Button
         v-if="editor?.isActive('link')"
         variant="outline"
         size="icon"
+        :aria-label="t('components.textEditor.unlink')"
+        :title="t('components.textEditor.unlink')"
         @click="
           editor?.chain().focus().extendMarkRange('link').unsetLink().run()
         "
@@ -1517,49 +1640,14 @@ const scrollToTableOfContentsItem = (item: TableOfContentDataItem) => {
         <IconUnlink />
       </Button>
 
-      <Button variant="outline" size="icon" @click="openImageDialog">
-        <IconImage />
-      </Button>
-
-      <Popover
-        v-model:open="isTablePickerOpen"
-        @update:open="!$event && clearTablePickerSelection()"
-      >
-        <PopoverTrigger as-child>
-          <Button variant="outline" size="icon">
-            <IconTable />
-          </Button>
-        </PopoverTrigger>
-        <PopoverContent class="w-auto p-2">
-          <div class="text-muted-foreground mb-2 text-xs font-medium">
-            {{ tablePickerLabel }}
-          </div>
-          <div
-            class="flex flex-col gap-1"
-            @mouseleave="clearTablePickerSelection"
-          >
-            <div v-for="row in TABLE_PICKER_ROWS" :key="row" class="flex gap-1">
-              <Button
-                v-for="col in TABLE_PICKER_COLS"
-                :key="`${row}-${col}`"
-                :class="
-                  col <= tablePickerSelection.cols &&
-                  row <= tablePickerSelection.rows
-                    ? 'border-accent bg-accent/30'
-                    : 'border-border bg-background hover:bg-muted'
-                "
-                @mouseenter="updateTablePickerSelection(row, col)"
-                @focus="updateTablePickerSelection(row, col)"
-                @click="insertTableFromPicker(row, col)"
-              />
-            </div>
-          </div>
-        </PopoverContent>
-      </Popover>
-
       <DropdownMenu v-if="editor?.isActive('table')">
         <DropdownMenuTrigger as-child>
-          <Button variant="outline" size="icon">
+          <Button
+            variant="outline"
+            size="icon"
+            :aria-label="t('components.textEditor.tableTitle')"
+            :title="t('components.textEditor.tableTitle')"
+          >
             <IconTable />
           </Button>
         </DropdownMenuTrigger>
@@ -1626,32 +1714,17 @@ const scrollToTableOfContentsItem = (item: TableOfContentDataItem) => {
           </SelectTrigger>
           <SelectContent>
             <SelectGroup>
-              <SelectItem value="50%">50%</SelectItem>
-              <SelectItem value="75%">75%</SelectItem>
-              <SelectItem value="100%">100%</SelectItem>
+              <SelectItem
+                v-for="width in IMAGE_WIDTHS"
+                :key="width"
+                :value="width"
+              >
+                {{ width }}
+              </SelectItem>
             </SelectGroup>
           </SelectContent>
         </Select>
       </div>
-
-      <Separator orientation="vertical" />
-
-      <Button
-        variant="outline"
-        size="icon"
-        :disabled="!editor?.can().undo()"
-        @click="editor?.chain().focus().undo().run()"
-      >
-        <IconRotateCcw />
-      </Button>
-      <Button
-        variant="outline"
-        size="icon"
-        :disabled="!editor?.can().redo()"
-        @click="editor?.chain().focus().redo().run()"
-      >
-        <IconRefreshCw />
-      </Button>
     </div>
   </BubbleMenu>
 
@@ -1666,6 +1739,8 @@ const scrollToTableOfContentsItem = (item: TableOfContentDataItem) => {
         variant="outline"
         size="icon"
         class="size-6"
+        :aria-label="t('components.textEditor.copyBlockLink')"
+        :title="t('components.textEditor.copyBlockLink')"
         @click.stop="copyBlockLink"
       >
         <IconLink2 />
@@ -1674,6 +1749,8 @@ const scrollToTableOfContentsItem = (item: TableOfContentDataItem) => {
         variant="outline"
         size="icon"
         class="size-6"
+        :aria-label="t('components.textEditor.selectBlock')"
+        :title="t('components.textEditor.selectBlock')"
         @click.stop="selectNodeFromDragHandle"
       >
         <IconGripVertical />
@@ -1683,24 +1760,28 @@ const scrollToTableOfContentsItem = (item: TableOfContentDataItem) => {
 
   <TextEditorCommandPanel
     :open="Boolean(slashPanelState)"
-    :x="slashPanelPosition.x"
-    :y="slashPanelPosition.y"
     :items="slashPanelState?.items ?? []"
     :selected-index="slashPanelState?.selectedIndex ?? 0"
+    :get-rect="slashPanelState?.getRect"
+    :context-element="editor?.view.dom"
+    :panel-id="slashPanelId"
     :label="t('components.textEditor.slashCommands')"
-    @select="selectSlashCommand"
-    @hover="hoverSlashCommand"
+    :empty-text="t('components.textEditor.noCommands')"
+    @select="slashPanelState?.execute($event)"
+    @hover="slashPanelState?.hover($event)"
   />
 
   <TextEditorCommandPanel
     :open="Boolean(emojiPanelState)"
-    :x="emojiPanelPosition.x"
-    :y="emojiPanelPosition.y"
     :items="emojiPanelState?.items ?? []"
     :selected-index="emojiPanelState?.selectedIndex ?? 0"
+    :get-rect="emojiPanelState?.getRect"
+    :context-element="editor?.view.dom"
+    :panel-id="emojiPanelId"
     :label="t('components.textEditor.emojiSuggestions')"
-    @select="selectEmojiSuggestion"
-    @hover="hoverEmojiSuggestion"
+    :empty-text="t('components.textEditor.noEmojis')"
+    @select="emojiPanelState?.execute($event)"
+    @hover="emojiPanelState?.hover($event)"
   />
 
   <TextEditorLinkDialog
@@ -1714,6 +1795,14 @@ const scrollToTableOfContentsItem = (item: TableOfContentDataItem) => {
     v-model:open="isImageDialogOpen"
     :upload-image="uploadImage"
     @insert="insertImageFromDialog"
+  />
+
+  <TextEditorMathDialog
+    v-model:open="isMathDialogOpen"
+    :initial-latex="mathTarget.latex"
+    :editing="mathTarget.pos !== null"
+    @submit="applyMathFromDialog"
+    @remove="removeMathFromDialog"
   />
 </template>
 
@@ -1773,29 +1862,21 @@ const scrollToTableOfContentsItem = (item: TableOfContentDataItem) => {
         user-select: none;
         cursor: pointer;
 
+        /* The box is the real checkbox (Tiptap's inner <span> is now a
+           visually-hidden screen-reader label, so it can't carry visuals).
+           Mirrors ui/checkbox Checkbox.vue: size-4 rounded-[5px] border-input
+           shadow-xs dark:bg-input/30, checked -> primary, focus-visible ->
+           3px ring-ring/50. Only the shadow transitions. */
         input[type="checkbox"] {
-          position: absolute;
-          inset: 0;
+          appearance: none;
           width: 1rem;
           height: 1rem;
           margin: 0;
-          opacity: 0;
-          cursor: pointer;
-          outline: none;
-          z-index: 1;
-        }
-
-        /* Mirrors ui/checkbox Checkbox.vue: size-4 rounded-[5px] border-input
-           shadow-xs dark:bg-input/30, checked -> primary with a size-3.5
-           lucide check, focus-visible -> 3px ring-ring/50. Only the shadow
-           transitions, like the component's `transition-shadow`. */
-        > span {
-          width: 1rem;
-          height: 1rem;
           border: 1px solid var(--input);
           border-radius: 5px;
           box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
-          color: var(--primary-foreground);
+          cursor: pointer;
+          outline: none;
           transition: box-shadow 0.15s ease;
 
           :where(.dark, [data-theme="dark"]) & {
@@ -1806,39 +1887,38 @@ const scrollToTableOfContentsItem = (item: TableOfContentDataItem) => {
             );
           }
 
-          &::after {
-            content: "";
-            display: block;
-            width: 100%;
-            height: 100%;
-            background-color: currentColor;
-            mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M20 6 9 17l-5-5'/%3E%3C/svg%3E")
-              center / 0.875rem no-repeat;
-            transform: scale(0);
+          &:focus-visible {
+            border-color: var(--ring);
+            box-shadow: 0 0 0 3px
+              color-mix(in oklab, var(--ring) 50%, transparent);
+          }
+
+          &:checked {
+            border-color: var(--primary);
+            background-color: var(--primary);
+          }
+
+          &:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
           }
         }
 
-        input[type="checkbox"]:focus-visible + span {
-          border-color: var(--ring);
-          box-shadow: 0 0 0 3px
-            color-mix(in oklab, var(--ring) 50%, transparent);
+        /* size-3.5 lucide check, drawn over the box (inputs can't host
+           pseudo-elements in every engine). */
+        &::after {
+          content: "";
+          position: absolute;
+          inset: 0;
+          background-color: var(--primary-foreground);
+          mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M20 6 9 17l-5-5'/%3E%3C/svg%3E")
+            center / 0.875rem no-repeat;
+          pointer-events: none;
+          transform: scale(0);
         }
 
-        input[type="checkbox"]:checked + span {
-          border-color: var(--primary);
-          background-color: var(--primary);
-
-          &::after {
-            transform: scale(1);
-          }
-        }
-
-        input[type="checkbox"]:disabled + span {
-          opacity: 0.5;
-        }
-
-        input[type="checkbox"]:disabled {
-          cursor: not-allowed;
+        &:has(input:checked)::after {
+          transform: scale(1);
         }
       }
 
@@ -2000,8 +2080,9 @@ const scrollToTableOfContentsItem = (item: TableOfContentDataItem) => {
     background: color-mix(in oklab, var(--primary) 18%, transparent);
   }
 
-  /* Deep-link landing offset for UniqueID hash targets. */
-  [data-id] {
+  /* Deep-link landing offset for block hash targets (UniqueID / TOC ids). */
+  [data-id],
+  [data-toc-id] {
     scroll-margin-top: 1.5rem;
   }
 

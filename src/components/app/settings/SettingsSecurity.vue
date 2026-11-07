@@ -1,4 +1,5 @@
 <script lang="ts" setup>
+import { useCopy } from "@/composables/useCopy"
 import { useCurrentTeamRole } from "@/composables/useCurrentTeamRole"
 import { useDismissGuard } from "@/composables/useDismissGuard"
 import { useSsoConfig } from "@/composables/useSsoConfig"
@@ -7,6 +8,7 @@ import {
   IconAlertTriangle,
   IconCheck,
   IconCircleAlert,
+  IconCopy,
   IconGlobe,
   IconSettings,
   IconShieldCheck,
@@ -44,13 +46,38 @@ const {
   saving,
   deleting,
   testing,
+  verifying,
   savingApprovedDomains,
   saveSsoConfig,
   deleteSsoConfig,
   testConnection,
+  verifyDomain,
   saveLoginMethods,
   saveApprovedDomains,
 } = useSsoConfig(teamId)
+
+// Saved domains only — verification proves the persisted config, not the draft.
+const savedSsoDomains = computed(() =>
+  hasSso.value ? (ssoConfig.value.domains ?? []) : []
+)
+const isDomainVerified = (domain: string) =>
+  (ssoConfig.value.verifiedDomains ?? []).includes(domain)
+const txtRecordFor = (domain: string) => {
+  const token = ssoConfig.value.verificationTokens?.[domain]
+  return token ? `lectornaut-domain-verification=${token}` : ""
+}
+const verifyingDomain = ref<string | null>(null)
+const handleVerifyDomain = async (domain: string) => {
+  verifyingDomain.value = domain
+  try {
+    await verifyDomain(domain)
+  } catch {
+    // Surfaced by the action runner's toast.
+  } finally {
+    verifyingDomain.value = null
+  }
+}
+const { copy: copyTxtRecord } = useCopy()
 
 type LoginMethodKey =
   "emailPassword" | "magicLink" | "google" | "microsoft" | "apple" | "sso"
@@ -697,6 +724,67 @@ const handleDeleteSso = async () => {
                         </Tooltip>
                       </TooltipProvider>
                     </TagsInput>
+                  </Field>
+                  <!-- Domain ownership: only verified domains enforce or route SSO -->
+                  <Field v-if="savedSsoDomains.length">
+                    <FieldContent>
+                      <FieldLabel>{{
+                        t("settings.security.sso.verificationLabel")
+                      }}</FieldLabel>
+                      <FieldDescription>
+                        {{ t("settings.security.sso.verificationDescription") }}
+                      </FieldDescription>
+                    </FieldContent>
+                    <div class="flex flex-col gap-3">
+                      <div
+                        v-for="domain in savedSsoDomains"
+                        :key="domain"
+                        class="flex flex-col gap-1.5"
+                      >
+                        <div class="flex items-center justify-between gap-2">
+                          <span class="text-sm font-medium">{{ domain }}</span>
+                          <Badge
+                            v-if="isDomainVerified(domain)"
+                            variant="secondary"
+                          >
+                            <IconShieldCheck />
+                            {{ t("settings.security.sso.verified") }}
+                          </Badge>
+                          <Button
+                            v-else
+                            size="sm"
+                            variant="outline"
+                            :disabled="verifying || !txtRecordFor(domain)"
+                            @click="handleVerifyDomain(domain)"
+                          >
+                            <Spinner v-if="verifyingDomain === domain" />
+                            {{ t("settings.security.sso.verify") }}
+                          </Button>
+                        </div>
+                        <InputGroup
+                          v-if="
+                            !isDomainVerified(domain) && txtRecordFor(domain)
+                          "
+                        >
+                          <InputGroupInput
+                            :model-value="txtRecordFor(domain)"
+                            readonly
+                            class="font-mono text-xs"
+                            :aria-label="t('settings.security.sso.txtRecord')"
+                          />
+                          <InputGroupAddon align="inline-end">
+                            <InputGroupButton
+                              variant="ghost"
+                              size="icon-xs"
+                              :aria-label="t('actions.copy')"
+                              @click="copyTxtRecord(txtRecordFor(domain))"
+                            >
+                              <IconCopy />
+                            </InputGroupButton>
+                          </InputGroupAddon>
+                        </InputGroup>
+                      </div>
+                    </div>
                   </Field>
                   <Field orientation="horizontal">
                     <FieldContent>

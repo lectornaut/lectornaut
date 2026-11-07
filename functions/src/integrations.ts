@@ -239,7 +239,11 @@ const toolFieldSchema = z.object({
 const toolActionSchema = z.discriminatedUnion("kind", [
   z.object({
     kind: z.literal("httpWebhook"),
-    url: z.string().url().max(2048),
+    url: z
+      .string()
+      .url()
+      .max(2048)
+      .refine((u) => /^https?:\/\//i.test(u), "Webhook URL must be http(s)."),
     method: z.enum(["GET", "POST", "PUT", "PATCH", "DELETE"]),
     headers: z.array(
       z.object({ name: z.string().min(1).max(80), value: z.string().max(1000) })

@@ -8,7 +8,12 @@ import {
   type FileTreeSelectionMode,
 } from "@/composables/useFileTreeSelection"
 import {
+  IconArchive,
+  IconChevronDown,
   IconChevronRight,
+  IconRefreshCcw,
+  IconTrash2,
+  IconX,
   IconFilePlus,
   IconFolderPlus,
   IconFolder,
@@ -90,6 +95,118 @@ if (!existingSidebarContext) {
 
 const selectionMode = computed<FileTreeSelectionMode>(() => props.selectionMode)
 
+// ── Finder-style multi-select ("none" mode only) ───────────────────────────
+//
+// ⌘/Ctrl-click toggles a row into `multiSelectedIds`, Shift-click selects
+// the visible range from the anchor. A plain click clears it and opens the
+// node as before. Bulk actions live in the "N selected" menu under the tree;
+// row menus always act on their own node.
+
+const multiSelectedIds = ref<string[]>([])
+let anchorId: string | null = null
+
+const storeSelectedId = computed(() =>
+  store.getSelectedNodeId(props.scope, props.teamId, props.workspaceId)
+)
+
+/** Ids in on-screen order: children of expanded folders follow their parent. */
+const visibleIds = (parentId: string): string[] =>
+  store
+    .getChildrenIds(props.scope, props.teamId, props.workspaceId, parentId)
+    .flatMap((id) => [
+      id,
+      ...(store.isExpanded(props.scope, props.teamId, props.workspaceId, id)
+        ? visibleIds(id)
+        : []),
+    ])
+
+const handleMultiSelectClick = (node: WorkspaceNode, event: MouseEvent) => {
+  if (event.shiftKey) {
+    const order = visibleIds(ROOT_PARENT_ID)
+    const to = order.indexOf(node.id)
+    const anchorIndex = order.indexOf(anchorId ?? storeSelectedId.value ?? "")
+    const from = anchorIndex === -1 ? to : anchorIndex
+    multiSelectedIds.value = order.slice(
+      Math.min(from, to),
+      Math.max(from, to) + 1
+    )
+    return true
+  }
+  if (event.metaKey || event.ctrlKey) {
+    const base = selectedNodes.value.length
+      ? selectedNodes.value.map((n) => n.id)
+      : storeSelectedId.value
+        ? [storeSelectedId.value]
+        : []
+    multiSelectedIds.value = base.includes(node.id)
+      ? base.filter((id) => id !== node.id)
+      : [...base, node.id]
+    anchorId = node.id
+    return true
+  }
+  multiSelectedIds.value = []
+  anchorId = node.id
+  return false
+}
+
+const hasAncestorIn = (id: string, ids: Set<string>) => {
+  let parentId = store.getNode(
+    props.scope,
+    props.teamId,
+    props.workspaceId,
+    id
+  )?.parentId
+  while (parentId && parentId !== ROOT_PARENT_ID) {
+    if (ids.has(parentId)) return true
+    parentId = store.getNode(
+      props.scope,
+      props.teamId,
+      props.workspaceId,
+      parentId
+    )?.parentId
+  }
+  return false
+}
+
+// Resolved against the live store, so deleted nodes (and a deleted
+// folder's subtree) drop out of the selection on their own.
+const selectedNodes = computed<WorkspaceNode[]>(() =>
+  multiSelectedIds.value
+    .map((id) =>
+      store.getNode(props.scope, props.teamId, props.workspaceId, id)
+    )
+    .filter((n): n is WorkspaceNode => Boolean(n))
+)
+
+/** Selected nodes, minus any whose ancestor is also selected. */
+const bulkTargets = computed<WorkspaceNode[]>(() => {
+  const ids = new Set(selectedNodes.value.map((n) => n.id))
+  // Archive/delete cascade to descendants, so acting on a selected folder
+  // already covers its selected children; acting twice would fail.
+  return selectedNodes.value.filter((n) => !hasAncestorIn(n.id, ids))
+})
+
+const bulkBusy = ref(false)
+
+const bulkHasActive = computed(() =>
+  bulkTargets.value.some((n) => !n.isArchived)
+)
+const bulkHasArchived = computed(() =>
+  bulkTargets.value.some((n) => n.isArchived)
+)
+
+const clearSelection = () => {
+  multiSelectedIds.value = []
+}
+
+/** Drop acted-on nodes (and their descendants) from the multi-selection. */
+const deselect = (nodes: WorkspaceNode[]) => {
+  const done = new Set(nodes.map((n) => n.id))
+  multiSelectedIds.value = multiSelectedIds.value.filter(
+    (id) => !done.has(id) && !hasAncestorIn(id, done)
+  )
+}
+
 const selectedIds = computed<Set<string>>(() => {
   if (selectionMode.value === "multiple") {
     return new Set(Array.isArray(props.selection) ? props.selection : [])
@@ -98,20 +215,20 @@ const selectedIds = computed<Set<string>>(() => {
     const id = typeof props.selection === "string" ? props.selection : null
     return new Set(id ? [id] : [])
   }
-  // "none": follow the store so URL-driven selection still highlights.
-  const storeId = store.getSelectedNodeId(
-    props.scope,
-    props.teamId,
-    props.workspaceId
-  )
-  return new Set(storeId ? [storeId] : [])
+  // "none": follow the store so URL-driven selection still highlights,
+  // unless a ⌘/Shift multi-selection is active.
+  if (selectedNodes.value.length) {
+    return new Set(selectedNodes.value.map((n) => n.id))
+  }
+  return new Set(storeSelectedId.value ? [storeSelectedId.value] : [])
 })
 
 provideFileTreeSelection({
   mode: selectionMode,
   isSelected: (id: string) => selectedIds.value.has(id),
-  onRowClick: (node: WorkspaceNode) => {
+  onRowClick: (node: WorkspaceNode, event: MouseEvent) => {
     if (selectionMode.value === "none") {
+      if (handleMultiSelectClick(node, event)) return
       store.setSelectedNode(
         props.scope,
         props.teamId,
@@ -166,11 +283,11 @@ const dialogs = reactive({
   },
   archive: {
     open: false,
-    node: null as WorkspaceNode | null,
+    nodes: [] as WorkspaceNode[],
   },
   delete: {
     open: false,
-    node: null as WorkspaceNode | null,
+    nodes: [] as WorkspaceNode[],
   },
 })
 
@@ -190,15 +307,25 @@ const openRenameDialog = (node: WorkspaceNode) => {
   dialogs.rename.open = true
 }
 
-const openArchiveDialog = (node: WorkspaceNode) => {
-  dialogs.archive.node = node
+const openArchiveDialog = (nodes: WorkspaceNode[]) => {
+  dialogs.archive.nodes = nodes.filter((n) => !n.isArchived)
   dialogs.archive.open = true
 }
 
-const openDeleteDialog = (node: WorkspaceNode) => {
-  dialogs.delete.node = node
+const openDeleteDialog = (nodes: WorkspaceNode[]) => {
+  dialogs.delete.nodes = nodes
   dialogs.delete.open = true
 }
+
+/** Confirm-dialog copy: the node's name, or a count for a multi-selection. */
+const describeTargets = (
+  nodes: WorkspaceNode[],
+  oneKey: string,
+  manyKey: string
+) =>
+  nodes.length > 1
+    ? t(manyKey, { count: nodes.length })
+    : t(oneKey, { name: nodes[0]?.name ?? "" })
 
 watch(
   () => dialogs.create.open,
@@ -218,13 +345,37 @@ watch(
   }
 )
 
-const handleUnarchive = async (node: WorkspaceNode) => {
+/**
+ * Runs `action` on every node in parallel and drops the ones that succeeded
+ * from the multi-selection; the first failure is rethrown for the caller's
+ * toast, so a partial run stays visible instead of silently half-done.
+ */
+const runOnNodes = async (
+  nodes: WorkspaceNode[],
+  action: (node: WorkspaceNode) => Promise<unknown>
+) => {
+  bulkBusy.value = true
   try {
-    await store.unarchiveNodeAction(
-      props.scope,
-      props.teamId,
-      props.workspaceId,
-      node.id
+    const results = await Promise.allSettled(nodes.map(action))
+    deselect(nodes.filter((_, i) => results[i]?.status === "fulfilled"))
+    const failed = results.find((r) => r.status === "rejected")
+    if (failed) throw failed.reason
+  } finally {
+    bulkBusy.value = false
+  }
+}
+
+const handleUnarchive = async (nodes: WorkspaceNode[]) => {
+  try {
+    await runOnNodes(
+      nodes.filter((n) => n.isArchived),
+      (n) =>
+        store.unarchiveNodeAction(
+          props.scope,
+          props.teamId,
+          props.workspaceId,
+          n.id
+        )
     )
     showSuccessToast(t("fileTree.toast.unarchived"))
   } catch (error) {
@@ -380,14 +531,16 @@ const handleRootDrop = async (event: DragEvent) => {
 }
 
 const handleArchiveConfirm = async () => {
-  if (!dialogs.archive.node) return
+  if (!dialogs.archive.nodes.length) return
 
   try {
-    await store.archiveNodeAction(
-      props.scope,
-      props.teamId,
-      props.workspaceId,
-      dialogs.archive.node.id
+    await runOnNodes(dialogs.archive.nodes, (n) =>
+      store.archiveNodeAction(
+        props.scope,
+        props.teamId,
+        props.workspaceId,
+        n.id
+      )
     )
     showSuccessToast(t("fileTree.toast.archived"))
   } catch (error) {
@@ -397,14 +550,11 @@ const handleArchiveConfirm = async () => {
 }
 
 const handleDeleteConfirm = async () => {
-  if (!dialogs.delete.node) return
+  if (!dialogs.delete.nodes.length) return
 
   try {
-    await store.deleteNodeAction(
-      props.scope,
-      props.teamId,
-      props.workspaceId,
-      dialogs.delete.node.id
+    await runOnNodes(dialogs.delete.nodes, (n) =>
+      store.deleteNodeAction(props.scope, props.teamId, props.workspaceId, n.id)
     )
     showSuccessToast(t("fileTree.toast.deleted"))
   } catch (error) {
@@ -428,6 +578,8 @@ watch(
     const prevScope = previous?.[0]
     const prevTeamId = previous?.[1]
     const prevWorkspaceId = previous?.[2]
+    multiSelectedIds.value = []
+    anchorId = null
     if (prevScope && prevTeamId && prevWorkspaceId) {
       store.releaseWorkspace(prevScope, prevTeamId, prevWorkspaceId)
     }
@@ -555,7 +707,7 @@ onBeforeUnmount(() => {
           @dragleave="handleRootDragLeave"
           @drop="handleRootDrop"
         >
-          <SidebarMenu>
+          <SidebarMenu class="select-none">
             <TreeNode
               v-for="childId in rootChildren"
               :key="childId"
@@ -566,9 +718,9 @@ onBeforeUnmount(() => {
               @create-folder="openCreateDialog('folder', $event.id)"
               @create-file="openCreateDialog('file', $event.id)"
               @rename="openRenameDialog"
-              @archive="openArchiveDialog"
-              @unarchive="handleUnarchive"
-              @delete="openDeleteDialog"
+              @archive="openArchiveDialog([$event])"
+              @unarchive="handleUnarchive([$event])"
+              @delete="openDeleteDialog([$event])"
             />
           </SidebarMenu>
           <div v-if="rootLoading" class="text-muted-foreground p-2 text-xs">
@@ -598,6 +750,54 @@ onBeforeUnmount(() => {
         </SidebarGroupContent>
       </CollapsibleContent>
     </Collapsible>
+    <!-- Bulk actions for the ⌘/Shift selection, pinned in the page's -->
+    <!-- sidebar footer (outside the scroll area) like the chat history -->
+    <!-- sidebar; mirrors DataTable's selected-count chip. Only "none" -->
+    <!-- mode (write/code pages, which own the target) ever multi-selects. -->
+    <Teleport v-if="selectedNodes.length" defer to="#file-tree-footer">
+      <DropdownMenu>
+        <DropdownMenuTrigger as-child>
+          <Button
+            variant="outline"
+            class="data-[state=open]:bg-accent self-stretch border-dashed tabular-nums"
+          >
+            {{ t("fileTree.selectedCount", { count: selectedNodes.length }) }}
+            <IconChevronDown />
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="start" side="top" class="min-w-48">
+          <DropdownMenuItem
+            v-if="bulkHasActive"
+            :disabled="bulkBusy"
+            @click="openArchiveDialog(bulkTargets)"
+          >
+            <IconArchive />
+            {{ t("fileTree.bulkArchive") }}
+          </DropdownMenuItem>
+          <DropdownMenuItem
+            v-if="bulkHasArchived"
+            :disabled="bulkBusy"
+            @click="handleUnarchive(bulkTargets)"
+          >
+            <IconRefreshCcw />
+            {{ t("fileTree.bulkUnarchive") }}
+          </DropdownMenuItem>
+          <DropdownMenuItem
+            variant="destructive"
+            :disabled="bulkBusy"
+            @click="openDeleteDialog(bulkTargets)"
+          >
+            <IconTrash2 />
+            {{ t("fileTree.bulkDelete") }}
+          </DropdownMenuItem>
+          <DropdownMenuSeparator />
+          <DropdownMenuItem :disabled="bulkBusy" @click="clearSelection">
+            <IconX />
+            {{ t("fileTree.bulkClear") }}
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+    </Teleport>
   </SidebarGroup>
 
   <Dialog
@@ -687,7 +887,11 @@ onBeforeUnmount(() => {
     v-model:open="dialogs.archive.open"
     :title="t('fileTree.archiveTitle')"
     :description="
-      t('fileTree.archiveConfirm', { name: dialogs.archive.node?.name ?? '' })
+      describeTargets(
+        dialogs.archive.nodes,
+        'fileTree.archiveConfirm',
+        'fileTree.archiveManyConfirm'
+      )
     "
     :action-label="t('fileTree.archive')"
     :on-confirm="handleArchiveConfirm"
@@ -697,7 +901,11 @@ onBeforeUnmount(() => {
     v-model:open="dialogs.delete.open"
     :title="t('fileTree.deleteTitle')"
     :description="
-      t('fileTree.deleteConfirm', { name: dialogs.delete.node?.name ?? '' })
+      describeTargets(
+        dialogs.delete.nodes,
+        'fileTree.deleteConfirm',
+        'fileTree.deleteManyConfirm'
+      )
     "
     :action-label="t('actions.delete')"
     destructive

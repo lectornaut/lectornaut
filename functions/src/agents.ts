@@ -396,6 +396,29 @@ export function buildHeadlessDirective(): string {
  * reconstructing a document from a snippet. This is the write-path
  * analogue of the deliberate archive-only/no-hard-delete design.
  */
+/**
+ * The exact markdown dialect `write` docs round-trip through
+ * (`shared/markdownToTiptap.ts`). Without it the model guesses markdown-it
+ * plugins the schema can't hold, then writes them as literal text. Keep in
+ * step with that file's extension list.
+ */
+const WRITE_MARKDOWN_SYNTAX =
+  "- 'write' docs are rich text stored from markdown. Supported: headings " +
+  "#–######, **bold**, *italic*, ~~strike~~, ==highlight==, `code`, " +
+  "[links](url), ![images](url), bullet/numbered lists, task lists " +
+  "(`- [ ]` / `- [x]`, nestable), > blockquotes, fenced code with a " +
+  "language (```mermaid included), --- rules, GFM pipe tables with " +
+  ":--- / :---: / ---: alignment, inline $math$ and block $$math$$ " +
+  "(LaTeX), and collapsible sections written EXACTLY as (blank line " +
+  "between every line, all at column 0):\n" +
+  "  :::details\n\n  :::detailsSummary\n\n  Title\n\n  :::\n\n" +
+  "  :::detailsContent\n\n  Body\n\n  :::\n\n  :::\n" +
+  "  NOT supported (would land as literal text or get mangled, so never " +
+  "write them): raw HTML tags (<kbd>, <details>, <mark>, ...), footnotes " +
+  "[^1], definition lists, ~sub~ / ^sup^ (single ~ becomes " +
+  "strikethrough). Use the supported " +
+  "equivalent instead, and don't claim a supported feature is missing.\n"
+
 export function buildNodeEditingDirective(canReadNodes: boolean): string {
   // The "how to get full content before an overwrite" clause depends on
   // whether `readNode` is actually registered this turn (the `readContent`
@@ -417,6 +440,7 @@ export function buildNodeEditingDirective(canReadNodes: boolean): string {
     fullContentSource +
     ". A search snippet or summary is NOT enough; overwriting from a " +
     "partial view destroys the rest of the document.\n" +
+    WRITE_MARKDOWN_SYNTAX +
     "- Prefer the smallest change that satisfies the request; preserve " +
     "everything you are not deliberately changing.\n" +
     "- Never imply you can permanently delete. Archiving is a reversible " +

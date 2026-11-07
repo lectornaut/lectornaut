@@ -25,6 +25,7 @@
  */
 
 import type { SendBotMessageStreamChunk } from "@/composables/useFunctions"
+import { splitUploadedFileLabels } from "@lectornaut/shared/domain"
 
 export type BotChatRole = "user" | "agent"
 
@@ -336,3 +337,38 @@ export const applyStreamChunk = (
     applyStreamToolResult(messages, agentIndex, chunk.toolResult)
   return effects
 }
+
+// The model's reasoning is folded into `<thinking>…</thinking>` blocks
+// inside `content` (rendered as a collapsible disclosure). Copying, quoting
+// or exporting should carry the answer, not the chain-of-thought — strip
+// those blocks (including a half-open block while streaming).
+const THINKING_BLOCK_RE = /<thinking\b[^>]*>[\s\S]*?(?:<\/thinking\s*>\s*|$)/gi
+
+/**
+ * The plain-text view of a bubble, shared by Copy / Reply / Read aloud /
+ * chat export. Agent turns shed their <thinking> blocks; user turns shed
+ * the server's `[Uploaded file …]` labels (those render as chips).
+ */
+export const messagePlainText = (message: BotChatMessage): string =>
+  message.role === "user"
+    ? splitUploadedFileLabels(message.content).text
+    : message.content.replace(THINKING_BLOCK_RE, "").trim()
+
+/**
+ * Whole-chat transcript as Markdown: a title, then one bold sender line
+ * per turn. Bubbles are already Markdown, so they go in verbatim. Empty
+ * turns (a tool-only reply, a file-only send) are skipped.
+ */
+export const chatToMarkdown = (
+  messages: readonly BotChatMessage[],
+  title: string
+): string =>
+  [
+    `# ${title}`,
+    ...messages.flatMap((m) => {
+      const text = messagePlainText(m)
+      return text
+        ? [`**${m.role === "user" ? "User" : "Assistant"}**\n\n${text}`]
+        : []
+    }),
+  ].join("\n\n---\n\n") + "\n"

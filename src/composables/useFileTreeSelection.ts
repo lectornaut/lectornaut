@@ -51,11 +51,12 @@ export interface FileTreeSelectionContext {
   /**
    * Called when the user clicks a node row (excluding the chevron and
    * the inline actions menu). The `FileTree` root decides what to do:
-   *   - "none":     write to the store
+   *   - "none":     write to the store; ⌘/Ctrl-click toggles and
+   *                 Shift-click ranges a Finder-style multi-selection
    *   - "single":   emit `select` so the parent can move its pointer
    *   - "multiple": emit `select` so the parent can toggle membership
    */
-  onRowClick: (node: WorkspaceNode) => void
+  onRowClick: (node: WorkspaceNode, event: MouseEvent) => void
 }
 
 const FileTreeSelectionKey: InjectionKey<FileTreeSelectionContext> = Symbol(

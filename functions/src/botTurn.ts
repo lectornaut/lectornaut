@@ -39,7 +39,7 @@
  * truth table rather than by reviewer vigilance.
  */
 
-import type { Part, ResumeOptions } from "genkit/beta"
+import type { MessageData, Part, ResumeOptions } from "genkit/beta"
 import type { GenerationUsage } from "genkit/model"
 
 import type { AiProvider, BotChatEffort } from "./domain.js"
@@ -543,4 +543,81 @@ export function billableUsage(usage: GenerationUsage): {
       (usage.inputTokens ?? 0) + (typeof toolUse === "number" ? toolUse : 0),
     outputTokens: (usage.outputTokens ?? 0) + (usage.thoughtsTokens ?? 0),
   }
+}
+
+// ===========================================================================
+// Failed-turn persistence (Genkit failed/aborted-snapshot semantics)
+// ===========================================================================
+
+/**
+ * The complete tool rounds a failed turn committed, from Genkit's failure
+ * partial (`generate({ throwOnError: false })` → `res.messages`, which ends at
+ * a turn seam). Takes everything after the turn's user message, then keeps
+ * `model` toolRequest → `tool` response pairs while every request is answered
+ * (by `ref`, else by name in order — the `findPendingInterruptParts` rule).
+ * Stops at the first incomplete round, so an unpaired tool_use (Anthropic
+ * rejects the next request) never lands. `[]` = nothing committed.
+ */
+export function committedToolRounds(
+  messages: readonly MessageData[]
+): MessageData[] {
+  let user = messages.length - 1
+  while (user >= 0 && messages[user]!.role !== "user") user--
+  const tail = messages.slice(user + 1)
+  const out: MessageData[] = []
+  for (let i = 0; i + 1 < tail.length; i += 2) {
+    const call = tail[i]!
+    const reply = tail[i + 1]!
+    if (call.role !== "model" || reply.role !== "tool") break
+    const pending = call.content.flatMap((p) =>
+      p.toolRequest ? [p.toolRequest] : []
+    )
+    if (!pending.length) break
+    for (const { toolResponse: r } of reply.content) {
+      if (!r) continue
+      const at = pending.findIndex((q) =>
+        r.ref ? q.ref === r.ref : !q.ref && q.name === r.name
+      )
+      if (at >= 0) pending.splice(at, 1)
+    }
+    if (pending.length) break
+    out.push(call, reply)
+  }
+  return out
+}
+
+/**
+ * The thread after a graceful-fallback turn: the error reply goes on top of
+ * the rounds the turn committed (`committed` and the thread ends on a `tool`
+ * message), else the turn wrote nothing and the user message is re-added.
+ */
+export function appendTurnError(
+  thread: readonly MessageData[],
+  committed: boolean,
+  userMessage: MessageData,
+  errorReply: MessageData
+): MessageData[] {
+  return committed && thread.at(-1)?.role === "tool"
+    ? [...thread, errorReply]
+    : [...thread, userMessage, errorReply]
+}
+
+/**
+ * The error of an agent turn that ended `aborted`. Genkit's `AgentChat`
+ * rejects only `failed` turns; an aborted one resolves with the error on
+ * `response.raw.error` (agent-core `buildResponse`), so the caller re-raises
+ * it for the recoverable-error classifiers above.
+ */
+export function abortedTurnError(response: {
+  finishReason?: string
+  raw?: { error?: { status?: string; message?: string } }
+}): { status: string; message: string } | undefined {
+  const error =
+    response.finishReason === "aborted" ? response.raw?.error : undefined
+  return error
+    ? {
+        status: error.status ?? "ABORTED",
+        message: error.message ?? "Agent turn aborted.",
+      }
+    : undefined
 }

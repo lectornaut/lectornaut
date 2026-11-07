@@ -3,6 +3,7 @@ import { BotChatContextKey } from "@/composables/useBotChat"
 import { useBotSessionFilter } from "@/composables/useBotSessionFilter"
 import {
   IconArchive,
+  IconChevronDown,
   IconChevronRight,
   IconGlobe,
   IconHistory,
@@ -220,6 +221,155 @@ const onArchiveToggle = (session: IBotSession) => {
 const onPinToggle = (session: IBotSession) => {
   void botChat?.pinSession(session.id, !session.pinnedAt)
 }
+
+// ── Finder-style multi-select ───────────────────────────────────────────────
+//
+// ⌘/Ctrl-click toggles a chat into the selection, Shift-click selects the
+// visible range from the anchor; a plain click clears it and opens the chat.
+// Only my own chats (active + archived) are selectable: shared chats belong
+// to other members and carry no row actions. Bulk actions live in the
+// "N selected" footer menu; row menus keep acting on their own chat.
+
+// Group open state, so Shift ranges skip rows inside collapsed groups.
+const groupOpen = ref<Record<string, boolean>>({})
+const isGroupOpen = (key: string) => groupOpen.value[key] !== false
+const setGroupOpen = (key: string, open: boolean) => {
+  groupOpen.value = { ...groupOpen.value, [key]: open }
+}
+
+const multiSelectedIds = ref<string[]>([])
+let anchorId: string | null = null
+
+const ownById = computed(
+  () =>
+    new Map(
+      [...rawMySessions.value, ...rawArchivedMySessions.value].map((s) => [
+        s.id,
+        s,
+      ])
+    )
+)
+
+/** Selectable ids in on-screen order. */
+const visibleOwnIds = computed(() => [
+  ...myGroups.value
+    .filter((g) => isGroupOpen(`mine-${g.key}`))
+    .flatMap((g) => g.items.map((s) => s.id)),
+  ...(isGroupOpen("archived") ? archivedMySessions.value.map((s) => s.id) : []),
+])
+
+// Resolved against the live lists, so deleted chats and team/workspace
+// switches drop out of the selection on their own.
+const selectedSessions = computed(() =>
+  multiSelectedIds.value
+    .map((id) => ownById.value.get(id))
+    .filter((s): s is IBotSession => Boolean(s))
+)
+
+const isRowActive = (id: string) =>
+  selectedSessions.value.length
+    ? selectedSessions.value.some((s) => s.id === id)
+    : id === activeSessionId.value
+
+const onRowClick = (session: IBotSession, event: MouseEvent) => {
+  const selectable = ownById.value.has(session.id)
+  if (selectable && event.shiftKey) {
+    const order = visibleOwnIds.value
+    const to = order.indexOf(session.id)
+    const anchorIndex = order.indexOf(anchorId ?? activeSessionId.value ?? "")
+    const from = anchorIndex === -1 ? to : anchorIndex
+    multiSelectedIds.value = order.slice(
+      Math.min(from, to),
+      Math.max(from, to) + 1
+    )
+    return
+  }
+  if (selectable && (event.metaKey || event.ctrlKey)) {
+    const active = activeSessionId.value
+    const base = selectedSessions.value.length
+      ? selectedSessions.value.map((s) => s.id)
+      : active && ownById.value.has(active)
+        ? [active]
+        : []
+    multiSelectedIds.value = base.includes(session.id)
+      ? base.filter((id) => id !== session.id)
+      : [...base, session.id]
+    anchorId = session.id
+    return
+  }
+  multiSelectedIds.value = []
+  anchorId = session.id
+  onSelectSession(session.id)
+}
+
+const clearSelection = () => {
+  multiSelectedIds.value = []
+}
+
+const bulkActive = computed(() =>
+  selectedSessions.value.filter((s) => !s.archivedAt)
+)
+const bulkArchived = computed(() =>
+  selectedSessions.value.filter((s) => !!s.archivedAt)
+)
+const bulkPinnable = computed(() =>
+  bulkActive.value.filter((s) => !isPinned(s))
+)
+const bulkUnpinnable = computed(() => bulkActive.value.filter(isPinned))
+
+const bulkBusy = ref(false)
+
+/** Runs `action` per chat, then drops the ones that succeeded. */
+const runBulk = async (
+  targets: IBotSession[],
+  action: (session: IBotSession) => Promise<unknown> | undefined
+) => {
+  if (bulkBusy.value || !targets.length) return false
+  bulkBusy.value = true
+  const done = new Set<string>()
+  try {
+    // ponytail: sequential, like Settings → Sessions; removeSession refuses
+    // while another session mutation is in flight (isMutatingSession).
+    for (const session of targets) {
+      if ((await action(session)) !== false) done.add(session.id)
+    }
+  } finally {
+    multiSelectedIds.value = multiSelectedIds.value.filter(
+      (id) => !done.has(id)
+    )
+    bulkBusy.value = false
+  }
+  return done.size === targets.length
+}
+
+const bulkPin = (pinned: boolean) =>
+  runBulk(pinned ? bulkPinnable.value : bulkUnpinnable.value, (s) =>
+    botChat?.pinSession(s.id, pinned)
+  )
+
+const bulkArchive = (archived: boolean) =>
+  runBulk(archived ? bulkActive.value : bulkArchived.value, (s) =>
+    botChat?.archiveSession(s.id, archived)
+  )
+
+const bulkDeleteDialogOpen = ref(false)
+const bulkDeleteCount = ref(0)
+
+const openBulkDelete = () => {
+  bulkDeleteCount.value = selectedSessions.value.length
+  bulkDeleteDialogOpen.value = true
+}
+
+// Each failed delete already toasts; a failure keeps the dialog open so the
+// outcome is visible instead of a silently half-finished wipe.
+const submitBulkDelete = async () => {
+  if (
+    !(await runBulk(selectedSessions.value, (s) =>
+      botChat?.removeSession(s.id)
+    ))
+  )
+    return false
+}
 </script>
 
 <template>
@@ -290,7 +440,7 @@ const onPinToggle = (session: IBotSession) => {
         </InputGroup>
       </div>
     </SidebarHeader>
-    <SidebarContent>
+    <SidebarContent class="select-none">
       <ScrollContainer>
         <div
           v-if="isEmpty"
@@ -312,7 +462,11 @@ const onPinToggle = (session: IBotSession) => {
 
         <template v-if="mySessions.length > 0">
           <SidebarGroup v-for="group in myGroups" :key="`mine-${group.key}`">
-            <Collapsible default-open class="group/collapsible">
+            <Collapsible
+              :open="isGroupOpen(`mine-${group.key}`)"
+              class="group/collapsible"
+              @update:open="setGroupOpen(`mine-${group.key}`, $event)"
+            >
               <SidebarGroupLabel as-child>
                 <CollapsibleTrigger class="flex w-full items-center gap-2">
                   {{ groupLabel(group.key) }}
@@ -332,9 +486,9 @@ const onPinToggle = (session: IBotSession) => {
                       <ContextMenu>
                         <ContextMenuTrigger as-child>
                           <SidebarMenuButton
-                            :is-active="item.id === activeSessionId"
+                            :is-active="isRowActive(item.id)"
                             class="h-auto items-end gap-2 py-2 pr-3.5"
-                            @click="onSelectSession(item.id)"
+                            @click="onRowClick(item, $event)"
                           >
                             <span class="flex min-w-0 grow flex-col gap-0.5">
                               <span class="flex items-center gap-2">
@@ -495,9 +649,9 @@ const onPinToggle = (session: IBotSession) => {
                       class="group/history relative"
                     >
                       <SidebarMenuButton
-                        :is-active="item.id === activeSessionId"
+                        :is-active="isRowActive(item.id)"
                         class="h-auto items-start gap-2 py-2"
-                        @click="onSelectSession(item.id)"
+                        @click="onRowClick(item, $event)"
                       >
                         <span class="flex min-w-0 grow flex-col">
                           <span class="flex items-center gap-2">
@@ -535,7 +689,11 @@ const onPinToggle = (session: IBotSession) => {
         <template v-if="archivedMySessions.length > 0">
           <Separator class="my-1" />
           <SidebarGroup>
-            <Collapsible default-open class="group/collapsible">
+            <Collapsible
+              :open="isGroupOpen('archived')"
+              class="group/collapsible"
+              @update:open="setGroupOpen('archived', $event)"
+            >
               <SidebarGroupLabel as-child>
                 <CollapsibleTrigger class="flex w-full items-center gap-2">
                   {{ t("ai.archived") }}
@@ -555,9 +713,9 @@ const onPinToggle = (session: IBotSession) => {
                       <ContextMenu>
                         <ContextMenuTrigger as-child>
                           <SidebarMenuButton
-                            :is-active="item.id === activeSessionId"
+                            :is-active="isRowActive(item.id)"
                             class="h-auto items-end gap-2 py-2 pr-3.5"
-                            @click="onSelectSession(item.id)"
+                            @click="onRowClick(item, $event)"
                           >
                             <span class="flex min-w-0 grow flex-col gap-0.5">
                               <span class="flex items-center gap-2">
@@ -668,6 +826,72 @@ const onPinToggle = (session: IBotSession) => {
         </template>
       </ScrollContainer>
     </SidebarContent>
+    <!-- Bulk actions for the ⌘/Shift selection; mirrors DataTable's -->
+    <!-- selected-count chip so every list surface reads the same. -->
+    <SidebarFooter v-if="selectedSessions.length">
+      <DropdownMenu>
+        <DropdownMenuTrigger as-child>
+          <Button
+            variant="outline"
+            class="data-[state=open]:bg-accent self-stretch border-dashed tabular-nums"
+          >
+            {{
+              t("settings.sessions.selectedCount", {
+                count: selectedSessions.length,
+              })
+            }}
+            <IconChevronDown />
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="start" side="top" class="min-w-48">
+          <DropdownMenuItem
+            v-if="bulkPinnable.length"
+            :disabled="bulkBusy"
+            @click="bulkPin(true)"
+          >
+            <IconPin />
+            {{ t("ai.bulkPin") }}
+          </DropdownMenuItem>
+          <DropdownMenuItem
+            v-if="bulkUnpinnable.length"
+            :disabled="bulkBusy"
+            @click="bulkPin(false)"
+          >
+            <IconPinOff />
+            {{ t("ai.bulkUnpin") }}
+          </DropdownMenuItem>
+          <DropdownMenuItem
+            v-if="bulkActive.length"
+            :disabled="bulkBusy"
+            @click="bulkArchive(true)"
+          >
+            <IconArchive />
+            {{ t("settings.sessions.bulkArchive") }}
+          </DropdownMenuItem>
+          <DropdownMenuItem
+            v-if="bulkArchived.length"
+            :disabled="bulkBusy"
+            @click="bulkArchive(false)"
+          >
+            <IconRotateCcw />
+            {{ t("settings.sessions.bulkRestore") }}
+          </DropdownMenuItem>
+          <DropdownMenuItem
+            variant="destructive"
+            :disabled="bulkBusy"
+            @click="openBulkDelete"
+          >
+            <IconTrash2 />
+            {{ t("settings.sessions.bulkDelete") }}
+          </DropdownMenuItem>
+          <DropdownMenuSeparator />
+          <DropdownMenuItem :disabled="bulkBusy" @click="clearSelection">
+            <IconX />
+            {{ t("settings.sessions.bulkClear") }}
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+    </SidebarFooter>
   </Sidebar>
 
   <SessionRenameDialog
@@ -690,4 +914,13 @@ const onPinToggle = (session: IBotSession) => {
       {{ t("ai.deleteChatConfirm") }}
     </template>
   </ConfirmAction>
+
+  <ConfirmAction
+    v-model:open="bulkDeleteDialogOpen"
+    :title="t('ai.bulkDeleteTitle')"
+    :description="t('ai.bulkDeleteConfirm', bulkDeleteCount)"
+    :action-label="t('actions.delete')"
+    destructive
+    :on-confirm="submitBulkDelete"
+  />
 </template>

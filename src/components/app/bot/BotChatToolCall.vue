@@ -72,7 +72,9 @@ import {
   IconSearch,
   IconTriangleAlert,
 } from "@/data/icons"
+import { useTeamAgentsStore } from "@/stores/teamAgentsStore"
 import { useTeamCustomToolsStore } from "@/stores/teamCustomToolsStore"
+import { delegateToolName } from "@lectornaut/shared/domain"
 import {
   GITHUB_WRITE_TOOL_NAMES,
   GOOGLE_CALENDAR_WRITE_TOOL_NAMES,
@@ -108,9 +110,21 @@ const { t } = useI18n()
 const customToolsStore = useTeamCustomToolsStore()
 const { tools: customTools } = storeToRefs(customToolsStore)
 
+const teamAgentsStore = useTeamAgentsStore()
+const { allAgents } = storeToRefs(teamAgentsStore)
+
 const displayName = computed<string>(() => {
   const builtIn = botToolLabel(props.tool.name)
   if (builtIn) return builtIn
+  // Sub-agent delegation (`agents()` middleware, functions/src/bot.ts).
+  if (props.tool.name === delegateToolName(""))
+    return t("ai.toolCall.askAgent", {
+      name: t("ai.toolCall.defaultAgent"),
+    })
+  const delegate = allAgents.value.find(
+    (a) => delegateToolName(a.id) === props.tool.name
+  )
+  if (delegate) return t("ai.toolCall.askAgent", { name: delegate.name })
   const custom = customTools.value.find(
     (entry) => entry.name === props.tool.name
   )

@@ -43,10 +43,6 @@ import { z } from "genkit/beta"
 import { logEvent } from "./audit.js"
 import { db } from "./firebase.js"
 import { ai } from "./genkitClient.js"
-import {
-  markdownToTiptapJson,
-  tiptapJsonToMarkdown,
-} from "./markdownToTiptap.js"
 import type { NodeType, WorkspaceNodeScope } from "./types.js"
 
 // ─── Local helpers (mirror the private ones in audit.ts) ─────────────────────
@@ -241,9 +237,35 @@ function validateName(raw: string): { name: string } | { error: string } {
  * Serialize agent-supplied content for storage. `write` nodes hold Tiptap
  * JSON (convert the markdown); `code` nodes hold the raw text verbatim.
  */
-function serializeContent(scope: WorkspaceNodeScope, content: string): string {
-  return scope === "write" ? markdownToTiptapJson(content) : content
+async function serializeContent(
+  scope: WorkspaceNodeScope,
+  content: string
+): Promise<string | MutationResult> {
+  if (scope !== "write") return content
+  const { markdownToTiptapDoc, assertValidTiptapDoc } =
+    await loadMarkdownConverter()
+  const doc = markdownToTiptapDoc(content)
+  try {
+    assertValidTiptapDoc(doc)
+  } catch (error) {
+    // Returned, not thrown: tool throws are turn-fatal in Genkit.
+    return {
+      ok: false,
+      message:
+        `Nothing was saved: the markdown produced an invalid document ` +
+        `(${(error as Error).message}). Fix the syntax — e.g. :::details ` +
+        `needs nested :::detailsSummary and :::detailsContent blocks, ` +
+        `each line separated by a blank line — and retry.`,
+    }
+  }
+  return JSON.stringify(doc)
 }
+
+// The converter pulls in Tiptap + ProseMirror + KaTeX + emoji data (~2.3 MB,
+// ~50 ms to load). Every function shares this bundle, so load it on first
+// use instead of on every cold start.
+const loadMarkdownConverter = () =>
+  import("@lectornaut/shared/markdownToTiptap")
 
 const mutationResultSchema = z.object({
   ok: z.boolean(),
@@ -379,6 +401,11 @@ export async function applyCreateNode(
     typeof input.parentId === "string" && input.parentId.trim()
       ? input.parentId.trim()
       : ROOT_PARENT_ID
+  const fileContent =
+    type === "file" && typeof input.content === "string" && input.content
+      ? await serializeContent(scope, input.content)
+      : ""
+  if (typeof fileContent !== "string") return fileContent
 
   try {
     const nodeId = await db.runTransaction(async (transaction) => {
@@ -406,10 +433,6 @@ export async function applyCreateNode(
         : nodesCollection.doc()
       const now = FieldValue.serverTimestamp()
       const nameLower = toNameLower(name)
-      const fileContent =
-        type === "file" && typeof input.content === "string" && input.content
-          ? serializeContent(scope, input.content)
-          : ""
 
       transaction.set(nodeRef, {
         workspaceId,
@@ -528,7 +551,10 @@ export const readNodeTool = ai.defineTool(
       }
 
       const raw = typeof data.content === "string" ? data.content : ""
-      const full = scope === "write" ? tiptapJsonToMarkdown(raw) : raw
+      const full =
+        scope === "write"
+          ? (await loadMarkdownConverter()).tiptapJsonToMarkdown(raw)
+          : raw
       if (full.length > READ_NODE_MAX_CHARS) {
         return {
           ok: false,
@@ -622,7 +648,8 @@ export async function applyUpdateNodeContent(
   const nodeId = input.nodeId
   const oversized = oversizedContentResult(input.content)
   if (oversized) return oversized
-  const content = serializeContent(scope, input.content ?? "")
+  const content = await serializeContent(scope, input.content ?? "")
+  if (typeof content !== "string") return content
 
   try {
     await db.runTransaction(async (transaction) => {

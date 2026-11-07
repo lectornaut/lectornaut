@@ -11,11 +11,14 @@ import {
   IconCheck,
   IconCopy,
   IconPause,
+  IconPencil,
   IconPlay,
+  IconRefreshCw,
   IconReply,
   IconSquare,
   IconVolume2,
 } from "@/data/icons"
+import { messagePlainText } from "@/helpers/botChatStream"
 import { resolveAttachmentIcon } from "@/helpers/node-attachments"
 import { splitUploadedFileLabels } from "@lectornaut/shared/domain"
 import { toast } from "vue-sonner"
@@ -154,23 +157,6 @@ const lastCopiedMessageId = ref<string | null>(null)
 const isCopied = (messageId: string): boolean =>
   justCopied.value && lastCopiedMessageId.value === messageId
 
-// The model's reasoning is folded into `<thinking>…</thinking>` blocks
-// inside `content` (rendered as a collapsible disclosure). Copying or
-// quoting a message should carry the answer, not the chain-of-thought —
-// strip those blocks (including a half-open block while streaming).
-const THINKING_BLOCK_RE = /<thinking\b[^>]*>[\s\S]*?(?:<\/thinking\s*>\s*|$)/gi
-const stripThinking = (text: string): string =>
-  text.replace(THINKING_BLOCK_RE, "").trim()
-
-// The plain-text view of a bubble, shared by Copy / Reply / Read aloud.
-// Agent turns shed their <thinking> blocks; user turns shed the server's
-// `[Uploaded file …]` labels — those render as attachment chips, and
-// copying/quoting/reading should carry the user's words, not the markers.
-const messagePlainText = (message: BotChatMessage): string =>
-  message.role === "user"
-    ? splitUploadedFileLabels(message.content).text
-    : stripThinking(message.content)
-
 const handleCopyMessage = async (message: BotChatMessage) => {
   const text = messagePlainText(message)
   if (!text) return
@@ -183,6 +169,57 @@ const handleCopyMessage = async (message: BotChatMessage) => {
 // shown as a banner above the input and folded into the next send as a
 // quoted blockquote (see `AiChatComposer`). We store the raw stripped text;
 // the composer owns the blockquote formatting at send time.
+// Edit-and-resend: your own bubbles, in a chat you can edit, while idle. The
+// composer prefills the text; sending cuts the chat back to this bubble.
+const canEditMessage = (message: BotChatMessage): boolean =>
+  message.role === "user" &&
+  isOwnMessage(message) &&
+  !isSending.value &&
+  !!botChat?.sessionId.value &&
+  !!botChat?.canEditActive.value
+const handleEditMessage = (message: BotChatMessage) => {
+  if (!botChat || !canEditMessage(message)) return
+  const userIndex = messages.value
+    .filter((m) => m.role === "user")
+    .findIndex((m) => m.id === message.id)
+  if (userIndex < 0) return
+  botChat.replyContext.value = null
+  botChat.editContext.value = {
+    messageId: message.id,
+    userIndex,
+    text: messagePlainText(message),
+  }
+}
+
+// Regenerate: the newest agent reply only. Resends the user bubble before it
+// unchanged through edit-and-resend, so the server cuts its thread there and
+// answers afresh with the composer's current mode/model/effort/attachments.
+// Same edit gate as edit-and-resend (any editor of the chat, not just the
+// author). A file-only user turn has no text to resend, so it can't regenerate.
+const regenerateTarget = computed(() => {
+  const list = messages.value
+  const last = list.at(-1)
+  if (
+    last?.role !== "agent" ||
+    isSending.value ||
+    !botChat?.sessionId.value ||
+    !botChat.canEditActive.value
+  )
+    return null
+  const users = list.filter((m) => m.role === "user")
+  const prompt = users.at(-1)
+  const text = prompt ? messagePlainText(prompt) : ""
+  return text ? { messageId: last.id, userIndex: users.length - 1, text } : null
+})
+const canRegenerate = (message: BotChatMessage): boolean =>
+  regenerateTarget.value?.messageId === message.id
+const handleRegenerate = () => {
+  const target = regenerateTarget.value
+  if (!botChat || !target) return
+  botChat.editContext.value = null
+  void botChat.editAndResend(target.userIndex, target.text)
+}
+
 const handleReplyMessage = (message: BotChatMessage) => {
   if (!botChat) return
   const text = messagePlainText(message)
@@ -192,7 +229,7 @@ const handleReplyMessage = (message: BotChatMessage) => {
 
 // ── Read aloud (Web Speech API) ───────────────────────────────────────────
 //
-// Reads the same plain-text view as Copy/Reply — `stripThinking(content)`,
+// Reads the same plain-text view as Copy/Reply — `messagePlainText`,
 // so the synthesizer speaks the answer, never the model's <thinking> blocks
 // or tool-call JSON. The speech state is an app-wide singleton (only one
 // message reads at a time); see `useReadAloud`. `isSpeaking`/`isPaused` are
@@ -488,7 +525,7 @@ const renderedMessages = computed(() =>
                             surface="chat"
                             :content="block.text"
                             :final="block.final"
-                            class="select-auto"
+                            class="flex flex-col gap-2 select-auto"
                           />
                           <BotChatToolCall
                             v-else
@@ -515,6 +552,36 @@ const renderedMessages = computed(() =>
                       ]"
                     >
                       <TooltipProvider>
+                        <Tooltip v-if="canEditMessage(message)">
+                          <TooltipTrigger as-child>
+                            <Button
+                              variant="ghost"
+                              size="icon-xs"
+                              :aria-label="t('ai.editMessage')"
+                              @click="handleEditMessage(message)"
+                            >
+                              <IconPencil class="size-3!" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>{{
+                            t("ai.editMessage")
+                          }}</TooltipContent>
+                        </Tooltip>
+                        <Tooltip v-if="canRegenerate(message)">
+                          <TooltipTrigger as-child>
+                            <Button
+                              variant="ghost"
+                              size="icon-xs"
+                              :aria-label="t('ai.regenerate')"
+                              @click="handleRegenerate"
+                            >
+                              <IconRefreshCw class="size-3!" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>{{
+                            t("ai.regenerate")
+                          }}</TooltipContent>
+                        </Tooltip>
                         <Tooltip>
                           <TooltipTrigger as-child>
                             <Button
@@ -633,6 +700,20 @@ const renderedMessages = computed(() =>
                 </Message>
               </ContextMenuTrigger>
               <ContextMenuContent>
+                <ContextMenuItem
+                  v-if="canEditMessage(message)"
+                  @select="handleEditMessage(message)"
+                >
+                  <IconPencil />
+                  {{ t("ai.editMessage") }}
+                </ContextMenuItem>
+                <ContextMenuItem
+                  v-if="canRegenerate(message)"
+                  @select="handleRegenerate"
+                >
+                  <IconRefreshCw />
+                  {{ t("ai.regenerate") }}
+                </ContextMenuItem>
                 <ContextMenuItem
                   :disabled="!message.content"
                   @select="handleCopyMessage(message)"

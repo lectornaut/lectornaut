@@ -5,6 +5,7 @@ import {
   testSsoConnection,
   updateTeamApprovedDomains,
   updateTeamLoginMethods,
+  verifySsoDomain,
   type ConfigureSsoRequest,
   type TestSsoConnectionRequest,
 } from "@/composables/useFunctions"
@@ -17,7 +18,7 @@ import { doc, type DocumentReference } from "firebase/firestore"
 import { toValue, type MaybeRefOrGetter } from "vue"
 
 type SsoOperation =
-  "save" | "delete" | "test" | "loginMethods" | "approvedDomains"
+  "save" | "delete" | "test" | "verify" | "loginMethods" | "approvedDomains"
 
 /**
  * Composable for managing team SSO configuration in admin settings.
@@ -77,6 +78,20 @@ export function useSsoConfig(teamId: MaybeRefOrGetter<string | null>) {
       {
         success: "SSO configuration saved",
         error: "Failed to save SSO configuration",
+      }
+    )
+
+  // Prove ownership of a saved SSO domain via its DNS TXT record
+  const verifyDomain = async (domain: string) =>
+    actions.run(
+      "verify",
+      async () => {
+        const id = requireTeamId()
+        await verifySsoDomain({ teamId: id, domain })
+      },
+      {
+        success: "Domain verified",
+        error: "Couldn't verify domain",
       }
     )
 
@@ -153,6 +168,7 @@ export function useSsoConfig(teamId: MaybeRefOrGetter<string | null>) {
   const saving = computed(() => loading.isLoading("save"))
   const deleting = computed(() => loading.isLoading("delete"))
   const testing = computed(() => loading.isLoading("test"))
+  const verifying = computed(() => loading.isLoading("verify"))
   const savingLoginMethods = computed(() => loading.isLoading("loginMethods"))
   const savingApprovedDomains = computed(() =>
     loading.isLoading("approvedDomains")
@@ -169,6 +185,7 @@ export function useSsoConfig(teamId: MaybeRefOrGetter<string | null>) {
     saving: readonly(saving),
     deleting: readonly(deleting),
     testing: readonly(testing),
+    verifying: readonly(verifying),
     savingLoginMethods: readonly(savingLoginMethods),
     savingApprovedDomains: readonly(savingApprovedDomains),
 
@@ -176,6 +193,7 @@ export function useSsoConfig(teamId: MaybeRefOrGetter<string | null>) {
     saveSsoConfig,
     deleteSsoConfig,
     testConnection,
+    verifyDomain,
     saveLoginMethods,
     saveApprovedDomains,
   }

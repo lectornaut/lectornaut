@@ -318,6 +318,7 @@ export const AUDIT_ACTIONS = [
   "billing.restore",
   // security
   "sso.configured",
+  "sso.domain_verified",
   "sso.deleted",
   "security.login_methods.updated",
   "security.approved_domains.updated",
@@ -1043,3 +1044,14 @@ export function resolveEffectiveTokenAllowance(
   if (planAllowance < 0) return cap
   return Math.min(planAllowance, cap)
 }
+
+// ── Sub-agent delegation ("ask an agent, then come back") ────────────────────
+
+/**
+ * Wire name of the delegation tool for a transfer-roster agent id — also the
+ * name its Genkit sub-agent is registered under (`agents()` middleware with an
+ * empty `toolPrefix`, functions/src/bot.ts). `""` is the team-default persona.
+ * Forward-only: the client matches names against known agents, never parses.
+ */
+export const delegateToolName = (agentId: string): string =>
+  `ask_${(agentId || "default").replace(/[^A-Za-z0-9_-]/g, "_")}`.slice(0, 64)

@@ -224,6 +224,7 @@ import IconSend from "~icons/lucide/send"
 import IconSettings from "~icons/lucide/settings"
 import IconSettings2 from "~icons/lucide/settings-2"
 import IconShieldCheck from "~icons/lucide/shield-check"
+import IconSigma from "~icons/lucide/sigma"
 import IconSignalHigh from "~icons/lucide/signal-high"
 import IconSignalLow from "~icons/lucide/signal-low"
 import IconSignalMedium from "~icons/lucide/signal-medium"
@@ -240,6 +241,7 @@ import IconSquareDashed from "~icons/lucide/square-dashed"
 import IconSquareDashedMousePointer from "~icons/lucide/square-dashed-mouse-pointer"
 import IconSquareMousePointer from "~icons/lucide/square-mouse-pointer"
 import IconSquarePen from "~icons/lucide/square-pen"
+import IconSquareSigma from "~icons/lucide/square-sigma"
 import IconSquareX from "~icons/lucide/square-x"
 import IconStar from "~icons/lucide/star"
 import IconStarOff from "~icons/lucide/star-off"
@@ -544,6 +546,7 @@ export {
   IconSettings2,
   IconShieldCheck,
   IconSimpleIconsShopify as IconShopify,
+  IconSigma,
   IconSignalHigh,
   IconSignalLow,
   IconSignalMedium,
@@ -560,6 +563,7 @@ export {
   IconSquareDashedMousePointer,
   IconSquareMousePointer,
   IconSquarePen,
+  IconSquareSigma,
   IconSquareX,
   IconStar,
   IconStarOff,
