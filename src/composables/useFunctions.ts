@@ -876,8 +876,8 @@ export interface SendBotMessageRequest {
    * `importDriveSessionAttachment` callable instead.
    */
   pendingDriveImports?: string[]
-  /** Edit-and-resend: 0-based index of the user bubble `message` replaces. */
-  editFromUserIndex?: number
+  /** Edit / regenerate: the snapshot to start from (a bubble's parent). */
+  fromSnapshotId?: string
 }
 
 export interface SendBotMessageResponse {
@@ -913,8 +913,14 @@ export type BotChatHistorySegment =
 export interface BotChatHistoryMessage {
   role: BotChatRole
   content: string
+  /** `"error"` on a persisted graceful-fallback agent turn. */
+  status?: "error"
   /** Present on agent messages with tool calls; absent for plain text. */
   segments?: BotChatHistorySegment[]
+  /** User-role only: who sent it. */
+  authorUid?: string
+  /** User-role only: the snapshot its turn started from. */
+  parentSnapshotId?: string
 }
 
 /**
@@ -1015,6 +1021,8 @@ export interface LoadBotSessionRequest {
 
 export interface LoadBotSessionResponse {
   sessionId: string
+  /** The snapshot `messages` were read from. */
+  headSnapshotId: string | null
   messages: BotChatHistoryMessage[]
 }
 
@@ -1987,6 +1995,28 @@ export const updateBotSessionVisibility = createTypedCallable<
   UpdateBotSessionVisibilityRequest,
   UpdateBotSessionVisibilityResponse
 >("updateBotSessionVisibility")
+
+export interface BotSessionSnapshotRequest {
+  teamId: string
+  workspaceId: string
+  sessionId: string
+  snapshotId: string
+}
+
+/**
+ * Show another version of a reply: move the chat's head down that sibling
+ * snapshot's branch. Editors only (it changes what a shared chat shows).
+ */
+export const switchBotSessionBranch = createTypedCallable<
+  BotSessionSnapshotRequest,
+  { sessionId: string; headSnapshotId: string }
+>("switchBotSessionBranch")
+
+/** Copy the chat as of `snapshotId` into a new private chat; returns its id. */
+export const branchBotSession = createTypedCallable<
+  BotSessionSnapshotRequest,
+  { sessionId: string }
+>("branchBotSession")
 
 /** Rename a bot chat session. Owner or team admin only. */
 export const renameBotSession = createTypedCallable<
@@ -2972,6 +3002,8 @@ export function useFunctions() {
     archiveBotSession,
     pinBotSession,
     deleteBotSession,
+    switchBotSessionBranch,
+    branchBotSession,
 
     // Team agent config operations
     getTeamAgentConfig,

@@ -9,12 +9,15 @@ import { useReadAloud } from "@/composables/useReadAloud"
 import {
   IconAi,
   IconCheck,
+  IconChevronLeft,
+  IconChevronRight,
   IconCopy,
   IconPause,
   IconPencil,
   IconPlay,
   IconRefreshCw,
   IconReply,
+  IconSplit,
   IconSquare,
   IconVolume2,
 } from "@/data/icons"
@@ -170,30 +173,27 @@ const handleCopyMessage = async (message: BotChatMessage) => {
 // quoted blockquote (see `AiChatComposer`). We store the raw stripped text;
 // the composer owns the blockquote formatting at send time.
 // Edit-and-resend: your own bubbles, in a chat you can edit, while idle. The
-// composer prefills the text; sending cuts the chat back to this bubble.
+// composer prefills the text; sending branches from the bubble's parent
+// snapshot (absent until a just-sent bubble's transcript reloads).
 const canEditMessage = (message: BotChatMessage): boolean =>
   message.role === "user" &&
+  !!message.parentSnapshotId &&
   isOwnMessage(message) &&
   !isSending.value &&
   !!botChat?.sessionId.value &&
   !!botChat?.canEditActive.value
 const handleEditMessage = (message: BotChatMessage) => {
   if (!botChat || !canEditMessage(message)) return
-  const userIndex = messages.value
-    .filter((m) => m.role === "user")
-    .findIndex((m) => m.id === message.id)
-  if (userIndex < 0) return
   botChat.replyContext.value = null
   botChat.editContext.value = {
     messageId: message.id,
-    userIndex,
     text: messagePlainText(message),
   }
 }
 
 // Regenerate: the newest agent reply only. Resends the user bubble before it
-// unchanged through edit-and-resend, so the server cuts its thread there and
-// answers afresh with the composer's current mode/model/effort/attachments.
+// unchanged through edit-and-resend — a sibling turn from that bubble's parent
+// snapshot — with the composer's current mode/model/effort/attachments.
 // Same edit gate as edit-and-resend (any editor of the chat, not just the
 // author). A file-only user turn has no text to resend, so it can't regenerate.
 const regenerateTarget = computed(() => {
@@ -206,10 +206,11 @@ const regenerateTarget = computed(() => {
     !botChat.canEditActive.value
   )
     return null
-  const users = list.filter((m) => m.role === "user")
-  const prompt = users.at(-1)
-  const text = prompt ? messagePlainText(prompt) : ""
-  return text ? { messageId: last.id, userIndex: users.length - 1, text } : null
+  const prompt = list.findLast((m) => m.role === "user")
+  const text = prompt?.parentSnapshotId ? messagePlainText(prompt) : ""
+  return prompt && text
+    ? { messageId: last.id, promptId: prompt.id, text }
+    : null
 })
 const canRegenerate = (message: BotChatMessage): boolean =>
   regenerateTarget.value?.messageId === message.id
@@ -217,7 +218,39 @@ const handleRegenerate = () => {
   const target = regenerateTarget.value
   if (!botChat || !target) return
   botChat.editContext.value = null
-  void botChat.editAndResend(target.userIndex, target.text)
+  void botChat.editAndResend(target.promptId, target.text)
+}
+
+// Versions: siblings of a reply from edits and regenerations, switched in
+// place (editors only — it changes what a shared chat shows).
+const canSwitchVersion = computed(
+  () => !isSending.value && !!botChat?.canEditActive.value
+)
+const versionsOf = (message: BotChatMessage) =>
+  botChat?.replyVersions(message.id) ?? null
+const versionLabel = (message: BotChatMessage): string => {
+  const v = versionsOf(message)
+  return v ? `${v.index + 1}/${v.ids.length}` : ""
+}
+const versionTarget = (message: BotChatMessage, step: -1 | 1) => {
+  const v = versionsOf(message)
+  return v?.ids[v.index + step] ?? null
+}
+const handleSwitchVersion = async (snapshotId: string | null) => {
+  if (!botChat || !snapshotId || !canSwitchVersion.value) return
+  if (!(await botChat.switchVersion(snapshotId))) {
+    toast.error(t("ai.switchVersionError"))
+  }
+}
+
+// Branch: copy the chat as of this reply into a new chat of your own.
+const branchPointOf = (message: BotChatMessage) =>
+  isSending.value ? null : (botChat?.branchPoint(message.id) ?? null)
+const handleBranch = async (message: BotChatMessage) => {
+  const point = branchPointOf(message)
+  if (!botChat || !point) return
+  if (await botChat.branchChat(point)) toast.success(t("ai.branched"))
+  else toast.error(t("ai.branchError"))
 }
 
 const handleReplyMessage = (message: BotChatMessage) => {
@@ -547,7 +580,9 @@ const renderedMessages = computed(() =>
                     <MessageFooter
                       :class="[
                         'pointer-events-none gap-1 opacity-0 transition group-focus-within:pointer-events-auto group-focus-within:opacity-100 group-hover:pointer-events-auto group-hover:opacity-100',
-                        (isSpeaking(message.id) || isPaused(message.id)) &&
+                        (isSpeaking(message.id) ||
+                          isPaused(message.id) ||
+                          versionLabel(message)) &&
                           'pointer-events-auto opacity-100',
                       ]"
                     >
@@ -580,6 +615,70 @@ const renderedMessages = computed(() =>
                           </TooltipTrigger>
                           <TooltipContent>{{
                             t("ai.regenerate")
+                          }}</TooltipContent>
+                        </Tooltip>
+                        <template v-if="versionLabel(message)">
+                          <Tooltip>
+                            <TooltipTrigger as-child>
+                              <Button
+                                variant="ghost"
+                                size="icon-xs"
+                                :aria-label="t('ai.previousVersion')"
+                                :disabled="
+                                  !canSwitchVersion ||
+                                  !versionTarget(message, -1)
+                                "
+                                @click="
+                                  handleSwitchVersion(
+                                    versionTarget(message, -1)
+                                  )
+                                "
+                              >
+                                <IconChevronLeft class="size-3!" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>{{
+                              t("ai.previousVersion")
+                            }}</TooltipContent>
+                          </Tooltip>
+                          <span class="tabular-nums">{{
+                            versionLabel(message)
+                          }}</span>
+                          <Tooltip>
+                            <TooltipTrigger as-child>
+                              <Button
+                                variant="ghost"
+                                size="icon-xs"
+                                :aria-label="t('ai.nextVersion')"
+                                :disabled="
+                                  !canSwitchVersion ||
+                                  !versionTarget(message, 1)
+                                "
+                                @click="
+                                  handleSwitchVersion(versionTarget(message, 1))
+                                "
+                              >
+                                <IconChevronRight class="size-3!" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>{{
+                              t("ai.nextVersion")
+                            }}</TooltipContent>
+                          </Tooltip>
+                        </template>
+                        <Tooltip v-if="branchPointOf(message)">
+                          <TooltipTrigger as-child>
+                            <Button
+                              variant="ghost"
+                              size="icon-xs"
+                              :aria-label="t('ai.branchFromHere')"
+                              @click="handleBranch(message)"
+                            >
+                              <IconSplit class="size-3!" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>{{
+                            t("ai.branchFromHere")
                           }}</TooltipContent>
                         </Tooltip>
                         <Tooltip>
@@ -713,6 +812,13 @@ const renderedMessages = computed(() =>
                 >
                   <IconRefreshCw />
                   {{ t("ai.regenerate") }}
+                </ContextMenuItem>
+                <ContextMenuItem
+                  v-if="branchPointOf(message)"
+                  @select="handleBranch(message)"
+                >
+                  <IconSplit />
+                  {{ t("ai.branchFromHere") }}
                 </ContextMenuItem>
                 <ContextMenuItem
                   :disabled="!message.content"

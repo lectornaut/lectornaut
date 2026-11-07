@@ -30,6 +30,7 @@ import {
   IconPencil,
   IconPlus,
   IconReply,
+  IconSquare,
   IconUpload,
   IconX,
 } from "@/data/icons"
@@ -672,16 +673,26 @@ const isDisabled = computed(
     hasUnavailableAttachment.value
 )
 
+// Stop: cancel the reply in flight. The server drops the turn, so the prompt
+// comes back to the input to resend or change (a reply quote isn't restored).
+let lastSentInput = ""
+const handleStop = () => {
+  if (!botChat?.isSending.value) return
+  botChat.stopSending()
+  if (!userInput.value.trim()) userInput.value = lastSentInput
+}
+
 const handleSend = async () => {
   if (isDisabled.value || !botChat) return
   stopDictation()
+  lastSentInput = userInput.value
   // Edit-and-resend replaces an earlier bubble instead of appending a turn.
   const edit = editContext.value
   if (edit) {
     const edited = userInput.value
     userInput.value = ""
     botChat.editContext.value = null
-    await botChat.editAndResend(edit.userIndex, edited)
+    await botChat.editAndResend(edit.messageId, edited)
     return
   }
   // Fold the reply (if any) into the message as quoted context ahead of the
@@ -1895,7 +1906,19 @@ const onToolMenuCloseAutoFocus = (event: Event) => {
           </Tooltip>
         </TooltipProvider>
         <TooltipProvider>
-          <Tooltip>
+          <Tooltip v-if="isSending">
+            <TooltipTrigger as-child>
+              <InputGroupButton
+                size="icon-xs"
+                :aria-label="t('ai.stopReply')"
+                @click="handleStop"
+              >
+                <IconSquare />
+              </InputGroupButton>
+            </TooltipTrigger>
+            <TooltipContent>{{ t("ai.stopReply") }}</TooltipContent>
+          </Tooltip>
+          <Tooltip v-else>
             <TooltipTrigger as-child>
               <InputGroupButton
                 size="icon-xs"

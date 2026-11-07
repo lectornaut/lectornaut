@@ -332,13 +332,18 @@ export const botSessionMessageSchema = z.object({
    * falls back to the session's `ownerUid` for those.
    */
   authorUid: z.string().optional(),
+  /**
+   * User-role only: the snapshot this bubble's turn started from. Edit and
+   * regenerate resend from it (`fromSnapshotId`).
+   */
+  parentSnapshotId: z.string().optional(),
 })
 
 /**
- * Bot chat session metadata. The full Genkit `SessionData` blob lives in
- * `data` and is round-tripped opaquely by the server-side `SessionStore`.
- * The other fields are derived on each save so the history sidebar can
- * render without parsing the blob client-side.
+ * Bot chat RECORD. The conversation itself lives server-side in Genkit's
+ * session store; the record points at its current snapshot
+ * (`headSnapshotId`) and carries the fields derived on each save so the
+ * history sidebar renders without loading any transcript.
  *
  * Sessions written before the visibility field existed have no value on
  * disk — the schema's `.default("private")` keeps them owner-only at the
@@ -883,12 +888,21 @@ export const botSessionSchema = z.object({
   preview: z.string().optional(),
   messageCount: z.number().optional(),
   /**
-   * Denormalized flat list of user/agent messages. Populated on every
-   * SessionStore.save so clients can subscribe to the doc and render
-   * the conversation in real-time without unpacking the SessionData
-   * blob. Empty array is valid (a session with no messages yet).
+   * The conversation snapshot this chat currently shows (Genkit's session
+   * store). The transcript is read from it via `loadBotSession`; clients
+   * reload when it moves.
    */
-  messages: z.array(botSessionMessageSchema).optional(),
+  headSnapshotId: z.string().optional(),
+  /**
+   * Branch index: parent snapshot id → child snapshot ids, oldest first.
+   * Siblings under one parent are versions of the same reply (edit /
+   * regenerate); the version switcher walks it.
+   */
+  snapshotChildren: z.record(z.string(), z.array(z.string())).optional(),
+  /** Set on a chat branched from another: the source and its snapshot. */
+  forkedFrom: z
+    .object({ sessionId: z.string(), snapshotId: z.string() })
+    .optional(),
   visibility: botSessionVisibilitySchema.default("private"),
   createdAt: timestampSchema.optional(),
   updatedAt: timestampSchema.optional(),

@@ -92,6 +92,12 @@ export interface BotChatMessage {
    * server-side); the UI falls back to the session's `ownerUid` then.
    */
   authorUid?: string
+  /**
+   * User-role only: the snapshot this bubble's turn started from — what edit
+   * and regenerate resend from. Absent on a bubble still streaming (it lands
+   * with the next transcript load), so those can't be edited yet.
+   */
+  parentSnapshotId?: string
 }
 
 /**
@@ -132,12 +138,14 @@ export const createMessage = (m: {
   status?: "error"
   segments?: BotChatSegment[]
   authorUid?: string
+  parentSnapshotId?: string
 }): BotChatMessage => ({
   id: crypto.randomUUID(),
   role: m.role,
   content: m.content,
   status: m.status,
   authorUid: m.authorUid,
+  parentSnapshotId: m.parentSnapshotId,
   segments: m.segments
     ? m.segments.map((s) =>
         s.kind === "text"

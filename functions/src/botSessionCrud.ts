@@ -25,16 +25,30 @@ import { HttpsError } from "firebase-functions/v2/https"
 import { z } from "zod"
 import { buildContext, logEvent } from "./audit.js"
 import {
-  extractMessagesFromSessionData,
+  acquireSessionTurnLock,
+  canEditChat,
+  extractChatMessages,
   getMembershipRole,
   pinnedNodeKey,
+  projectChatRecord,
   readSessionDoc,
+  readSnapshotThread,
+  writeRawSnapshot,
   type ChatMessage,
   type SessionVisibility,
 } from "./bot.js"
+import {
+  branchLeaf,
+  forkThread,
+  isBranch,
+  type SnapshotChildren,
+} from "./botBranches.js"
+import { deleteBotSessionHistory } from "./botSnapshotStore.js"
 import { defineCallable } from "./defineCallable.js"
 import { db } from "./firebase.js"
 import { isAdminRole } from "./permissions.js"
+import { generateId } from "./utilities.js"
+import { resolveParticipation } from "./workspaceRoles.js"
 
 /** The three-part address every session callable needs to resolve one doc. */
 const sessionTargetSchema = z.object({
@@ -49,14 +63,16 @@ const sessionTargetSchema = z.object({
 
 interface LoadBotSessionResponse {
   sessionId: string
+  /** The snapshot these messages come from (the chat's head). */
+  headSnapshotId: string | null
   /** Includes `segments` for agent messages with tool calls. */
   messages: ChatMessage[]
 }
 
 /**
- * Resume an existing session: fetches the persisted `SessionData` blob and
- * returns its main-thread messages so the client can render the prior
- * conversation. Allowed when the caller is the owner OR the session's
+ * Read a chat's transcript: the head snapshot's thread, projected into
+ * bubbles. Clients call this on open and again whenever the record's
+ * `headSnapshotId` moves. Allowed when the caller is the owner OR the session's
  * visibility is "shared" and the caller is a team member.
  */
 export const loadBotSession = defineCallable({
@@ -83,8 +99,15 @@ export const loadBotSession = defineCallable({
       )
     }
 
-    const messages = extractMessagesFromSessionData(existing.data)
-    return { sessionId, messages }
+    const head = existing.headSnapshotId
+    const thread = head
+      ? await readSnapshotThread({ teamId, workspaceId, sessionId }, head)
+      : undefined
+    return {
+      sessionId,
+      headSnapshotId: head,
+      messages: extractChatMessages(thread),
+    }
   },
 })
 
@@ -382,7 +405,8 @@ export const deleteBotSession = defineCallable({
       auth.uid
     )
 
-    // Single document; no subcollections to traverse.
+    // History first, so a failure leaves the record to retry the delete from.
+    await deleteBotSessionHistory({ teamId, workspaceId, sessionId })
     await db
       .doc(`teams/${teamId}/workspaces/${workspaceId}/botSessions/${sessionId}`)
       .delete()
@@ -414,5 +438,174 @@ export const deleteBotSession = defineCallable({
     })
 
     return { sessionId, deleted: true }
+  },
+})
+
+// ===========================================================================
+// Branches: switch the version a chat shows; branch a chat into a new one.
+// ===========================================================================
+//
+// Every turn is an immutable snapshot (Genkit's session store); edits and
+// regenerations are sibling snapshots under the same parent, filed in the
+// record's `snapshotChildren` index. Switching versions just moves the
+// record's head; branching copies one snapshot's thread into a new chat.
+
+const snapshotTargetSchema = sessionTargetSchema.extend({
+  snapshotId: z.string().min(1),
+})
+
+/**
+ * Show another version of a reply: move the chat's head to the newest
+ * snapshot down that sibling's branch. Changes what every reader of a shared
+ * chat sees, so it's gated like sending a message.
+ */
+export const switchBotSessionBranch = defineCallable({
+  name: "switchBotSessionBranch",
+  auth: "verified",
+  appCheck: true,
+  input: snapshotTargetSchema,
+  handler: async ({
+    auth,
+    input,
+  }): Promise<{ sessionId: string; headSnapshotId: string }> => {
+    const { teamId, workspaceId, sessionId, snapshotId } = input
+    const [role, participation, existing] = await Promise.all([
+      getMembershipRole(teamId, auth.uid),
+      resolveParticipation(teamId, workspaceId, auth.uid),
+      readSessionDoc(teamId, workspaceId, sessionId),
+    ])
+    if (participation.excluded) {
+      throw new HttpsError(
+        "permission-denied",
+        "You are not a member of this workspace."
+      )
+    }
+    if (!existing) throw new HttpsError("not-found", "Session not found.")
+    if (existing.archived) {
+      throw new HttpsError(
+        "failed-precondition",
+        "This chat is archived. Restore it before switching versions."
+      )
+    }
+    if (!canEditChat(auth.uid, existing, role, participation.role)) {
+      throw new HttpsError(
+        "permission-denied",
+        "You don't have permission to change this chat."
+      )
+    }
+
+    // Serialized with turns, so a reply landing mid-switch can't be clobbered.
+    const release = await acquireSessionTurnLock(teamId, workspaceId, sessionId)
+    try {
+      const key = { teamId, workspaceId, sessionId }
+      const children = ((
+        await db
+          .doc(
+            `teams/${teamId}/workspaces/${workspaceId}/botSessions/${sessionId}`
+          )
+          .get()
+      ).get("snapshotChildren") ?? {}) as SnapshotChildren
+      const leaf = isBranch(children, snapshotId)
+        ? branchLeaf(children, snapshotId)
+        : null
+      const thread = leaf ? await readSnapshotThread(key, leaf) : undefined
+      if (!leaf || !thread) {
+        throw new HttpsError(
+          "failed-precondition",
+          "That version is no longer in this chat."
+        )
+      }
+      await projectChatRecord(
+        { ...key, ownerUid: existing.ownerUid },
+        leaf,
+        thread
+      )
+      return { sessionId, headSnapshotId: leaf }
+    } finally {
+      await release()
+    }
+  },
+})
+
+/**
+ * Branch a chat into a new one: copy the thread at `snapshotId` into a fresh,
+ * private chat owned by the caller, with the source's per-chat settings.
+ * Anyone who can read the source can branch it — the copy holds nothing they
+ * couldn't already see. The new chat records where it came from.
+ */
+export const branchBotSession = defineCallable({
+  name: "branchBotSession",
+  auth: "verified",
+  appCheck: true,
+  input: snapshotTargetSchema,
+  handler: async ({ auth, input }): Promise<{ sessionId: string }> => {
+    const { teamId, workspaceId, sessionId, snapshotId } = input
+
+    await getMembershipRole(teamId, auth.uid)
+    const sourceRef = db.doc(
+      `teams/${teamId}/workspaces/${workspaceId}/botSessions/${sessionId}`
+    )
+    const source = (await sourceRef.get()).data()
+    if (!source) throw new HttpsError("not-found", "Session not found.")
+    if (source.ownerUid !== auth.uid && source.visibility !== "shared") {
+      throw new HttpsError(
+        "permission-denied",
+        "You don't have access to this chat."
+      )
+    }
+    const thread = await readSnapshotThread(
+      { teamId, workspaceId, sessionId },
+      snapshotId
+    )
+    if (!thread) {
+      throw new HttpsError(
+        "failed-precondition",
+        "That message is no longer in this chat."
+      )
+    }
+
+    // Two snapshots, so the copied last message can be edited or
+    // regenerated in the branch straight away: a root before it, the head.
+    const key = {
+      teamId,
+      workspaceId,
+      sessionId: db
+        .collection(`teams/${teamId}/workspaces/${workspaceId}/botSessions`)
+        .doc().id,
+    }
+    const rootId = generateId()
+    const headId = generateId()
+    const { root, head } = forkThread(thread, rootId)
+    await writeRawSnapshot(key, rootId, root)
+    await writeRawSnapshot(key, headId, head, rootId)
+
+    const sourceTitle =
+      typeof source.title === "string" && source.title.trim()
+        ? source.title.trim()
+        : "New chat"
+    const settings = Object.fromEntries(
+      ["lastMode", "lastModel", "lastEffort", "activeAgentId"]
+        .filter((field) => source[field] !== undefined)
+        .map((field) => [field, source[field]])
+    )
+    await projectChatRecord(
+      {
+        ...key,
+        ownerUid: auth.uid,
+        contextNodes: Array.isArray(source.contextNodes)
+          ? source.contextNodes
+          : [],
+      },
+      headId,
+      head,
+      rootId,
+      {
+        ...settings,
+        title: `${sourceTitle.slice(0, TITLE_LIMIT - 9)} (branch)`,
+        visibility: "private",
+        forkedFrom: { sessionId, snapshotId },
+      }
+    )
+    return { sessionId: key.sessionId }
   },
 })

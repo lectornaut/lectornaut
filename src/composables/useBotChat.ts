@@ -25,10 +25,12 @@ import { useBotSessionActions } from "@/composables/useBotSessionActions"
 import { useCloseGuard } from "@/composables/useCloseConfirmation"
 import { useCurrentTeamRole } from "@/composables/useCurrentTeamRole"
 import {
+  branchBotSession,
   findBotSessionByPinnedNode,
   loadBotSession,
   respondToBotInterrupt,
   sendBotMessage,
+  switchBotSessionBranch,
   updateBotSessionVisibility,
   type BotChatMode,
   type BotChatNodeRef,
@@ -255,14 +257,34 @@ export interface BotChatContext {
       newSessionId?: string
       pendingAttachments?: BotSessionPendingAttachment[]
       pendingDriveImports?: string[]
-      editFromUserIndex?: number
+      fromSnapshotId?: string
     }
   ) => Promise<boolean>
   /**
-   * Edit-and-resend: replace the `userIndex`-th user bubble with `text` and
-   * answer it afresh. Everything after it is dropped server-side.
+   * Edit-and-resend: send `text` in place of user bubble `messageId`, as a
+   * new turn from that bubble's parent snapshot. The old branch stays in the
+   * store; the chat moves to the new one.
    */
-  editAndResend: (userIndex: number, text: string) => Promise<void>
+  editAndResend: (messageId: string, text: string) => Promise<void>
+  /**
+   * Versions of agent reply `messageId` — its siblings from edits and
+   * regenerations of the prompt before it — and which one is shown. Null
+   * when there's only one.
+   */
+  replyVersions: (messageId: string) => { index: number; ids: string[] } | null
+  /** Show another version (a sibling id from `replyVersions`). */
+  switchVersion: (snapshotId: string) => Promise<boolean>
+  /** The snapshot holding the chat as of agent reply `messageId`, if known. */
+  branchPoint: (messageId: string) => string | null
+  /** Copy the chat as of `snapshotId` into a new chat and open it. */
+  branchChat: (snapshotId: string) => Promise<boolean>
+  /**
+   * Stop the reply in flight. The request closes, the server cancels the
+   * turn (Genkit's per-turn abort) and drops it — complete tool rounds, whose
+   * side effects already happened, still commit — and the optimistic bubbles
+   * roll back.
+   */
+  stopSending: () => void
   /**
    * Resume a chat that's paused on an interrupt. The `messageId` + `ref`
    * locate the tool segment (so the UI can mutate it in place); `answer` is
@@ -378,7 +400,6 @@ export interface BotChatContext {
    */
   editContext: Ref<{
     messageId: string
-    userIndex: number
     text: string
   } | null>
 }
@@ -821,10 +842,13 @@ export function useBotChat(options?: BotChatOptions): BotChatContext {
 
   // ── Real-time subscription to the active session ──────────────────────────
   //
-  // Binds to the active session doc so every save (from this user OR another
-  // owner/admin in a shared chat) flows back into the local message list as
-  // a Firestore snapshot. The denormalized `messages` field on the doc is
-  // the canonical wire format — clients don't unpack the SessionData blob.
+  // Binds to the active chat RECORD. The transcript isn't on it: the record
+  // names the conversation snapshot it shows (`headSnapshotId`), and
+  // `loadBotSession` reads that snapshot. Whenever the head moves — this
+  // user's turn, or another member's in a shared chat — and nothing is
+  // streaming, reload the transcript. A head that moved mid-send is caught
+  // when `isSending` flips back, which also swaps the streamed bubbles for
+  // the server's (carrying the parent snapshot ids edit/regenerate need).
 
   const activeSessionDocRef = computed(() => {
     const teamId = currentTeamId.value
@@ -836,22 +860,36 @@ export function useBotChat(options?: BotChatOptions): BotChatContext {
 
   const activeSessionQuery = useDocumentQuery<IBotSession>(activeSessionDocRef)
 
-  // Sync server-driven messages into local state. Skipped during in-flight
-  // sends so the optimistic / streaming agent message stays visible until
-  // the response lands. Genkit's `SessionStore.save` runs once at the end
-  // of each chat turn, so a fresh snapshot will fire shortly after
-  // `isSending` flips back to false and reconcile naturally.
-  //
-  // We deliberately don't re-read the snapshot when `isSending` flips
-  // false — that introduced a race where the locally-built streaming
-  // text could be overwritten with a stale pre-write snapshot before the
-  // post-write snapshot arrived.
-  watch(
-    () => activeSessionQuery.data.value?.messages,
-    (serverMessages) => {
-      if (!serverMessages) return
+  /** The head the local transcript was last loaded from. */
+  const loadedHeadSnapshotId = ref<string | null>(null)
+  let transcriptLoad = 0
+  const reloadTranscript = async () => {
+    const teamId = currentTeamId.value
+    const workspaceId = currentWorkspaceId.value
+    const id = sessionId.value
+    if (!teamId || !workspaceId || !id) return
+    const token = ++transcriptLoad
+    try {
+      const { data } = await loadBotSession({
+        teamId,
+        workspaceId,
+        sessionId: id,
+      })
+      // Drop a stale answer: a newer load, a switched chat, or a send that
+      // started meanwhile (its streaming bubbles win until it settles).
+      if (token !== transcriptLoad || sessionId.value !== id) return
       if (isSending.value) return
-      messages.value = serverMessages.map(createMessage)
+      messages.value = data.messages.map(createMessage)
+      loadedHeadSnapshotId.value = data.headSnapshotId
+    } catch (error) {
+      console.error("[useBotChat] transcript reload failed:", error)
+    }
+  }
+  watch(
+    [() => activeSessionQuery.data.value?.headSnapshotId, isSending],
+    ([head, sending]) => {
+      if (!head || sending || head === loadedHeadSnapshotId.value) return
+      void reloadTranscript()
     }
   )
 
@@ -1110,6 +1148,7 @@ export function useBotChat(options?: BotChatOptions): BotChatContext {
 
         sessionId.value = loaded.data.sessionId
         messages.value = loaded.data.messages.map(createMessage)
+        loadedHeadSnapshotId.value = loaded.data.headSnapshotId
         pendingPinnedNode.value = null
       }
       // else: no existing session — leave the synchronous state alone
@@ -1204,7 +1243,7 @@ export function useBotChat(options?: BotChatOptions): BotChatContext {
       newSessionId?: string
       pendingAttachments?: BotSessionPendingAttachment[]
       pendingDriveImports?: string[]
-      editFromUserIndex?: number
+      fromSnapshotId?: string
     }
   ): Promise<boolean> => {
     const trimmed = text.trim()
@@ -1295,8 +1334,8 @@ export function useBotChat(options?: BotChatOptions): BotChatContext {
             ? { pendingDriveImports: opts.pendingDriveImports }
             : {}),
           ...(pinnedNode ? { pinnedNode } : {}),
-          ...(opts?.editFromUserIndex !== undefined
-            ? { editFromUserIndex: opts.editFromUserIndex }
+          ...(opts?.fromSnapshotId
+            ? { fromSnapshotId: opts.fromSnapshotId }
             : {}),
           // Always send `activeAgentId` (even when null) so the server
           // knows the user's intent for this turn. Omitting the field
@@ -1360,24 +1399,109 @@ export function useBotChat(options?: BotChatOptions): BotChatContext {
     }
   }
 
-  // Edit-and-resend. Drop the edited bubble and everything after it locally,
-  // then send the new text with `editFromUserIndex` — the server cuts its
-  // thread at the same bubble (counted the same way: user bubbles only) and
-  // answers afresh. On failure, resync from the session doc: the server may
-  // or may not have cut before the turn failed, and the doc says which.
-  const editAndResend = async (userIndex: number, text: string) => {
+  // Edit-and-resend. Show the chat up to the edited bubble, then send the new
+  // text as a turn from the bubble's parent snapshot. A failed turn that
+  // committed nothing leaves the head where it was, so restore the old view;
+  // one that committed an error turn moved the head, and the transcript sync
+  // below loads it.
+  const editAndResend = async (messageId: string, text: string) => {
     if (isSending.value || !sessionId.value || !canEditActive.value) return
-    let seen = -1
-    const at = messages.value.findIndex(
-      (m) => m.role === "user" && ++seen === userIndex
-    )
-    if (at < 0) return
+    const at = messages.value.findIndex((m) => m.id === messageId)
+    const fromSnapshotId = messages.value[at]?.parentSnapshotId
+    if (at < 0 || !fromSnapshotId) return
     const previous = messages.value
     messages.value = previous.slice(0, at)
-    const ok = await sendMessage(text, { editFromUserIndex: userIndex })
-    if (ok) return
-    const server = activeSessionQuery.data.value?.messages
-    messages.value = server ? server.map(createMessage) : previous
+    const ok = await sendMessage(text, { fromSnapshotId })
+    if (!ok) messages.value = previous
+  }
+  // ── Versions and branches ─────────────────────────────────────────────────
+  //
+  // Each turn is a snapshot; edits and regenerations are siblings under the
+  // prompt's parent snapshot, filed in the record's `snapshotChildren`. The
+  // shown version is the sibling on the path from the loaded head to the root.
+
+  const snapshotChildren = computed(
+    () => activeSessionQuery.data.value?.snapshotChildren ?? {}
+  )
+  const headPath = computed(() => {
+    const parentOf = new Map<string, string>()
+    for (const [parent, ids] of Object.entries(snapshotChildren.value)) {
+      for (const id of ids) parentOf.set(id, parent)
+    }
+    const path = new Set<string>()
+    let id = loadedHeadSnapshotId.value
+    while (id && !path.has(id)) {
+      path.add(id)
+      id = parentOf.get(id) ?? null
+    }
+    return path
+  })
+
+  const replyVersions: BotChatContext["replyVersions"] = (messageId) => {
+    const at = messages.value.findIndex((m) => m.id === messageId)
+    if (messages.value[at]?.role !== "agent") return null
+    const prompt = messages.value
+      .slice(0, at)
+      .findLast((m) => m.role === "user")
+    const ids = prompt?.parentSnapshotId
+      ? (snapshotChildren.value[prompt.parentSnapshotId] ?? [])
+      : []
+    const index = ids.findIndex((id) => headPath.value.has(id))
+    return ids.length > 1 && index >= 0 ? { index, ids } : null
+  }
+
+  const switchVersion: BotChatContext["switchVersion"] = async (snapshotId) => {
+    const teamId = currentTeamId.value
+    const workspaceId = currentWorkspaceId.value
+    const id = sessionId.value
+    if (!teamId || !workspaceId || !id || isSending.value) return false
+    try {
+      await switchBotSessionBranch({
+        teamId,
+        workspaceId,
+        sessionId: id,
+        snapshotId,
+      })
+      await reloadTranscript()
+      return true
+    } catch (error) {
+      console.error("[useBotChat] switchVersion failed:", error)
+      return false
+    }
+  }
+
+  // The chat as of an agent reply: the snapshot the next prompt started from,
+  // or — for the last reply — the loaded head, once it's the record's head
+  // (right after a send the transcript still shows the stream).
+  const branchPoint: BotChatContext["branchPoint"] = (messageId) => {
+    const at = messages.value.findIndex((m) => m.id === messageId)
+    if (messages.value[at]?.role !== "agent") return null
+    const next = messages.value.slice(at + 1).find((m) => m.role === "user")
+    if (next) return next.parentSnapshotId ?? null
+    const head = loadedHeadSnapshotId.value
+    return head && head === activeSessionQuery.data.value?.headSnapshotId
+      ? head
+      : null
+  }
+
+  const branchChat: BotChatContext["branchChat"] = async (snapshotId) => {
+    const teamId = currentTeamId.value
+    const workspaceId = currentWorkspaceId.value
+    const id = sessionId.value
+    if (!teamId || !workspaceId || !id) return false
+    try {
+      const { data } = await branchBotSession({
+        teamId,
+        workspaceId,
+        sessionId: id,
+        snapshotId,
+      })
+      await selectSession(data.sessionId)
+      return true
+    } catch (error) {
+      console.error("[useBotChat] branchChat failed:", error)
+      return false
+    }
   }
 
   // Resume a paused chat by submitting the user's answer to an interrupt.
@@ -1476,14 +1600,14 @@ export function useBotChat(options?: BotChatOptions): BotChatContext {
       // would lose the prefix. The next Firestore snapshot is the
       // canonical reconcile.
     } catch (error) {
-      const isAbort = controller.signal.aborted
-      if (!isAbort) {
+      if (!controller.signal.aborted) {
         console.error("[useBotChat] respondToBotInterrupt failed:", error)
         toast.error("Couldn't submit your answer. Please try again.")
-        // Roll back the optimistic resolution so the user can re-submit.
-        target.tool.output = previousOutput
-        target.tool.isInterrupt = true
       }
+      // Roll back the optimistic resolution so the user can re-submit — a
+      // stopped resume committed no answer either.
+      target.tool.output = previousOutput
+      target.tool.isInterrupt = true
     } finally {
       if (inflightController === controller) inflightController = null
       isSending.value = false
@@ -1528,6 +1652,7 @@ export function useBotChat(options?: BotChatOptions): BotChatContext {
       })
       sessionId.value = data.sessionId
       messages.value = data.messages.map(createMessage)
+      loadedHeadSnapshotId.value = data.headSnapshotId
       // Rehydrate chips from the session doc's `contextNodes` — the
       // unified field, re-written on every send so it always reflects
       // the latest attach/detach state. If the local listener hasn't
@@ -1724,6 +1849,11 @@ export function useBotChat(options?: BotChatOptions): BotChatContext {
     canManageActive,
     sendMessage,
     editAndResend,
+    replyVersions,
+    switchVersion,
+    branchPoint,
+    branchChat,
+    stopSending: abortInflightSend,
     respondToInterrupt,
     selectSession,
     startNewSession,

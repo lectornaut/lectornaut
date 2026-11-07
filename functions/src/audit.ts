@@ -19,6 +19,7 @@ import Stripe from "stripe"
 import { z, type ZodType } from "zod"
 import { assertAuthenticated, type AuthData } from "./auth.js"
 import { authorize, requireAuthorized } from "./authorize.js"
+import { deleteWorkspaceBotHistory } from "./botSnapshotStore.js"
 import { BUILT_IN_AGENTS_BY_ID, isBuiltInAgentId } from "./builtInAgents.js"
 import { COST_BUDGET } from "./costBudget.js"
 import { defineCallable } from "./defineCallable.js"
@@ -1339,6 +1340,12 @@ export const deleteTeam = onCall(
       )
     }
 
+    // Chat histories live outside the team tree (Genkit's snapshot store) and
+    // are listed by the chat records, so they go first.
+    for (const ws of await teamRef.collection("workspaces").listDocuments()) {
+      await deleteWorkspaceBotHistory(teamId, ws.id)
+    }
+
     // Recursively delete the entire team document tree (all subcollections)
     await db.recursiveDelete(teamRef)
 
@@ -1719,6 +1726,9 @@ export const deleteWorkspace = onCall(
     // deleting all nested documents and subcollections.
     // NOTE: This cannot run inside a transaction, hence the two-step approach.
     const workspaceRef = db.doc(`teams/${teamId}/workspaces/${workspaceId}`)
+    // Chat histories live outside the workspace tree (Genkit's snapshot
+    // store) and are listed by the chat records, so they go first.
+    await deleteWorkspaceBotHistory(teamId, workspaceId)
     await db.recursiveDelete(workspaceRef)
 
     // Step 2b: Prune references that live outside the workspace subtree

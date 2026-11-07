@@ -60,29 +60,34 @@ import type { AiProvider, BotChatEffort } from "./domain.js"
  *   - `{ resume }`           — re-enter a paused Human-in-the-Loop turn with
  *                              the user's answer folded in as a tool response
  *                              (`respondToBotInterrupt`).
- *   - `{ kind: "continue" }` — re-enter a truncated thread with NO new input,
- *                              so the model just replies to the message at the
- *                              tail (the transfer re-entry second turn).
+ *   - `{ kind: "continue" }` — resume a snapshot with NO new input, so the
+ *                              model replies to the message at its tail (the
+ *                              handoff second turn, from its seed snapshot).
  */
 export type TurnDelivery =
   { prompt: string | Part[] } | { resume: ResumeOptions } | { kind: "continue" }
 
 /**
- * Map a {@link TurnDelivery} to the `chat.sendStream(...)` input — a bare string
- * for a plain prompt, or a structural `{ message }` / `{ resume }` object.
+ * Map a {@link TurnDelivery} to the `chat.sendStream(...)` input — a
+ * structural `{ message }` / `{ resume }` object.
  * (Structural, not the framework's `AgentInput` which isn't publicly exported;
  * `runChatTurn` casts the result to `chat.sendStream`'s parameter type.)
- *   - `{ prompt: string }`  → the bare string (the framework wraps it).
- *   - `{ prompt: Part[] }`  → a `{ message }` carrying the multimodal user turn.
+ *   - `{ prompt }`          → a `{ message }` user turn carrying `metadata`
+ *     (author + parent snapshot, see bot.ts).
  *   - `{ resume }`          → `{ resume }` (folds the HITL answer back in).
- *   - `{ kind: "continue" }`→ `{}` — generate on the (truncated) thread alone,
- *     which is precisely what the transfer second turn wants.
+ *   - `{ kind: "continue" }`→ `{}` — generate on the snapshot's thread alone,
+ *     which is precisely what the handoff second turn wants.
  */
-export function deliveryToAgentInput(delivery: TurnDelivery) {
+export function deliveryToAgentInput(
+  delivery: TurnDelivery,
+  metadata?: Record<string, unknown>
+) {
   if ("prompt" in delivery) {
-    return typeof delivery.prompt === "string"
-      ? delivery.prompt
-      : { message: { role: "user", content: delivery.prompt } }
+    const content =
+      typeof delivery.prompt === "string"
+        ? [{ text: delivery.prompt }]
+        : delivery.prompt
+    return { message: { role: "user", content, metadata } }
   }
   if ("resume" in delivery) return { resume: delivery.resume }
   return {}
