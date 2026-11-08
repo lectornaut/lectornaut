@@ -370,8 +370,8 @@ const showThinking = computed(
 //
 // Streaming-tail text gets `final: false` so the underlying renderer
 // turns on smooth pacing + typewriter + tolerant parsing for half-open
-// code fences / links. Everything else is `final: true`, which trips
-// fade-in and skips pacing. The dynamic switch is handled inside
+// code fences / links. Everything else is `final: true`, which renders
+// in one synchronous pass with no pacing. The dynamic switch is handled inside
 // `AppMarkdown` based on the `final` prop — see that wrapper for the
 // streaming/history matrix.
 //

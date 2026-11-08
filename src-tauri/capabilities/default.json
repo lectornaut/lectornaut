@@ -24,6 +24,7 @@
     "fs:allow-write-file",
     "opener:allow-open-path",
     "opener:allow-open-url",
+    "opener:allow-default-urls",
     "opener:allow-reveal-items-in-dir",
     "deep-link:default",
     "os:default",

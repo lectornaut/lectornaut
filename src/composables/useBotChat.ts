@@ -51,6 +51,7 @@ import {
   botModels,
   type BotModelEntry,
 } from "@/helpers/defaults"
+import { queryClient } from "@/modules/queryClient"
 import { useAgentConfigStore } from "@/stores/agentConfigStore"
 import { useAuthStore } from "@/stores/authStore"
 import { useBillingStore } from "@/stores/billingStore"
@@ -898,6 +899,23 @@ export function useBotChat(options?: BotChatOptions): BotChatContext {
 
   /** The head the local transcript was last loaded from. */
   const loadedHeadSnapshotId = ref<string | null>(null)
+
+  // Transcripts live in the shared query cache (outside the persisted
+  // `"firestore"` namespace, so memory-only), so re-opening a chat paints it
+  // in the same frame instead of a spinner + network round trip. Freshness is
+  // owned by the head watcher below, not by `staleTime`: the cached
+  // `headSnapshotId` is compared against the live record, and a moved head
+  // reloads. Unvisited entries are evicted by the default `gcTime`.
+  type Transcript = Awaited<ReturnType<typeof loadBotSession>>["data"]
+  const transcriptKey = (id: string) => ["botTranscript", id] as const
+  const cachedTranscript = (id: string) =>
+    queryClient.getQueryData<Transcript>(transcriptKey(id))
+  const fetchTranscript = (args: Parameters<typeof loadBotSession>[0]) =>
+    queryClient.fetchQuery({
+      queryKey: transcriptKey(args.sessionId),
+      queryFn: async () => (await loadBotSession(args)).data,
+      staleTime: 0,
+    })
   let transcriptLoad = 0
   const reloadTranscript = async () => {
     const teamId = currentTeamId.value
@@ -906,7 +924,7 @@ export function useBotChat(options?: BotChatOptions): BotChatContext {
     if (!teamId || !workspaceId || !id) return
     const token = ++transcriptLoad
     try {
-      const { data } = await loadBotSession({
+      const data = await fetchTranscript({
         teamId,
         workspaceId,
         sessionId: id,
@@ -1170,7 +1188,7 @@ export function useBotChat(options?: BotChatOptions): BotChatContext {
         // Existing pinned chat — load its history. The pin was
         // persisted server-side at creation time, so we don't need to
         // forward `pendingPinnedNode` on the next send.
-        const loaded = await loadBotSession({
+        const loaded = await fetchTranscript({
           teamId,
           workspaceId,
           sessionId: data.sessionId,
@@ -1182,9 +1200,9 @@ export function useBotChat(options?: BotChatOptions): BotChatContext {
           attachedNodes.value[0]?.nodeId === node.nodeId
         if (!stillCurrentAfterLoad) return
 
-        sessionId.value = loaded.data.sessionId
-        messages.value = loaded.data.messages.map(createMessage)
-        loadedHeadSnapshotId.value = loaded.data.headSnapshotId
+        sessionId.value = loaded.sessionId
+        messages.value = loaded.messages.map(createMessage)
+        loadedHeadSnapshotId.value = loaded.headSnapshotId
         pendingPinnedNode.value = null
       }
       // else: no existing session — leave the synchronous state alone
@@ -1757,13 +1775,12 @@ export function useBotChat(options?: BotChatOptions): BotChatContext {
     // the previous one so its chunks don't bleed into this load.
     abortInflightSend()
 
-    isLoadingSession.value = true
+    const cached = cachedTranscript(id)
+    isLoadingSession.value = !cached
     try {
-      const { data } = await loadBotSession({
-        teamId,
-        workspaceId,
-        sessionId: id,
-      })
+      const data =
+        cached ??
+        (await fetchTranscript({ teamId, workspaceId, sessionId: id }))
       sessionId.value = data.sessionId
       messages.value = data.messages.map(createMessage)
       loadedHeadSnapshotId.value = data.headSnapshotId

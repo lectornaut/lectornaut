@@ -534,6 +534,18 @@
 }
 
 /*
+  Chat scroller fades BOTH edges. The vendored viewport ships `scroll-fade-b`;
+  this unlayered rule wins over it (same data-slot house rule as below).
+  `-b` also sets `--scroll-fade-mask`, which `-y` reads first, so reset it or
+  the top edge never fades.
+*/
+[data-slot="message-scroller-viewport"] {
+  @apply scroll-fade-y;
+
+  --scroll-fade-mask: initial;
+}
+
+/*
   DataTable: the Table's own container must BE the scroll viewport — its
   sticky header and pinned columns stick to the nearest scrollport, so a
   wrapper-level scroller would carry them away (this is exactly what the

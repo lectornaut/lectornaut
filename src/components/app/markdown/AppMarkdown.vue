@@ -15,8 +15,11 @@
  *   • final=false (chat tail mid-stream) → smooth pacing on,
  *     typewriter cursor off, fade off (would flicker against
  *     280ms pacing windows).
- *   • final=true (chat history + every other surface) → fade on for a
- *     polished entry, no pacing, no cursor.
+ *   • final=true → no pacing, no cursor. Chat history also renders in ONE
+ *     synchronous pass with no fade: the `chat` preset's idle-scheduled
+ *     render batches, multiplied across every bubble, made a session switch
+ *     paint empty bubbles that filled in over many frames. Fade stays on
+ *     only for the changelog surfaces.
  */
 import {
   activeCodeThemeColors,
@@ -212,11 +215,6 @@ const smoothStreamingOptions = {
 // for the sheet to match its compact density — explicit because the
 // sheet's `docs` preset would otherwise turn them on.
 const showTooltips = computed(() => props.surface === "changelog-page")
-
-// Surfaces parse/render timing and virtualization stats to the console.
-// Free in production (tree-shaken via `import.meta.env.DEV`), useful
-// the next time streaming feels janky.
-const isDev = import.meta.env.DEV
 </script>
 
 <template>
@@ -235,9 +233,9 @@ const isDev = import.meta.env.DEV
     :custom-html-tags="customHtmlTags"
     :smooth-streaming="streaming ? 'auto' : false"
     :smooth-streaming-options="smoothStreamingOptions"
-    :fade="!streaming"
+    :fade="surface !== 'chat'"
+    :batch-rendering="surface === 'chat' ? streaming : undefined"
     :defer-nodes-until-visible="deferNodesUntilVisible"
     :show-tooltips="showTooltips"
-    :debug-performance="isDev"
   />
 </template>

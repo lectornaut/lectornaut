@@ -38,8 +38,6 @@ log = "0.4"
 tauri-plugin-log = "3.0.0-alpha.1"
 # https://crates.io/crates/tauri-plugin-clipboard-manager/versions
 tauri-plugin-clipboard-manager = "3.0.0-alpha.1"
-# https://crates.io/crates/tauri-plugin-shell/versions
-tauri-plugin-shell = "3.0.0-alpha.1"
 # https://crates.io/crates/tauri-plugin-opener/versions
 tauri-plugin-opener = "3.0.0-alpha.1"
 # https://crates.io/crates/tauri-plugin-deep-link/versions
