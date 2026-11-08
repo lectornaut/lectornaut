@@ -18,8 +18,7 @@
  *     into a graceful, user-visible fallback instead of an opaque `INTERNAL`.
  *   - `buildTurnConfig` — the per-provider sampling/`thinking` config
  *     assembly shared by the streaming turn and (eventually) the one-shot
- *     structured generations, with the optional temperature clamp the
- *     summary path needs.
+ *     structured generations.
  *   - `resolveTransferOutcome` — `transferToAgent`'s target-validation
  *     decision. The rejection branches RETURN a message (never throw):
  *     a tool-handler throw is fatal to the whole turn, so the failure
@@ -129,6 +128,22 @@ export function isToolIterationsExceededError(err: unknown): boolean {
   const e = err as GenkitErrorLike
   if (e.status !== "ABORTED") return false
   return errorMessage(e).includes("maximum tool call iterations")
+}
+
+/**
+ * Message of the failure the agent handler raises when a reply ends at the
+ * output-token cap with no text (`finishReason: "length"`). Genkit treats
+ * that as success, so the handler makes it a failure itself.
+ */
+export const OUTPUT_LENGTH_EXCEEDED_MESSAGE =
+  "Model reply truncated by the output token limit before any text."
+
+/** Detect the handler's output-token-cap failure (see above). */
+export function isOutputLengthExceededError(err: unknown): boolean {
+  if (!err || typeof err !== "object") return false
+  const e = err as GenkitErrorLike
+  if (e.status !== "RESOURCE_EXHAUSTED") return false
+  return errorMessage(e).includes(OUTPUT_LENGTH_EXCEEDED_MESSAGE)
 }
 
 /**
@@ -392,39 +407,43 @@ export const ANTHROPIC_THINKING_BUDGET_TOKENS = 2048
  * it up regardless of this gate.
  */
 export function modelSupportsThinking(name: string): boolean {
-  if (/^gemini-(2\.5|3)/.test(name)) return true
-  if (/^claude-(3-7|(opus|sonnet|haiku)-4|(fable|opus|sonnet)-5)/.test(name))
+  if (/^gemini-(2\.5|[34])/.test(name)) return true
+  if (
+    /^claude-(3-7|(opus|sonnet|haiku)-4|(fable|opus|sonnet|haiku)-5)/.test(name)
+  )
     return true
   return false
 }
 
 /**
- * Claude 4.7+ and the Claude 5 family (Fable 5, Sonnet 5) removed
+ * Claude 4.7+ and the Claude 5 family (Fable/Opus/Sonnet/Haiku 5.x) removed
  * `temperature`/`top_p`/`top_k` from the API entirely — sending any of them
  * is a 400 regardless of thinking state. 4.6-family models still accept
  * them.
  */
 const ANTHROPIC_SAMPLING_REMOVED_RE =
-  /^claude-(opus-4-[789]|(fable|opus|sonnet)-5)/
+  /^claude-(opus-4-[789]|(fable|opus|sonnet|haiku)-5)/
 
 /**
  * Whether a wire-name accepts the canonical per-turn effort level:
- *   - Claude 4.6+ and the 5 family (Fable/Opus/Sonnet): `output_config.effort`
+ *   - Claude 4.6+ and the 5 family (incl. Haiku 5.5): `output_config.effort`
  *     — GA. Excludes Haiku 4.5, which rejects the parameter.
- *   - Gemini 3.x: `thinkingConfig.thinkingLevel` (2.5 only has token
+ *   - Gemini 3.x / 4: `thinkingConfig.thinkingLevel` (2.5 only has token
  *     budgets, and none are in the catalog).
- * OpenAI gpt-5.6 and xAI grok-4.5 take `reasoning_effort` at the API level,
+ * OpenAI GPT-6 and xAI Grok take `reasoning_effort` at the API level,
  * but @genkit-ai/compat-oai 1.40 has no config key for it on those models
  * (only xAI's grok-mini line) — flip them on here when the plugin ships one.
- * deepseek-v4-pro's reasoning depth is model-managed; no knob to map.
+ * DeepSeek's thinking/effort knobs aren't mapped by its plugin either.
  */
 export function modelSupportsEffort(
   provider: AiProvider,
   name: string
 ): boolean {
   if (provider === "anthropic")
-    return /^claude-((opus|sonnet)-4-[6-9]|(fable|opus|sonnet)-5)/.test(name)
-  if (provider === "google") return /^gemini-3/.test(name)
+    return /^claude-((opus|sonnet)-4-[6-9]|(fable|opus|sonnet|haiku)-5)/.test(
+      name
+    )
+  if (provider === "google") return /^gemini-[34]/.test(name)
   return false
 }
 
@@ -458,12 +477,6 @@ export interface TurnSampling {
  * The stream + reconstruction fold any resulting `reasoning` parts into
  * `<thinking>` blocks uniformly (`createThinkingFolder`), so this only
  * controls how each provider is *asked* to emit reasoning.
- *
- * `temperatureCap` clamps temperature to an upper bound (the one-shot
- * summary path hugs the source at 0.3 even when the team's chat temperature
- * is higher); omit it and temperature passes through unchanged — the
- * streaming chat turn passes nothing, so its config is byte-identical to the
- * pre-extraction inline assembly.
  */
 export function buildTurnConfig(opts: {
   provider: AiProvider
@@ -478,12 +491,8 @@ export function buildTurnConfig(opts: {
    * a stale client pick can never fail a turn.
    */
   effort?: BotChatEffort | null
-  temperatureCap?: number
 }): Record<string, unknown> {
   const sampling: TurnSampling = { ...opts.sampling }
-  if (opts.temperatureCap !== undefined && sampling.temperature !== undefined) {
-    sampling.temperature = Math.min(sampling.temperature, opts.temperatureCap)
-  }
 
   const thinkingOn = opts.thinkingEnabled && modelSupportsThinking(opts.model)
   const effort =
@@ -525,7 +534,16 @@ export function buildTurnConfig(opts: {
     return base
   }
 
-  // OpenAI / xAI / DeepSeek (and any future provider): sampling only —
+  // OpenAI's GPT-6 line is all reasoning models, which accept only the
+  // default sampling (non-default temperature/top_p is a 400): send the
+  // token ceiling alone.
+  if (opts.provider === "openai") {
+    return sampling.maxOutputTokens !== undefined
+      ? { maxOutputTokens: sampling.maxOutputTokens }
+      : {}
+  }
+
+  // xAI / DeepSeek (and any future provider): sampling only —
   // neither a thinking toggle nor an effort knob maps here yet (see
   // `modelSupportsEffort`). Kept total so the function never falls through.
   return { ...sampling }

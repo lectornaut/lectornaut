@@ -64,8 +64,10 @@ import {
 import { paletteHex } from "@/utils/theme/tokens"
 import {
   canExportAuditLogsOnPlan,
+  DEFAULT_BOT_MAX_OUTPUT_TOKENS,
   modelsAddedByPlan,
   PLAN_AUDIT_LOG_RETENTION_DAYS,
+  PLAN_FLOOR_MODEL,
   PLAN_TOKEN_ALLOWANCES,
   PLAN_WORKSPACE_ALLOWANCES,
 } from "@lectornaut/shared/domain"
@@ -456,180 +458,128 @@ export const defaultBotModelProviderToggles: Record<
 export const botModels = [
   // Google Gemini
   {
-    id: "gemini-2.5-flash-lite",
+    id: "gemini-3.5-flash-lite",
     provider: "google",
-    name: "Gemini 2.5 Flash-Lite",
-    description: "The fastest, most efficient Gemini 2.5 model.",
+    name: "Gemini 3.5 Flash-Lite",
+    description: "Cheapest Gemini, for quick, high-volume tasks.",
     badge: "Fast",
-    supportsEffort: false,
+    supportsEffort: true,
   },
   {
-    id: "gemini-2.5-pro",
+    id: "gemini-3.8-flash",
     provider: "google",
-    name: "Gemini 2.5 Pro",
-    description: "Advanced reasoning for complex tasks and coding.",
-    badge: "Pro",
-    supportsEffort: false,
-  },
-  {
-    id: "gemini-3.6-flash",
-    provider: "google",
-    name: "Gemini 3.6 Flash",
-    description: "Fast, capable, multimodal — great everyday default.",
+    name: "Gemini 3.8 Flash",
+    description: "Smartest Flash: fast, capable, a great everyday default.",
     badge: "Flash",
     supportsEffort: true,
   },
   {
-    id: "gemini-3.1-pro-preview",
+    id: "gemini-4-argon",
     provider: "google",
-    name: "Gemini 3.1 Pro (Preview)",
-    description: "Most capable Gemini — best for complex reasoning.",
-    badge: "Preview",
+    name: "Gemini 4 Argon",
+    description: "Google's flagship for deep reasoning and long agentic work.",
+    badge: "Flagship",
     supportsEffort: true,
   },
   // Anthropic Claude
   {
-    id: "claude-haiku-4-5",
+    id: "claude-haiku-5-5",
     provider: "anthropic",
-    name: "Claude Haiku 4.5",
-    description: "Fast, efficient Claude for high-volume work.",
+    name: "Claude Haiku 5.5",
+    description: "Fastest Claude, for high-volume, latency-sensitive work.",
     badge: "Fast",
-    supportsEffort: false,
+    supportsEffort: true,
   },
   {
-    id: "claude-opus-4-1",
+    id: "claude-sonnet-5-5",
     provider: "anthropic",
-    name: "Claude Opus 4.1",
-    description: "Anthropic's strongest model for difficult reasoning.",
-    badge: "Opus",
-    supportsEffort: false,
-  },
-  {
-    id: "claude-sonnet-4-5",
-    provider: "anthropic",
-    name: "Claude Sonnet 4.5",
-    description: "Balanced coding, reasoning, and writing quality.",
+    name: "Claude Sonnet 5.5",
+    description: "The best balance of speed and intelligence.",
     badge: "Sonnet",
-    supportsEffort: false,
+    supportsEffort: true,
   },
   {
-    id: "claude-fable-5",
+    id: "claude-opus-5-5",
     provider: "anthropic",
-    name: "Claude Fable 5",
-    description: "Anthropic's most capable — deepest long-horizon reasoning.",
+    name: "Claude Opus 5.5",
+    description: "Long-running agentic coding and knowledge work.",
+    badge: "Opus",
+    supportsEffort: true,
+  },
+  {
+    id: "claude-fable-5-1",
+    provider: "anthropic",
+    name: "Claude Fable 5.1",
+    description: "Anthropic's most capable, for the hardest long-horizon work.",
     badge: "Frontier",
     supportsEffort: true,
   },
+  // OpenAI. All four take `reasoning_effort` at the API level, but the
+  // installed Genkit OpenAI plugin has no config key for it yet; flip on
+  // (here and in the server's `modelSupportsEffort`) when it ships one.
   {
-    id: "claude-opus-5",
-    provider: "anthropic",
-    name: "Claude Opus 5",
-    description: "Most capable Opus — long-horizon reasoning and writing.",
-    badge: "Opus",
-    supportsEffort: true,
-  },
-  {
-    id: "claude-sonnet-5",
-    provider: "anthropic",
-    name: "Claude Sonnet 5",
-    description: "Near-Opus coding and agentic quality at Sonnet speed.",
-    badge: null,
-    supportsEffort: true,
-  },
-  // OpenAI
-  {
-    id: "gpt-5",
+    id: "gpt-6-luna",
     provider: "openai",
-    name: "GPT-5",
-    description: "OpenAI's flagship model for reasoning and generation.",
-    badge: "Flagship",
-    supportsEffort: false,
-  },
-  {
-    id: "gpt-5-mini",
-    provider: "openai",
-    name: "GPT-5 Mini",
-    description: "A smaller GPT-5 model for fast, capable responses.",
-    badge: "Fast",
-    supportsEffort: false,
-  },
-  {
-    id: "gpt-5-nano",
-    provider: "openai",
-    name: "GPT-5 Nano",
-    description: "The fastest and most economical GPT-5 model.",
+    name: "GPT-6 Luna",
+    description: "OpenAI's most efficient model, for high-volume tasks.",
     badge: "Value",
     supportsEffort: false,
   },
   {
-    id: "gpt-5.6",
+    id: "gpt-6.1-terra",
     provider: "openai",
-    name: "GPT-5.6",
-    description: "OpenAI flagship — routes to the Sol tier for hard work.",
-    // Takes `reasoning_effort` at the API level, but the installed Genkit
-    // OpenAI plugin has no config key for it yet — flip on (here and in the
-    // server's `modelSupportsEffort`) when the plugin ships one.
-    badge: "Reasoning",
-    supportsEffort: false,
-  },
-  // xAI Grok
-  {
-    id: "grok-4",
-    provider: "xai",
-    name: "Grok 4",
-    description: "xAI's flagship model for reasoning and analysis.",
-    badge: "Flagship",
-    supportsEffort: false,
-  },
-  {
-    id: "grok-4-fast-reasoning",
-    provider: "xai",
-    name: "Grok 4 Fast Reasoning",
-    description: "Fast Grok reasoning for interactive workflows.",
+    name: "GPT-6.1 Terra",
+    description: "Fast and efficient for everyday work.",
     badge: "Fast",
     supportsEffort: false,
   },
   {
-    id: "grok-4.5",
+    id: "gpt-6.1-sol",
+    provider: "openai",
+    name: "GPT-6.1 Sol",
+    description: "Near-flagship reasoning at a lower cost.",
+    badge: null,
+    supportsEffort: false,
+  },
+  {
+    id: "gpt-6-astra",
+    provider: "openai",
+    name: "GPT-6 Astra",
+    description: "OpenAI's flagship for complex reasoning and coding.",
+    badge: "Flagship",
+    supportsEffort: false,
+  },
+  // xAI Grok
+  {
+    id: "grok-4.3",
     provider: "xai",
-    name: "Grok 4.5",
-    description: "xAI's flagship — one model, configurable reasoning.",
-    // grok-4.5 takes reasoning effort at the API level, but the installed
-    // Genkit xAI plugin only maps it for the grok-mini line.
-    badge: null,
-    supportsEffort: false,
-  },
-  // DeepSeek
-  {
-    id: "deepseek-chat",
-    provider: "deepseek",
-    name: "DeepSeek Chat",
-    description: "General-purpose DeepSeek for fast conversations.",
-    badge: null,
+    name: "Grok 4.3",
+    description: "Lower-cost Grok for everyday conversations.",
+    badge: "Value",
     supportsEffort: false,
   },
   {
-    id: "deepseek-reasoner",
-    provider: "deepseek",
-    name: "DeepSeek Reasoner",
-    description: "Deep reasoning for difficult technical problems.",
-    badge: "Reasoning",
+    id: "grok-4.7",
+    provider: "xai",
+    name: "Grok 4.7",
+    description: "xAI's most capable model, for code and chat.",
+    badge: "Flagship",
     supportsEffort: false,
   },
+  // DeepSeek. Reasoning depth isn't wired to the composer for either.
   {
-    id: "deepseek-v4-flash",
+    id: "deepseek-flash",
     provider: "deepseek",
-    name: "DeepSeek V4 Flash",
-    description: "DeepSeek V4 — fast, capable, cost-efficient.",
-    badge: null,
+    name: "DeepSeek Flash",
+    description: "Fast, very low-cost DeepSeek (V4.1 Flash).",
+    badge: "Value",
     supportsEffort: false,
   },
   {
     id: "deepseek-v4-pro",
     provider: "deepseek",
     name: "DeepSeek V4 Pro",
-    description: "Top DeepSeek — deep reasoning and agentic strength.",
-    // Reasoning depth is model-managed; no client knob to expose.
+    description: "Top DeepSeek, for deep reasoning and agentic work.",
     badge: "Reasoning",
     supportsEffort: false,
   },
@@ -734,11 +684,8 @@ export const defaultBotModelToggles: IBotAgentModelToggles = Object.fromEntries(
 export const defaultBotAgentConfig: IBotAgentConfig = {
   providers: { ...defaultBotModelProviderToggles },
   models: { ...defaultBotModelToggles },
-  model: "gemini-3.6-flash",
-  temperature: 0.7,
-  topP: 0.95,
-  topK: 40,
-  maxOutputTokens: 2048,
+  model: PLAN_FLOOR_MODEL,
+  maxOutputTokens: DEFAULT_BOT_MAX_OUTPUT_TOKENS,
   thinking: true,
   autoContext: false,
   memoryEnabled: true,
@@ -752,25 +699,6 @@ export const defaultBotAgentConfig: IBotAgentConfig = {
     "answering instead of guessing, and say so plainly when you can't " +
     "find a relevant node. Write replies in Markdown and keep them " +
     "concise.",
-  promptSuffixes: {
-    auto:
-      "Default mode: answer concisely. Call a tool when it directly " +
-      "advances the user's request, otherwise just reply with text. If " +
-      "the request is ambiguous, prefer asking the user a clarifying " +
-      "question via `askQuestion` over guessing.",
-    agent:
-      "Agent mode: be proactive. Prefer calling tools to gather concrete " +
-      "data over guessing, and chain multiple tool calls when a question " +
-      "needs them. Briefly narrate what you're doing and why. When you " +
-      "need a decision from the user before continuing, ask via " +
-      "`askQuestion` — don't pick on their behalf.",
-    manual:
-      "Manual mode: stay conversational and let the user lead. Prefer " +
-      "explaining, suggesting, and discussing; reach for a tool only when " +
-      "the user explicitly asks rather than acting on your own initiative. " +
-      "Ask clarifying questions via `askQuestion` whenever it would help " +
-      "the discussion.",
-  },
   tools: {
     rollDice: true,
     browseInternet: true,
@@ -786,8 +714,6 @@ export const defaultBotAgentConfig: IBotAgentConfig = {
     customWorkflows: true,
     customTools: true,
   },
-  titleMaxLength: 80,
-  previewMaxLength: 200,
   monthlyTokenCap: null,
   monthlyCostCapCents: null,
 }
@@ -797,14 +723,8 @@ export const defaultBotAgentConfig: IBotAgentConfig = {
  * `BOT_AGENT_BOUNDS` server-side; if you tighten one, tighten the other.
  */
 export const botAgentBounds = {
-  temperature: { min: 0, max: 2, step: 0.05 },
-  topP: { min: 0, max: 1, step: 0.01 },
-  topK: { min: 1, max: 100, step: 1 },
   maxOutputTokens: { min: 256, max: 65536, step: 256 },
   systemPromptBase: { max: 4000 },
-  promptSuffix: { max: 2000 },
-  titleMaxLength: { min: 20, max: 200, step: 1 },
-  previewMaxLength: { min: 50, max: 500, step: 1 },
   /**
    * Custom-tool field caps. Mirror the Zod schema in
    * `src/schemas/domain.ts::teamCustomToolSchema` — keep them in

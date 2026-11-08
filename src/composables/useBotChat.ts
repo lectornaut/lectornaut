@@ -30,6 +30,7 @@ import {
   loadBotSession,
   respondToBotInterrupt,
   sendBotMessage,
+  stopBotTurn,
   switchBotSessionBranch,
   updateBotSessionVisibility,
   type BotChatMode,
@@ -267,6 +268,12 @@ export interface BotChatContext {
    */
   editAndResend: (messageId: string, text: string) => Promise<void>
   /**
+   * Continue the failed last turn: Genkit re-runs it from its committed tool
+   * rounds with no new message, so finished tool calls aren't repeated. Only
+   * meaningful when the last bubble is an error reply after tool cards.
+   */
+  continueFailedTurn: () => Promise<void>
+  /**
    * Versions of agent reply `messageId` — its siblings from edits and
    * regenerations of the prompt before it — and which one is shown. Null
    * when there's only one.
@@ -274,10 +281,18 @@ export interface BotChatContext {
   replyVersions: (messageId: string) => { index: number; ids: string[] } | null
   /** Show another version (a sibling id from `replyVersions`). */
   switchVersion: (snapshotId: string) => Promise<boolean>
-  /** The snapshot holding the chat as of agent reply `messageId`, if known. */
+  /**
+   * Where a branch from `messageId` starts, if known: for an agent reply the
+   * chat as of that reply; for a user message the chat just BEFORE it (its
+   * parent snapshot) — the message itself then comes back as a draft.
+   */
   branchPoint: (messageId: string) => string | null
-  /** Copy the chat as of `snapshotId` into a new chat and open it. */
-  branchChat: (snapshotId: string) => Promise<boolean>
+  /**
+   * Copy the chat as of `snapshotId` into a new chat and open it. `draft`
+   * (a user message being branched) lands in the new chat's composer,
+   * editable and unsent.
+   */
+  branchChat: (snapshotId: string, draft?: string) => Promise<boolean>
   /**
    * Stop the reply in flight. The request closes, the server cancels the
    * turn (Genkit's per-turn abort) and drops it — complete tool rounds, whose
@@ -398,6 +413,11 @@ export interface BotChatContext {
    * banner, and sends through `editAndResend`. Same lifecycle as
    * `replyContext`.
    */
+  /**
+   * One-shot composer prefill: the composer takes the text, focuses, and
+   * clears this back to null. Set by `branchChat` for a user-message branch.
+   */
+  composerDraft: Ref<string | null>
   editContext: Ref<{
     messageId: string
     text: string
@@ -491,6 +511,7 @@ export function useBotChat(options?: BotChatOptions): BotChatContext {
   // it's cleared on session switches below.
   const replyContext = ref<string | null>(null)
   const editContext = ref<BotChatContext["editContext"]["value"]>(null)
+  const composerDraft = ref<string | null>(null)
 
   const canAttachMoreNodes = computed(
     () => attachedNodes.value.length < BOT_CHAT_MAX_ATTACHED_NODES
@@ -773,6 +794,21 @@ export function useBotChat(options?: BotChatOptions): BotChatContext {
       inflightController.abort()
       inflightController = null
     }
+  }
+
+  // The Stop button: drop the stream here AND tell the server, since a
+  // client disconnect doesn't reliably reach the function. Best-effort — a
+  // turn that already finished just ignores it.
+  const stopSending = () => {
+    if (!inflightController) return
+    abortInflightSend()
+    const teamId = currentTeamId.value
+    const workspaceId = currentWorkspaceId.value
+    const id = sessionId.value
+    if (!teamId || !workspaceId || !id) return
+    stopBotTurn({ teamId, workspaceId, sessionId: id }).catch((error) =>
+      console.error("[useBotChat] stopBotTurn failed:", error)
+    )
   }
 
   const isArchived = (s: IBotSession) => !!s.archivedAt
@@ -1272,6 +1308,7 @@ export function useBotChat(options?: BotChatOptions): BotChatContext {
         role: "user",
         content: trimmed,
         authorUid: currentUser.value?.uid,
+        sentAt: new Date().toISOString(),
       })
     )
     // Empty agent placeholder; chunks mutate `.content` and `.segments`
@@ -1284,7 +1321,12 @@ export function useBotChat(options?: BotChatOptions): BotChatContext {
     // restructuring the message.
     const agentIndex = messages.value.length
     messages.value.push(
-      createMessage({ role: "agent", content: "", segments: [] })
+      createMessage({
+        role: "agent",
+        content: "",
+        segments: [],
+        sentAt: new Date().toISOString(),
+      })
     )
     isSending.value = true
 
@@ -1414,6 +1456,68 @@ export function useBotChat(options?: BotChatOptions): BotChatContext {
     const ok = await sendMessage(text, { fromSnapshotId })
     if (!ok) messages.value = previous
   }
+  // Continue a failed turn. The continuation streams into a new agent bubble
+  // under the error reply; on success the head moves and the transcript sync
+  // below swaps both for the server's merged bubble (tool cards + the rest of
+  // the reply). On failure the server keeps the error turn as the head, so
+  // dropping the placeholder restores the view.
+  const continueFailedTurn = async () => {
+    const teamId = currentTeamId.value
+    const workspaceId = currentWorkspaceId.value
+    const sid = sessionId.value
+    if (!teamId || !workspaceId || !sid) return
+    if (isSending.value || !canEditActive.value) return
+
+    const agentIndex = messages.value.length
+    messages.value.push(
+      createMessage({
+        role: "agent",
+        content: "",
+        segments: [],
+        sentAt: new Date().toISOString(),
+      })
+    )
+    isSending.value = true
+    const controller = new AbortController()
+    inflightController = controller
+    try {
+      const result = await sendBotMessage.stream(
+        {
+          teamId,
+          workspaceId,
+          sessionId: sid,
+          message: "",
+          continueFailedTurn: true,
+          mode: mode.value,
+          toolPermissionMode: toolPermissionMode.value,
+          model: model.value,
+          effort: effort.value,
+          contextNodes: attachedNodes.value.map((node) => ({
+            scope: node.scope,
+            nodeId: node.nodeId,
+          })),
+          activeAgentId: activeAgentId.value,
+        },
+        { signal: controller.signal }
+      )
+      // Same dual-channel failure mirroring as `sendMessage`.
+      void result.data.catch(() => {})
+      for await (const chunk of result.stream) {
+        applyStreamEffects(applyStreamChunk(messages.value, agentIndex, chunk))
+      }
+      await result.data
+    } catch (error) {
+      if (!controller.signal.aborted) {
+        console.error("[useBotChat] continueFailedTurn failed:", error)
+        toast.error("Couldn't continue the reply. Please try again.")
+      }
+      messages.value.splice(agentIndex, 1)
+    } finally {
+      if (inflightController === controller) inflightController = null
+      isSending.value = false
+    }
+  }
+
   // ── Versions and branches ─────────────────────────────────────────────────
   //
   // Each turn is a snapshot; edits and regenerations are siblings under the
@@ -1472,10 +1576,14 @@ export function useBotChat(options?: BotChatOptions): BotChatContext {
 
   // The chat as of an agent reply: the snapshot the next prompt started from,
   // or — for the last reply — the loaded head, once it's the record's head
-  // (right after a send the transcript still shows the stream).
+  // (right after a send the transcript still shows the stream). For a user
+  // message: its parent snapshot, the chat just before it (the root for the
+  // first message, so that branch starts empty).
   const branchPoint: BotChatContext["branchPoint"] = (messageId) => {
     const at = messages.value.findIndex((m) => m.id === messageId)
-    if (messages.value[at]?.role !== "agent") return null
+    const message = messages.value[at]
+    if (message?.role === "user") return message.parentSnapshotId ?? null
+    if (message?.role !== "agent") return null
     const next = messages.value.slice(at + 1).find((m) => m.role === "user")
     if (next) return next.parentSnapshotId ?? null
     const head = loadedHeadSnapshotId.value
@@ -1484,7 +1592,10 @@ export function useBotChat(options?: BotChatOptions): BotChatContext {
       : null
   }
 
-  const branchChat: BotChatContext["branchChat"] = async (snapshotId) => {
+  const branchChat: BotChatContext["branchChat"] = async (
+    snapshotId,
+    draft
+  ) => {
     const teamId = currentTeamId.value
     const workspaceId = currentWorkspaceId.value
     const id = sessionId.value
@@ -1497,6 +1608,9 @@ export function useBotChat(options?: BotChatOptions): BotChatContext {
         snapshotId,
       })
       await selectSession(data.sessionId)
+      // After the switch: a draft set before it would be scoped to the chat
+      // being left.
+      if (draft) composerDraft.value = draft
       return true
     } catch (error) {
       console.error("[useBotChat] branchChat failed:", error)
@@ -1849,11 +1963,12 @@ export function useBotChat(options?: BotChatOptions): BotChatContext {
     canManageActive,
     sendMessage,
     editAndResend,
+    continueFailedTurn,
     replyVersions,
     switchVersion,
     branchPoint,
     branchChat,
-    stopSending: abortInflightSend,
+    stopSending,
     respondToInterrupt,
     selectSession,
     startNewSession,
@@ -1877,5 +1992,6 @@ export function useBotChat(options?: BotChatOptions): BotChatContext {
     pendingPinnedNode,
     replyContext,
     editContext,
+    composerDraft,
   }
 }

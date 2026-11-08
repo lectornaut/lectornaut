@@ -53,18 +53,12 @@ export const AI_CONFIG_KEYS = [
   "providers",
   "models",
   "model",
-  "temperature",
-  "topP",
-  "topK",
   "maxOutputTokens",
   "thinking",
   "autoContext",
   "memoryEnabled",
   "defaultMode",
   "systemPromptBase",
-  "promptSuffixes",
-  "titleMaxLength",
-  "previewMaxLength",
 ] as const satisfies readonly Exclude<keyof IBotAgentConfig, "tools">[]
 
 export type AiConfigKey = (typeof AI_CONFIG_KEYS)[number]
@@ -76,8 +70,8 @@ export type AiConfigKey = (typeof AI_CONFIG_KEYS)[number]
  * doesn't clobber an in-flight tools edit on the Agents tab).
  *
  * Returns a *shallow* copy. That's enough for `JSON.stringify` dirty
- * checks; the nested objects on the AI subset (`providers`, `models`,
- * `promptSuffixes`) are stable references when nothing changed, and
+ * checks; the nested objects on the AI subset (`providers`, `models`)
+ * are stable references when nothing changed, and
  * the watcher in the consumer re-clones via `cloneAgentConfig` when
  * the upstream config truly mutates.
  */
@@ -101,7 +95,7 @@ export function pickAiAgentConfig(
  *      a sane default on the form before any save round-trips.
  *
  *   2. Spreads the nested objects (`providers`, `models`,
- *      `promptSuffixes`, `tools`) so mutations to the draft don't leak
+ *      `tools`) so mutations to the draft don't leak
  *      back into the upstream store via shared references.
  */
 export function cloneAgentConfig(source: IBotAgentConfig): IBotAgentConfig {
@@ -115,7 +109,6 @@ export function cloneAgentConfig(source: IBotAgentConfig): IBotAgentConfig {
       ...defaultBotModelToggles,
       ...source.models,
     },
-    promptSuffixes: { ...source.promptSuffixes },
     tools: { ...source.tools },
   }
 }

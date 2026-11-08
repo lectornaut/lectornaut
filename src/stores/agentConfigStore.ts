@@ -46,7 +46,6 @@ export const useAgentConfigStore = defineStore("agentConfig", () => {
   const cloneDefaultConfig = (): IBotAgentConfig => ({
     ...defaultBotAgentConfig,
     providers: { ...defaultBotAgentConfig.providers },
-    promptSuffixes: { ...defaultBotAgentConfig.promptSuffixes },
     tools: { ...defaultBotAgentConfig.tools },
   })
 

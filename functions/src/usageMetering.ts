@@ -97,6 +97,8 @@ export interface TeamUsageBudget {
   /** Estimated USD cost remaining before the optional cost cap. */
   costRemainingUsd: number
   costLimited: boolean
+  /** `teams/{t}.usageExhaustedMonth` — the member-readable "limit hit" flag. */
+  usageExhaustedMonth: string | null
 }
 
 /** Read a team's plan allowance + this month's usage. */
@@ -143,6 +145,35 @@ export async function getTeamUsageAndBudget(
     costAllowanceUsd,
     costRemainingUsd,
     costLimited: Number.isFinite(costAllowanceUsd),
+    usageExhaustedMonth:
+      (teamSnap.data()?.usageExhaustedMonth as string | undefined) ?? null,
+  }
+}
+
+export const isBudgetExhausted = (b: TeamUsageBudget): boolean =>
+  (!b.unlimited && b.remaining <= 0) ||
+  (b.costLimited && b.estimatedCostUsd >= b.costAllowanceUsd)
+
+/**
+ * Members can't read `usage/{month}` (admin-only), so the gate mirrors its
+ * verdict onto the team doc as `usageExhaustedMonth`. The chat's usage counter
+ * shows members a "Request more usage" action off it. Stamped when a turn is refused,
+ * cleared on the next admitted turn (cap raised / plan upgraded); a stale month
+ * key is ignored client-side, so the monthly reset needs no write.
+ * Best-effort: a failed flag write must never change the gate's verdict.
+ */
+async function syncExhaustedFlag(
+  teamId: string,
+  current: string | null,
+  next: string | null
+): Promise<void> {
+  if (current === next) return
+  try {
+    await db.doc(`teams/${teamId}`).update({
+      usageExhaustedMonth: next ?? FieldValue.delete(),
+    })
+  } catch (err) {
+    logger.warn("[usageMetering] exhausted-flag write failed", { teamId, err })
   }
 }
 
@@ -152,22 +183,24 @@ export async function getTeamUsageAndBudget(
  * Workflows), so both inherit the same ceiling.
  */
 export async function assertWithinBudget(teamId: string): Promise<void> {
+  const budget = await getTeamUsageAndBudget(teamId)
   const {
-    remaining,
     used,
     allowance,
     planKey,
-    unlimited,
     estimatedCostUsd,
     costAllowanceUsd,
     costLimited,
-  } = await getTeamUsageAndBudget(teamId)
-  if (
-    (unlimited || remaining > 0) &&
-    (!costLimited || estimatedCostUsd < costAllowanceUsd)
-  ) {
+  } = budget
+  if (!isBudgetExhausted(budget)) {
+    await syncExhaustedFlag(teamId, budget.usageExhaustedMonth, null)
     return
   }
+  await syncExhaustedFlag(
+    teamId,
+    budget.usageExhaustedMonth,
+    currentUsageMonthKey()
+  )
   if (costLimited && estimatedCostUsd >= costAllowanceUsd) {
     throw new HttpsError(
       "resource-exhausted",

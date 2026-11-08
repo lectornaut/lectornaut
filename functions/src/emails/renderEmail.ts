@@ -1,5 +1,4 @@
 import Handlebars from "handlebars"
-import mjml2html from "mjml"
 import fs from "node:fs"
 import path, { dirname } from "node:path"
 import { fileURLToPath } from "node:url"
@@ -104,6 +103,11 @@ export const renderEmail = async (
   // We use Handlebars to replace {{variables}} inside the MJML structure
   const mjmlContent = compiledMjmlTemplate(templateData)
 
+  // Loaded on first render, not at import: every function shares one bundle,
+  // and MJML alone adds ~31 MiB to each cold start — enough to push the
+  // default 256 MiB functions over their limit at boot. Only email senders
+  // pay for it.
+  const { default: mjml2html } = await import("mjml")
   const { html, errors } = await mjml2html(mjmlContent, {
     filePath: templatesDir,
   })

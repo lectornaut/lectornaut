@@ -53,7 +53,10 @@ import { isAgentMembership } from "@/types/membership"
 import type { WorkspaceNodeScope } from "@/types/nodes"
 import { can, Capabilities } from "@/types/permissions"
 import { storeToRefs } from "pinia"
-import { BOT_TOOL_PERMISSION_MODES } from "@lectornaut/shared/domain"
+import {
+  BOT_TOOL_PERMISSION_MODES,
+  PLAN_FLOOR_MODEL,
+} from "@lectornaut/shared/domain"
 import { computed, inject, nextTick, ref, watch, watchEffect } from "vue"
 import type { Component } from "vue"
 import { toast } from "vue-sonner"
@@ -455,7 +458,7 @@ const onToolPermissionModeChange = (next: unknown) => {
 // component), but matches the mode dropdown's "default to auto"
 // pattern so the trigger always has *something* to render.
 const model = computed<IBotAgentModel>(
-  () => botChat?.model.value ?? "gemini-3.6-flash"
+  () => botChat?.model.value ?? PLAN_FLOOR_MODEL
 )
 const availableModelsByProvider = computed(
   () => botChat?.availableModelsByProvider.value ?? []
@@ -801,6 +804,20 @@ const replyContext = computed(() => botChat?.replyContext.value ?? null)
 // bubbles. Prefill its text, focus, and show an "Editing" banner; `handleSend`
 // routes through `editAndResend`. Cancel restores an empty composer.
 const editContext = computed(() => botChat?.editContext.value ?? null)
+
+// One-shot prefill (a user message branched into this chat): take the text,
+// focus, and clear the request so it can't re-apply.
+watch(
+  () => botChat?.composerDraft.value ?? null,
+  (draft) => {
+    if (draft === null || !botChat) return
+    userInput.value = draft
+    botChat.composerDraft.value = null
+    nextTick(() => textareaRef.value?.$el?.focus())
+  },
+  // Also on mount, in case the chat switch remounted the composer.
+  { immediate: true }
+)
 const cancelEdit = () => {
   if (botChat) botChat.editContext.value = null
   userInput.value = ""

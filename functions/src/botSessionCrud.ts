@@ -33,6 +33,7 @@ import {
   projectChatRecord,
   readSessionDoc,
   readSnapshotThread,
+  requestTurnStop,
   writeRawSnapshot,
   type ChatMessage,
   type SessionVisibility,
@@ -47,6 +48,7 @@ import { deleteBotSessionHistory } from "./botSnapshotStore.js"
 import { defineCallable } from "./defineCallable.js"
 import { db } from "./firebase.js"
 import { isAdminRole } from "./permissions.js"
+import { SESSION_READ_CALLABLE_OPTS } from "./runtimeConfig.js"
 import { generateId } from "./utilities.js"
 import { resolveParticipation } from "./workspaceRoles.js"
 
@@ -79,6 +81,7 @@ export const loadBotSession = defineCallable({
   name: "loadBotSession",
   auth: "verified",
   appCheck: true,
+  opts: SESSION_READ_CALLABLE_OPTS,
   input: sessionTargetSchema,
   handler: async ({ auth, input }): Promise<LoadBotSessionResponse> => {
     const { teamId, workspaceId, sessionId } = input
@@ -463,6 +466,7 @@ export const switchBotSessionBranch = defineCallable({
   name: "switchBotSessionBranch",
   auth: "verified",
   appCheck: true,
+  opts: SESSION_READ_CALLABLE_OPTS,
   input: snapshotTargetSchema,
   handler: async ({
     auth,
@@ -495,7 +499,12 @@ export const switchBotSessionBranch = defineCallable({
     }
 
     // Serialized with turns, so a reply landing mid-switch can't be clobbered.
-    const release = await acquireSessionTurnLock(teamId, workspaceId, sessionId)
+    const lock = await acquireSessionTurnLock(
+      teamId,
+      workspaceId,
+      sessionId,
+      auth.uid
+    )
     try {
       const key = { teamId, workspaceId, sessionId }
       const children = ((
@@ -522,7 +531,7 @@ export const switchBotSessionBranch = defineCallable({
       )
       return { sessionId, headSnapshotId: leaf }
     } finally {
-      await release()
+      await lock.release()
     }
   },
 })
@@ -537,6 +546,7 @@ export const branchBotSession = defineCallable({
   name: "branchBotSession",
   auth: "verified",
   appCheck: true,
+  opts: SESSION_READ_CALLABLE_OPTS,
   input: snapshotTargetSchema,
   handler: async ({ auth, input }): Promise<{ sessionId: string }> => {
     const { teamId, workspaceId, sessionId, snapshotId } = input
@@ -607,5 +617,26 @@ export const branchBotSession = defineCallable({
       }
     )
     return { sessionId: key.sessionId }
+  },
+})
+
+/**
+ * Stop the reply running in a chat — the server half of the client's Stop
+ * button (a client's disconnect doesn't reliably reach a Cloud Function).
+ * Only the turn's own sender can stop it; a no-op when nothing of theirs is
+ * running. The turn aborts within moments and drops itself; a resend made
+ * meanwhile waits for it instead of being turned away.
+ */
+export const stopBotTurn = defineCallable({
+  name: "stopBotTurn",
+  auth: "verified",
+  appCheck: true,
+  input: sessionTargetSchema,
+  handler: async ({ auth, input }): Promise<{ stopped: boolean }> => {
+    const { teamId, workspaceId, sessionId } = input
+    await getMembershipRole(teamId, auth.uid)
+    return {
+      stopped: await requestTurnStop(teamId, workspaceId, sessionId, auth.uid),
+    }
   },
 })

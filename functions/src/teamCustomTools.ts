@@ -15,6 +15,7 @@ import { HttpsError } from "firebase-functions/v2/https"
 import { tool, z } from "genkit/beta"
 import type { BotActionContext } from "./botBuiltinTools.js"
 import { searchWorkspaceNodesTool } from "./botRag.js"
+import { BOT_AGENT_MODELS, PLAN_FLOOR_MODEL } from "./domain.js"
 import {
   ai,
   type AiModelProvider,
@@ -226,12 +227,14 @@ async function executePromptTemplate(
   //   1. Admin-specified override (if the provider is still configured).
   //   2. The chat's current effective model (post-clamp; threaded
   //      through via `BotActionContext.effectiveModel`).
-  //   3. A hardcoded Flash fallback so the call doesn't blow up on
-  //      legacy code paths that never set `effectiveModel`.
+  //   3. The plan-floor model, so the call doesn't blow up on legacy code
+  //      paths that never set `effectiveModel`.
+  // An override retired from the catalog falls through to (2).
   let modelName: string
   const adminProvider = action.model ? modelProvider(action.model) : null
   if (
     action.model &&
+    (BOT_AGENT_MODELS as readonly string[]).includes(action.model) &&
     adminProvider &&
     isAiModelProviderConfigured(adminProvider)
   ) {
@@ -239,7 +242,7 @@ async function executePromptTemplate(
   } else if (context?.effectiveModel) {
     modelName = context.effectiveModel
   } else {
-    modelName = "gemini-3.6-flash"
+    modelName = PLAN_FLOOR_MODEL
   }
   // The generation call deliberately avoids `output: { schema }`
   // because the tool's outputSchema is admin-defined and may be

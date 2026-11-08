@@ -6,6 +6,10 @@
  *
  * Gen 2 functions support concurrency (multiple requests per instance).
  * Right-sizing concurrency helps reduce cold starts and instance churn.
+ *
+ * ponytail: 512 MiB floor everywhere. Every function boots the one shared
+ * bundle (~230 MiB in Cloud Run, Genkit included), so 256 MiB instances OOM on
+ * any request. Split light functions into their own codebase if cost matters.
  */
 
 function envInt(key: string, fallback: number): number {
@@ -26,11 +30,22 @@ export const REGION = "us-central1"
  */
 export const CALLABLE_OPTS = {
   region: REGION,
-  memory: "256MiB" as const,
+  memory: "512MiB" as const,
   timeoutSeconds: 60,
   maxInstances: 40,
   concurrency: 80,
   invoker: "public" as const,
+}
+
+/**
+ * Callables that load a whole chat snapshot thread (full history incl. tool
+ * results). The shared bundle already boots at ~230 MiB in Cloud Run, so a
+ * long chat's thread OOMs a 256 MiB instance mid-request (client: `internal`).
+ * ponytail: memory bump, not streaming/paging; page the thread if 512 MiB is ever hit.
+ */
+export const SESSION_READ_CALLABLE_OPTS = {
+  ...CALLABLE_OPTS,
+  memory: "512MiB" as const,
 }
 
 /**
@@ -56,7 +71,7 @@ export const DESTRUCTIVE_CALLABLE_OPTS = {
  */
 export const TRIGGER_OPTS = {
   region: REGION,
-  memory: "256MiB" as const,
+  memory: "512MiB" as const,
   timeoutSeconds: 120,
   maxInstances: 10,
   concurrency: 10,
@@ -72,7 +87,7 @@ export const TRIGGER_OPTS = {
  */
 export const BLOCKING_AUTH_OPTS = {
   region: REGION,
-  memory: "256MiB" as const,
+  memory: "512MiB" as const,
   timeoutSeconds: 7,
   maxInstances: 10,
   concurrency: 10,
@@ -85,7 +100,7 @@ export const BLOCKING_AUTH_OPTS = {
  */
 export const SCHEDULED_OPTS = {
   region: REGION,
-  memory: "256MiB" as const,
+  memory: "512MiB" as const,
   timeoutSeconds: 300,
   maxInstances: 1,
   concurrency: 1,
@@ -97,7 +112,7 @@ export const SCHEDULED_OPTS = {
  */
 export const EMAIL_OPTS = {
   region: REGION,
-  memory: "256MiB" as const,
+  memory: "512MiB" as const,
   timeoutSeconds: 60,
   maxInstances: 10,
   concurrency: 20,

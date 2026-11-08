@@ -16,9 +16,8 @@
  *     in the handler; this seam returns the decoded object or `undefined`
  *     (never throws on a soft decode-miss), and the caller defaults.
  *   - **provider-aware sampling/thinking** is delegated to
- *     `buildTurnConfig` (shared with the streaming chat turn), so the clamp
- *     (`temperatureCap`) and the Anthropic `maxTokens > budget` rule live in
- *     exactly one place.
+ *     `buildTurnConfig` (shared with the streaming chat turn), so the
+ *     Anthropic `maxTokens > budget` rule lives in exactly one place.
  *
  * Two invocation shapes, one seam:
  *   - inline `ai.generate` — the seam owns the call; caller passes
@@ -66,8 +65,6 @@ interface StructuredGenBase {
   model: string
   /** Sampling knobs; the caller computes any fixed/floored values. */
   sampling: TurnSampling
-  /** Upper bound applied to temperature (summary/compare hug the source). */
-  temperatureCap?: number
   /** Enable provider thinking when the model supports it. Defaults to false. */
   thinkingEnabled?: boolean
   /**
@@ -103,7 +100,6 @@ function resolveGeneration(spec: StructuredGenBase): ResolvedGeneration {
       model: spec.model,
       sampling: spec.sampling,
       thinkingEnabled: spec.thinkingEnabled ?? false,
-      temperatureCap: spec.temperatureCap,
     }),
     // `onUsage: undefined` skips the metering layer (see `aiMiddlewares`), so
     // a caller that omits it behaves exactly like the old bare `aiMiddlewares()`.

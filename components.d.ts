@@ -306,6 +306,7 @@ declare module 'vue' {
     OnboardingAppFlow: typeof import('./src/components/app/onboarding/OnboardingAppFlow.vue')['default']
     OnboardingPlansFlow: typeof import('./src/components/app/onboarding/OnboardingPlansFlow.vue')['default']
     OnboardingTeamWorkspaceFlow: typeof import('./src/components/app/onboarding/OnboardingTeamWorkspaceFlow.vue')['default']
+    OutlineRail: typeof import('./src/components/app/global/OutlineRail.vue')['default']
     Overview: typeof import('./src/components/landing/Overview.vue')['default']
     PageHeader: typeof import('./src/components/layout/PageHeader.vue')['default']
     PhotoUploadAvatar: typeof import('./src/components/app/global/PhotoUploadAvatar.vue')['default']

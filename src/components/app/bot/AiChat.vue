@@ -30,6 +30,7 @@ import { useMembershipStore } from "@/stores/membershipStore"
 import { isUserMembership } from "@/types/membership"
 import { storeToRefs } from "pinia"
 import { inject } from "vue"
+import { formatTimeAgo, useIntervalFn, useNow } from "@vueuse/core"
 
 const { t } = useI18n()
 
@@ -139,6 +140,18 @@ const messageSenderName = (message: BotChatMessage): string | null => {
 const senderKey = (message: BotChatMessage): string =>
   message.role === "user" ? `user:${messageAvatarSeed(message)}` : "agent"
 
+// ── Sent time (hover bar) ────────────────────────────────────────────────
+//
+// ONE shared ticker for the whole list; `formatTimeAgo` is pure, so each
+// bubble's label re-derives from it without a timer per message.
+const now = useNow({ scheduler: (cb) => useIntervalFn(cb, 30_000) })
+const sentAgo = (iso: string) => formatTimeAgo(new Date(iso), {}, now.value)
+const sentFull = (iso: string) =>
+  new Date(iso).toLocaleString(undefined, {
+    dateStyle: "full",
+    timeStyle: "medium",
+  })
+
 // ── Copy / Reply (context menu actions) ──────────────────────────────────
 //
 // Both actions read `message.content` — for agent turns this is the
@@ -221,6 +234,24 @@ const handleRegenerate = () => {
   void botChat.editAndResend(target.promptId, target.text)
 }
 
+// Continue: the newest reply only, when it's an error reply after tool cards —
+// the turn failed after finishing some tool calls, which Genkit saved. Picks
+// up from those (no new message, nothing re-run). The server re-checks the
+// snapshots and refuses anything else. Same edit gate as regenerate.
+const canContinue = (message: BotChatMessage): boolean =>
+  message === messages.value.at(-1) &&
+  message.role === "agent" &&
+  message.status === "error" &&
+  !!message.segments?.some((segment) => segment.kind === "tool") &&
+  !isSending.value &&
+  !!botChat?.sessionId.value &&
+  !!botChat.canEditActive.value
+const handleContinue = () => {
+  if (!botChat) return
+  botChat.editContext.value = null
+  void botChat.continueFailedTurn()
+}
+
 // Versions: siblings of a reply from edits and regenerations, switched in
 // place (editors only — it changes what a shared chat shows).
 const canSwitchVersion = computed(
@@ -243,13 +274,19 @@ const handleSwitchVersion = async (snapshotId: string | null) => {
   }
 }
 
-// Branch: copy the chat as of this reply into a new chat of your own.
+// Branch: copy the chat into a new chat of your own. From a reply, the chat
+// as of that reply; from a user message, the chat just before it, with the
+// message back in the composer to change or resend ("Edit in new chat").
 const branchPointOf = (message: BotChatMessage) =>
   isSending.value ? null : (botChat?.branchPoint(message.id) ?? null)
+const branchLabel = (message: BotChatMessage): string =>
+  message.role === "user" ? t("ai.editInNewChat") : t("ai.branchFromHere")
 const handleBranch = async (message: BotChatMessage) => {
   const point = branchPointOf(message)
   if (!botChat || !point) return
-  if (await botChat.branchChat(point)) toast.success(t("ai.branched"))
+  const draft =
+    message.role === "user" ? messagePlainText(message) || undefined : undefined
+  if (await botChat.branchChat(point, draft)) toast.success(t("ai.branched"))
   else toast.error(t("ai.branchError"))
 }
 
@@ -602,6 +639,21 @@ const renderedMessages = computed(() =>
                             t("ai.editMessage")
                           }}</TooltipContent>
                         </Tooltip>
+                        <Tooltip v-if="canContinue(message)">
+                          <TooltipTrigger as-child>
+                            <Button
+                              variant="ghost"
+                              size="icon-xs"
+                              :aria-label="t('ai.continueReply')"
+                              @click="handleContinue"
+                            >
+                              <IconPlay class="size-3!" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>{{
+                            t("ai.continueReply")
+                          }}</TooltipContent>
+                        </Tooltip>
                         <Tooltip v-if="canRegenerate(message)">
                           <TooltipTrigger as-child>
                             <Button
@@ -671,14 +723,14 @@ const renderedMessages = computed(() =>
                             <Button
                               variant="ghost"
                               size="icon-xs"
-                              :aria-label="t('ai.branchFromHere')"
+                              :aria-label="branchLabel(message)"
                               @click="handleBranch(message)"
                             >
                               <IconSplit class="size-3!" />
                             </Button>
                           </TooltipTrigger>
                           <TooltipContent>{{
-                            t("ai.branchFromHere")
+                            branchLabel(message)
                           }}</TooltipContent>
                         </Tooltip>
                         <Tooltip>
@@ -793,6 +845,29 @@ const renderedMessages = computed(() =>
                             }}</TooltipContent>
                           </Tooltip>
                         </template>
+                        <!-- On right-aligned (user) rows the timestamp leads,
+                             so its changing width ("5s" → "1m ago") grows
+                             leftward instead of shoving the buttons. The
+                             middot sits on whichever side faces the buttons;
+                             2.5 (10px) on its text side matches the 6px icon
+                             padding + 4px row gap on its button side. -->
+                        <Tooltip v-if="message.sentAt">
+                          <TooltipTrigger as-child>
+                            <time
+                              :datetime="message.sentAt"
+                              class="text-muted-foreground text-xs whitespace-nowrap tabular-nums group-data-[align=end]/message:order-first before:me-2.5 before:content-['·'] group-data-[align=end]/message:before:content-none group-data-[align=end]/message:after:ms-2.5 group-data-[align=end]/message:after:content-['·']"
+                            >
+                              <!-- Own box so ::first-letter skips the
+                                   ::before middot on agent rows. -->
+                              <span class="inline-block first-letter:uppercase">
+                                {{ sentAgo(message.sentAt) }}
+                              </span>
+                            </time>
+                          </TooltipTrigger>
+                          <TooltipContent>{{
+                            sentFull(message.sentAt)
+                          }}</TooltipContent>
+                        </Tooltip>
                       </TooltipProvider>
                     </MessageFooter>
                   </MessageContent>
@@ -807,6 +882,13 @@ const renderedMessages = computed(() =>
                   {{ t("ai.editMessage") }}
                 </ContextMenuItem>
                 <ContextMenuItem
+                  v-if="canContinue(message)"
+                  @select="handleContinue"
+                >
+                  <IconPlay />
+                  {{ t("ai.continueReply") }}
+                </ContextMenuItem>
+                <ContextMenuItem
                   v-if="canRegenerate(message)"
                   @select="handleRegenerate"
                 >
@@ -818,7 +900,7 @@ const renderedMessages = computed(() =>
                   @select="handleBranch(message)"
                 >
                   <IconSplit />
-                  {{ t("ai.branchFromHere") }}
+                  {{ branchLabel(message) }}
                 </ContextMenuItem>
                 <ContextMenuItem
                   :disabled="!message.content"
@@ -892,13 +974,10 @@ const renderedMessages = computed(() =>
         </MessageScrollerContent>
       </MessageScrollerViewport>
       <MessageScrollerButton direction="end" />
-      <!-- Transcript outline — a tick rail on the right edge that tracks
-           the reader's position (the tick for `currentAnchorId` lights up)
-           and expands on hover into a jump menu over the user turns. Must
+      <!-- Transcript outline: the same left-edge rail as the doc TOC,
+           tracking `currentAnchorId` and opening a jump menu on hover. Must
            sit inside the provider: it injects the scroller context. -->
-      <div class="absolute top-1/2 right-0.75 z-10 -translate-y-1/2">
-        <BotChatOutline />
-      </div>
+      <BotChatOutline />
     </MessageScroller>
   </MessageScrollerProvider>
 </template>

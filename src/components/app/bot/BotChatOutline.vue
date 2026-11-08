@@ -41,62 +41,27 @@ const outlineLabel = (content: string): string => {
   return attachments[0] ?? text
 }
 
+// An outline of one entry is noise, so the rail only appears once there is
+// somewhere to jump to. Every turn is one level, so all bars share a width.
+const railItems = computed(() =>
+  userMessages.value.length > 1
+    ? userMessages.value.map((message) => ({
+        id: message.id,
+        label: outlineLabel(message.content),
+        active: message.id === currentAnchorId.value,
+      }))
+    : []
+)
+
 const jumpToMessage = (messageId: string) => {
   scrollToMessage(messageId, { align: "start", behavior: "smooth" })
 }
 </script>
 
 <template>
-  <!-- An outline of one entry is noise — the rail only appears once there
-       is somewhere to jump to. -->
-  <HoverCard
-    v-if="userMessages.length > 1"
-    :open-delay="150"
-    :close-delay="100"
-  >
-    <HoverCardTrigger as-child>
-      <Button
-        type="button"
-        :aria-label="t('ai.outline')"
-        variant="ghost"
-        class="grid h-full grid-cols-1 items-center justify-center gap-1 overflow-hidden py-2"
-      >
-        <!-- One tick per turn. `shrink min-h-px` lets long chats compress
-             the ticks instead of overflowing the 36px trigger. -->
-        <span
-          v-for="message in userMessages"
-          :key="message.id"
-          :data-current="message.id === currentAnchorId"
-          class="bg-muted-foreground/50 data-[current=true]:bg-foreground h-0.5 min-h-px w-2 shrink rounded-full transition-colors"
-        />
-      </Button>
-    </HoverCardTrigger>
-    <HoverCardContent
-      side="left"
-      align="center"
-      class="aspect-square w-64 overflow-clip p-0"
-    >
-      <!-- The height cap must sit on the OS viewport itself: the popover's
-           height is auto, so percentage/stretch sizing never reaches the
-           scroll element and OS measures zero overflow (dead wheel). The
-           outer max-h-80 only guards the frame before deferred init. -->
-      <ScrollContainer class="p-1">
-        <Button
-          v-for="message in userMessages"
-          :key="message.id"
-          type="button"
-          :variant="currentAnchorId === message.id ? 'secondary' : 'ghost'"
-          :aria-current="
-            currentAnchorId === message.id ? 'location' : undefined
-          "
-          class="justify-start text-left"
-          @click="jumpToMessage(message.id)"
-        >
-          <span class="min-w-0 truncate font-semibold">
-            {{ outlineLabel(message.content) }}
-          </span>
-        </Button>
-      </ScrollContainer>
-    </HoverCardContent>
-  </HoverCard>
+  <OutlineRail
+    :items="railItems"
+    :label="t('ai.outline')"
+    @select="jumpToMessage"
+  />
 </template>

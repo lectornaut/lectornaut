@@ -112,9 +112,11 @@
     "reply": "Reply",
     "replyingTo": "Replying to",
     "editMessage": "Edit",
+    "continueReply": "Continue",
     "regenerate": "Regenerate",
     "stopReply": "Stop generating",
     "branchFromHere": "Branch in new chat",
+    "editInNewChat": "Edit in new chat",
     "branched": "Branched into a new chat",
     "branchError": "Couldn't branch this chat",
     "previousVersion": "Previous version",
@@ -1133,6 +1135,12 @@
           "description": "{used} of {limit} tokens used"
         },
         "remainingUnlimited": "No limit",
+        "limitReached": "Limit reached",
+        "memberExhausted": "Your team has used this month's AI allowance.",
+        "requestAdmin": "Request admin for usage",
+        "requested": "Request sent",
+        "requestSent": "Your admins have been notified.",
+        "requestFailed": "Couldn't send the request. Please try again.",
         "exhausted": "Limit reached. Agents will refuse new turns until next month, until the team limit is raised, or until the plan is upgraded."
       },
       "costUsage": {
@@ -1912,22 +1920,6 @@
         "description": "Pick the default model from this team's enabled providers.",
         "placeholder": "Select a model"
       },
-      "generation": {
-        "label": "Generation parameters",
-        "description": "Tune randomness, sampling, and reply length."
-      },
-      "temperature": {
-        "label": "Temperature",
-        "description": "Higher values produce more varied output (0 = deterministic, 2 = wild)."
-      },
-      "topP": {
-        "label": "Top-P",
-        "description": "Nucleus sampling cutoff. 1.0 disables this constraint."
-      },
-      "topK": {
-        "label": "Top-K",
-        "description": "Limits the model to its top-K most likely tokens."
-      },
       "maxOutputTokens": {
         "label": "Max output tokens",
         "description": "Hard cap on the model's reply length."
@@ -1958,8 +1950,6 @@
         "placeholder": "You are a helpful assistant for this team."
       },
       "promptSuffixes": {
-        "label": "Mode-specific suffixes",
-        "description": "Appended after the base prompt depending on the active chat mode.",
         "auto": "Auto suffix",
         "agent": "Agent suffix",
         "manual": "Manual suffix"
@@ -2038,18 +2028,6 @@
           "label": "Find related nodes",
           "description": "Surface content related to a workspace node."
         }
-      },
-      "limits": {
-        "label": "Display limits",
-        "description": "Truncation lengths for sidebar previews and chat titles."
-      },
-      "titleMaxLength": {
-        "label": "Title max length",
-        "description": "Characters allowed in the auto-generated chat title."
-      },
-      "previewMaxLength": {
-        "label": "Preview max length",
-        "description": "Characters shown in the sidebar preview."
       },
       "custom": {
         "sectionDescription": "Build team-scoped agents with their own personas and tool subsets. Members pick one to focus a chat on it, and the bot can transfer between agents mid-conversation.",

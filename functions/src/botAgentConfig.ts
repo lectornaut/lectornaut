@@ -8,12 +8,11 @@
  * concern, not a per-workspace one. The doc is read on every chat turn
  * (one extra Firestore read per send — negligible against model latency)
  * and used to drive:
- *   - provider availability (Google / Anthropic / OpenAI)
+ *   - provider availability (Google / Anthropic / OpenAI / xAI / DeepSeek)
  *   - the model passed to `session.chat({ model })`
- *   - the system prompt (base + per-mode suffix)
- *   - generation knobs (temperature, topP, topK, maxOutputTokens)
+ *   - the system prompt base (the per-mode suffix is fixed, `MODE_CONFIG`)
+ *   - the reply length cap (sampling stays at each provider's default)
  *   - tool exposure (each side-effecting tool can be flipped off)
- *   - title/preview truncation lengths used by the SessionStore on save
  *
  * Missing or partially-set docs fall back to `DEFAULT_BOT_AGENT_CONFIG`
  * field-by-field, so teams without a config doc keep working without a
@@ -40,6 +39,7 @@ import { BOT_CHAT_MODES, type BotChatMode } from "./botBuiltinTools.js"
 import {
   AI_PROVIDERS,
   BOT_AGENT_MODELS,
+  DEFAULT_BOT_MAX_OUTPUT_TOKENS,
   MONTHLY_COST_CAP_MIN_CENTS,
   MONTHLY_TOKEN_CAP_MIN,
   PLAN_FLOOR_MODEL,
@@ -77,9 +77,9 @@ interface BotChatModeConfig {
 }
 
 /**
- * Per-mode default prompt suffixes. These are also the defaults that
- * `DEFAULT_BOT_AGENT_CONFIG.promptSuffixes` falls back to, so teams
- * inherit reasonable copy out of the box. Modes differ only in prompt
+ * Per-mode prompt suffixes, appended after the team's `systemPromptBase`.
+ * Fixed product behavior (not team-editable): they are what make each mode
+ * behave as its picker copy promises. Modes differ only in prompt
  * style — every tool is available in every mode (tool access is no
  * longer mode-gated; see `pickChatTools`).
  */
@@ -143,30 +143,24 @@ export type BotModelProvider = (typeof BOT_MODEL_PROVIDERS)[number]
  */
 const BOT_AGENT_MODEL_REGISTRY = [
   // Google Gemini
-  { id: "gemini-2.5-flash-lite", provider: "google" },
-  { id: "gemini-2.5-pro", provider: "google" },
-  { id: "gemini-3.6-flash", provider: "google" },
-  { id: "gemini-3.1-pro-preview", provider: "google" },
+  { id: "gemini-3.5-flash-lite", provider: "google" },
+  { id: "gemini-3.8-flash", provider: "google" },
+  { id: "gemini-4-argon", provider: "google" },
   // Anthropic Claude
-  { id: "claude-haiku-4-5", provider: "anthropic" },
-  { id: "claude-opus-4-1", provider: "anthropic" },
-  { id: "claude-sonnet-4-5", provider: "anthropic" },
-  { id: "claude-fable-5", provider: "anthropic" },
-  { id: "claude-opus-5", provider: "anthropic" },
-  { id: "claude-sonnet-5", provider: "anthropic" },
+  { id: "claude-haiku-5-5", provider: "anthropic" },
+  { id: "claude-sonnet-5-5", provider: "anthropic" },
+  { id: "claude-opus-5-5", provider: "anthropic" },
+  { id: "claude-fable-5-1", provider: "anthropic" },
   // OpenAI
-  { id: "gpt-5", provider: "openai" },
-  { id: "gpt-5-mini", provider: "openai" },
-  { id: "gpt-5-nano", provider: "openai" },
-  { id: "gpt-5.6", provider: "openai" },
+  { id: "gpt-6-luna", provider: "openai" },
+  { id: "gpt-6.1-terra", provider: "openai" },
+  { id: "gpt-6.1-sol", provider: "openai" },
+  { id: "gpt-6-astra", provider: "openai" },
   // xAI Grok
-  { id: "grok-4", provider: "xai" },
-  { id: "grok-4-fast-reasoning", provider: "xai" },
-  { id: "grok-4.5", provider: "xai" },
+  { id: "grok-4.3", provider: "xai" },
+  { id: "grok-4.7", provider: "xai" },
   // DeepSeek
-  { id: "deepseek-chat", provider: "deepseek" },
-  { id: "deepseek-reasoner", provider: "deepseek" },
-  { id: "deepseek-v4-flash", provider: "deepseek" },
+  { id: "deepseek-flash", provider: "deepseek" },
   { id: "deepseek-v4-pro", provider: "deepseek" },
 ] as const satisfies ReadonlyArray<{
   id: BotAgentModel
@@ -180,7 +174,9 @@ const BOT_AGENT_MODEL_REGISTRY = [
 // registry in step with the shared list — every model needs a provider entry.
 export { BOT_AGENT_MODELS, type BotAgentModel }
 
-const DEFAULT_BOT_AGENT_MODEL: BotAgentModel = BOT_AGENT_MODELS[0]
+// The plan floor: available on every plan, and its provider (Google) is the
+// one the server always has configured. Shared with the client form default.
+const DEFAULT_BOT_AGENT_MODEL: BotAgentModel = PLAN_FLOOR_MODEL
 
 /**
  * Wire-name → provider record derived from the registry at module load.
@@ -298,12 +294,6 @@ export interface BotAgentConfig {
    */
   models: BotAgentModelToggles
   model: BotAgentModel
-  /** [0, 2]; lower = more deterministic. */
-  temperature: number
-  /** [0, 1]; nucleus sampling cutoff. */
-  topP: number
-  /** [1, 100]; top-K sampling cutoff. */
-  topK: number
   /** Hard cap on the model's reply length, in tokens. */
   maxOutputTokens: number
   /**
@@ -335,14 +325,8 @@ export interface BotAgentConfig {
   defaultMode: BotChatMode
   /** Workspace-level system prompt; mode-specific suffix appended at runtime. */
   systemPromptBase: string
-  /** One suffix per chat mode — appended after `systemPromptBase`. */
-  promptSuffixes: Record<BotChatMode, string>
   /** Per-tool feature flags. Disabled tools are simply not registered. */
   tools: BotAgentToolToggles
-  /** Truncation length for the auto-derived chat title (set on creation). */
-  titleMaxLength: number
-  /** Truncation length for the sidebar preview (re-derived every save). */
-  previewMaxLength: number
   /**
    * Team-set monthly token cap (Settings → Usage). `null` = no team cap, the
    * plan allowance alone applies. Only ever LOWERS the plan allowance — see
@@ -358,17 +342,9 @@ const DEFAULT_BOT_AGENT_CONFIG: BotAgentConfig = {
   providers: { ...DEFAULT_BOT_AGENT_PROVIDERS },
   models: { ...DEFAULT_BOT_AGENT_MODEL_TOGGLES },
   model: DEFAULT_BOT_AGENT_MODEL,
-  temperature: 0.7,
-  topP: 0.95,
-  topK: 40,
-  // 4096 is a sane default for 2025-era chat models: large enough for
-  // most structured replies (multi-paragraph answers, tool-rich
-  // narrations, longer markdown) without leaving room for the model
-  // to drift into runaway essays. Modern providers support far more
-  // (Claude Opus 4.5 → 64K, Gemini 2.5 Pro → 65K+, GPT-4o → 16K) so
-  // teams can raise this in Settings → Agents up to the
-  // `BOT_AGENT_BOUNDS.maxOutputTokens.max = 65536` ceiling.
-  maxOutputTokens: 4096,
+  // Shared with the Settings → AI form (see shared/domain.ts for why 8K).
+  // Teams can raise it up to `BOT_AGENT_BOUNDS.maxOutputTokens.max`.
+  maxOutputTokens: DEFAULT_BOT_MAX_OUTPUT_TOKENS,
   // Reasoning-capable models emit <thinking> by default; teams can turn
   // this off in Settings → AI to trim latency and token cost.
   thinking: true,
@@ -389,11 +365,6 @@ const DEFAULT_BOT_AGENT_CONFIG: BotAgentConfig = {
     "answering instead of guessing, and say so plainly when you can't " +
     "find a relevant node. Write replies in Markdown and keep them " +
     "concise.",
-  promptSuffixes: {
-    auto: MODE_CONFIG.auto.promptSuffix,
-    agent: MODE_CONFIG.agent.promptSuffix,
-    manual: MODE_CONFIG.manual.promptSuffix,
-  },
   tools: {
     rollDice: true,
     browseInternet: true,
@@ -409,8 +380,6 @@ const DEFAULT_BOT_AGENT_CONFIG: BotAgentConfig = {
     customWorkflows: true,
     customTools: true,
   },
-  titleMaxLength: TITLE_MAX_LENGTH,
-  previewMaxLength: PREVIEW_MAX_LENGTH,
   monthlyTokenCap: null,
   monthlyCostCapCents: null,
 }
@@ -419,7 +388,6 @@ const cloneDefaultBotAgentConfig = (): BotAgentConfig => ({
   ...DEFAULT_BOT_AGENT_CONFIG,
   providers: { ...DEFAULT_BOT_AGENT_CONFIG.providers },
   models: { ...DEFAULT_BOT_AGENT_CONFIG.models },
-  promptSuffixes: { ...DEFAULT_BOT_AGENT_CONFIG.promptSuffixes },
   tools: { ...DEFAULT_BOT_AGENT_CONFIG.tools },
 })
 
@@ -429,14 +397,8 @@ const cloneDefaultBotAgentConfig = (): BotAgentConfig => ({
  * a bound and both error messages move together.
  */
 const BOT_AGENT_BOUNDS = {
-  temperature: { min: 0, max: 2 },
-  topP: { min: 0, max: 1 },
-  topK: { min: 1, max: 100 },
   maxOutputTokens: { min: 256, max: 65536 },
   systemPromptBase: { max: 4000 },
-  promptSuffix: { max: 2000 },
-  titleMaxLength: { min: 20, max: 200 },
-  previewMaxLength: { min: 50, max: 500 },
 } as const
 
 const botAgentConfigUpdateSchema = z.object({
@@ -454,22 +416,6 @@ const botAgentConfigUpdateSchema = z.object({
     .optional(),
   models: z.record(z.enum(BOT_AGENT_MODELS), z.boolean()).optional(),
   model: z.enum(BOT_AGENT_MODELS).optional(),
-  temperature: z
-    .number()
-    .min(BOT_AGENT_BOUNDS.temperature.min)
-    .max(BOT_AGENT_BOUNDS.temperature.max)
-    .optional(),
-  topP: z
-    .number()
-    .min(BOT_AGENT_BOUNDS.topP.min)
-    .max(BOT_AGENT_BOUNDS.topP.max)
-    .optional(),
-  topK: z
-    .number()
-    .int()
-    .min(BOT_AGENT_BOUNDS.topK.min)
-    .max(BOT_AGENT_BOUNDS.topK.max)
-    .optional(),
   maxOutputTokens: z
     .number()
     .int()
@@ -483,14 +429,6 @@ const botAgentConfigUpdateSchema = z.object({
   systemPromptBase: z
     .string()
     .max(BOT_AGENT_BOUNDS.systemPromptBase.max)
-    .optional(),
-  promptSuffixes: z
-    .object({
-      auto: z.string().max(BOT_AGENT_BOUNDS.promptSuffix.max),
-      agent: z.string().max(BOT_AGENT_BOUNDS.promptSuffix.max),
-      manual: z.string().max(BOT_AGENT_BOUNDS.promptSuffix.max),
-    })
-    .partial()
     .optional(),
   tools: z
     .object({
@@ -509,18 +447,6 @@ const botAgentConfigUpdateSchema = z.object({
       customTools: z.boolean(),
     })
     .partial()
-    .optional(),
-  titleMaxLength: z
-    .number()
-    .int()
-    .min(BOT_AGENT_BOUNDS.titleMaxLength.min)
-    .max(BOT_AGENT_BOUNDS.titleMaxLength.max)
-    .optional(),
-  previewMaxLength: z
-    .number()
-    .int()
-    .min(BOT_AGENT_BOUNDS.previewMaxLength.min)
-    .max(BOT_AGENT_BOUNDS.previewMaxLength.max)
     .optional(),
   monthlyTokenCap: z
     .number()
@@ -702,13 +628,6 @@ function assertEnabledProvidersConfigured(
 // Zod-based per-field normalizer
 // ===========================================================================
 
-const clampedNumber = (min: number, max: number, fallback: number) =>
-  z
-    .number()
-    .finite()
-    .catch(fallback)
-    .transform((v) => Math.min(Math.max(v, min), max))
-
 const clampedInt = (min: number, max: number, fallback: number) =>
   z
     .number()
@@ -726,21 +645,6 @@ const cappedToolToggle = (fallback: boolean) => z.boolean().catch(fallback)
 
 const botAgentConfigDocSchema = z
   .object({
-    temperature: clampedNumber(
-      BOT_AGENT_BOUNDS.temperature.min,
-      BOT_AGENT_BOUNDS.temperature.max,
-      DEFAULT_BOT_AGENT_CONFIG.temperature
-    ),
-    topP: clampedNumber(
-      BOT_AGENT_BOUNDS.topP.min,
-      BOT_AGENT_BOUNDS.topP.max,
-      DEFAULT_BOT_AGENT_CONFIG.topP
-    ),
-    topK: clampedInt(
-      BOT_AGENT_BOUNDS.topK.min,
-      BOT_AGENT_BOUNDS.topK.max,
-      DEFAULT_BOT_AGENT_CONFIG.topK
-    ),
     maxOutputTokens: clampedInt(
       BOT_AGENT_BOUNDS.maxOutputTokens.min,
       BOT_AGENT_BOUNDS.maxOutputTokens.max,
@@ -756,22 +660,6 @@ const botAgentConfigDocSchema = z
       BOT_AGENT_BOUNDS.systemPromptBase.max,
       DEFAULT_BOT_AGENT_CONFIG.systemPromptBase
     ),
-    promptSuffixes: z
-      .object({
-        auto: cappedString(
-          BOT_AGENT_BOUNDS.promptSuffix.max,
-          DEFAULT_BOT_AGENT_CONFIG.promptSuffixes.auto
-        ),
-        agent: cappedString(
-          BOT_AGENT_BOUNDS.promptSuffix.max,
-          DEFAULT_BOT_AGENT_CONFIG.promptSuffixes.agent
-        ),
-        manual: cappedString(
-          BOT_AGENT_BOUNDS.promptSuffix.max,
-          DEFAULT_BOT_AGENT_CONFIG.promptSuffixes.manual
-        ),
-      })
-      .catch({ ...DEFAULT_BOT_AGENT_CONFIG.promptSuffixes }),
     tools: z
       .object({
         rollDice: cappedToolToggle(DEFAULT_BOT_AGENT_CONFIG.tools.rollDice),
@@ -813,16 +701,6 @@ const botAgentConfigDocSchema = z
         ),
       })
       .catch({ ...DEFAULT_BOT_AGENT_CONFIG.tools }),
-    titleMaxLength: clampedInt(
-      BOT_AGENT_BOUNDS.titleMaxLength.min,
-      BOT_AGENT_BOUNDS.titleMaxLength.max,
-      DEFAULT_BOT_AGENT_CONFIG.titleMaxLength
-    ),
-    previewMaxLength: clampedInt(
-      BOT_AGENT_BOUNDS.previewMaxLength.min,
-      BOT_AGENT_BOUNDS.previewMaxLength.max,
-      DEFAULT_BOT_AGENT_CONFIG.previewMaxLength
-    ),
     monthlyTokenCap: z
       .number()
       .int()
@@ -879,19 +757,13 @@ function applyAgentConfigOverrides(
     providers,
     models,
     model,
-    temperature: parsed.temperature,
-    topP: parsed.topP,
-    topK: parsed.topK,
     maxOutputTokens: parsed.maxOutputTokens,
     thinking: parsed.thinking,
     autoContext: parsed.autoContext,
     memoryEnabled: parsed.memoryEnabled,
     defaultMode: parsed.defaultMode,
     systemPromptBase: parsed.systemPromptBase,
-    promptSuffixes: parsed.promptSuffixes,
     tools: parsed.tools,
-    titleMaxLength: parsed.titleMaxLength,
-    previewMaxLength: parsed.previewMaxLength,
     monthlyTokenCap: parsed.monthlyTokenCap ?? null,
     monthlyCostCapCents:
       typeof parsed.monthlyCostCapCents === "number"

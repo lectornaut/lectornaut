@@ -16,7 +16,7 @@ import {
   type BundledTheme,
   type Highlighter,
 } from "shiki"
-import { computed, ref, watch } from "vue"
+import { computed, effectScope, ref, watch } from "vue"
 
 /** Shiki's id for "no specific language" — renders without token highlighting. */
 export const PLAINTEXT_LANGUAGE = "plaintext"
@@ -176,11 +176,16 @@ const syncCodeThemeColors = async (name: string): Promise<void> => {
 export const preloadActiveCodeTheme = (): Promise<void> =>
   syncCodeThemeColors(activeCodeThemeName.value)
 
+// Detached scope: callers invoke this from a component's setup, and a bare
+// `watch()` there would be owned by (and stopped with) whichever component
+// mounted first — leaving the once-flag set and colors frozen for the session.
 let colorSyncStarted = false
 export const startCodeThemeColorSync = (): void => {
   if (colorSyncStarted) return
   colorSyncStarted = true
-  watch(activeCodeThemeName, (name) => void syncCodeThemeColors(name), {
-    immediate: true,
-  })
+  effectScope(true).run(() =>
+    watch(activeCodeThemeName, (name) => void syncCodeThemeColors(name), {
+      immediate: true,
+    })
+  )
 }

@@ -1,9 +1,13 @@
 <script lang="ts" setup>
 import type { ChartConfig } from "@/components/ui/chart"
 import { ChartContainer } from "@/components/ui/chart"
+import { requestUsageIncrease } from "@/composables/useFunctions"
 import { useTeamUsage } from "@/composables/useTeamUsage"
 import { emitMainWindowIntent } from "@/modules/mitt"
+import { useTeamStore } from "@/stores/teamStore"
 import { VisDonut, VisSingleContainer } from "@unovis/vue"
+import { storeToRefs } from "pinia"
+import { toast } from "vue-sonner"
 
 const { t, n } = useI18n()
 const {
@@ -12,9 +16,36 @@ const {
   isExhausted,
   isLoading,
   isUnlimited,
+  monthKey,
   percentUsed,
   used,
 } = useTeamUsage()
+const { currentTeam } = storeToRefs(useTeamStore())
+
+// Members can't read the usage doc; the budget gate mirrors "limit hit" onto
+// the team doc, so that flag is all a member ever sees of usage.
+const isMemberExhausted = computed(
+  () =>
+    !canReadUsage.value && currentTeam.value?.usageExhaustedMonth === monthKey
+)
+
+const isTooltipOpen = ref(false)
+const requestState = ref<"idle" | "sending" | "sent">("idle")
+
+const requestAdminForUsage = async (): Promise<void> => {
+  const teamId = currentTeam.value?.id
+  if (!teamId || requestState.value !== "idle") return
+  requestState.value = "sending"
+  try {
+    await requestUsageIncrease({ teamId })
+    requestState.value = "sent"
+    toast.success(t("settings.usage.thisMonth.requestSent"))
+  } catch (error) {
+    console.error("[BotUsageCounter] requestUsageIncrease failed:", error)
+    requestState.value = "idle"
+    toast.error(t("settings.usage.thisMonth.requestFailed"))
+  }
+}
 
 const usageText = computed(() => {
   if (isLoading.value) return "..."
@@ -84,7 +115,39 @@ const openUsageSettings = async (): Promise<void> => {
 </script>
 
 <template>
-  <TooltipProvider v-if="canReadUsage">
+  <TooltipProvider v-if="isMemberExhausted">
+    <Tooltip v-model:open="isTooltipOpen">
+      <TooltipTrigger as-child>
+        <Button
+          variant="destructive"
+          size="sm"
+          class="ml-auto"
+          @click="isTooltipOpen = true"
+        >
+          <InputGroupText class="text-xs">
+            {{ t("settings.usage.thisMonth.limitReached") }}
+          </InputGroupText>
+        </Button>
+      </TooltipTrigger>
+      <TooltipContent class="flex flex-col items-start gap-2 py-2">
+        {{ t("settings.usage.thisMonth.memberExhausted") }}
+        <Button
+          variant="secondary"
+          size="xs"
+          :disabled="requestState !== 'idle'"
+          @click="requestAdminForUsage"
+        >
+          <Spinner v-if="requestState === 'sending'" />
+          {{
+            requestState === "sent"
+              ? t("settings.usage.thisMonth.requested")
+              : t("settings.usage.thisMonth.requestAdmin")
+          }}
+        </Button>
+      </TooltipContent>
+    </Tooltip>
+  </TooltipProvider>
+  <TooltipProvider v-else-if="canReadUsage">
     <Tooltip>
       <TooltipTrigger as-child>
         <Button

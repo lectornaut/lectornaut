@@ -77,7 +77,6 @@ import {
   TableOfContents,
   getHierarchicalIndexes,
   type TableOfContentData,
-  type TableOfContentDataItem,
   type TableOfContentsStorage,
 } from "@tiptap/extension-table-of-contents"
 import { TableCell } from "@tiptap/extension-table/cell"
@@ -1319,88 +1318,36 @@ const scrollToHashBlock = (currentEditor: TiptapEditor): boolean => {
   return true
 }
 
-// Wider = more important: H1 1.5rem, H2 1rem, H3 0.5rem. Uses the heading's
-// own level (`originalLevel`), not its relative nesting depth (`level`).
-const getTableOfContentsItemWidth = (headingLevel: number) =>
-  `${Math.max(4 - headingLevel, 1) * 0.5}rem`
+// `originalLevel` (the heading's own level) sizes the bar; `level` (relative
+// nesting) indents the row, so an H3 directly under an H1 sits one step in.
+const outlineRailItems = computed(() =>
+  tableOfContentsItems.value.map((item) => ({
+    id: item.id,
+    label: item.textContent || t("components.textEditor.untitledHeading"),
+    active: item.isActive,
+    level: item.originalLevel,
+    depth: item.level,
+  }))
+)
 
-// Outline indent follows nesting (`level`), so an H3 directly under an H1
-// sits one step in, like Notion. Base 0.75rem matches menu row padding.
-const getTableOfContentsItemIndent = (nestingLevel: number) =>
-  `${0.75 + Math.max(nestingLevel - 1, 0) * 0.75}rem`
-
-const scrollToTableOfContentsItem = (item: TableOfContentDataItem) => {
-  item.dom.scrollIntoView({
-    behavior: "smooth",
-    block: "start",
-    inline: "nearest",
-  })
+const scrollToTableOfContentsItem = (id: string) => {
+  tableOfContentsItems.value
+    .find((item) => item.id === id)
+    ?.dom.scrollIntoView({
+      behavior: "smooth",
+      block: "start",
+      inline: "nearest",
+    })
 }
 </script>
 
 <template>
   <Teleport defer :to="tocTarget ?? 'body'" :disabled="!tocTarget">
-    <div
-      v-if="tableOfContentsItems.length"
-      class="pointer-events-none absolute inset-y-0 left-2 flex items-center"
-    >
-      <!-- Notion-style: the bars are an overview; hovering opens the outline
-         (indented by nesting, current section highlighted, click to jump). -->
-      <HoverCard :open-delay="100" :close-delay="150">
-        <HoverCardTrigger as-child>
-          <aside
-            class="pointer-events-auto flex max-h-full flex-col items-start overflow-y-auto py-2 pr-2"
-          >
-            <button
-              v-for="item in tableOfContentsItems"
-              :key="item.id"
-              type="button"
-              class="group flex cursor-pointer py-0.5"
-              :aria-label="item.textContent"
-              @click="scrollToTableOfContentsItem(item)"
-            >
-              <span
-                class="bg-sidebar-primary h-1 rounded-full opacity-25 group-hover:opacity-75"
-                :class="{ 'opacity-75': item.isActive }"
-                :style="{
-                  width: getTableOfContentsItemWidth(item.originalLevel),
-                }"
-              />
-            </button>
-          </aside>
-        </HoverCardTrigger>
-        <HoverCardContent
-          side="right"
-          align="center"
-          :side-offset="4"
-          class="max-h-[min(28rem,var(--reka-hover-card-content-available-height))] w-64 overflow-y-auto p-1.5"
-        >
-          <nav
-            :aria-label="t('components.textEditor.tableOfContents')"
-            class="flex flex-col"
-          >
-            <button
-              v-for="item in tableOfContentsItems"
-              :key="item.id"
-              type="button"
-              class="hover:bg-accent hover:text-accent-foreground w-full truncate rounded-2xl py-2 pr-3 text-left text-sm"
-              :class="
-                item.isActive
-                  ? 'text-foreground font-medium'
-                  : 'text-muted-foreground'
-              "
-              :aria-current="item.isActive ? 'location' : undefined"
-              :style="{ paddingLeft: getTableOfContentsItemIndent(item.level) }"
-              @click="scrollToTableOfContentsItem(item)"
-            >
-              {{
-                item.textContent || t("components.textEditor.untitledHeading")
-              }}
-            </button>
-          </nav>
-        </HoverCardContent>
-      </HoverCard>
-    </div>
+    <OutlineRail
+      :items="outlineRailItems"
+      :label="t('components.textEditor.tableOfContents')"
+      @select="scrollToTableOfContentsItem"
+    />
   </Teleport>
 
   <TooltipProvider>

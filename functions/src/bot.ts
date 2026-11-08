@@ -55,6 +55,7 @@ import {
   type ToolArgument,
 } from "genkit/beta"
 import { AsyncLocalStorage } from "node:async_hooks"
+import { setTimeout as sleep } from "node:timers/promises"
 import {
   buildAgentSystemPrompt,
   DEFAULT_AGENT_ID,
@@ -65,6 +66,7 @@ import {
 import {
   BOT_AGENT_MODELS,
   loadTeamAgentConfig,
+  MODE_CONFIG,
   PREVIEW_MAX_LENGTH,
   resolveEffectiveModel,
   resolveFallbackModel,
@@ -111,7 +113,11 @@ import {
 // turn started from — what edit/regenerate resume from.
 import {
   AUTHOR_METADATA_KEY,
+  failedTurnResumePoint,
   PARENT_SNAPSHOT_METADATA_KEY,
+  SENT_AT_METADATA_KEY,
+  stampSentAt,
+  turnLockState,
 } from "./botBranches.js"
 import {
   BOT_SNAPSHOT_COLLECTION,
@@ -128,8 +134,10 @@ import {
   committedToolRounds,
   deliveryToAgentInput,
   getMissingToolName,
+  isOutputLengthExceededError,
   isToolInputValidationError,
   isToolIterationsExceededError,
+  OUTPUT_LENGTH_EXCEEDED_MESSAGE,
   type TurnDelivery,
 } from "./botTurn.js"
 import {
@@ -327,6 +335,12 @@ export interface ChatMessage {
    * regenerating the bubble resumes from it (see `fromSnapshotId`).
    */
   parentSnapshotId?: string
+  /**
+   * ISO time from {@link SENT_AT_METADATA_KEY}: when a user message was sent,
+   * or when an agent bubble's last model/tool message was committed. Absent
+   * on legacy messages.
+   */
+  sentAt?: string
 }
 
 interface ToolRequestLike {
@@ -498,11 +512,13 @@ export function extractChatMessages(
         // User messages are flat strings on the wire — no segments field.
         const author = raw.metadata?.[AUTHOR_METADATA_KEY]
         const parent = raw.metadata?.[PARENT_SNAPSHOT_METADATA_KEY]
+        const sentAt = raw.metadata?.[SENT_AT_METADATA_KEY]
         messages.push({
           role: "user",
           content: text,
           ...(typeof author === "string" ? { authorUid: author } : {}),
           ...(typeof parent === "string" ? { parentSnapshotId: parent } : {}),
+          ...(typeof sentAt === "string" ? { sentAt } : {}),
         })
       }
       continue
@@ -514,6 +530,10 @@ export function extractChatMessages(
     // the client renders a failure instead of a normal reply. Sticky for
     // the whole coalesced bubble, which is right: the fallback IS the reply.
     const isErrorTurn = !!raw.metadata?.[TURN_ERROR_METADATA_KEY]
+    // The coalesced bubble shows its LAST message's time: when the reply
+    // finished, not when the first tool round landed.
+    const sentAt = raw.metadata?.[SENT_AT_METADATA_KEY]
+    if (typeof sentAt === "string") ensureAgent().sentAt = sentAt
 
     // Coalesce model + tool turns into the same agent bubble. Genkit
     // sometimes emits a string content for legacy model messages; treat
@@ -640,16 +660,6 @@ interface SessionPersistInfo {
   readonly sessionId: string
 
   /**
-   * Per-workspace truncation knobs. The store doesn't read the agent
-   * config doc itself — the calling flow loads it once per turn and
-   * passes the relevant lengths in. Keeps the Genkit save callback
-   * (which fires on every turn, sometimes mid-flight) free of extra
-   * Firestore reads.
-   */
-  readonly titleMaxLength?: number
-  readonly previewMaxLength?: number
-
-  /**
    * Composite `${ownerUid}:${scope}:${nodeId}` index key for the
    * caller's node-pinned chat lookup. Written once on session
    * creation; never rewritten on subsequent saves. The pin's
@@ -772,6 +782,23 @@ const turnRuntime = new AsyncLocalStorage<TurnRuntime>()
 // Edit, regenerate and the agent-handoff second turn all start a new turn from
 // an EARLIER snapshot (`chat({ snapshotId })`), Genkit's branching primitive.
 // Nothing is truncated or overwritten; abandoned branches stay in the store.
+//
+// Retention (Genkit's store never prunes — the docs leave it to the app):
+// snapshots live exactly as long as their chat. Abandoned branches are NOT
+// garbage: they are the versions the ‹n/m› switcher shows
+// (`snapshotChildren`). Deleting a chat, workspace or team removes the whole
+// history first (`deleteBotSessionHistory` / `deleteWorkspaceBotHistory`).
+// The only unreachable snapshots — a handoff's replaced first reply, a failed
+// turn's committed rounds under a later Continue, a new chat's root whose
+// first turn never committed — are small and go with their chat; the store
+// has no per-snapshot delete, and pruning a snapshot out from under its
+// checkpoint/diff chain isn't safe. ponytail: no TTL; add a chat-age sweep
+// (delete record + history) if storage cost ever matters.
+//
+// Always resume by an explicit `snapshotId` (the record's head, or a branch
+// point). Raw writes (root, seed, branch copy) move the store's per-session
+// pointer too, so `getSnapshot({ sessionId })` alone would pick the wrong end
+// of a branched chat.
 
 /** Resolves the per-chat prefix; falls back to the turn's ALS. */
 function snapshotPrefix(options?: SessionStoreOptions): string {
@@ -805,6 +832,43 @@ export async function readSnapshotThread(
     context: botSessionContext(key),
   })
   return snap ? ((snap.state?.messages ?? []) as MessageData[]) : undefined
+}
+
+/**
+ * The committed failure a "continue" turn resumes from (see
+ * `failedTurnResumePoint`): the parent of the chat's head when the head is a
+ * persisted error reply stacked on complete tool rounds. Call under the turn
+ * lock so the head can't move underneath.
+ */
+async function resolveFailedTurnResumePoint(
+  key: BotSessionKey
+): Promise<string> {
+  const read = (snapshotId: string) =>
+    snapshotStore.getSnapshot({
+      snapshotId,
+      context: botSessionContext(key),
+    })
+  const headId = (await sessionRecordRef(key).get()).get("headSnapshotId")
+  const head = typeof headId === "string" ? await read(headId) : undefined
+  const parent = head?.parentId ? await read(head.parentId) : undefined
+  const tail = (head?.state?.messages as MessageData[] | undefined)?.at(-1)
+  const resumeFrom = failedTurnResumePoint(
+    !!tail?.metadata?.[TURN_ERROR_METADATA_KEY],
+    parent
+      ? {
+          snapshotId: parent.snapshotId,
+          status: parent.status,
+          state: { messages: parent.state?.messages as MessageData[] },
+        }
+      : undefined
+  )
+  if (!resumeFrom) {
+    throw new HttpsError(
+      "failed-precondition",
+      "There's no unfinished reply to continue."
+    )
+  }
+  return resumeFrom
 }
 
 /**
@@ -876,10 +940,7 @@ export async function projectChatRecord(
       workspaceId: p.workspaceId,
       ownerUid: p.ownerUid,
       headSnapshotId: snapshotId,
-      preview: derivePreview(
-        messages,
-        p.previewMaxLength ?? PREVIEW_MAX_LENGTH
-      ),
+      preview: derivePreview(messages, PREVIEW_MAX_LENGTH),
       messageCount: messages.length,
       updatedAt: FieldValue.serverTimestamp(),
     }
@@ -902,7 +963,7 @@ export async function projectChatRecord(
     // One-shot creation fields. (Rename is its own callable; the pin's
     // queryable identity is fixed at creation.)
     if (isNew) {
-      update.title = deriveTitle(messages, p.titleMaxLength ?? TITLE_MAX_LENGTH)
+      update.title = deriveTitle(messages, TITLE_MAX_LENGTH)
       update.createdAt = FieldValue.serverTimestamp()
       update.archivedAt = null
       if (p.pinnedNodeKey) update.pinnedNodeKey = p.pinnedNodeKey
@@ -922,6 +983,16 @@ class BotSessionStore implements SessionStore {
     return snapshotStore.getSnapshot(opts)
   }
 
+  // Pass-through of the official store's status watch (Firestore listener), so
+  // Genkit's own abort / background-status machinery works through this
+  // wrapper. Attached turns stop through the turn lock instead
+  // (`acquireSessionTurnLock`); nothing here detaches today.
+  onSnapshotStateChange(
+    ...args: Parameters<NonNullable<SessionStore["onSnapshotStateChange"]>>
+  ) {
+    return snapshotStore.onSnapshotStateChange(...args)
+  }
+
   async saveSnapshot(
     snapshotId: string | undefined,
     mutator: SnapshotMutator,
@@ -933,6 +1004,22 @@ class BotSessionStore implements SessionStore {
       snapshotId,
       (current) => {
         saved = mutator(current)
+        // Every thread write lands here (turns, committed failures, persisted
+        // fallbacks), so this one seam timestamps new messages. A model
+        // message is stamped when it commits; the user message carries its
+        // own send time from `userMessageMetadata`.
+        if (saved?.state?.messages) {
+          saved = {
+            ...saved,
+            state: {
+              ...saved.state,
+              messages: stampSentAt(
+                saved.state.messages as MessageData[],
+                new Date().toISOString()
+              ),
+            },
+          }
+        }
         // A turn the deadline already gave up on must not land a late write
         // from the framework (the provider ignored the abort): the user saw
         // the fallback, and `persistTurnError` owns this turn's record. Before
@@ -1052,7 +1139,15 @@ const botChatAgent = ai.defineCustomAgent(
         sendChunk({ modelChunk: chunk })
       }
       const res = await gen.response
-      if (res.error && res.finishReason !== "interrupted" && !res.isValid()) {
+      // A reply the output-token cap cut off before any text (thinking ate
+      // the budget, or a big tool call was truncated mid-argument) resolves
+      // as a normal `length` finish with an empty reply. Route it through the
+      // failure path so it gets a visible fallback instead of silence.
+      const truncated = res.finishReason === "length" && !res.text.trim()
+      if (
+        truncated ||
+        (res.error && res.finishReason !== "interrupted" && !res.isValid())
+      ) {
         // Rebuild the error the throwing path would have raised (Genkit's own
         // `generationError`), so the AgentError keeps the status/message the
         // `streamChatToClientInner` classifiers match on.
@@ -1060,11 +1155,17 @@ const botChatAgent = ai.defineCustomAgent(
           res.finishReason === "aborted"
             ? GenerationAbortedError
             : GenerationResponseError
-        const failure = new Failure(
-          res,
-          res.error.message,
-          res.error.status as ConstructorParameters<typeof Failure>[2]
-        )
+        const failure = truncated
+          ? new GenerationResponseError(
+              res,
+              OUTPUT_LENGTH_EXCEEDED_MESSAGE,
+              "RESOURCE_EXHAUSTED"
+            )
+          : new Failure(
+              res,
+              res.error!.message,
+              res.error!.status as ConstructorParameters<typeof Failure>[2]
+            )
         // Commit the complete tool rounds so their side effects stay in the
         // thread (Genkit writes a `failed`/`aborted` snapshot). Prompt turns
         // only: `continue`/`resume` deliveries own their thread shape (see
@@ -1821,87 +1922,139 @@ async function runTransferTurnIfRequested(opts: {
  */
 const SESSION_LOCK_LEASE_MS = 120_000
 
-/** Releases a previously-acquired session turn lock. Idempotent + safe to
- *  call unconditionally — the no-op variant is returned for new sessions. */
-type ReleaseLock = () => Promise<void>
-const NOOP_RELEASE: ReleaseLock = async () => {}
+/** How long a new turn waits for a stopped one to let go of the lock. */
+const STOP_WAIT_MS = 8_000
+const STOP_POLL_MS = 400
+
+/** The lock doc's free / busy / stopping state (see `turnLockState`). */
+const lockStateOf = (snap: FirebaseFirestore.DocumentSnapshot, now: number) =>
+  turnLockState(
+    (snap.get("expiresAt") as Timestamp | undefined)?.toMillis(),
+    (snap.get("stopRequestedAt") as Timestamp | undefined)?.toMillis(),
+    now,
+    STOP_WAIT_MS
+  )
+
+/** A held per-chat turn lock. */
+export interface TurnLock {
+  /** Releases the lock (only while we still own it). Idempotent. */
+  release: () => Promise<void>
+  /** Fires when someone asks this turn to stop (`requestTurnStop`). */
+  stopSignal: AbortSignal
+}
+
+const turnLockRef = (teamId: string, workspaceId: string, sessionId: string) =>
+  db.doc(
+    `teams/${teamId}/workspaces/${workspaceId}/botSessionLocks/${sessionId}`
+  )
 
 /**
- * Acquire an exclusive per-session turn lock so two concurrent turns on the
- * same session can't both read the thread, append, and save — Genkit's
- * `SessionStore` is last-write-wins with no version guard, so without this a
- * simultaneous send (common in shared chats where several admins post into
- * one session) silently drops one side's message + reply.
+ * Acquire an exclusive per-chat turn lock, so a second sender is told to wait
+ * instead of starting a competing branch from the same head (snapshots can't
+ * be lost anymore, but two racing turns would leave the chat on whichever
+ * finished last).
  *
- * Stored as a dedicated lease doc (NOT a field on the session doc) so it
- * neither churns the client's real-time session listeners nor has to ride
- * through the client read schema. Clients can't touch it — writes are
- * Cloud-Functions-only and the collection falls under Firestore's
- * default-deny rule.
+ * A dedicated, server-only lease doc (`botSessionLocks`, default-deny rules):
+ *   - Held → fail fast with `aborted`, UNLESS the holder was asked to stop:
+ *     then wait (up to {@link STOP_WAIT_MS}) for it to unwind, and if it never
+ *     does (a dead instance), take over — so Stop-then-resend just works.
+ *   - The lease bounds how long a hard-killed instance can wedge the chat.
+ *   - The holder watches its own lock doc and aborts when a stop is
+ *     requested — the attached-turn counterpart of Genkit aborting a detached
+ *     run through its store's `onSnapshotStateChange`. Needed because a
+ *     client's disconnect doesn't reliably reach a Cloud Function.
  *
- * Transactional + lease-based: acquisition fails fast with an `aborted`
- * HttpsError when an unexpired lock is held (the second sender is told to
- * wait rather than losing their turn), and the lease bounds how long a
- * crashed instance can wedge the chat. The returned release only clears the
- * lock when our token still owns it, so a turn that overran its lease can't
- * delete a later turn's freshly-acquired lock.
- *
- * MUST be acquired before the thread is read (the store's `getSnapshot`,
- * triggered by `chat.sendStream` inside `runChatTurn` — acquired at the top of
- * `runAgentTurn` and held across the whole turn): acquiring after the read
- * would leave a window where another turn completes between our read and our
- * acquire, handing us a stale base we'd then clobber on save.
+ * Acquire BEFORE reading the chat's head, so the turn builds on a current one.
  */
 export async function acquireSessionTurnLock(
   teamId: string,
   workspaceId: string,
-  sessionId: string
-): Promise<ReleaseLock> {
-  const ref = db.doc(
-    `teams/${teamId}/workspaces/${workspaceId}/botSessionLocks/${sessionId}`
-  )
+  sessionId: string,
+  holderUid: string
+): Promise<TurnLock> {
+  const ref = turnLockRef(teamId, workspaceId, sessionId)
   const token = generateId()
-  const now = Date.now()
-  const expiresAt = Timestamp.fromMillis(now + SESSION_LOCK_LEASE_MS)
-
-  await db.runTransaction(async (tx) => {
-    const snap = await tx.get(ref)
-    const existingExpiry = snap.exists
-      ? (snap.get("expiresAt") as Timestamp | undefined)
-      : undefined
-    if (existingExpiry && existingExpiry.toMillis() > now) {
+  const waitUntil = Date.now() + STOP_WAIT_MS
+  for (;;) {
+    const now = Date.now()
+    const blocked = await db.runTransaction(async (tx) => {
+      const state = lockStateOf(await tx.get(ref), now)
+      if (state !== "free") return state
+      tx.set(ref, {
+        token,
+        holderUid,
+        expiresAt: Timestamp.fromMillis(now + SESSION_LOCK_LEASE_MS),
+        updatedAt: FieldValue.serverTimestamp(),
+      })
+      return null
+    })
+    if (!blocked) break
+    if (blocked === "busy" || Date.now() >= waitUntil) {
       throw new HttpsError(
         "aborted",
         "This chat is already processing a message. Wait for the current " +
           "reply to finish, then try again."
       )
     }
-    tx.set(ref, {
-      token,
-      expiresAt,
-      updatedAt: FieldValue.serverTimestamp(),
-    })
-  })
-
-  return async () => {
-    try {
-      await db.runTransaction(async (tx) => {
-        const snap = await tx.get(ref)
-        // Only the owner clears the lock — if our lease already expired and
-        // a later turn re-acquired, its token differs and we leave it be.
-        if (snap.exists && snap.get("token") === token) {
-          tx.delete(ref)
-        }
-      })
-    } catch (err) {
-      // Release failure is non-fatal: the lease guarantees the lock clears
-      // on its own. Log so a persistent failure is visible.
-      logger.warn(
-        `[botSessionLock] release failed team=${teamId} workspace=${workspaceId} session=${sessionId}`,
-        { err: String(err) }
-      )
-    }
+    await sleep(STOP_POLL_MS)
   }
+
+  const stop = new AbortController()
+  const unsubscribe = ref.onSnapshot(
+    (snap) => {
+      if (snap.get("token") === token && snap.get("stopRequestedAt")) {
+        stop.abort()
+      }
+    },
+    (err) =>
+      logger.warn(`[botSessionLock] stop watch failed session=${sessionId}`, {
+        err: String(err),
+      })
+  )
+  let released = false
+  return {
+    stopSignal: stop.signal,
+    release: async () => {
+      if (released) return
+      released = true
+      unsubscribe()
+      try {
+        await db.runTransaction(async (tx) => {
+          const snap = await tx.get(ref)
+          // Only the owner clears the lock — if our lease expired and a
+          // later turn re-acquired, its token differs and we leave it be.
+          if (snap.exists && snap.get("token") === token) tx.delete(ref)
+        })
+      } catch (err) {
+        // Non-fatal: the lease clears the lock on its own.
+        logger.warn(
+          `[botSessionLock] release failed team=${teamId} workspace=${workspaceId} session=${sessionId}`,
+          { err: String(err) }
+        )
+      }
+    },
+  }
+}
+
+/**
+ * Ask the turn running in a chat to stop. Only its own sender may: the lock
+ * records who holds it. Best-effort — false when no turn of theirs is running.
+ */
+export async function requestTurnStop(
+  teamId: string,
+  workspaceId: string,
+  sessionId: string,
+  uid: string
+): Promise<boolean> {
+  const ref = turnLockRef(teamId, workspaceId, sessionId)
+  return db.runTransaction(async (tx) => {
+    const snap = await tx.get(ref)
+    // `busy` = running and not already asked to stop.
+    if (lockStateOf(snap, Date.now()) !== "busy") return false
+    if (snap.get("holderUid") !== uid) return false
+    tx.update(ref, { stopRequestedAt: Timestamp.now() })
+    return true
+  })
 }
 
 // ===========================================================================
@@ -2054,7 +2207,8 @@ const SendBotMessageInput = z.object({
   workspaceId: z.string().min(1),
   /** Pass null/undefined to start a new session; the response carries the new id. */
   sessionId: z.string().nullable().optional(),
-  message: z.string().min(1),
+  /** Required (non-blank) unless `continueFailedTurn`. */
+  message: z.string(),
   /**
    * Action-context mode for this turn. Drives the system prompt, tool
    * exposure, and any context.mode-aware tool branching. Defaults to
@@ -2150,6 +2304,14 @@ const SendBotMessageInput = z.object({
    * from it; the old branch stays in the store. Must belong to this chat.
    */
   fromSnapshotId: z.string().min(1).optional(),
+  /**
+   * Continue the chat's failed last turn instead of sending a message: Genkit
+   * re-runs it from its committed `failed`/`aborted` snapshot (user message +
+   * complete tool rounds) with no new input, so finished tool calls aren't
+   * repeated. Only valid when the head is that turn's error reply
+   * (`failedTurnResumePoint`); `message` is ignored.
+   */
+  continueFailedTurn: z.boolean().optional(),
   /**
    * Set only when creating a new session, to bind it to a specific
    * workspace node. Enables `findBotSessionByPinnedNode` to resume the
@@ -2363,7 +2525,11 @@ const TOOL_MAX_TURNS = 8
  * client only ever sees the flat `status: "error"`.
  */
 type TurnErrorKind =
-  "deadline" | "toolIterations" | "missingTool" | "invalidToolArgs"
+  | "deadline"
+  | "toolIterations"
+  | "outputLength"
+  | "missingTool"
+  | "invalidToolArgs"
 
 /**
  * Build the stub unary response for a turn that ended in a graceful
@@ -2609,12 +2775,21 @@ async function streamChatToClientInner(
     thinking.close()
     if (isToolIterationsExceededError(err)) {
       const fallback =
-        'I reached my step limit for one reply before finishing. The steps above are done and saved. Say "continue" and I\'ll pick up from there, or narrow the request if I was going in circles.'
+        'I reached my step limit for one reply before finishing. The steps above are done and saved. Choose Continue (or say "continue") and I\'ll pick up from there, or narrow the request if I was going in circles.'
       sendChunk({ chunk: fallback, status: "error" })
       // Stub return — caller only uses `final.text` for the unary reply;
       // the streaming protocol with the client already concluded
       // successfully via `sendChunk`.
       return stubTurnResponse(fallback, "toolIterations")
+    }
+    if (isOutputLengthExceededError(err)) {
+      logger.warn(
+        "[streamChatToClient] reply hit the output token limit before any text — raise the agent's max output tokens if this recurs"
+      )
+      const fallback =
+        'I ran out of room for this reply before I could finish. Any steps above are done and saved. Choose Continue (or say "continue") and I\'ll pick up from there, or ask for a smaller piece at a time.'
+      sendChunk({ chunk: fallback, status: "error" })
+      return stubTurnResponse(fallback, "outputLength")
     }
     const missingTool = getMissingToolName(err)
     if (missingTool) {
@@ -3434,8 +3609,6 @@ async function prepareChatTurn(opts: {
     workspaceId,
     ownerUid: sessionOwnerUid,
     sessionId: resolvedSessionId,
-    titleMaxLength: agentConfig.titleMaxLength,
-    previewMaxLength: agentConfig.previewMaxLength,
     pinnedNodeKey: newSessionPinnedNodeKey,
     contextNodes,
     turnMode: mode,
@@ -3717,7 +3890,7 @@ async function prepareChatTurn(opts: {
   const baseSystem = buildAgentSystemPrompt({
     agent: activeAgent,
     teamBaseSystem: agentConfig.systemPromptBase,
-    teamModeSuffix: agentConfig.promptSuffixes[mode],
+    teamModeSuffix: MODE_CONFIG[mode].promptSuffix,
     mode,
     otherAgents: transferRoster,
     // Pass the EFFECTIVE flags so the node-editing directive (and its
@@ -3754,12 +3927,8 @@ async function prepareChatTurn(opts: {
   const turnConfig = buildTurnConfig({
     provider,
     model: effectiveModel,
-    sampling: {
-      temperature: agentConfig.temperature,
-      topP: agentConfig.topP,
-      topK: agentConfig.topK,
-      maxOutputTokens: agentConfig.maxOutputTokens,
-    },
+    // Only the reply cap: sampling stays at each provider's tuned default.
+    sampling: { maxOutputTokens: agentConfig.maxOutputTokens },
     thinkingEnabled: agentConfig.thinking,
     effort: opts.effort,
   })
@@ -3802,12 +3971,7 @@ async function prepareChatTurn(opts: {
                 config: buildTurnConfig({
                   provider: getModelProvider(fallbackModel),
                   model: fallbackModel,
-                  sampling: {
-                    temperature: agentConfig.temperature,
-                    topP: agentConfig.topP,
-                    topK: agentConfig.topK,
-                    maxOutputTokens: agentConfig.maxOutputTokens,
-                  },
+                  sampling: { maxOutputTokens: agentConfig.maxOutputTokens },
                   thinkingEnabled: agentConfig.thinking,
                   effort: opts.effort,
                 }),
@@ -3830,6 +3994,7 @@ async function prepareChatTurn(opts: {
     userMessageMetadata: {
       [AUTHOR_METADATA_KEY]: actingId,
       [PARENT_SNAPSHOT_METADATA_KEY]: startSnapshotId,
+      [SENT_AT_METADATA_KEY]: new Date().toISOString(),
     },
     // Sub-agents rebuild a persona from these inputs. One-shot fields
     // (uploads, imports, pin) were consumed by this turn; a brand-new
@@ -3879,6 +4044,11 @@ interface RunAgentTurnOptions {
   message: string
   /** Edit / regenerate branch point — forwarded to {@link prepareChatTurn}. */
   fromSnapshotId?: string
+  /**
+   * Continue the failed last turn (no new message; see
+   * `SendBotMessageInput.continueFailedTurn`). Existing chats only.
+   */
+  continueFailedTurn?: boolean
   mode: BotChatMode
   toolPermissionMode?: BotToolPermissionMode
   model: BotAgentModel | undefined
@@ -3957,23 +4127,40 @@ async function runAgentTurn(
   // shouldn't be blocked once the first turn was admitted.
   await assertWithinBudget(opts.teamId)
 
-  // Serialize turns per existing session so two concurrent sends (common in
-  // shared chats where several admins post into one session, or a scheduled
-  // run racing a human) can't both load the same thread and clobber each
-  // other on save — Genkit's SessionStore is last-write-wins with no version
-  // guard. Acquired BEFORE prepareChatTurn (whose loadSession reads the
-  // thread) so the base we build on is current; new sessions (no sessionId)
-  // have a fresh id nothing else knows yet, so they skip the lock. Released
-  // in the finally below — including on a throw from prepareChatTurn — so a
-  // rejected turn never wedges the chat.
-  const releaseLock = opts.sessionId
+  // Serialize turns per chat (see `acquireSessionTurnLock`). An existing
+  // chat is locked BEFORE prepareChatTurn reads its head, so the turn builds
+  // on a current one; a brand-new chat's id exists only after prepare, so it
+  // is locked there — nothing else knows the id yet, but Stop needs the lock.
+  // Released in the finally below, including on a throw, so a rejected turn
+  // never wedges the chat.
+  const holderUid = principalId(opts.principal)
+  let lock = opts.sessionId
     ? await acquireSessionTurnLock(
         opts.teamId,
         opts.workspaceId,
-        opts.sessionId
+        opts.sessionId,
+        holderUid
       )
-    : NOOP_RELEASE
+    : null
   try {
+    // Continue a failed turn: start from its committed failure (resolved under
+    // the lock, so the head can't move) with no new message. No handoff —
+    // the transfer second turn seeds from "start + this turn's user message",
+    // which a continue doesn't have.
+    const continuing = !!opts.continueFailedTurn
+    if (continuing && !opts.sessionId) {
+      throw new HttpsError(
+        "invalid-argument",
+        "Only a saved chat can be continued."
+      )
+    }
+    const resumeFrom = continuing
+      ? await resolveFailedTurnResumePoint({
+          teamId: opts.teamId,
+          workspaceId: opts.workspaceId,
+          sessionId: opts.sessionId!,
+        })
+      : undefined
     const {
       chat,
       runtime,
@@ -3991,11 +4178,11 @@ async function runAgentTurn(
       mode: opts.mode,
       toolPermissionMode: opts.toolPermissionMode,
       contextNodes: opts.contextNodes,
-      message: opts.message,
+      message: continuing ? undefined : opts.message,
       attachmentIds: opts.attachmentIds,
       pendingAttachments: opts.pendingAttachments,
       pendingDriveImports: opts.pendingDriveImports,
-      fromSnapshotId: opts.fromSnapshotId,
+      fromSnapshotId: resumeFrom ?? opts.fromSnapshotId,
       activeAgentId: opts.activeAgentId,
       model: opts.model,
       effort: opts.effort,
@@ -4006,11 +4193,21 @@ async function runAgentTurn(
       onUsage: opts.onUsage,
       captureChanges: opts.captureChanges,
       targetScope: opts.targetScope,
-      disableTransfer: opts.disableTransfer,
+      disableTransfer: continuing || opts.disableTransfer,
       connectionsActsAsUid: opts.connectionsActsAsUid,
     })
 
+    lock ??= await acquireSessionTurnLock(
+      opts.teamId,
+      opts.workspaceId,
+      sessionId,
+      holderUid
+    )
+    // Stop arrives either way: the request's disconnect (when the platform
+    // relays it) or an explicit `stopBotTurn` on the lock.
     runtime.stopSignal = opts.abortSignal
+      ? AbortSignal.any([opts.abortSignal, lock.stopSignal])
+      : lock.stopSignal
 
     // Start-thread length: a handoff seeds its second turn with this many
     // messages plus the user message.
@@ -4039,7 +4236,7 @@ async function runAgentTurn(
     const firstFinal = await runChatTurn(
       chat,
       runtime,
-      { prompt: turnPrompt },
+      continuing ? { kind: "continue" } : { prompt: turnPrompt },
       {
         sendChunk,
         preSentToolCalls: priorRefs.calls,
@@ -4141,7 +4338,7 @@ async function runAgentTurn(
       reply: final.text,
     }
   } finally {
-    await releaseLock()
+    await lock?.release()
   }
 }
 
@@ -4266,11 +4463,12 @@ const sendBotMessageFlow = ai.defineFlow(
     }
 
     const message = input.message.trim()
-    if (!message) {
+    if (!message && !input.continueFailedTurn) {
       throw new HttpsError("invalid-argument", "message cannot be empty.")
     }
 
     return runAgentTurn({
+      continueFailedTurn: input.continueFailedTurn,
       principal: { kind: "user", uid: auth.uid },
       teamId: input.teamId,
       workspaceId: input.workspaceId,
@@ -4531,10 +4729,11 @@ const respondToBotInterruptFlow = ai.defineFlow(
     // same rationale as `sendBotMessageFlow`. Interrupts always run on an
     // existing session, so the lock is unconditional. Acquired before
     // prepareChatTurn's loadSession; released in the finally below.
-    const releaseLock = await acquireSessionTurnLock(
+    const lock = await acquireSessionTurnLock(
       input.teamId,
       input.workspaceId,
-      input.sessionId
+      input.sessionId,
+      auth.uid
     )
     try {
       const { chat, runtime, sessionId, actionContext, baseThread } =
@@ -4556,6 +4755,8 @@ const respondToBotInterruptFlow = ai.defineFlow(
         })
 
       runtime.stopSignal = abortSignal
+        ? AbortSignal.any([abortSignal, lock.stopSignal])
+        : lock.stopSignal
 
       // `requireExistingSession: true` guarantees a saved chat; its head
       // snapshot (`baseThread`) is where pending interrupts live.
@@ -4801,7 +5002,7 @@ const respondToBotInterruptFlow = ai.defineFlow(
         reply: final.text,
       }
     } finally {
-      await releaseLock()
+      await lock.release()
     }
   }
 )

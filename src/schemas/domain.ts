@@ -126,6 +126,8 @@ export const teamSchema = z.object({
   username: z.string().nullable().optional(),
   isPublic: z.boolean().optional(),
   billing: teamBillingSchema.partial().nullable().optional(),
+  /** Server-stamped "YYYY-MM" when the AI budget gate last refused a turn. */
+  usageExhaustedMonth: z.string().nullable().optional(),
   createdAt: timestampSchema,
   updatedAt: timestampSchema,
 })
@@ -337,6 +339,8 @@ export const botSessionMessageSchema = z.object({
    * regenerate resend from it (`fromSnapshotId`).
    */
   parentSnapshotId: z.string().optional(),
+  /** ISO time the message was sent (user) or finished (agent). Absent on legacy messages. */
+  sentAt: z.string().optional(),
 })
 
 /**
@@ -543,9 +547,6 @@ export const botAgentConfigSchema = z.object({
   providers: botAgentProviderTogglesSchema,
   models: botAgentModelTogglesSchema,
   model: botAgentModelSchema,
-  temperature: z.number().min(0).max(2),
-  topP: z.number().min(0).max(1),
-  topK: z.number().int().min(1).max(100),
   maxOutputTokens: z.number().int().min(256).max(65536),
   // `.catch(true)` mirrors the server's forgiving normalization and keeps the
   // client resilient if a response predates the field (deploy ordering).
@@ -557,14 +558,7 @@ export const botAgentConfigSchema = z.object({
   memoryEnabled: z.boolean().catch(true),
   defaultMode: botAgentDefaultModeSchema,
   systemPromptBase: z.string().max(4000),
-  promptSuffixes: z.object({
-    auto: z.string().max(2000),
-    agent: z.string().max(2000),
-    manual: z.string().max(2000),
-  }),
   tools: botAgentToolTogglesSchema,
-  titleMaxLength: z.number().int().min(20).max(200),
-  previewMaxLength: z.number().int().min(50).max(500),
   // Team-set monthly token cap (Settings → Usage); `null` = plan allowance
   // alone. `.catch(null)` keeps a pre-field response resilient (deploy order).
   monthlyTokenCap: z.number().int().nullable().catch(null),

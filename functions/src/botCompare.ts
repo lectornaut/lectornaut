@@ -372,9 +372,7 @@ export const compareNodesTool = ai.defineTool(
 
     try {
       // Comparisons want a low-randomness, source-anchored read of the
-      // documents — same intent as the summarize prompt's 0.3 upper bound.
-      // `temperatureCap` clamps against the team's configured ceiling so a
-      // team that tuned its chat temperature down stays low here too. The
+      // documents — same fixed 0.3 as the summarize prompt. The
       // schema is intentionally NOT `.partial()`, so a decode-miss throws
       // INVALID_ARGUMENT — caught by the surrounding try → makeErrorResult.
       const output = await runStructuredGeneration({
@@ -382,11 +380,9 @@ export const compareNodesTool = ai.defineTool(
         prompt: promptBody,
         output: compareModelOutputSchema,
         sampling: {
-          temperature: agentConfig.temperature,
-          topP: agentConfig.topP,
+          temperature: 0.3,
           maxOutputTokens: agentConfig.maxOutputTokens,
         },
-        temperatureCap: 0.3,
       })
 
       if (!output) {

@@ -5,6 +5,7 @@ import {
   IconCircle,
   IconEye,
   IconEyeOff,
+  IconGauge,
   IconInbox,
   IconInfo,
   IconMail,
@@ -16,6 +17,7 @@ import {
   IconUserRoundPlus,
   IconWorkflow,
 } from "@/data/icons"
+import { emitter } from "@/modules/mitt"
 import { type INotification } from "@/types/notification"
 
 const props = defineProps<{
@@ -50,6 +52,8 @@ const typeIcon = computed(() => {
       return IconUserRoundMinus
     case "workflow.run":
       return IconWorkflow
+    case "usage.limit_request":
+      return IconGauge
     default:
       return IconCircle
   }
@@ -59,7 +63,10 @@ const handleClick = () => {
   if (props.notification.read === false) {
     emit("mark-read", props.notification.id)
   }
-  if (props.notification.url) {
+  // Settings is a dialog, not a route, so usage requests open it directly.
+  if (props.notification.type === "usage.limit_request") {
+    emitter.emit("Dialog.Settings.Open", "usage")
+  } else if (props.notification.url) {
     router.push(props.notification.url)
   }
   emit("click")

@@ -90,7 +90,6 @@ export async function extractMemoriesFromTurn(params: {
     const output = await runStructuredGeneration({
       model: params.model,
       sampling: { temperature: EXTRACTION_TEMPERATURE },
-      temperatureCap: EXTRACTION_TEMPERATURE,
       system: EXTRACTION_SYSTEM,
       prompt:
         `Conversation exchange to mine for durable memories:\n\n` +

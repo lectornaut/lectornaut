@@ -15,6 +15,7 @@ import {
 import { onSchedule } from "firebase-functions/v2/scheduler"
 import { createHash } from "node:crypto"
 import Stripe from "stripe"
+import { z } from "zod"
 import { buildContext, logEvent } from "./audit.js"
 import { assertAuthenticated } from "./auth.js"
 import {
@@ -25,12 +26,19 @@ import {
   mapPriceIdToPlan,
   resolveBillingCatalogFromStripe,
 } from "./billingConfig.js"
+import { defineCallable } from "./defineCallable.js"
 import { getPlanFitBlockers, type PlanFitBlocker } from "./domain.js"
 import { db } from "./firebase.js"
 import { makeEventIdempotencyKey } from "./idempotency.js"
+import { sendNotificationToMany } from "./notifier.js"
 import { can } from "./permissions.js"
 import { CALLABLE_OPTS, SCHEDULED_OPTS, TRIGGER_OPTS } from "./runtimeConfig.js"
-import { stripeSecretKey, stripeWebhookSecret } from "./secrets.js"
+import {
+  postmarkApiKey,
+  stripeSecretKey,
+  stripeWebhookSecret,
+} from "./secrets.js"
+import { getTeamAdminsAndOwners } from "./teams.js"
 import {
   AuditAction,
   Capabilities,
@@ -38,6 +46,11 @@ import {
   IMembershipRole,
   isMembershipRole,
 } from "./types.js"
+import {
+  currentUsageMonthKey,
+  getTeamUsageAndBudget,
+  isBudgetExhausted,
+} from "./usageMetering.js"
 
 type PlanChangeTiming = "immediate" | "period_end"
 type StripeEventMeta = {
@@ -2725,3 +2738,70 @@ export const stripeWebhook = onRequest(
     }
   }
 )
+
+// ============================================================================
+// Usage-limit request (member → admins)
+// ============================================================================
+
+/**
+ * A member whose team hit its monthly AI limit asks the admins/owners to raise
+ * it. Fans out through the notifier, so each admin gets it on the channels they
+ * enabled (in-app / email / native). One request per member per month: the
+ * marker doc's `create()` is the dedupe, so a double-click or a later retry
+ * reports `alreadyRequested` instead of re-notifying.
+ */
+export const requestUsageIncrease = defineCallable({
+  name: "requestUsageIncrease",
+  auth: "verified",
+  appCheck: true,
+  secrets: [postmarkApiKey],
+  input: z.object({ teamId: z.string().min(1) }),
+  handler: async ({ auth, input }): Promise<{ alreadyRequested: boolean }> => {
+    const { teamId } = input
+    const membership = await db
+      .doc(`teams/${teamId}/memberships/${auth.uid}`)
+      .get()
+    if (!membership.exists) {
+      throw new HttpsError("permission-denied", "Not a member of this team.")
+    }
+    if (!isBudgetExhausted(await getTeamUsageAndBudget(teamId))) {
+      throw new HttpsError(
+        "failed-precondition",
+        "This team hasn't reached its monthly AI usage limit."
+      )
+    }
+
+    const month = currentUsageMonthKey()
+    try {
+      await db
+        .doc(`teams/${teamId}/usage/${month}/limitRequests/${auth.uid}`)
+        .create({ userId: auth.uid, createdAt: FieldValue.serverTimestamp() })
+    } catch (err) {
+      // gRPC ALREADY_EXISTS — this member already asked this month.
+      if ((err as { code?: number }).code === 6) {
+        return { alreadyRequested: true }
+      }
+      throw err
+    }
+
+    const data = membership.data() ?? {}
+    const memberName: string =
+      data.user?.displayName || data.user?.email || "A team member"
+    const teamName: string = data.team?.name || "your team"
+    const admins = await getTeamAdminsAndOwners(teamId, auth.uid)
+
+    await sendNotificationToMany(
+      admins.map((m) => ({
+        userId: m.userId,
+        userEmail: m.email,
+        type: "usage.limit_request" as const,
+        title: "AI usage limit reached",
+        description: `${memberName} is asking for more AI usage in ${teamName}.`,
+        url: "/",
+        source: { entityType: "team", entityId: teamId },
+        emailData: { templateData: { memberName, teamName } },
+      }))
+    )
+    return { alreadyRequested: false }
+  },
+})

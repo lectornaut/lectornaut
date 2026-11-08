@@ -168,7 +168,6 @@ async function resolveGenerationContext(teamId: string) {
     modelWireName: agentConfig.model,
     sampling: {
       temperature: GENERATION_TEMPERATURE,
-      topP: agentConfig.topP,
       maxOutputTokens: Math.max(agentConfig.maxOutputTokens, MIN_OUTPUT_TOKENS),
     },
   }

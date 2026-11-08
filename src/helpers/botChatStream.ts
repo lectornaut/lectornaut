@@ -98,6 +98,12 @@ export interface BotChatMessage {
    * with the next transcript load), so those can't be edited yet.
    */
   parentSnapshotId?: string
+  /**
+   * ISO time the message was sent (user) or finished (agent). Live bubbles
+   * are stamped locally; the transcript reconcile swaps in the server's.
+   * Absent on legacy messages saved before the server stamped them.
+   */
+  sentAt?: string
 }
 
 /**
@@ -139,6 +145,7 @@ export const createMessage = (m: {
   segments?: BotChatSegment[]
   authorUid?: string
   parentSnapshotId?: string
+  sentAt?: string
 }): BotChatMessage => ({
   id: crypto.randomUUID(),
   role: m.role,
@@ -146,6 +153,7 @@ export const createMessage = (m: {
   status: m.status,
   authorUid: m.authorUid,
   parentSnapshotId: m.parentSnapshotId,
+  sentAt: m.sentAt,
   segments: m.segments
     ? m.segments.map((s) =>
         s.kind === "text"

@@ -28,11 +28,11 @@ import type {
  * SettingsAi — high-level AI configuration for the team's bot.
  *
  * Owns the AI side of the team's `agentConfig`:
- *   - Providers (Google / Anthropic / OpenAI) + per-model toggles
+ *   - Providers + per-model toggles
  *   - Default model + default chat mode
- *   - Generation parameters (temperature, topP, topK, maxOutputTokens)
- *   - System prompt base + per-mode suffixes
- *   - Display limits (title + preview max length)
+ *   - Thinking, workspace grounding, memory
+ *   - System prompt base
+ *   - Max reply length (sampling stays at each provider's default)
  *   - Restore-defaults action (scoped to AI fields only)
  *
  * Tools toggles + custom agents live in the sibling `SettingsAgents`
@@ -274,12 +274,7 @@ const sliderModel = (key: keyof IBotAgentConfig) =>
     },
   })
 
-const temperatureModel = sliderModel("temperature")
-const topPModel = sliderModel("topP")
-const topKModel = sliderModel("topK")
 const maxOutputTokensModel = sliderModel("maxOutputTokens")
-const titleMaxLengthModel = sliderModel("titleMaxLength")
-const previewMaxLengthModel = sliderModel("previewMaxLength")
 
 /**
  * Save AI-side fields only. Tools are deliberately excluded — that
@@ -308,9 +303,6 @@ const handleDiscard = () => {
 const handleResetDefaults = () => {
   draft.value = cloneAgentConfig(defaultBotAgentConfig)
 }
-
-const formatTemperature = (value: number) => value.toFixed(2)
-const formatTopP = (value: number) => value.toFixed(2)
 
 // Keep the per-provider model dropdown open while the user toggles
 // multiple checkboxes. `DropdownMenuCheckboxItem` auto-closes the
@@ -699,157 +691,12 @@ const keepMenuOpen = (event: Event) => {
               rows="3"
             />
           </Field>
-
-          <Field orientation="vertical">
-            <FieldContent>
-              <FieldLabel>
-                {{ t("settings.agents.promptSuffixes.label") }}
-              </FieldLabel>
-              <FieldDescription>
-                {{ t("settings.agents.promptSuffixes.description") }}
-              </FieldDescription>
-            </FieldContent>
-          </Field>
-
-          <Field orientation="vertical">
-            <FieldContent>
-              <FieldLabel for="agent-suffix-auto">
-                {{ t("settings.agents.promptSuffixes.auto") }}
-              </FieldLabel>
-            </FieldContent>
-            <Textarea
-              id="agent-suffix-auto"
-              v-model="draft.promptSuffixes.auto"
-              :maxlength="botAgentBounds.promptSuffix.max"
-              :disabled="!canEdit"
-              rows="3"
-            />
-          </Field>
-
-          <Field orientation="vertical">
-            <FieldContent>
-              <FieldLabel for="agent-suffix-agent">
-                {{ t("settings.agents.promptSuffixes.agent") }}
-              </FieldLabel>
-            </FieldContent>
-            <Textarea
-              id="agent-suffix-agent"
-              v-model="draft.promptSuffixes.agent"
-              :maxlength="botAgentBounds.promptSuffix.max"
-              :disabled="!canEdit"
-              rows="3"
-            />
-          </Field>
-
-          <Field orientation="vertical">
-            <FieldContent>
-              <FieldLabel for="agent-suffix-manual">
-                {{ t("settings.agents.promptSuffixes.manual") }}
-              </FieldLabel>
-            </FieldContent>
-            <Textarea
-              id="agent-suffix-manual"
-              v-model="draft.promptSuffixes.manual"
-              :maxlength="botAgentBounds.promptSuffix.max"
-              :disabled="!canEdit"
-              rows="3"
-            />
-          </Field>
         </FieldSet>
 
         <FieldSeparator />
 
-        <!-- Generation parameters -->
+        <!-- Reply length -->
         <FieldSet>
-          <Field orientation="horizontal">
-            <FieldContent>
-              <FieldLabel>
-                {{ t("settings.agents.generation.label") }}
-              </FieldLabel>
-              <FieldDescription>
-                {{ t("settings.agents.generation.description") }}
-              </FieldDescription>
-            </FieldContent>
-          </Field>
-
-          <Field orientation="horizontal">
-            <FieldContent>
-              <FieldLabel for="agent-temperature">
-                {{ t("settings.agents.temperature.label") }}
-              </FieldLabel>
-              <FieldDescription>
-                {{ t("settings.agents.temperature.description") }}
-              </FieldDescription>
-            </FieldContent>
-            <div class="flex w-72 items-center gap-3">
-              <Slider
-                id="agent-temperature"
-                v-model="temperatureModel"
-                :min="botAgentBounds.temperature.min"
-                :max="botAgentBounds.temperature.max"
-                :step="botAgentBounds.temperature.step"
-                :disabled="!canEdit"
-              />
-              <span
-                class="text-muted-foreground w-16 text-right text-sm tabular-nums"
-              >
-                {{ formatTemperature(draft.temperature) }}
-              </span>
-            </div>
-          </Field>
-
-          <Field orientation="horizontal">
-            <FieldContent>
-              <FieldLabel for="agent-top-p">
-                {{ t("settings.agents.topP.label") }}
-              </FieldLabel>
-              <FieldDescription>
-                {{ t("settings.agents.topP.description") }}
-              </FieldDescription>
-            </FieldContent>
-            <div class="flex w-72 items-center gap-3">
-              <Slider
-                id="agent-top-p"
-                v-model="topPModel"
-                :min="botAgentBounds.topP.min"
-                :max="botAgentBounds.topP.max"
-                :step="botAgentBounds.topP.step"
-                :disabled="!canEdit"
-              />
-              <span
-                class="text-muted-foreground w-16 text-right text-sm tabular-nums"
-              >
-                {{ formatTopP(draft.topP) }}
-              </span>
-            </div>
-          </Field>
-
-          <Field orientation="horizontal">
-            <FieldContent>
-              <FieldLabel for="agent-top-k">
-                {{ t("settings.agents.topK.label") }}
-              </FieldLabel>
-              <FieldDescription>
-                {{ t("settings.agents.topK.description") }}
-              </FieldDescription>
-            </FieldContent>
-            <div class="flex w-72 items-center gap-3">
-              <Slider
-                id="agent-top-k"
-                v-model="topKModel"
-                :min="botAgentBounds.topK.min"
-                :max="botAgentBounds.topK.max"
-                :step="botAgentBounds.topK.step"
-                :disabled="!canEdit"
-              />
-              <span
-                class="text-muted-foreground w-16 text-right text-sm tabular-nums"
-              >
-                {{ draft.topK }}
-              </span>
-            </div>
-          </Field>
-
           <Field orientation="horizontal">
             <FieldContent>
               <FieldLabel for="agent-max-tokens">
@@ -872,74 +719,6 @@ const keepMenuOpen = (event: Event) => {
                 class="text-muted-foreground w-16 text-right text-sm tabular-nums"
               >
                 {{ draft.maxOutputTokens }}
-              </span>
-            </div>
-          </Field>
-        </FieldSet>
-
-        <FieldSeparator />
-
-        <!-- Display limits -->
-        <FieldSet>
-          <Field orientation="horizontal">
-            <FieldContent>
-              <FieldLabel>
-                {{ t("settings.agents.limits.label") }}
-              </FieldLabel>
-              <FieldDescription>
-                {{ t("settings.agents.limits.description") }}
-              </FieldDescription>
-            </FieldContent>
-          </Field>
-
-          <Field orientation="horizontal">
-            <FieldContent>
-              <FieldLabel for="agent-title-max">
-                {{ t("settings.agents.titleMaxLength.label") }}
-              </FieldLabel>
-              <FieldDescription>
-                {{ t("settings.agents.titleMaxLength.description") }}
-              </FieldDescription>
-            </FieldContent>
-            <div class="flex w-72 items-center gap-3">
-              <Slider
-                id="agent-title-max"
-                v-model="titleMaxLengthModel"
-                :min="botAgentBounds.titleMaxLength.min"
-                :max="botAgentBounds.titleMaxLength.max"
-                :step="botAgentBounds.titleMaxLength.step"
-                :disabled="!canEdit"
-              />
-              <span
-                class="text-muted-foreground w-16 text-right text-sm tabular-nums"
-              >
-                {{ draft.titleMaxLength }}
-              </span>
-            </div>
-          </Field>
-
-          <Field orientation="horizontal">
-            <FieldContent>
-              <FieldLabel for="agent-preview-max">
-                {{ t("settings.agents.previewMaxLength.label") }}
-              </FieldLabel>
-              <FieldDescription>
-                {{ t("settings.agents.previewMaxLength.description") }}
-              </FieldDescription>
-            </FieldContent>
-            <div class="flex w-72 items-center gap-3">
-              <Slider
-                id="agent-preview-max"
-                v-model="previewMaxLengthModel"
-                :min="botAgentBounds.previewMaxLength.min"
-                :max="botAgentBounds.previewMaxLength.max"
-                :step="botAgentBounds.previewMaxLength.step"
-                :disabled="!canEdit"
-              />
-              <span
-                class="text-muted-foreground w-16 text-right text-sm tabular-nums"
-              >
-                {{ draft.previewMaxLength }}
               </span>
             </div>
           </Field>

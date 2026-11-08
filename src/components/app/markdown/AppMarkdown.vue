@@ -236,7 +236,6 @@ const isDev = import.meta.env.DEV
     :smooth-streaming="streaming ? 'auto' : false"
     :smooth-streaming-options="smoothStreamingOptions"
     :fade="!streaming"
-    :typewriter="false"
     :defer-nodes-until-visible="deferNodesUntilVisible"
     :show-tooltips="showTooltips"
     :debug-performance="isDev"

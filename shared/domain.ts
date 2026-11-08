@@ -66,6 +66,7 @@ export const NOTIFICATION_TYPES = [
   "member.joined",
   "member.removed",
   "workflow.run",
+  "usage.limit_request",
 ] as const
 export type NotificationType = (typeof NOTIFICATION_TYPES)[number]
 
@@ -165,6 +166,13 @@ export const NotificationTypeConfig = {
     inApp: true,
     email: true,
     native: false,
+    category: "communication",
+  },
+  // A member hit the monthly AI limit and asked admins/owners to raise it.
+  "usage.limit_request": {
+    inApp: true,
+    email: true,
+    native: true,
     category: "communication",
   },
 } satisfies Record<NotificationType, ChannelConfig>
@@ -444,33 +452,35 @@ export type AiProvider = (typeof AI_PROVIDERS)[number]
  */
 export const BOT_AGENT_MODELS = [
   // Google Gemini
-  "gemini-2.5-flash-lite",
-  "gemini-2.5-pro",
-  "gemini-3.6-flash",
-  "gemini-3.1-pro-preview",
+  "gemini-3.5-flash-lite",
+  "gemini-3.8-flash",
+  "gemini-4-argon",
   // Anthropic Claude
-  "claude-haiku-4-5",
-  "claude-opus-4-1",
-  "claude-sonnet-4-5",
-  "claude-fable-5",
-  "claude-opus-5",
-  "claude-sonnet-5",
+  "claude-haiku-5-5",
+  "claude-sonnet-5-5",
+  "claude-opus-5-5",
+  "claude-fable-5-1",
   // OpenAI
-  "gpt-5",
-  "gpt-5-mini",
-  "gpt-5-nano",
-  "gpt-5.6",
+  "gpt-6-luna",
+  "gpt-6.1-terra",
+  "gpt-6.1-sol",
+  "gpt-6-astra",
   // xAI Grok
-  "grok-4",
-  "grok-4-fast-reasoning",
-  "grok-4.5",
+  "grok-4.3",
+  "grok-4.7",
   // DeepSeek
-  "deepseek-chat",
-  "deepseek-reasoner",
-  "deepseek-v4-flash",
+  "deepseek-flash",
   "deepseek-v4-pro",
 ] as const
 export type BotAgentModel = (typeof BOT_AGENT_MODELS)[number]
+
+/**
+ * Default per-reply output-token ceiling for a team's agents. Single-sourced
+ * so the server default and the Settings → AI form/reset can't drift (they
+ * did: 4096 vs 2048, and a saved form persisted the low one). Thinking models
+ * (Gemini) spend reasoning INSIDE this cap, so 2–4K truncates long writes.
+ */
+export const DEFAULT_BOT_MAX_OUTPUT_TOKENS = 8192
 
 /** Default turn-handling mode for an agent. */
 export const BOT_CHAT_MODES = ["auto", "agent", "manual"] as const
@@ -971,27 +981,25 @@ export const MONTHLY_COST_CAP_MIN_CENTS = 100
  * `BOT_AGENT_MODELS` must have an entry (the Record type enforces it).
  */
 export const MODEL_MIN_PLAN: Record<BotAgentModel, BillingPlanKey> = {
-  "gemini-2.5-flash-lite": "personal",
-  "gemini-2.5-pro": "professional",
-  "gemini-3.6-flash": "personal",
-  "deepseek-v4-flash": "personal",
-  "deepseek-chat": "personal",
-  "deepseek-reasoner": "professional",
-  "gemini-3.1-pro-preview": "professional",
-  "claude-haiku-4-5": "personal",
-  "claude-opus-4-1": "business",
-  "claude-sonnet-4-5": "professional",
-  "claude-sonnet-5": "professional",
+  // Under ~$1 / $4 per MTok: every plan.
+  "gemini-3.5-flash-lite": "personal",
+  "gemini-3.8-flash": "personal",
+  "claude-haiku-5-5": "personal",
+  "gpt-6-luna": "personal",
+  "deepseek-flash": "personal",
+  // Mid-price workhorses.
+  "claude-sonnet-5-5": "professional",
+  "gpt-6.1-terra": "professional",
+  "gpt-6.1-sol": "professional",
+  "grok-4.3": "professional",
   "deepseek-v4-pro": "professional",
-  "claude-opus-5": "business",
-  "gpt-5-nano": "personal",
-  "gpt-5-mini": "professional",
-  "gpt-5": "business",
-  "gpt-5.6": "business",
-  "grok-4": "business",
-  "grok-4-fast-reasoning": "professional",
-  "grok-4.5": "business",
-  "claude-fable-5": "enterprise",
+  // Flagships.
+  "gemini-4-argon": "business",
+  "claude-opus-5-5": "business",
+  "grok-4.7": "business",
+  // Frontier ($10 / $50 per MTok).
+  "gpt-6-astra": "enterprise",
+  "claude-fable-5-1": "enterprise",
 }
 
 /**
@@ -999,7 +1007,7 @@ export const MODEL_MIN_PLAN: Record<BotAgentModel, BillingPlanKey> = {
  * one the server always has configured — embeddings and web grounding need it
  * — so a turn can never be left with no resolvable model.
  */
-export const PLAN_FLOOR_MODEL: BotAgentModel = "gemini-3.6-flash"
+export const PLAN_FLOOR_MODEL: BotAgentModel = "gemini-3.8-flash"
 
 /** Rank of a plan in `BILLING_PLAN_KEYS`; unknown/missing → the lowest plan. */
 function planRankOrLowest(planKey: string | null | undefined): number {

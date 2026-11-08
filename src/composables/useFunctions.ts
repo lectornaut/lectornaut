@@ -878,6 +878,11 @@ export interface SendBotMessageRequest {
   pendingDriveImports?: string[]
   /** Edit / regenerate: the snapshot to start from (a bubble's parent). */
   fromSnapshotId?: string
+  /**
+   * Continue the chat's failed last turn from its committed tool rounds (no
+   * new message; `message` is ignored). See the server's `continueFailedTurn`.
+   */
+  continueFailedTurn?: boolean
 }
 
 export interface SendBotMessageResponse {
@@ -921,6 +926,8 @@ export interface BotChatHistoryMessage {
   authorUid?: string
   /** User-role only: the snapshot its turn started from. */
   parentSnapshotId?: string
+  /** ISO time the message was sent (user) or finished (agent). */
+  sentAt?: string
 }
 
 /**
@@ -1120,18 +1127,12 @@ export type UpdateTeamAgentConfigPatch = Partial<{
   providers: Partial<IBotAgentConfig["providers"]>
   models: Partial<IBotAgentConfig["models"]>
   model: IBotAgentConfig["model"]
-  temperature: number
-  topP: number
-  topK: number
   maxOutputTokens: number
   thinking: boolean
   autoContext: boolean
   defaultMode: IBotAgentConfig["defaultMode"]
   systemPromptBase: string
-  promptSuffixes: Partial<IBotAgentConfig["promptSuffixes"]>
   tools: Partial<IBotAgentConfig["tools"]>
-  titleMaxLength: number
-  previewMaxLength: number
   monthlyTokenCap: number | null
   monthlyCostCapCents: number | null
 }>
@@ -1632,6 +1633,11 @@ export const cancelSubscription = createTypedCallable<
   BillingSummaryResponse
 >("cancelSubscription")
 
+export const requestUsageIncrease = createTypedCallable<
+  { teamId: string },
+  { alreadyRequested: boolean }
+>("requestUsageIncrease")
+
 export const restoreSubscription = createTypedCallable<
   RestoreSubscriptionRequest,
   BillingSummaryResponse
@@ -2011,6 +2017,12 @@ export const switchBotSessionBranch = createTypedCallable<
   BotSessionSnapshotRequest,
   { sessionId: string; headSnapshotId: string }
 >("switchBotSessionBranch")
+
+/** Stop the caller's reply running in a chat (no-op when none is). */
+export const stopBotTurn = createTypedCallable<
+  { teamId: string; workspaceId: string; sessionId: string },
+  { stopped: boolean }
+>("stopBotTurn")
 
 /** Copy the chat as of `snapshotId` into a new private chat; returns its id. */
 export const branchBotSession = createTypedCallable<
@@ -2956,6 +2968,7 @@ export function useFunctions() {
     changeSubscriptionPlan,
     cancelSubscription,
     restoreSubscription,
+    requestUsageIncrease,
     getBillingStatus,
     getBillingCatalog,
 
@@ -3004,6 +3017,7 @@ export function useFunctions() {
     deleteBotSession,
     switchBotSessionBranch,
     branchBotSession,
+    stopBotTurn,
 
     // Team agent config operations
     getTeamAgentConfig,

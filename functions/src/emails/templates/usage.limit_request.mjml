@@ -1,0 +1,45 @@
+<mjml>
+  <mj-head>
+    <mj-title>AI usage limit reached</mj-title>
+    <mj-preview
+      >{{ memberName }} is asking for more AI usage in
+      {{ teamName }}.</mj-preview
+    >
+    <mj-attributes>
+      <mj-all
+        font-family="'Helvetica Neue', Helvetica, Arial, sans-serif"
+      ></mj-all>
+      <mj-text font-size="14px" line-height="24px" color="black"></mj-text>
+      <mj-button
+        font-size="14px"
+        color="white"
+        background-color="black"
+        border-radius="8px"
+        font-weight="bold"
+      ></mj-button>
+    </mj-attributes>
+  </mj-head>
+  <mj-body>
+    <mj-include path="../partials/header.mjml" />
+
+    <mj-section padding="0">
+      <mj-column>
+        <mj-text font-size="16px" font-weight="bold">
+          AI usage limit reached
+        </mj-text>
+
+        <mj-text> Hello, </mj-text>
+
+        <mj-text>
+          <strong>{{ memberName }}</strong> can't chat with agents because
+          <strong>{{ teamName }}</strong> has used this month's AI allowance.
+          They're asking you to raise the team cap or upgrade the plan.
+        </mj-text>
+
+        <mj-button href="{{ ctaUrl }}" align="left"> Review usage </mj-button>
+      </mj-column>
+    </mj-section>
+
+    <mj-include path="../partials/footer.mjml" />
+  </mj-body>
+</mjml>

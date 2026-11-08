@@ -165,7 +165,7 @@ interface SummarizeNodeResult extends SummarizeNodeOutput {
 // ===========================================================================
 //
 // Summaries are deterministic for a given (content, model) pair — the
-// model + temperature are clamped, the prompt is identical, and the
+// model + temperature are fixed, the prompt is identical, and the
 // schema rejects any model drift. So once we've spent the tokens to
 // produce a summary, every subsequent request for the same content
 // can return the cached result instead of re-paying the LLM call.
@@ -364,8 +364,8 @@ async function runSummarize(
   // Dotprompt invocation through the shared one-shot seam: the `.prompt`
   // file owns the messages + base config (temperature 0.3) and its own
   // output schema; `runStructuredGeneration` resolves the team-selected
-  // model, assembles the per-call config (clamping temperature to 0.3 even
-  // if the team's chat temperature is higher — summaries hug the source),
+  // model, assembles the per-call config (fixed temperature 0.3 —
+  // summaries hug the source),
   // and attaches the middleware stack. The seam returns `unknown` for the
   // dotprompt shape (the prompt owns the schema), so we re-assert the
   // dotprompt's output type here exactly as before.
@@ -374,11 +374,9 @@ async function runSummarize(
     dotprompt: getSummarizeNodePrompt(),
     input: promptInput,
     sampling: {
-      temperature: agentConfig.temperature,
-      topP: agentConfig.topP,
+      temperature: 0.3,
       maxOutputTokens: agentConfig.maxOutputTokens,
     },
-    temperatureCap: 0.3,
   })) as SummarizeNodeOutput | undefined
 
   if (!output) {
