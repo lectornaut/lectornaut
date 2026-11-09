@@ -128,8 +128,10 @@ fn create_tray_menu<R: tauri::Runtime>(
 
 /// Build the macOS application menu bar.
 ///
-/// This replaces Tauri's default menu (see [`tauri::menu::Menu::default`]).
-/// The only meaningful difference is that the Quit item is a plain
+/// This replaces Tauri's default menu (see [`tauri::menu::Menu::default`])
+/// with the HIG menu order (App, File, Edit, View, Window, Help) and exposes the
+/// webview's commands so every command is reachable from the menu bar. The
+/// Quit item is a plain
 /// `MenuItem` bound to `CmdOrCtrl+Q` instead of `PredefinedMenuItem::quit`.
 ///
 /// Why: `PredefinedMenuItem::quit` on macOS is wired to
@@ -165,6 +167,18 @@ fn create_app_menu<R: tauri::Runtime>(handle: &tauri::AppHandle<R>) -> tauri::Re
         Some("CmdOrCtrl+Q"),
     )?;
 
+    // Webview commands: `emit:<event>` ids are forwarded by the shared
+    // `on_menu_event` fallback as `tray-action` and re-emitted on the webview's
+    // event bus (src/layouts/app.vue). Accelerators mirror the default
+    // bindings in src/helpers/shortcuts.ts; when the webview handles a key
+    // (preventDefault), WebKit never hands it to the menu, so nothing fires
+    // twice, and in text inputs (which global hotkeys ignore) the menu acts.
+    // ponytail: labels are English and accelerators show the defaults, not
+    // user overrides; push overrides via `set_accelerator` if that matters.
+    let cmd = |id: &str, text: &str, accel: Option<&str>| {
+        MenuItem::with_id(handle, id, text, true, accel)
+    };
+
     let app_submenu = Submenu::with_items(
         handle,
         pkg_info.name.clone(),
@@ -172,12 +186,31 @@ fn create_app_menu<R: tauri::Runtime>(handle: &tauri::AppHandle<R>) -> tauri::Re
         &[
             &PredefinedMenuItem::about(handle, None, Some(about_metadata))?,
             &PredefinedMenuItem::separator(handle)?,
+            // `settings` is the id the tray menu already uses.
+            &cmd("settings", "Settings…", Some("CmdOrCtrl+Comma"))?,
+            &PredefinedMenuItem::separator(handle)?,
             &PredefinedMenuItem::services(handle, None)?,
             &PredefinedMenuItem::separator(handle)?,
             &PredefinedMenuItem::hide(handle, None)?,
             &PredefinedMenuItem::hide_others(handle, None)?,
+            &PredefinedMenuItem::show_all(handle, None)?,
             &PredefinedMenuItem::separator(handle)?,
             &quit_item,
+        ],
+    )?;
+
+    let file_submenu = Submenu::with_items(
+        handle,
+        "File",
+        true,
+        &[
+            &cmd("emit:Tabs.Add", "New Tab", Some("CmdOrCtrl+T"))?,
+            &cmd(
+                "emit:Tabs.ReopenLast",
+                "Reopen Closed Tab",
+                Some("CmdOrCtrl+Shift+T"),
+            )?,
+            &cmd("emit:Tabs.Duplicate", "Duplicate Tab", Some("CmdOrCtrl+D"))?,
         ],
     )?;
 
@@ -200,7 +233,25 @@ fn create_app_menu<R: tauri::Runtime>(handle: &tauri::AppHandle<R>) -> tauri::Re
         handle,
         "View",
         true,
-        &[&PredefinedMenuItem::fullscreen(handle, None)?],
+        &[
+            &cmd(
+                "emit:Sidebar.Left.Toggle",
+                "Show/Hide Left Sidebar",
+                Some("CmdOrCtrl+Shift+Backslash"),
+            )?,
+            &cmd(
+                "emit:Sidebar.Right.Toggle",
+                "Show/Hide Right Sidebar",
+                Some("CmdOrCtrl+Backslash"),
+            )?,
+            &cmd(
+                "emit:Panel.Bottom.Toggle",
+                "Show/Hide Bottom Panel",
+                Some("CmdOrCtrl+J"),
+            )?,
+            &PredefinedMenuItem::separator(handle)?,
+            &PredefinedMenuItem::fullscreen(handle, None)?,
+        ],
     )?;
 
     let window_submenu = Submenu::with_items(
@@ -221,12 +272,39 @@ fn create_app_menu<R: tauri::Runtime>(handle: &tauri::AppHandle<R>) -> tauri::Re
                 true,
                 Some("CmdOrCtrl+W"),
             )?,
+            &PredefinedMenuItem::separator(handle)?,
+            &PredefinedMenuItem::bring_all_to_front(handle, None)?,
         ],
     )?;
 
+    let help_submenu = Submenu::with_items(
+        handle,
+        "Help",
+        true,
+        &[
+            &cmd(
+                "emit:Dialog.Shortcuts.Open",
+                "Keyboard Shortcuts",
+                Some("CmdOrCtrl+Slash"),
+            )?,
+            &cmd("emit:Dialog.Changelog.Open", "What’s New", None)?,
+        ],
+    )?;
+
+    // Lets AppKit add the open-window list to Window and the search field to Help.
+    window_submenu.set_as_windows_menu_for_nsapp()?;
+    help_submenu.set_as_help_menu_for_nsapp()?;
+
     Menu::with_items(
         handle,
-        &[&app_submenu, &edit_submenu, &view_submenu, &window_submenu],
+        &[
+            &app_submenu,
+            &file_submenu,
+            &edit_submenu,
+            &view_submenu,
+            &window_submenu,
+            &help_submenu,
+        ],
     )
 }
 
@@ -377,8 +455,11 @@ pub fn run() {
 
             file_capture::setup(app)?;
 
+            // `Sidebar` is the semantic material for a main window's translucent
+            // chrome and follows light/dark; `HudWindow` is for floating HUD
+            // panels (still used by the file-capture panel).
             #[cfg(target_os = "macos")]
-            apply_vibrancy(&window, NSVisualEffectMaterial::HudWindow, None, None)
+            apply_vibrancy(&window, NSVisualEffectMaterial::Sidebar, None, None)
                 .expect("Unsupported platform! 'apply_vibrancy' is only supported on macOS");
 
             #[cfg(target_os = "windows")]

@@ -111,7 +111,12 @@ watch(canPreview, (ok) => {
     @update:open="onPreviewUpdate"
   >
     <HoverCardTrigger as-child>
-      <Button variant="outline" size="icon" @click="toggle">
+      <Button
+        :aria-label="tooltipLabel"
+        variant="outline"
+        size="icon"
+        @click="toggle"
+      >
         <slot><Component :is="icon" /></slot>
       </Button>
     </HoverCardTrigger>
@@ -134,7 +139,12 @@ watch(canPreview, (ok) => {
 
   <Tooltip v-else>
     <TooltipTrigger as-child>
-      <Button variant="outline" size="icon" @click="toggle">
+      <Button
+        :aria-label="tooltipLabel"
+        variant="outline"
+        size="icon"
+        @click="toggle"
+      >
         <slot><Component :is="icon" /></slot>
       </Button>
     </TooltipTrigger>

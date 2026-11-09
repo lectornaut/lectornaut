@@ -19,6 +19,14 @@ const { sidebarOpen, sidebarWidth } = storeToRefs(uiPreferencesStore)
 
 const themeStore = useThemeStore()
 const { themeSettings } = storeToRefs(themeStore)
+// The OS Reduce Transparency setting wins over the in-app toggle. On macOS
+// Tauri the native vibrancy view already goes opaque; this covers browsers.
+const reduceTransparency = useMediaQuery(
+  "(prefers-reduced-transparency: reduce)"
+)
+const isSidebarTranslucent = computed(
+  () => themeSettings.value.translucentSidebar && !reduceTransparency.value
+)
 
 const billingStore = useBillingStore()
 const { canUseFeature } = billingStore
@@ -70,6 +78,12 @@ onMounted(async () => {
     await listen("tray-action", (event) => {
       if (event.payload === "settings") {
         emitter.emit("Dialog.Settings.Open", "preferences")
+      } else if (
+        typeof event.payload === "string" &&
+        event.payload.startsWith("emit:")
+      ) {
+        // Native menu bar commands (src-tauri/src/lib.rs `create_app_menu`).
+        emitter.emit(event.payload.slice(5))
       }
     })
   }
@@ -115,7 +129,7 @@ onBeforeUnmount(() =>
 <template>
   <SidebarProvider
     v-model:open="sidebarOpen"
-    :class="{ 'bg-transparent!': themeSettings.translucentSidebar }"
+    :class="{ 'bg-transparent!': isSidebarTranslucent }"
     :style="{ '--sidebar-width': `${sidebarWidth}rem` }"
   >
     <div class="flex size-full min-h-0 min-w-0 grow flex-col overflow-clip">

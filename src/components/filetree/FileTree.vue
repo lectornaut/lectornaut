@@ -668,6 +668,7 @@ onBeforeUnmount(() => {
               <Tooltip>
                 <TooltipTrigger as-child>
                   <Button
+                    :aria-label="t('fileTree.newFolder')"
                     size="icon"
                     variant="outline"
                     @click.stop="openCreateDialog('folder', ROOT_PARENT_ID)"
@@ -682,6 +683,7 @@ onBeforeUnmount(() => {
               <Tooltip>
                 <TooltipTrigger as-child>
                   <Button
+                    :aria-label="t('fileTree.newFile')"
                     size="icon"
                     variant="outline"
                     @click.stop="openCreateDialog('file', ROOT_PARENT_ID)"

@@ -105,6 +105,7 @@ defineSlots<{
         <Tooltip>
           <TooltipTrigger as-child>
             <Button
+              :aria-label="$t('components.dataTable.goToFirstPage')"
               variant="outline"
               size="icon"
               :disabled="!table.getCanPreviousPage()"
@@ -120,6 +121,7 @@ defineSlots<{
         <Tooltip>
           <TooltipTrigger as-child>
             <Button
+              :aria-label="$t('components.dataTable.goToPreviousPage')"
               variant="outline"
               size="icon"
               :disabled="!table.getCanPreviousPage()"
@@ -135,6 +137,7 @@ defineSlots<{
         <Tooltip>
           <TooltipTrigger as-child>
             <Button
+              :aria-label="$t('components.dataTable.goToNextPage')"
               variant="outline"
               size="icon"
               :disabled="!table.getCanNextPage()"
@@ -150,6 +153,7 @@ defineSlots<{
         <Tooltip>
           <TooltipTrigger as-child>
             <Button
+              :aria-label="$t('components.dataTable.goToLastPage')"
               variant="outline"
               size="icon"
               :disabled="!table.getCanNextPage()"

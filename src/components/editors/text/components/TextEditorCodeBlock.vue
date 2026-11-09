@@ -89,7 +89,16 @@ const surfaceStyle = computed(() => ({
       <TooltipProvider>
         <Tooltip>
           <TooltipTrigger as-child>
-            <Button variant="outline" size="icon" @click="copyCode">
+            <Button
+              :aria-label="
+                copied
+                  ? t('components.textEditor.copied')
+                  : t('components.textEditor.copyCode')
+              "
+              variant="outline"
+              size="icon"
+              @click="copyCode"
+            >
               <IconCheck v-if="copied" />
               <IconCopy v-else />
             </Button>

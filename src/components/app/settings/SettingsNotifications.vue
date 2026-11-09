@@ -189,6 +189,11 @@ const frequencyOptions = computed(() => [
             <Tooltip>
               <TooltipTrigger as-child>
                 <InputGroupButton
+                  :aria-label="
+                    t('settings.notifications.channels.test', {
+                      channel: t('settings.notifications.channels.email.label'),
+                    })
+                  "
                   variant="ghost"
                   size="icon-xs"
                   :disabled="
@@ -239,6 +244,11 @@ const frequencyOptions = computed(() => [
             <Tooltip>
               <TooltipTrigger as-child>
                 <InputGroupButton
+                  :aria-label="
+                    t('settings.notifications.channels.test', {
+                      channel: t('settings.notifications.channels.inApp.label'),
+                    })
+                  "
                   variant="ghost"
                   size="icon-xs"
                   :disabled="
@@ -289,6 +299,13 @@ const frequencyOptions = computed(() => [
             <Tooltip>
               <TooltipTrigger as-child>
                 <InputGroupButton
+                  :aria-label="
+                    t('settings.notifications.channels.test', {
+                      channel: t(
+                        'settings.notifications.channels.native.label'
+                      ),
+                    })
+                  "
                   variant="ghost"
                   size="icon-xs"
                   :disabled="

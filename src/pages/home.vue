@@ -674,6 +674,14 @@ const expandedCard = ref<number | null>(null)
               <TooltipTrigger as-child>
                 <PopoverTrigger as-child>
                   <Button
+                    :aria-label="
+                      range.start
+                        ? formatDate(
+                            range.start.toDate(getLocalTimeZone()),
+                            'MMM D, YYYY'
+                          )
+                        : 'Start date'
+                    "
                     variant="outline"
                     size="icon"
                     class="data-[state=open]:bg-accent"
@@ -787,6 +795,11 @@ const expandedCard = ref<number | null>(null)
                       <Tooltip>
                         <TooltipTrigger as-child>
                           <Button
+                            :aria-label="
+                              expandedCard === card.id
+                                ? t('actions.collapse')
+                                : t('actions.expand')
+                            "
                             variant="outline"
                             size="icon"
                             @click="
@@ -816,6 +829,7 @@ const expandedCard = ref<number | null>(null)
                           <TooltipTrigger as-child>
                             <DropdownMenuTrigger as-child>
                               <Button
+                                :aria-label="t('actions.moreOptions')"
                                 variant="outline"
                                 size="icon"
                                 class="data-[state=open]:bg-accent"

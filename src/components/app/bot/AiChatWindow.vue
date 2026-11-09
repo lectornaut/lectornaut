@@ -245,6 +245,13 @@ useResizeObserver(draggableEl, (entries) => {
                         <Tooltip>
                           <TooltipTrigger as-child>
                             <InputGroupButton
+                              :aria-label="
+                                t(
+                                  isDocked
+                                    ? 'layouts.app.popout.undock'
+                                    : 'layouts.app.popout.dock'
+                                )
+                              "
                               variant="ghost"
                               size="icon-sm"
                               @click="isDocked = !isDocked"
@@ -264,6 +271,11 @@ useResizeObserver(draggableEl, (entries) => {
                         <Tooltip v-if="!isDocked">
                           <TooltipTrigger as-child>
                             <InputGroupButton
+                              :aria-label="
+                                isPoppedOutMinimized
+                                  ? t('layouts.app.popout.expand')
+                                  : t('layouts.app.popout.minimize')
+                              "
                               variant="ghost"
                               size="icon-sm"
                               @click="
@@ -285,6 +297,13 @@ useResizeObserver(draggableEl, (entries) => {
                         <Tooltip>
                           <TooltipTrigger as-child>
                             <InputGroupButton
+                              :aria-label="
+                                t(
+                                  isDocked
+                                    ? 'layouts.app.sidebar.close'
+                                    : 'layouts.app.popout.close'
+                                )
+                              "
                               variant="ghost"
                               size="icon-sm"
                               @click="closeChatWindow"

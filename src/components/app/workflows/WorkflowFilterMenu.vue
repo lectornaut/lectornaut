@@ -50,6 +50,7 @@ const keepMenuOpen = (event: Event): void => {
         <TooltipTrigger as-child>
           <DropdownMenuTrigger as-child>
             <InputGroupButton
+              :aria-label="t('pages.workflows.filter')"
               size="icon-xs"
               class="data-[state=open]:bg-accent relative"
             >

@@ -20,7 +20,7 @@ useMacOSWindowControls(windowControlsHeader)
   >
     <div class="flex items-center justify-start gap-2">
       <Button variant="ghost" size="icon-sm" as-child>
-        <RouterLink to="/start">
+        <RouterLink to="/start" :aria-label="$t('actions.goBack')">
           <IconArrowLeft />
         </RouterLink>
       </Button>

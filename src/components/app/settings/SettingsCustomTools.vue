@@ -920,6 +920,7 @@ const handleEditorSave = async (): Promise<void> => {
                       size="icon"
                       class="col-span-1 justify-self-end"
                       :disabled="!canManage"
+                      :aria-label="t('common.remove')"
                       @click="removeField('inputSchema', index)"
                     >
                       <IconTrash />
@@ -1014,6 +1015,7 @@ const handleEditorSave = async (): Promise<void> => {
                       size="icon"
                       class="col-span-1 justify-self-end"
                       :disabled="!canManage"
+                      :aria-label="t('common.remove')"
                       @click="removeField('outputSchema', index)"
                     >
                       <IconTrash />

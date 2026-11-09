@@ -363,6 +363,11 @@ const isEditing = (shortcut: Shortcut): boolean =>
                           <Tooltip v-if="isCustomized(shortcut)">
                             <TooltipTrigger as-child>
                               <InputGroupButton
+                                :aria-label="
+                                  t(
+                                    'components.global.shortcuts.restoreDefault'
+                                  )
+                                "
                                 size="icon-xs"
                                 :disabled="isShortcutsLoading"
                                 @mousedown.prevent
@@ -380,6 +385,9 @@ const isEditing = (shortcut: Shortcut): boolean =>
                           <Tooltip v-if="isEditing(shortcut) && isRecording">
                             <TooltipTrigger as-child>
                               <InputGroupButton
+                                :aria-label="
+                                  t('components.global.shortcuts.save')
+                                "
                                 size="icon-xs"
                                 :disabled="isShortcutsLoading"
                               >
@@ -393,6 +401,9 @@ const isEditing = (shortcut: Shortcut): boolean =>
                           <Tooltip v-else>
                             <TooltipTrigger as-child>
                               <InputGroupButton
+                                :aria-label="
+                                  t('components.global.shortcuts.recording')
+                                "
                                 size="icon-xs"
                                 :disabled="isShortcutsLoading"
                                 @mousedown.prevent
@@ -426,7 +437,13 @@ const isEditing = (shortcut: Shortcut): boolean =>
                       <InputGroupAddon align="inline-end">
                         <Tooltip>
                           <TooltipTrigger as-child>
-                            <InputGroupButton size="icon-xs" disabled>
+                            <InputGroupButton
+                              :aria-label="
+                                t('components.global.shortcuts.uneditable')
+                              "
+                              size="icon-xs"
+                              disabled
+                            >
                               <IconKeyboard />
                             </InputGroupButton>
                           </TooltipTrigger>

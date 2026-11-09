@@ -378,6 +378,9 @@ const keepMenuOpen = (event: Event) => {
                   <TooltipTrigger as-child>
                     <DropdownMenuTrigger as-child>
                       <InputGroupButton
+                        :aria-label="
+                          t('settings.agents.providers.configureModels')
+                        "
                         variant="ghost"
                         size="icon-xs"
                         :disabled="!canEdit || !draft.providers[provider.id]"

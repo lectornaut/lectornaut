@@ -296,6 +296,7 @@ watch(copied, (isCopied) => {
                       <Tooltip>
                         <TooltipTrigger as-child>
                           <InputGroupButton
+                            :aria-label="t('common.save')"
                             variant="secondary"
                             size="icon-xs"
                             @click.prevent="saveRename"
@@ -351,6 +352,7 @@ watch(copied, (isCopied) => {
                               <Tooltip>
                                 <TooltipTrigger as-child>
                                   <InputGroupButton
+                                    :aria-label="t('common.close')"
                                     variant="ghost"
                                     size="icon-xs"
                                     class="invisible group-hover:visible"
@@ -472,6 +474,7 @@ watch(copied, (isCopied) => {
                         <Tooltip>
                           <TooltipTrigger as-child>
                             <InputGroupButton
+                              :aria-label="t('actions.copyURL')"
                               variant="ghost"
                               size="icon-xs"
                               @click="handleCopyTabUrl(tab)"
@@ -509,7 +512,12 @@ watch(copied, (isCopied) => {
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger as-child>
-                  <Button variant="outline" size="icon-sm" @click="openNewTab">
+                  <Button
+                    :aria-label="t('tabs.newTab')"
+                    variant="outline"
+                    size="icon-sm"
+                    @click="openNewTab"
+                  >
                     <IconPlus />
                   </Button>
                 </TooltipTrigger>
@@ -525,7 +533,11 @@ watch(copied, (isCopied) => {
                   <DropdownMenu>
                     <TooltipTrigger as-child>
                       <DropdownMenuTrigger as-child>
-                        <Button variant="ghost" size="icon-sm">
+                        <Button
+                          :aria-label="t('tabs.options')"
+                          variant="ghost"
+                          size="icon-sm"
+                        >
                           <IconChevronDown />
                         </Button>
                       </DropdownMenuTrigger>

@@ -82,6 +82,7 @@ const keepMenuOpen = (event: Event) => {
         <TooltipTrigger as-child>
           <DropdownMenuTrigger as-child>
             <InputGroupButton
+              :aria-label="t('ai.filterSessions')"
               size="icon-xs"
               class="data-[state=open]:bg-accent relative"
             >

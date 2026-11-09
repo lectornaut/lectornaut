@@ -206,7 +206,11 @@ const formatWhen = (ts: unknown): string =>
               <TooltipProvider>
                 <Tooltip>
                   <TooltipTrigger as-child>
-                    <InputGroupButton size="icon-xs" @click="expandSearch">
+                    <InputGroupButton
+                      :aria-label="t('pages.workflows.search')"
+                      size="icon-xs"
+                      @click="expandSearch"
+                    >
                       <IconSearch />
                     </InputGroupButton>
                   </TooltipTrigger>
@@ -234,6 +238,7 @@ const formatWhen = (ts: unknown): string =>
                 <Tooltip>
                   <TooltipTrigger as-child>
                     <InputGroupButton
+                      :aria-label="t('ai.searchClear')"
                       size="icon-xs"
                       @mousedown.prevent
                       @click="filter.state.search = ''"

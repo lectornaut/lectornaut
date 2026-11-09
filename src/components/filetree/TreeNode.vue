@@ -236,6 +236,9 @@ const showEmptyState = computed(
               variant="ghost"
               size="icon-xs"
               class="absolute top-1.5 left-1.5"
+              :aria-label="
+                isExpanded ? t('actions.collapse') : t('actions.expand')
+              "
               @click.stop
             >
               <Spinner v-if="isLoading" />

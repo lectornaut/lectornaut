@@ -607,6 +607,9 @@ const closeTab = (id: string) => {
                                             <Tooltip>
                                               <TooltipTrigger as-child>
                                                 <InputGroupButton
+                                                  :aria-label="
+                                                    t('layouts.app.tabs.close')
+                                                  "
                                                   variant="ghost"
                                                   size="icon-xs"
                                                   class="invisible group-hover:visible"
@@ -633,6 +636,9 @@ const closeTab = (id: string) => {
                                           <Tooltip>
                                             <TooltipTrigger as-child>
                                               <Button
+                                                :aria-label="
+                                                  t('layouts.app.tabs.new')
+                                                "
                                                 variant="ghost"
                                                 size="icon"
                                                 @click="newTab()"
@@ -655,6 +661,15 @@ const closeTab = (id: string) => {
                                           <Tooltip>
                                             <TooltipTrigger as-child>
                                               <Button
+                                                :aria-label="
+                                                  topPanel?.isCollapsed
+                                                    ? t(
+                                                        'layouts.app.panel.minimize'
+                                                      )
+                                                    : t(
+                                                        'layouts.app.panel.maximize'
+                                                      )
+                                                "
                                                 variant="outline"
                                                 size="icon"
                                                 @click="
@@ -684,6 +699,9 @@ const closeTab = (id: string) => {
                                           <Tooltip>
                                             <TooltipTrigger as-child>
                                               <Button
+                                                :aria-label="
+                                                  t('layouts.app.panel.close')
+                                                "
                                                 variant="outline"
                                                 size="icon"
                                                 @click="bottomPanel?.collapse()"

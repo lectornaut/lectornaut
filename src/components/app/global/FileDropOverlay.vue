@@ -1093,6 +1093,9 @@ const macOSTrafficLightsVisible = useMacOSTrafficLightsVisible()
               <Tooltip>
                 <TooltipTrigger as-child>
                   <Button
+                    :aria-label="
+                      t('components.fileDropOverlay.tooltips.uploadFiles')
+                    "
                     variant="outline"
                     size="icon"
                     :disabled="isMoving"
@@ -1276,6 +1279,9 @@ const macOSTrafficLightsVisible = useMacOSTrafficLightsVisible()
                   <Tooltip>
                     <TooltipTrigger as-child>
                       <Button
+                        :aria-label="
+                          t('components.fileDropOverlay.tooltips.previewFile')
+                        "
                         variant="outline"
                         size="icon"
                         :disabled="
@@ -1293,6 +1299,7 @@ const macOSTrafficLightsVisible = useMacOSTrafficLightsVisible()
                   <Tooltip>
                     <TooltipTrigger as-child>
                       <Button
+                        :aria-label="revealFileTooltip"
                         variant="outline"
                         size="icon"
                         :disabled="!isTauri || file.source !== 'tauri'"
@@ -1306,6 +1313,9 @@ const macOSTrafficLightsVisible = useMacOSTrafficLightsVisible()
                   <Tooltip>
                     <TooltipTrigger as-child>
                       <Button
+                        :aria-label="
+                          t('components.fileDropOverlay.tooltips.removeFile')
+                        "
                         variant="outline"
                         size="icon"
                         :disabled="isMoving"
@@ -1363,6 +1373,9 @@ const macOSTrafficLightsVisible = useMacOSTrafficLightsVisible()
                   <Tooltip>
                     <TooltipTrigger as-child>
                       <Button
+                        :aria-label="
+                          t('components.fileDropOverlay.tooltips.previewFile')
+                        "
                         variant="outline"
                         size="icon"
                         :disabled="
@@ -1380,6 +1393,7 @@ const macOSTrafficLightsVisible = useMacOSTrafficLightsVisible()
                   <Tooltip v-if="!(!isTauri || file.source !== 'tauri')">
                     <TooltipTrigger as-child>
                       <Button
+                        :aria-label="revealFileTooltip"
                         variant="outline"
                         size="icon"
                         @click="revealFile(file)"
@@ -1392,6 +1406,9 @@ const macOSTrafficLightsVisible = useMacOSTrafficLightsVisible()
                   <Tooltip>
                     <TooltipTrigger as-child>
                       <Button
+                        :aria-label="
+                          t('components.fileDropOverlay.tooltips.removeFile')
+                        "
                         variant="outline"
                         size="icon"
                         :disabled="isMoving"
@@ -1435,7 +1452,13 @@ const macOSTrafficLightsVisible = useMacOSTrafficLightsVisible()
               <DropdownMenu>
                 <TooltipTrigger as-child>
                   <DropdownMenuTrigger as-child>
-                    <Button variant="secondary" size="icon">
+                    <Button
+                      :aria-label="
+                        t('components.fileDropOverlay.tooltips.more')
+                      "
+                      variant="secondary"
+                      size="icon"
+                    >
                       <IconMoreHorizontal />
                     </Button>
                   </DropdownMenuTrigger>
@@ -1459,7 +1482,13 @@ const macOSTrafficLightsVisible = useMacOSTrafficLightsVisible()
             <ButtonGroupSeparator />
             <Tooltip>
               <TooltipTrigger as-child>
-                <Button variant="secondary" size="icon">
+                <Button
+                  :aria-label="
+                    t('components.fileDropOverlay.tooltips.settings')
+                  "
+                  variant="secondary"
+                  size="icon"
+                >
                   <IconSettings />
                 </Button>
               </TooltipTrigger>

@@ -437,6 +437,11 @@ const restoreDefaultShortcut = () => {
                   <Tooltip v-if="!isDefaultShortcut">
                     <TooltipTrigger as-child>
                       <InputGroupButton
+                        :aria-label="
+                          t(
+                            'settings.preferences.fileDropOverlayShortcutKeys.restoreDefault'
+                          )
+                        "
                         size="icon-xs"
                         :disabled="isUpdatingPreferences !== null"
                         @mousedown.prevent
@@ -456,6 +461,11 @@ const restoreDefaultShortcut = () => {
                   <Tooltip v-if="isRecording">
                     <TooltipTrigger as-child>
                       <InputGroupButton
+                        :aria-label="
+                          t(
+                            'settings.preferences.fileDropOverlayShortcutKeys.recording'
+                          )
+                        "
                         size="icon-xs"
                         :disabled="isUpdatingPreferences !== null"
                       >
@@ -473,6 +483,11 @@ const restoreDefaultShortcut = () => {
                   <Tooltip v-else>
                     <TooltipTrigger as-child>
                       <InputGroupButton
+                        :aria-label="
+                          t(
+                            'settings.preferences.fileDropOverlayShortcutKeys.recording'
+                          )
+                        "
                         size="icon-xs"
                         :disabled="isUpdatingPreferences !== null"
                         @mousedown.prevent

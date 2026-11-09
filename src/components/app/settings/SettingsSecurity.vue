@@ -414,7 +414,12 @@ const handleDeleteSso = async () => {
                 localApprovedDomains = filterValidDomains($event as string[])
               "
             >
-              <InputGroupButton variant="ghost" size="icon-xs" disabled>
+              <InputGroupButton
+                variant="ghost"
+                size="icon-xs"
+                disabled
+                aria-hidden="true"
+              >
                 <IconGlobe />
               </InputGroupButton>
               <TagsInputItem
@@ -436,6 +441,7 @@ const handleDeleteSso = async () => {
                 <Tooltip>
                   <TooltipTrigger as-child>
                     <InputGroupButton
+                      :aria-label="t('actions.save')"
                       variant="ghost"
                       size="icon-xs"
                       class="invisible group-focus-within:visible"
@@ -603,6 +609,7 @@ const handleDeleteSso = async () => {
               <Tooltip>
                 <TooltipTrigger as-child>
                   <InputGroupButton
+                    :aria-label="t('settings.security.sso.configure')"
                     variant="ghost"
                     size="icon-xs"
                     :disabled="!loginMethods.sso || updatingMethod !== null"
@@ -688,7 +695,12 @@ const handleDeleteSso = async () => {
                         ssoDomains = filterValidDomains($event as string[])
                       "
                     >
-                      <InputGroupButton variant="ghost" size="icon-xs" disabled>
+                      <InputGroupButton
+                        variant="ghost"
+                        size="icon-xs"
+                        disabled
+                        aria-hidden="true"
+                      >
                         <IconGlobe />
                       </InputGroupButton>
                       <TagsInputItem
@@ -710,6 +722,7 @@ const handleDeleteSso = async () => {
                         <Tooltip>
                           <TooltipTrigger as-child>
                             <InputGroupButton
+                              :aria-label="t('actions.save')"
                               variant="ghost"
                               size="icon-xs"
                               class="invisible group-focus-within:visible"

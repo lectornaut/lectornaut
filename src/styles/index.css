@@ -475,6 +475,7 @@
     base` so its `!important` reliably wins over later-layer and scoped
     component transitions.
   */
+  :root[data-reduced-motion],
   :root[data-reduced-motion] *,
   :root[data-reduced-motion] *::before,
   :root[data-reduced-motion] *::after {
@@ -482,6 +483,20 @@
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
+  }
+
+  /* Same kill-switch for the OS setting, so the in-app toggle is an extra
+     opt-out rather than the only way to get it. */
+  @media (prefers-reduced-motion: reduce) {
+    :root,
+    :root *,
+    :root *::before,
+    :root *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
   }
 }
 
@@ -530,6 +545,12 @@
   :root[data-reduced-motion]
     :is(.scroll-fade, .scroll-fade-y, .scroll-fade-x, .scroll-fade-b) {
     animation-duration: auto !important;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    :root :is(.scroll-fade, .scroll-fade-y, .scroll-fade-x, .scroll-fade-b) {
+      animation-duration: auto !important;
+    }
   }
 }
 

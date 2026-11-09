@@ -10,6 +10,7 @@ import { store } from "@/modules/theme"
         <TooltipTrigger as-child>
           <DropdownMenuTrigger as-child>
             <Button
+              :aria-label="$t('components.colorMode.tooltip')"
               variant="ghost"
               size="icon"
               class="data-[state=open]:bg-accent"

@@ -18,6 +18,7 @@ import { defaultMenu } from "@/helpers/defaults"
           :class="item.style.bg"
           class="pointer-events-none"
           tabindex="-1"
+          aria-hidden="true"
         >
           <Component :is="item.icon" :class="item.style.text" />
         </Button>
@@ -27,7 +28,7 @@ import { defaultMenu } from "@/helpers/defaults"
       </ItemContent>
       <ItemActions>
         <Button variant="outline" size="icon" as-child>
-          <RouterLink :to="item.url">
+          <RouterLink :to="item.url" :aria-label="item.action">
             <IconArrowRight />
           </RouterLink>
         </Button>

@@ -1,4 +1,5 @@
 <script lang="ts" setup>
+import { buttonVariants } from "@/components/ui/button"
 import { useNodeActivityLogs } from "@/composables/useNodeActivityLogs"
 import {
   IconAlertTriangle,
@@ -292,9 +293,13 @@ useInfiniteScroll(
             >
               <div class="relative flex flex-col items-center self-stretch">
                 <StepperIndicator as-child>
-                  <Button variant="outline" size="icon-xs">
+                  <span
+                    :class="
+                      buttonVariants({ variant: 'outline', size: 'icon-xs' })
+                    "
+                  >
                     <Component :is="getActionIcon(entry)" />
-                  </Button>
+                  </span>
                 </StepperIndicator>
                 <StepperSeparator
                   v-if="index < logs.length - 1"

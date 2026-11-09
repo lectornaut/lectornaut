@@ -377,7 +377,12 @@ const authenticateApple = () =>
       <div class="flex flex-col gap-2">
         <!-- Email display with back button -->
         <div class="flex items-center gap-2">
-          <Button variant="ghost" size="icon" @click="goBackToEmail">
+          <Button
+            variant="ghost"
+            size="icon"
+            :aria-label="t('actions.goBack')"
+            @click="goBackToEmail"
+          >
             <IconArrowLeft />
           </Button>
           <span class="text-muted-foreground truncate text-sm">
@@ -432,6 +437,7 @@ const authenticateApple = () =>
                     <Tooltip>
                       <TooltipTrigger as-child>
                         <InputGroupButton
+                          :aria-label="t('enter.tooltips.strongPassword')"
                           variant="ghost"
                           size="icon-xs"
                           class="ml-auto"
@@ -453,6 +459,7 @@ const authenticateApple = () =>
                         <TooltipTrigger as-child>
                           <AlertDialogTrigger as-child>
                             <InputGroupButton
+                              :aria-label="t('enter.forgotPassword.tooltip')"
                               variant="ghost"
                               size="icon-xs"
                               class="ml-auto"
@@ -520,6 +527,11 @@ const authenticateApple = () =>
                   <Tooltip>
                     <TooltipTrigger as-child>
                       <InputGroupButton
+                        :aria-label="
+                          passwordInputType === 'password'
+                            ? t('enter.labels.showPassword')
+                            : t('enter.labels.hidePassword')
+                        "
                         variant="ghost"
                         size="icon-xs"
                         class="ml-auto"

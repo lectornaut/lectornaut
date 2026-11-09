@@ -1,4 +1,5 @@
 <script lang="ts" setup>
+import { buttonVariants } from "@/components/ui/button"
 import { useDismissGuard } from "@/composables/useDismissGuard"
 import {
   assignWorkspaceGroupRole,
@@ -816,7 +817,22 @@ const handleSubmit = async () => {
                             >
                               <Tooltip>
                                 <TooltipTrigger as-child>
-                                  <InputGroupButton size="icon-xs">
+                                  <InputGroupButton
+                                    :aria-label="
+                                      t(
+                                        'components.workspaceDialog.roles.via',
+                                        {
+                                          role: t(
+                                            `settings.members.roles.${groupProvenanceByUser.get(member.userId)!.role}`
+                                          ),
+                                          group: groupProvenanceByUser.get(
+                                            member.userId
+                                          )!.group,
+                                        }
+                                      )
+                                    "
+                                    size="icon-xs"
+                                  >
                                     <IconUsersRound />
                                   </InputGroupButton>
                                 </TooltipTrigger>
@@ -846,7 +862,19 @@ const handleSubmit = async () => {
                             >
                               <Tooltip>
                                 <TooltipTrigger as-child>
-                                  <InputGroupButton size="icon-xs">
+                                  <InputGroupButton
+                                    :aria-label="
+                                      t(
+                                        'components.workspaceDialog.roles.fromTeam',
+                                        {
+                                          role: t(
+                                            `settings.members.roles.${member.role}`
+                                          ),
+                                        }
+                                      )
+                                    "
+                                    size="icon-xs"
+                                  >
                                     <IconBuilding />
                                   </InputGroupButton>
                                 </TooltipTrigger>
@@ -885,6 +913,7 @@ const handleSubmit = async () => {
                         <Tooltip>
                           <TooltipTrigger as-child>
                             <Button
+                              :aria-label="t(participationLockReason(member))"
                               variant="outline"
                               size="icon"
                               :disabled="isLoading"
@@ -992,7 +1021,15 @@ const handleSubmit = async () => {
                           <TooltipProvider>
                             <Tooltip>
                               <TooltipTrigger as-child>
-                                <Button variant="outline" size="icon">
+                                <Button
+                                  :aria-label="
+                                    t(
+                                      'components.workspaceDialog.roles.agentLocked'
+                                    )
+                                  "
+                                  variant="outline"
+                                  size="icon"
+                                >
                                   <Checkbox
                                     :model-value="true"
                                     disabled
@@ -1082,12 +1119,14 @@ const handleSubmit = async () => {
                         </SelectContent>
                       </Select>
                       <!-- Access grant toggle. Off = no access (hides role). -->
-                      <Button
-                        variant="outline"
-                        size="icon"
-                        :disabled="isLoading"
+                      <label
+                        :class="[
+                          buttonVariants({ variant: 'outline', size: 'icon' }),
+                          'has-disabled:opacity-50',
+                        ]"
                       >
                         <Checkbox
+                          :aria-label="group.name"
                           :model-value="!!workspaceGroupGrants[group.id]"
                           :disabled="isLoading"
                           class="rounded border-none opacity-100! disabled:opacity-25! data-[state=checked]:bg-transparent"
@@ -1096,7 +1135,7 @@ const handleSubmit = async () => {
                               handleGroupGrantToggle(group.id, value === true)
                           "
                         />
-                      </Button>
+                      </label>
                     </ItemActions>
                   </Item>
                 </ItemGroup>

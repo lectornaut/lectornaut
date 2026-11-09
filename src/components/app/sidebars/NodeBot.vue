@@ -154,6 +154,7 @@ const onNewNodeChat = () => {
                     <Tooltip v-if="filter.state.search">
                       <TooltipTrigger as-child>
                         <InputGroupButton
+                          :aria-label="t('ai.searchClear')"
                           size="icon-xs"
                           @click="filter.state.search = ''"
                         >

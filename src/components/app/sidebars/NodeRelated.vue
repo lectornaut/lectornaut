@@ -132,6 +132,7 @@ const isEmpty = computed(
         <Tooltip>
           <TooltipTrigger as-child>
             <Button
+              :aria-label="t('actions.refresh')"
               variant="ghost"
               size="icon"
               :disabled="loading"

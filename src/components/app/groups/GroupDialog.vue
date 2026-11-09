@@ -1,4 +1,5 @@
 <script lang="ts" setup>
+import { buttonVariants } from "@/components/ui/button"
 import { useDismissGuard } from "@/composables/useDismissGuard"
 import { usePhotoUpload } from "@/composables/usePhotoUpload"
 import { IconUsers } from "@/data/icons"
@@ -322,8 +323,14 @@ const handleSubmit = async () => {
                 </ItemDescription>
               </ItemContent>
               <ItemActions>
-                <Button variant="outline" size="icon" :disabled="isSaving">
+                <label
+                  :class="[
+                    buttonVariants({ variant: 'outline', size: 'icon' }),
+                    'has-disabled:opacity-50',
+                  ]"
+                >
                   <Checkbox
+                    :aria-label="memberLabel(member)"
                     :model-value="isSelected(member.userId)"
                     :disabled="isSaving"
                     class="rounded border-none opacity-100! disabled:opacity-25! data-[state=checked]:bg-transparent"
@@ -331,7 +338,7 @@ const handleSubmit = async () => {
                       (value) => toggleMember(member.userId, value === true)
                     "
                   />
-                </Button>
+                </label>
               </ItemActions>
             </Item>
           </ItemGroup>

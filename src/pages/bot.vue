@@ -163,7 +163,12 @@ const popOut = () => {
       <TooltipProvider v-if="isTauri">
         <Tooltip>
           <TooltipTrigger as-child>
-            <Button variant="outline" size="icon" @click="popOut">
+            <Button
+              :aria-label="t('ai.openInNewWindow')"
+              variant="outline"
+              size="icon"
+              @click="popOut"
+            >
               <IconSquareArrowOutUpRight />
             </Button>
           </TooltipTrigger>

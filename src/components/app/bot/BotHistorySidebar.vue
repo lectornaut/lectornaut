@@ -393,7 +393,11 @@ const submitBulkDelete = async () => {
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger as-child>
-                  <InputGroupButton size="icon-xs" @click="expandSearch">
+                  <InputGroupButton
+                    :aria-label="$t('ai.search')"
+                    size="icon-xs"
+                    @click="expandSearch"
+                  >
                     <IconSearch />
                   </InputGroupButton>
                 </TooltipTrigger>
@@ -425,6 +429,7 @@ const submitBulkDelete = async () => {
               <Tooltip>
                 <TooltipTrigger as-child>
                   <InputGroupButton
+                    :aria-label="$t('ai.searchClear')"
                     size="icon-xs"
                     @mousedown.prevent
                     @click="filter.state.search = ''"
@@ -557,6 +562,7 @@ const submitBulkDelete = async () => {
                             <TooltipTrigger as-child>
                               <DropdownMenuTrigger as-child>
                                 <Button
+                                  :aria-label="t('ai.chatActions')"
                                   variant="ghost"
                                   size="icon-xs"
                                   class="absolute top-2 right-2 opacity-0 group-hover/history:opacity-100 focus-visible:opacity-100 data-[state=open]:opacity-100"
@@ -774,6 +780,7 @@ const submitBulkDelete = async () => {
                             <TooltipTrigger as-child>
                               <DropdownMenuTrigger as-child>
                                 <Button
+                                  :aria-label="t('ai.chatActions')"
                                   variant="ghost"
                                   size="icon-xs"
                                   class="absolute top-2 right-2 opacity-0 group-hover/history:opacity-100 focus-visible:opacity-100 data-[state=open]:opacity-100"

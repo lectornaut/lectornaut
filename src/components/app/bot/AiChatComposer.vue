@@ -1117,6 +1117,7 @@ const onToolMenuCloseAutoFocus = (event: Event) => {
               <Tooltip>
                 <TooltipTrigger as-child>
                   <InputGroupButton
+                    :aria-label="t('actions.cancel')"
                     size="icon-xs"
                     :disabled="isSending"
                     @click="cancelEdit"
@@ -1144,6 +1145,7 @@ const onToolMenuCloseAutoFocus = (event: Event) => {
               <Tooltip>
                 <TooltipTrigger as-child>
                   <InputGroupButton
+                    :aria-label="t('actions.cancel')"
                     size="icon-xs"
                     :disabled="isSending"
                     @click="clearReply"
@@ -1367,6 +1369,7 @@ const onToolMenuCloseAutoFocus = (event: Event) => {
               <TooltipTrigger as-child>
                 <DropdownMenuTrigger as-child>
                   <InputGroupButton
+                    :aria-label="t('ai.attachContent')"
                     variant="outline"
                     size="icon-xs"
                     :disabled="!canOpenAttachSheet && !canUploadFiles"
@@ -1487,7 +1490,13 @@ const onToolMenuCloseAutoFocus = (event: Event) => {
             <DropdownMenu v-model:open="toolsOpen">
               <TooltipTrigger as-child>
                 <DropdownMenuTrigger as-child>
-                  <Button variant="ghost" size="icon-xs">
+                  <Button
+                    :aria-label="
+                      toolsOpen ? t('ai.hideTools') : t('ai.showTools')
+                    "
+                    variant="ghost"
+                    size="icon-xs"
+                  >
                     <IconAi />
                   </Button>
                 </DropdownMenuTrigger>
@@ -1907,6 +1916,9 @@ const onToolMenuCloseAutoFocus = (event: Event) => {
           <Tooltip>
             <TooltipTrigger as-child>
               <InputGroupButton
+                :aria-label="
+                  isDictating ? t('ai.dictateStop') : t('ai.dictate')
+                "
                 variant="ghost"
                 size="icon-xs"
                 :class="isDictating ? 'text-destructive animate-pulse' : ''"
@@ -1938,6 +1950,7 @@ const onToolMenuCloseAutoFocus = (event: Event) => {
           <Tooltip v-else>
             <TooltipTrigger as-child>
               <InputGroupButton
+                :aria-label="t('actions.send')"
                 size="icon-xs"
                 :disabled="isDisabled"
                 @click="handleSend"

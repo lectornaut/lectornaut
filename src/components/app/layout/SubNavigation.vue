@@ -86,7 +86,12 @@ onMounted(() => {
           <div id="sub-nav-left-action" ref="leftActionDock" class="contents" />
           <Tooltip>
             <TooltipTrigger as-child>
-              <Button variant="outline" size="icon" as-child>
+              <Button
+                :aria-label="t('components.subNavigation.tooltips.home')"
+                variant="outline"
+                size="icon"
+                as-child
+              >
                 <RouterLink to="/home">
                   <IconHome />
                 </RouterLink>

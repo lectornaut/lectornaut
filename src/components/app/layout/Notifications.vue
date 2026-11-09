@@ -271,7 +271,11 @@ useInfiniteScroll(
           <ButtonGroup>
             <DropdownMenu>
               <DropdownMenuTrigger as-child>
-                <Button variant="secondary" size="icon">
+                <Button
+                  variant="secondary"
+                  size="icon"
+                  :aria-label="t('actions.moreOptions')"
+                >
                   <IconMoreHorizontal />
                 </Button>
               </DropdownMenuTrigger>

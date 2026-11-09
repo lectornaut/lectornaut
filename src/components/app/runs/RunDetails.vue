@@ -1,4 +1,5 @@
 <script lang="ts" setup>
+import { buttonVariants } from "@/components/ui/button"
 import {
   IconCheck,
   IconChevronRight,
@@ -203,9 +204,11 @@ const opStyle = (op: string) => OP_STYLE[op] ?? OP_STYLE.update
       >
         <div class="relative flex flex-col items-center self-stretch">
           <StepperIndicator as-child>
-            <Button variant="outline" size="icon-xs">
+            <span
+              :class="buttonVariants({ variant: 'outline', size: 'icon-xs' })"
+            >
               <Component :is="event.icon" />
-            </Button>
+            </span>
           </StepperIndicator>
           <StepperSeparator
             v-if="i < events.length - 1"

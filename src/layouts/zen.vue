@@ -58,6 +58,7 @@ const previewOpen = ref(false)
     <Tooltip>
       <TooltipTrigger as-child>
         <Button
+          :aria-label="t('ai.exitZenMode')"
           variant="ghost"
           size="icon-sm"
           class="fixed bottom-2 left-2"

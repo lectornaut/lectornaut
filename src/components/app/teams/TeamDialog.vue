@@ -1337,6 +1337,13 @@ const handleSubmit = async () => {
                       <Tooltip>
                         <TooltipTrigger as-child>
                           <Button
+                            :aria-label="
+                              isMemberRemovalDisabled(member)
+                                ? ownerRoleManagementReason
+                                : t(
+                                    'components.teamDialog.tooltips.removeMember'
+                                  )
+                            "
                             variant="outline"
                             size="icon"
                             :disabled="isMemberRemovalDisabled(member)"
@@ -1418,6 +1425,9 @@ const handleSubmit = async () => {
                       <Tooltip>
                         <TooltipTrigger as-child>
                           <Button
+                            :aria-label="
+                              t('components.teamDialog.tooltips.removeAgent')
+                            "
                             variant="outline"
                             size="icon"
                             @click="removeAgent(agent.agentId)"
@@ -1483,6 +1493,11 @@ const handleSubmit = async () => {
                       <Tooltip>
                         <TooltipTrigger as-child>
                           <Button
+                            :aria-label="
+                              t(
+                                'components.teamDialog.tooltips.resendInvitation'
+                              )
+                            "
                             variant="outline"
                             size="icon"
                             :disabled="isResending(invite.id!)"
@@ -1542,6 +1557,11 @@ const handleSubmit = async () => {
                       <Tooltip>
                         <TooltipTrigger as-child>
                           <Button
+                            :aria-label="
+                              t(
+                                'components.teamDialog.tooltips.cancelInvitation'
+                              )
+                            "
                             variant="outline"
                             size="icon"
                             @click="
@@ -1592,6 +1612,13 @@ const handleSubmit = async () => {
                               <TooltipTrigger as-child>
                                 <PopoverTrigger as-child>
                                   <InputGroupButton
+                                    :aria-label="
+                                      getCannotInviteMembersReason
+                                        ? t(getCannotInviteMembersReason)
+                                        : t(
+                                            'components.teamDialog.tooltips.addAgent'
+                                          )
+                                    "
                                     size="icon-xs"
                                     :disabled="
                                       !canInviteMembers && mode !== 'create'
@@ -1712,6 +1739,10 @@ const handleSubmit = async () => {
                     <Tooltip>
                       <TooltipTrigger as-child>
                         <Button
+                          :aria-label="
+                            addMemberDisabledReason ||
+                            t('components.teamDialog.tooltips.addMember')
+                          "
                           variant="outline"
                           size="icon"
                           :disabled="
@@ -1789,6 +1820,13 @@ const handleSubmit = async () => {
                       <Tooltip>
                         <TooltipTrigger as-child>
                           <Button
+                            :aria-label="
+                              isMemberRemovalDisabled(member)
+                                ? ownerRoleManagementReason
+                                : t(
+                                    'components.teamDialog.tooltips.cancelInvitation'
+                                  )
+                            "
                             variant="outline"
                             size="icon"
                             :disabled="isMemberRemovalDisabled(member)"
@@ -1880,6 +1918,9 @@ const handleSubmit = async () => {
                         <Tooltip>
                           <TooltipTrigger as-child>
                             <Button
+                              :aria-label="
+                                t('components.teamDialog.tooltips.removeAgent')
+                              "
                               variant="outline"
                               size="icon"
                               @click="removeAgent(agent.agentId)"

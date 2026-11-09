@@ -170,6 +170,7 @@ const toggleIcon = computed(() =>
           <TooltipTrigger as-child>
             <DropdownMenuTrigger as-child>
               <Button
+                :aria-label="t('settings.workflows.actions')"
                 variant="ghost"
                 size="icon-xs"
                 class="absolute top-2 right-2 opacity-0 group-hover/wf:opacity-100 focus-visible:opacity-100 data-[state=open]:opacity-100"

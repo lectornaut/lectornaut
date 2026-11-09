@@ -1165,6 +1165,9 @@ const getDeviceIcon = (deviceType: string) => {
                   <Tooltip>
                     <TooltipTrigger as-child>
                       <Button
+                        :aria-label="
+                          getComputedProviderName(provider.providerId)
+                        "
                         variant="secondary"
                         class="ring-background absolute -right-2 -bottom-2 size-4 ring-2"
                         size="icon"

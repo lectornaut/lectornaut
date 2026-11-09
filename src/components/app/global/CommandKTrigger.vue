@@ -17,6 +17,7 @@ const openCommandDialog = () => {
         <TooltipTrigger as-child>
           <Button
             id="tour-search-bar"
+            :aria-label="t('components.global.commandK.tooltip')"
             variant="outline"
             size="icon-sm"
             @click="openCommandDialog"

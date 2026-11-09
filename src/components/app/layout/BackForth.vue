@@ -10,7 +10,12 @@ const { t } = useI18n()
     <ButtonGroup>
       <Tooltip>
         <TooltipTrigger as-child>
-          <Button variant="ghost" size="icon-sm" @click="router.go(-1)">
+          <Button
+            :aria-label="t('tabs.goBack')"
+            variant="ghost"
+            size="icon-sm"
+            @click="router.go(-1)"
+          >
             <IconArrowLeft />
           </Button>
         </TooltipTrigger>
@@ -18,7 +23,12 @@ const { t } = useI18n()
       </Tooltip>
       <Tooltip>
         <TooltipTrigger as-child>
-          <Button variant="ghost" size="icon-sm" @click="router.go(1)">
+          <Button
+            :aria-label="t('tabs.goForward')"
+            variant="ghost"
+            size="icon-sm"
+            @click="router.go(1)"
+          >
             <IconArrowRight />
           </Button>
         </TooltipTrigger>

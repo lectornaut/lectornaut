@@ -13,7 +13,13 @@ const { t } = useI18n()
       <div class="mr-auto flex min-w-0 items-center gap-2">
         <Tooltip>
           <TooltipTrigger as-child>
-            <Button variant="ghost" size="icon-sm" class="shrink-0" as-child>
+            <Button
+              :aria-label="t('ai.zenMode')"
+              variant="ghost"
+              size="icon-sm"
+              class="shrink-0"
+              as-child
+            >
               <RouterLink to="/zen" :aria-label="t('ai.zenMode')">
                 <IconLeaf />
               </RouterLink>

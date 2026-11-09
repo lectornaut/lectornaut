@@ -282,7 +282,8 @@ const HOUSE_DISPLAY_GLYPHS: Record<string, string> = {
 
 /**
  * Convert a single hotkey combo to platform-specific display key tokens for
- * `<Kbd>` rendering, e.g. `"Mod+Shift+L"` -> `["⌘", "⇧", "L"]` on macOS.
+ * `<Kbd>` rendering, e.g. `"Mod+Shift+L"` -> `["⇧", "⌘", "L"]` on macOS (the library
+ * emits Apple's ⌃⌥⇧⌘ modifier order).
  * Library glyphs are remapped to the app's house style (see
  * `HOUSE_DISPLAY_GLYPHS`), so this is the one source of display-key glyphs.
  */
@@ -692,7 +693,9 @@ export const shortcuts: ShortcutCategory[] = [
           "components.global.shortcutDescriptions.team",
           "components.global.shortcutDescriptions.workspaces",
         ],
-        hotkeys: "Mod+Shift+S",
+        // ⌥⌘, — a variant of ⌘, (Settings). Not ⇧⌘S, which macOS reserves
+        // for Duplicate / Save As.
+        hotkeys: "Mod+Alt+,",
         event: "Dialog.Settings.Open",
         parameters: "workspaces",
         icon: IconSettings,

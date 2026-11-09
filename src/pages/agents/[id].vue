@@ -311,6 +311,7 @@ useHead(() => ({
                 v-if="pageState === 'found'"
                 variant="ghost"
                 size="icon"
+                :aria-label="$t('actions.copy')"
                 @click="copy(source)"
               >
                 <IconCopy v-if="!copied" />

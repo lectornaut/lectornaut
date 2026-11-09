@@ -21,7 +21,7 @@ const getLinkId = (title: string) =>
       >
         <div class="col-span-full xl:col-span-1">
           <Button variant="ghost" size="icon" as-child>
-            <RouterLink to="/">
+            <RouterLink to="/" aria-label="Lectornaut">
               <Logo />
             </RouterLink>
           </Button>

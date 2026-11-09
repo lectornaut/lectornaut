@@ -509,7 +509,11 @@ const openInfoDialog = (provider: ConnectionProvider): void => {
                 <TooltipProvider>
                   <Tooltip>
                     <TooltipTrigger as-child>
-                      <InputGroupButton size="icon-xs" @click="expandSearch">
+                      <InputGroupButton
+                        :aria-label="t('ai.search')"
+                        size="icon-xs"
+                        @click="expandSearch"
+                      >
                         <IconSearch />
                       </InputGroupButton>
                     </TooltipTrigger>
@@ -540,6 +544,7 @@ const openInfoDialog = (provider: ConnectionProvider): void => {
                   <Tooltip>
                     <TooltipTrigger as-child>
                       <InputGroupButton
+                        :aria-label="t('ai.searchClear')"
                         size="icon-xs"
                         @mousedown.prevent
                         @click="searchQuery = ''"
@@ -556,6 +561,9 @@ const openInfoDialog = (provider: ConnectionProvider): void => {
                       <TooltipTrigger as-child>
                         <DropdownMenuTrigger as-child>
                           <InputGroupButton
+                            :aria-label="
+                              t('settings.connections.filterByCategory')
+                            "
                             size="icon-xs"
                             class="data-[state=open]:bg-accent relative"
                           >
@@ -804,6 +812,7 @@ const openInfoDialog = (provider: ConnectionProvider): void => {
                       <Tooltip>
                         <TooltipTrigger as-child>
                           <Button
+                            :aria-label="t('settings.connections.infoButton')"
                             variant="secondary"
                             size="icon"
                             class="ml-auto"
