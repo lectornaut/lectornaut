@@ -385,7 +385,7 @@ const submitBulkDelete = async () => {
         <!-- DOM order matches visual/tab order; the trailing addon keeps a -->
         <!-- stable key so the filter menu instance survives the toggle. -->
         <InputGroup
-          class="border-border border"
+          class="border-border"
           :class="searchExpanded ? 'max-w-64' : 'w-auto'"
         >
           <!-- Collapsed: tooltipped button standing in for the search field. -->
@@ -445,7 +445,7 @@ const submitBulkDelete = async () => {
         </InputGroup>
       </div>
     </SidebarHeader>
-    <SidebarContent class="select-none">
+    <SidebarContent>
       <ScrollContainer>
         <div
           v-if="isEmpty"

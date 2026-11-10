@@ -1,0 +1,8 @@
+/*
+  Markdown surface styles, imported by AppMarkdown.vue so they ship in its
+  chunk instead of the entry CSS. `layer(components)` keeps markstream below
+  the unlayered `.markstream-vue` overrides in index.css; the layer order itself
+  is fixed by Tailwind's entry sheet, so a late-loaded sheet joins it in place.
+*/
+@import "markstream-vue/index.css" layer(components);
+@import "katex/dist/katex.min.css";

@@ -20,9 +20,9 @@ const LIGHT_MODE: ThemeMode = "light"
 const DARK_MODE: ThemeMode = "dark"
 
 const FONT_TOKENS = {
-  sans: '"Geist Variable", "sans-serif"',
-  serif: '"Bricolage Grotesque Variable", "serif"',
-  mono: '"Geist Mono Variable", "monospace"',
+  sans: '"Geist Variable", sans-serif',
+  serif: '"Bricolage Grotesque Variable", serif',
+  mono: '"Geist Mono Variable", monospace',
 } as const
 
 const SIZE_TOKENS = {

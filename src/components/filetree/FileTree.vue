@@ -709,7 +709,7 @@ onBeforeUnmount(() => {
           @dragleave="handleRootDragLeave"
           @drop="handleRootDrop"
         >
-          <SidebarMenu class="select-none">
+          <SidebarMenu>
             <TreeNode
               v-for="childId in rootChildren"
               :key="childId"

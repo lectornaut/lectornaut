@@ -138,7 +138,7 @@ const tabContentClass =
 <template>
   <Dialog :open="openSettings" @update:open="guard.onOpenChange">
     <DialogContent
-      class="h-3/4 max-h-3/4! w-3/4 max-w-3/4! overflow-auto overscroll-none scroll-smooth p-0"
+      class="size-3/4 max-h-3/4! max-w-3/4! overflow-auto overscroll-none scroll-smooth p-0"
       @open-auto-focus="focusActiveTab"
     >
       <Tabs

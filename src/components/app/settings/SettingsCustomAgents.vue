@@ -568,7 +568,7 @@ const handleEditorSave = async (): Promise<void> => {
     @update:open="(next: boolean) => !isSaving && guard.onOpenChange(next)"
   >
     <DialogContent
-      class="h-3/4 max-h-3/4! w-3/4 max-w-3/4! grid-rows-[auto_minmax(0,1fr)_auto] overflow-hidden overscroll-none"
+      class="size-3/4 max-h-3/4! max-w-3/4! grid-rows-[auto_minmax(0,1fr)_auto] overflow-hidden overscroll-none"
       data-dialog-enter="off"
     >
       <DialogHeader>

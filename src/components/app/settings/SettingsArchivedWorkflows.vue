@@ -25,7 +25,7 @@ const open = ref(false)
       <Button variant="ghost" class="w-full justify-between">
         {{ t("settings.workflows.archivedCount", { n: workflows.length }) }}
         <IconChevronDown
-          class="size-4 transition-transform"
+          class="transition-transform"
           :class="{ 'rotate-180': open }"
         />
       </Button>

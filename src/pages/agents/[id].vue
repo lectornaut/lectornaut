@@ -46,8 +46,7 @@ import { useIsCurrentUserLoaded } from "vuefire"
 
 definePage({
   // Public page: bare chrome (own PageHeader), no auth requirement.
-  // The parent `agents.vue` is deliberately layout-free + meta-light so
-  // nothing auth-gated is inherited here.
+  // There's no parent route component, so nothing auth-gated is inherited.
   meta: {
     layout: false,
   },

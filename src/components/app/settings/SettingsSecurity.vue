@@ -659,7 +659,7 @@ const handleDeleteSso = async () => {
           "
         >
           <DialogContent
-            class="h-3/4 max-h-3/4! w-3/4 max-w-3/4! overflow-auto overscroll-none scroll-smooth"
+            class="size-3/4 max-h-3/4! max-w-3/4! overflow-auto overscroll-none scroll-smooth"
           >
             <DialogHeader>
               <DialogTitle class="flex items-center gap-2">

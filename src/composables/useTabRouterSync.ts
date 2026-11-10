@@ -1,71 +1,57 @@
 /**
- * Route ⇄ tab-strip synchronization for Tabbar.vue — the densest, most
- * load-bearing logic in the strip, lifted verbatim out of the component so the
- * view shrinks to presentation. {@link useTabsStore} stays the source of truth;
- * this composable only wires the URL to it and back.
+ * Route ⇄ tab-strip wiring. {@link useTabsStore} stays the source of truth;
+ * this module connects the URL to it and back. Two exports, two lifetimes:
  *
- * Three watchers keep the URL and the store in agreement:
- *   1. Route → Store (primary): the URL is authoritative; every change
- *      activates an existing tab, consumes a throwaway "/new", reuses the
- *      active tab for in-app navigation, restores the last session, or finally
- *      opens a fresh tab.
- *   2. Store → Route (secondary): when the active tab's path changes, follow it.
- *   3. Workspace switch: re-enter the per-workspace initial-sync phase and
- *      remember the outgoing route so (1) can ignore it until hydration lands.
+ * - {@link useTabRouterSync} — call ONCE, from App.vue. Two watchers keep the
+ *   URL and the store in agreement for the app's whole life:
+ *     1. Route → Store (primary): the URL is authoritative; every change
+ *        activates an existing tab, consumes a throwaway "/new", reuses the
+ *        active tab for in-app navigation, restores the last session, or
+ *        finally opens a fresh tab. Also detects workspace switches.
+ *     2. Store → Route (secondary): when the active tab's path changes, follow.
+ *   It used to live in Tabbar, which remounts on every layout change
+ *   (`app` → `bot`); each remount restarted "initial sync" and the next link
+ *   opened a new tab. App-level, it can't be remounted.
  *
- * Plus the navigation entry points the menus bind to and the `Tabs.*` mitt
- * bridge (hotkeys + cross-component commands). Inline rename stays in the
- * component (it owns the input ref + local draft state); we reach it through
- * the injected {@link UseTabRouterSyncOptions.beginRename} callback.
+ * - {@link useTabActions} — Tabbar's menu entry points + the `Tabs.*` mitt
+ *   bridge (hotkeys). Stateless, so living in a remounting component is fine.
  */
 import { requestAppClose } from "@/composables/useCloseConfirmation"
-import { isMainTauriWindow } from "@/composables/usePlatform"
+import { isBrowser, isMainTauriWindow } from "@/composables/usePlatform"
 import { resolveRouteName } from "@/helpers/breadcrumber"
 import { emitter } from "@/modules/mitt"
 import { useTabsStore } from "@/stores/tabsStore"
 import { useWorkspaceStore } from "@/stores/workspaceStore"
 import { storeToRefs } from "pinia"
-import { onMounted, onUnmounted, ref, watch } from "vue"
+import { computed, onMounted, onUnmounted, watch } from "vue"
 import { useRoute, useRouter } from "vue-router"
 
-export interface UseTabRouterSyncOptions {
-  /**
-   * Begin inline-rename for a tab id. Owned by the component (it holds the
-   * `<input>` ref + local draft refs); invoked by the `Tabs.Rename` mitt
-   * handler here.
-   */
-  beginRename: (id: string | undefined) => void
-}
-
-export function useTabRouterSync({ beginRename }: UseTabRouterSyncOptions) {
+export function useTabRouterSync() {
   const router = useRouter()
   const route = useRoute()
 
   const tabsStore = useTabsStore()
   const { tabs, activeTabId, activeTab, isHydrated } = storeToRefs(tabsStore)
-  const {
-    addTab,
-    closeTab,
-    closeOtherTabs,
-    closeAllTabs,
-    duplicateTab,
-    setTabPinned,
-    setActiveTab,
-    updateActiveTab,
-    reopenLastClosed,
-  } = tabsStore
-
+  const { addTab, setActiveTab, updateActiveTab } = tabsStore
   const { currentWorkspace } = storeToRefs(useWorkspaceStore())
 
-  // Route↔store sync bookkeeping (see watchers below).
-  const isInitialRouteSync = ref(true)
-  const previousWorkspaceRoutePath = ref<string | null>(null)
+  // Only routes that render the tab strip take part: the `app` layout minus
+  // `?popout=1` pages — and only in the main window, never a Tauri pop-out
+  // (`ask-*`), which shares the same tabs doc.
+  const syncsTabs = computed(
+    () =>
+      (isBrowser.value || isMainTauriWindow.value) &&
+      route.meta.layout === "app" &&
+      route.query.popout !== "1"
+  )
 
-  function navigateToTab(tab: { fullPath: string }) {
-    if (route.fullPath !== tab.fullPath) {
-      router.push(tab.fullPath)
-    }
-  }
+  // Sync bookkeeping. Plain locals: nothing watches them, and this runs once.
+  let isInitialRouteSync = true
+  let syncedWorkspaceId: string | undefined
+  let lastRoutePath: string | undefined
+  // Route showing when the workspace switched; consumed on the first hydrated
+  // sync so it isn't materialized as a tab in the new workspace.
+  let switchedFromPath: string | null = null
 
   // ----------------------------------------------------------------------------
   // Core synchronization: Route → Store (primary truth)
@@ -75,63 +61,62 @@ export function useTabRouterSync({ beginRename }: UseTabRouterSyncOptions) {
   // navigation, restoring the last session, or finally adding a new tab.
   // ----------------------------------------------------------------------------
   watch(
-    [() => route.fullPath, isHydrated],
-    async ([newPath, hydrated]) => {
-      if (!hydrated || !currentWorkspace.value) return
-
-      // Drop the workspace-switch marker once the route leaves the old path.
-      if (
-        previousWorkspaceRoutePath.value &&
-        newPath !== previousWorkspaceRoutePath.value
-      ) {
-        previousWorkspaceRoutePath.value = null
+    [() => route.fullPath, isHydrated, () => currentWorkspace.value?.id],
+    async ([newPath, hydrated, workspaceId]) => {
+      // Workspace switch: re-enter the initial-sync phase and remember the
+      // outgoing route. Compared against the last *synced* workspace (module
+      // scope), not the watcher's old value, so a Tabbar remount never reads as
+      // a switch.
+      const outgoingPath = lastRoutePath
+      lastRoutePath = newPath
+      if (workspaceId !== syncedWorkspaceId) {
+        const isSwitch = syncedWorkspaceId !== undefined
+        syncedWorkspaceId = workspaceId
+        isInitialRouteSync = true
+        switchedFromPath = isSwitch ? (outgoingPath ?? newPath) : null
       }
 
-      // While switching workspace, don't materialize the *old* workspace's route
-      // as a tab in the new one — redirect to a sensible fallback instead.
-      if (
-        previousWorkspaceRoutePath.value &&
-        newPath === previousWorkspaceRoutePath.value
-      ) {
+      if (!hydrated || !currentWorkspace.value || !syncsTabs.value) return
+
+      // Still on the old workspace's route → redirect to a sensible fallback
+      // instead of materializing it as a tab here. (The same route can
+      // legitimately exist in both workspaces, hence the equality check.)
+      const fromPath = switchedFromPath
+      switchedFromPath = null
+      if (fromPath === newPath) {
         const fallbackPath =
           activeTab.value?.fullPath ?? tabs.value[0]?.fullPath ?? "/start"
         if (fallbackPath !== newPath) {
           router.replace(fallbackPath)
           return
         }
-        // The same route can legitimately exist in both workspaces.
-        previousWorkspaceRoutePath.value = null
       }
 
       // Already the active tab → nothing to do. Lets several "/new" tabs coexist
       // without snapping back to the first one.
       if (activeTab.value?.fullPath === newPath) {
-        isInitialRouteSync.value = false
+        isInitialRouteSync = false
         return
       }
 
       // Case A: route matches an existing tab (excluding the reusable "/new").
       const existingTab = tabs.value.find((tab) => tab.fullPath === newPath)
       if (existingTab && newPath !== "/new") {
-        if (activeTabId.value !== existingTab.id) setActiveTab(existingTab.id)
-        isInitialRouteSync.value = false
+        setActiveTab(existingTab.id)
+        isInitialRouteSync = false
         return
       }
 
       // Case B: the active tab is a throwaway "/new" → consume it for this route.
       if (activeTab.value?.fullPath === "/new") {
         updateActiveTab(newPath, resolveRouteName(route))
-        isInitialRouteSync.value = false
+        isInitialRouteSync = false
         return
       }
 
       // Case C: in-app navigation → reuse the active tab (never on initial sync,
       // never for "/start").
-      if (
-        !isInitialRouteSync.value &&
-        activeTabId.value &&
-        newPath !== "/start"
-      ) {
+      if (!isInitialRouteSync && activeTabId.value && newPath !== "/start") {
         updateActiveTab(newPath, resolveRouteName(route))
         return
       }
@@ -150,7 +135,7 @@ export function useTabRouterSync({ beginRename }: UseTabRouterSyncOptions) {
         await addTab(newPath, resolveRouteName(route))
       }
 
-      isInitialRouteSync.value = false
+      isInitialRouteSync = false
     },
     { immediate: true }
   )
@@ -161,7 +146,7 @@ export function useTabRouterSync({ beginRename }: UseTabRouterSyncOptions) {
   watch(
     () => activeTab.value?.fullPath,
     (newPath) => {
-      if (!isHydrated.value) return
+      if (!isHydrated.value || !syncsTabs.value) return
 
       // An intentionally-emptied strip (no active tab, zero tabs) always resolves
       // to /start — and must do so even while `isInitialRouteSync` is still true.
@@ -179,7 +164,7 @@ export function useTabRouterSync({ beginRename }: UseTabRouterSyncOptions) {
 
       // During initial sync the Route→Store watcher is authoritative — don't let
       // a restored tab override a redirect URL.
-      if (isInitialRouteSync.value) return
+      if (isInitialRouteSync) return
 
       // No active tab but the strip isn't empty (shouldn't normally happen) — leave
       // the route alone rather than guessing a destination.
@@ -191,20 +176,37 @@ export function useTabRouterSync({ beginRename }: UseTabRouterSyncOptions) {
     },
     { flush: "post" }
   )
+}
 
-  // ----------------------------------------------------------------------------
-  // Workspace switch: re-enter the per-workspace initial-sync phase and remember
-  // the outgoing route so the Route→Store watcher can ignore it once hydrated.
-  // ----------------------------------------------------------------------------
-  watch(
-    () => currentWorkspace.value?.id,
-    (newId, oldId) => {
-      if (newId === oldId) return
-      isInitialRouteSync.value = true
-      previousWorkspaceRoutePath.value =
-        oldId !== undefined ? route.fullPath : null
-    }
-  )
+export interface UseTabActionsOptions {
+  /**
+   * Begin inline-rename for a tab id. Owned by the component (it holds the
+   * `<input>` ref + local draft refs); invoked by the `Tabs.Rename` mitt
+   * handler here.
+   */
+  beginRename: (id: string | undefined) => void
+}
+
+export function useTabActions({ beginRename }: UseTabActionsOptions) {
+  const router = useRouter()
+  const route = useRoute()
+
+  const tabsStore = useTabsStore()
+  const { tabs, activeTabId } = storeToRefs(tabsStore)
+  const {
+    addTab,
+    closeTab,
+    closeOtherTabs,
+    closeAllTabs,
+    duplicateTab,
+    setTabPinned,
+    setActiveTab,
+    reopenLastClosed,
+  } = tabsStore
+
+  function navigateToTab(tab: { fullPath: string }) {
+    if (route.fullPath !== tab.fullPath) router.push(tab.fullPath)
+  }
 
   // ----------------------------------------------------------------------------
   // Navigation entry points (bound by the tab strip menus/tooltips)
@@ -244,12 +246,10 @@ export function useTabRouterSync({ beginRename }: UseTabRouterSyncOptions) {
     void closeTab(id).catch(() => {})
   }
 
-  async function handleDuplicateTab(id: string | undefined) {
-    if (!id) return
-    await duplicateTab(id)
-    // duplicateTab sets the copy active; navigate to it if it's a new tab.
-    const newTab = tabs.value.find((tab) => tab.id === activeTabId.value)
-    if (newTab && newTab.id !== id) navigateToTab(newTab)
+  function handleDuplicateTab(id: string | undefined) {
+    // duplicateTab makes the copy active; the Store→Route watcher follows it
+    // (and the copy shares the source's path, so there's usually nothing to do).
+    if (id) void duplicateTab(id)
   }
 
   async function handleToggleTabPinned(id: string | undefined) {
@@ -289,15 +289,18 @@ export function useTabRouterSync({ beginRename }: UseTabRouterSyncOptions) {
     const target = tabs.value.find((tab) => tab.id === targetId)
     if (!target) return
 
-    // Keep active state in sync even when the path doesn't change (e.g. several
-    // tabs pointing at "/new").
-    if (activeTabId.value !== target.id) setActiveTab(target.id)
+    // Set active explicitly: the path may not change (several "/new" tabs).
+    setActiveTab(target.id)
     navigateToTab(target)
   }
 
   // ----------------------------------------------------------------------------
   // Global events (Mitt) — driven by hotkeys and other components
   // ----------------------------------------------------------------------------
+  // An explicit string id targets that tab; anything else means the active one.
+  const idOrActive = (id: unknown) =>
+    (typeof id === "string" ? id : activeTabId.value) || undefined
+
   function onTabsAdd(raw?: unknown) {
     const data = raw as
       | { fullPath?: string; path?: string; url?: string; name?: string }
@@ -318,13 +321,11 @@ export function useTabRouterSync({ beginRename }: UseTabRouterSyncOptions) {
       requestAppClose("close")
       return
     }
-    handleCloseTab(
-      (typeof id === "string" ? id : activeTabId.value) || undefined
-    )
+    handleCloseTab(idOrActive(id))
   }
 
   function onTabsCloseOthers(id?: unknown) {
-    const keepId = typeof id === "string" ? id : activeTabId.value
+    const keepId = idOrActive(id)
     // closeOtherTabs makes `keepId` the active tab; the Store→Route watcher follows
     // it. Swallow a persist rejection from a degraded sync backend.
     if (keepId) void closeOtherTabs(keepId).catch(() => {})
@@ -356,38 +357,28 @@ export function useTabRouterSync({ beginRename }: UseTabRouterSyncOptions) {
     if (tab) handleAddTab(tab.fullPath, tab.name)
   }
 
-  function onTabsDuplicate(id?: unknown) {
-    handleDuplicateTab(
-      (typeof id === "string" ? id : activeTabId.value) || undefined
-    )
-  }
-
-  function onTabsRename(id?: unknown) {
-    beginRename((typeof id === "string" ? id : activeTabId.value) || undefined)
+  const handlers: Record<string, (payload?: unknown) => void> = {
+    "Tabs.Add": onTabsAdd,
+    "Tabs.Close": onTabsClose,
+    "Tabs.Close.Others": onTabsCloseOthers,
+    "Tabs.Close.All": onTabsCloseAll,
+    "Tabs.Select": onTabsSelect,
+    "Tabs.ReopenLast": onTabsReopenLast,
+    "Tabs.Reopen": onTabsReopen,
+    "Tabs.Duplicate": (id) => handleDuplicateTab(idOrActive(id)),
+    "Tabs.Rename": (id) => beginRename(idOrActive(id)),
   }
 
   onMounted(() => {
-    emitter.on("Tabs.Add", onTabsAdd)
-    emitter.on("Tabs.Close", onTabsClose)
-    emitter.on("Tabs.Close.Others", onTabsCloseOthers)
-    emitter.on("Tabs.Close.All", onTabsCloseAll)
-    emitter.on("Tabs.Select", onTabsSelect)
-    emitter.on("Tabs.ReopenLast", onTabsReopenLast)
-    emitter.on("Tabs.Reopen", onTabsReopen)
-    emitter.on("Tabs.Duplicate", onTabsDuplicate)
-    emitter.on("Tabs.Rename", onTabsRename)
+    for (const [event, handler] of Object.entries(handlers)) {
+      emitter.on(event, handler)
+    }
   })
 
   onUnmounted(() => {
-    emitter.off("Tabs.Add", onTabsAdd)
-    emitter.off("Tabs.Close", onTabsClose)
-    emitter.off("Tabs.Close.Others", onTabsCloseOthers)
-    emitter.off("Tabs.Close.All", onTabsCloseAll)
-    emitter.off("Tabs.Select", onTabsSelect)
-    emitter.off("Tabs.ReopenLast", onTabsReopenLast)
-    emitter.off("Tabs.Reopen", onTabsReopen)
-    emitter.off("Tabs.Duplicate", onTabsDuplicate)
-    emitter.off("Tabs.Rename", onTabsRename)
+    for (const [event, handler] of Object.entries(handlers)) {
+      emitter.off(event, handler)
+    }
   })
 
   return {

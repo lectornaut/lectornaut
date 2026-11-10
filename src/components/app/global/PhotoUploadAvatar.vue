@@ -75,11 +75,11 @@ const onUpload = () => {
              photo; `after:` widens the 16px badge to a 24px hit area. -->
           <button
             type="button"
-            class="bg-foreground text-background ring-background hover:bg-destructive focus-visible:bg-destructive hover:text-destructive-foreground focus-visible:text-destructive-foreground absolute top-[calc(14.645%-0.5rem)] right-[calc(14.645%-0.5rem)] flex size-4 scale-75 cursor-pointer items-center justify-center rounded-full opacity-0 ring-2 transition-[opacity,scale,background-color,color] duration-150 ease-out outline-none group-focus-within/photo:scale-100 group-focus-within/photo:opacity-100 group-hover/photo:scale-100 group-hover/photo:opacity-100 after:absolute after:-inset-1 active:scale-90"
+            class="bg-foreground text-background ring-background hover:bg-destructive focus-visible:bg-destructive hover:text-destructive-foreground focus-visible:text-destructive-foreground absolute top-[calc(14.645%-0.5rem)] right-[calc(14.645%-0.5rem)] flex size-4 scale-75 items-center justify-center rounded-full opacity-0 ring-2 transition-[opacity,scale,background-color,color] duration-150 ease-out outline-none group-focus-within/photo:scale-100 group-focus-within/photo:opacity-100 group-hover/photo:scale-100 group-hover/photo:opacity-100 after:absolute after:-inset-1 active:scale-90"
             :aria-label="t('components.photoUpload.remove')"
             @click.stop="emit('remove')"
           >
-            <IconX class="size-2.5! [&_path]:stroke-3" />
+            <IconX class="size-2.5 [&_path]:stroke-3" />
           </button>
         </TooltipTrigger>
         <TooltipContent>{{

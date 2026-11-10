@@ -252,10 +252,34 @@ const handleContinue = () => {
   void botChat.continueFailedTurn()
 }
 
+// Branch and version switches are plain round-trips (callable + reload) with
+// no stream to watch, so the clicked button spins until they settle and
+// every other branch/version button holds still. Regenerate/continue/edit
+// need none of this: they flip `isSending` synchronously and stream a bubble.
+type PendingKind = "branch" | "prev" | "next"
+const pendingAction = ref<{ messageId: string; kind: PendingKind } | null>(null)
+const isPending = (messageId: string, kind: PendingKind): boolean =>
+  pendingAction.value?.messageId === messageId &&
+  pendingAction.value.kind === kind
+const runPending = async (
+  messageId: string,
+  kind: PendingKind,
+  run: () => Promise<void>
+) => {
+  if (pendingAction.value) return
+  pendingAction.value = { messageId, kind }
+  try {
+    await run()
+  } finally {
+    pendingAction.value = null
+  }
+}
+
 // Versions: siblings of a reply from edits and regenerations, switched in
 // place (editors only — it changes what a shared chat shows).
 const canSwitchVersion = computed(
-  () => !isSending.value && !!botChat?.canEditActive.value
+  () =>
+    !isSending.value && !pendingAction.value && !!botChat?.canEditActive.value
 )
 const versionsOf = (message: BotChatMessage) =>
   botChat?.replyVersions(message.id) ?? null
@@ -267,11 +291,14 @@ const versionTarget = (message: BotChatMessage, step: -1 | 1) => {
   const v = versionsOf(message)
   return v?.ids[v.index + step] ?? null
 }
-const handleSwitchVersion = async (snapshotId: string | null) => {
+const handleSwitchVersion = (message: BotChatMessage, step: -1 | 1) => {
+  const snapshotId = versionTarget(message, step)
   if (!botChat || !snapshotId || !canSwitchVersion.value) return
-  if (!(await botChat.switchVersion(snapshotId))) {
-    toast.error(t("ai.switchVersionError"))
-  }
+  return runPending(message.id, step < 0 ? "prev" : "next", async () => {
+    if (!(await botChat.switchVersion(snapshotId))) {
+      toast.error(t("ai.switchVersionError"))
+    }
+  })
 }
 
 // Branch: copy the chat into a new chat of your own. From a reply, the chat
@@ -286,8 +313,10 @@ const handleBranch = async (message: BotChatMessage) => {
   if (!botChat || !point) return
   const draft =
     message.role === "user" ? messagePlainText(message) || undefined : undefined
-  if (await botChat.branchChat(point, draft)) toast.success(t("ai.branched"))
-  else toast.error(t("ai.branchError"))
+  await runPending(message.id, "branch", async () => {
+    if (await botChat.branchChat(point, draft)) toast.success(t("ai.branched"))
+    else toast.error(t("ai.branchError"))
+  })
 }
 
 const handleReplyMessage = (message: BotChatMessage) => {
@@ -492,7 +521,7 @@ const renderedMessages = computed(() =>
     <MessageScroller>
       <MessageScrollerViewport>
         <MessageScrollerContent
-          class="messages-list container mx-auto max-w-4xl p-2"
+          class="messages-list container mx-auto max-w-4xl p-4"
         >
           <MessageScrollerItem
             v-for="{
@@ -619,6 +648,7 @@ const renderedMessages = computed(() =>
                         'pointer-events-none gap-1 opacity-0 transition group-focus-within:pointer-events-auto group-focus-within:opacity-100 group-hover:pointer-events-auto group-hover:opacity-100',
                         (isSpeaking(message.id) ||
                           isPaused(message.id) ||
+                          pendingAction?.messageId === message.id ||
                           versionLabel(message)) &&
                           'pointer-events-auto opacity-100',
                       ]"
@@ -632,7 +662,7 @@ const renderedMessages = computed(() =>
                               :aria-label="t('ai.editMessage')"
                               @click="handleEditMessage(message)"
                             >
-                              <IconPencil class="size-3!" />
+                              <IconPencil />
                             </Button>
                           </TooltipTrigger>
                           <TooltipContent>{{
@@ -647,7 +677,7 @@ const renderedMessages = computed(() =>
                               :aria-label="t('ai.continueReply')"
                               @click="handleContinue"
                             >
-                              <IconPlay class="size-3!" />
+                              <IconPlay />
                             </Button>
                           </TooltipTrigger>
                           <TooltipContent>{{
@@ -662,7 +692,7 @@ const renderedMessages = computed(() =>
                               :aria-label="t('ai.regenerate')"
                               @click="handleRegenerate"
                             >
-                              <IconRefreshCw class="size-3!" />
+                              <IconRefreshCw />
                             </Button>
                           </TooltipTrigger>
                           <TooltipContent>{{
@@ -676,17 +706,18 @@ const renderedMessages = computed(() =>
                                 variant="ghost"
                                 size="icon-xs"
                                 :aria-label="t('ai.previousVersion')"
+                                :aria-busy="isPending(message.id, 'prev')"
                                 :disabled="
                                   !canSwitchVersion ||
                                   !versionTarget(message, -1)
                                 "
-                                @click="
-                                  handleSwitchVersion(
-                                    versionTarget(message, -1)
-                                  )
-                                "
+                                @click="handleSwitchVersion(message, -1)"
                               >
-                                <IconChevronLeft class="size-3!" />
+                                <Spinner
+                                  v-if="isPending(message.id, 'prev')"
+                                  class="size-3"
+                                />
+                                <IconChevronLeft v-else />
                               </Button>
                             </TooltipTrigger>
                             <TooltipContent>{{
@@ -702,15 +733,18 @@ const renderedMessages = computed(() =>
                                 variant="ghost"
                                 size="icon-xs"
                                 :aria-label="t('ai.nextVersion')"
+                                :aria-busy="isPending(message.id, 'next')"
                                 :disabled="
                                   !canSwitchVersion ||
                                   !versionTarget(message, 1)
                                 "
-                                @click="
-                                  handleSwitchVersion(versionTarget(message, 1))
-                                "
+                                @click="handleSwitchVersion(message, 1)"
                               >
-                                <IconChevronRight class="size-3!" />
+                                <Spinner
+                                  v-if="isPending(message.id, 'next')"
+                                  class="size-3"
+                                />
+                                <IconChevronRight v-else />
                               </Button>
                             </TooltipTrigger>
                             <TooltipContent>{{
@@ -724,9 +758,15 @@ const renderedMessages = computed(() =>
                               variant="ghost"
                               size="icon-xs"
                               :aria-label="branchLabel(message)"
+                              :aria-busy="isPending(message.id, 'branch')"
+                              :disabled="!!pendingAction"
                               @click="handleBranch(message)"
                             >
-                              <IconSplit class="size-3!" />
+                              <Spinner
+                                v-if="isPending(message.id, 'branch')"
+                                class="size-3"
+                              />
+                              <IconSplit v-else />
                             </Button>
                           </TooltipTrigger>
                           <TooltipContent>{{
@@ -742,11 +782,8 @@ const renderedMessages = computed(() =>
                               :disabled="!message.content"
                               @click="handleCopyMessage(message)"
                             >
-                              <IconCheck
-                                v-if="isCopied(message.id)"
-                                class="size-3!"
-                              />
-                              <IconCopy v-else class="size-3!" />
+                              <IconCheck v-if="isCopied(message.id)" />
+                              <IconCopy v-else />
                             </Button>
                           </TooltipTrigger>
                           <TooltipContent>
@@ -766,7 +803,7 @@ const renderedMessages = computed(() =>
                               :disabled="!message.content"
                               @click="handleReplyMessage(message)"
                             >
-                              <IconReply class="size-3!" />
+                              <IconReply />
                             </Button>
                           </TooltipTrigger>
                           <TooltipContent>{{ t("ai.reply") }}</TooltipContent>
@@ -790,7 +827,7 @@ const renderedMessages = computed(() =>
                                   :aria-label="t('ai.readAloudPause')"
                                   @click="pauseReadAloud()"
                                 >
-                                  <IconPause class="size-3!" />
+                                  <IconPause />
                                 </Button>
                               </TooltipTrigger>
                               <TooltipContent>
@@ -805,7 +842,7 @@ const renderedMessages = computed(() =>
                                   :aria-label="t('ai.readAloudResume')"
                                   @click="resumeReadAloud()"
                                 >
-                                  <IconPlay class="size-3!" />
+                                  <IconPlay />
                                 </Button>
                               </TooltipTrigger>
                               <TooltipContent>
@@ -820,7 +857,7 @@ const renderedMessages = computed(() =>
                                   :aria-label="t('ai.readAloudStop')"
                                   @click="stopReadAloud()"
                                 >
-                                  <IconSquare class="size-3!" />
+                                  <IconSquare />
                                 </Button>
                               </TooltipTrigger>
                               <TooltipContent>
@@ -837,7 +874,7 @@ const renderedMessages = computed(() =>
                                 :disabled="!message.content"
                                 @click="handleReadAloud(message)"
                               >
-                                <IconVolume2 class="size-3!" />
+                                <IconVolume2 />
                               </Button>
                             </TooltipTrigger>
                             <TooltipContent>{{
@@ -897,6 +934,7 @@ const renderedMessages = computed(() =>
                 </ContextMenuItem>
                 <ContextMenuItem
                   v-if="branchPointOf(message)"
+                  :disabled="!!pendingAction"
                   @select="handleBranch(message)"
                 >
                   <IconSplit />

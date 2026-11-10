@@ -7,7 +7,7 @@ const { t } = useI18n()
 <template>
   <div
     data-tauri-drag-region="deep"
-    class="no-scrollbar flex min-w-0 shrink-0 items-center justify-end gap-2 overflow-x-auto p-2"
+    class="flex min-w-0 shrink-0 items-center justify-end gap-2 overflow-x-clip p-2"
   >
     <TooltipProvider>
       <div class="mr-auto flex min-w-0 items-center gap-2">

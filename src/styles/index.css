@@ -7,17 +7,10 @@
 @import "tw-animate-css";
 @import "@/styles/theme.css";
 @import "shadcn-vue/tailwind.css";
-@import "markstream-vue/index.css" layer(components);
-@import "katex/dist/katex.min.css";
 
 @plugin "@tailwindcss/typography";
-@plugin "@tailwindcss/forms";
 
-@custom-variant dark (&:where(.dark, .dark *, [data-theme="dark"], [data-theme="dark"] *));
-
-@view-transition {
-  navigation: auto;
-}
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
 
 /*
   Base layer
@@ -27,20 +20,10 @@
 @layer base {
   * {
     @apply border-border outline-ring/50;
-
-    /* @apply border;
-    @apply border-red-500; */
   }
 
   body {
-    --grade-axis: 0;
-
-    text-box: trim-both cap alphabetic;
-    font-variation-settings: "GRAD" var(--grade-axis);
-    interpolate-size: allow-keywords;
-
-    @apply h-dvh;
-    @apply w-dvw;
+    @apply size-full;
     @apply bg-linear-to-b;
     @apply from-muted/95;
     @apply to-secondary/90;
@@ -49,7 +32,7 @@
     @apply font-flex;
     @apply select-none;
     @apply selection:bg-primary/25;
-    @apply overflow-auto;
+    @apply overflow-hidden;
     @apply overscroll-none;
     @apply scroll-smooth;
     @apply scrollbar-gutter-stable;
@@ -67,36 +50,6 @@
   */
   :root[data-native-font-smoothing] body {
     @apply subpixel-antialiased;
-  }
-
-  @media (prefers-contrast: more) {
-    body {
-      --grade-axis: 700;
-    }
-  }
-
-  @media (prefers-contrast: less) {
-    body {
-      --grade-axis: -50;
-    }
-  }
-
-  @media (prefers-color-scheme: dark) {
-    body {
-      --grade-axis: -50;
-    }
-  }
-
-  @media (prefers-color-scheme: dark) and (prefers-contrast: more) {
-    body {
-      --grade-axis: 150;
-    }
-  }
-
-  @media (prefers-color-scheme: dark) and (prefers-contrast: less) {
-    body {
-      --grade-axis: -150;
-    }
   }
 
   /* Global custom properties used across the app and component libraries */
@@ -118,12 +71,11 @@
     --vf-connection-path: var(--color-border);
 
     font-synthesis: none;
-    text-rendering: optimizelegibility;
     interpolate-size: allow-keywords;
 
-    @apply overflow-auto;
+    @apply h-dvh;
+    @apply overflow-hidden;
     @apply overscroll-none;
-    @apply scroll-smooth;
     @apply pl-safe-left;
     @apply pr-safe-right;
     @apply pt-safe-top;
@@ -169,9 +121,29 @@
     @apply rounded;
   }
 
-  ::highlight(search-results) {
+  /*
+    Fallback size for unplugin-icons (`defaultClass: "icon …"` in
+    vite.config.ts). `:where()` + base layer = loses to any `size-*` utility
+    and to the components' `[&_svg:not([class*=size-])]` rules, so icons
+    take the size their container intends without `!`.
+  */
+  :where(.icon) {
+    @apply size-4;
+  }
+
+  /*
+    Browser find-in-page (⌘F / Ctrl+F) matches. Chromium only (WebView2 and
+    the web build); WebKit has no `::search-text` and keeps its own yellow.
+    Text is pinned to `foreground` because the UA default is black, which
+    vanishes in dark mode. `:current` is the match the find bar is on.
+  */
+  ::search-text {
     @apply bg-primary/25;
-    @apply text-primary-foreground;
+    @apply text-foreground;
+  }
+
+  ::search-text:current {
+    @apply bg-primary/60;
   }
 }
 
@@ -243,35 +215,15 @@
   --spacing-titlebar-left: env(titlebar-area-x);
   --spacing-titlebar-right: env(titlebar-area-x);
   --spacing-macos-window-controls: var(--macos-window-controls-width, 5.5rem);
-  --font-sans: "Geist Variable", "sans-serif";
-  --font-serif: "Bricolage Grotesque Variable", "serif";
-  --font-mono: "Geist Mono Variable", "monospace";
-  --font-display: "Bricolage Grotesque Variable", "serif";
+  --font-sans: "Geist Variable", sans-serif;
+  --font-serif: "Bricolage Grotesque Variable", serif;
+  --font-mono: "Geist Mono Variable", monospace;
+  --font-display: "Bricolage Grotesque Variable", serif;
   --font-flex: var(--flex);
   --font-heading: var(--font-sans);
   --text-size: var(--size);
   --animate-accordion-down: accordion-down 0.2s ease-out;
   --animate-accordion-up: accordion-up 0.2s ease-out;
-
-  @keyframes accordion-down {
-    from {
-      height: 0;
-    }
-
-    to {
-      height: var(--reka-accordion-content-height);
-    }
-  }
-
-  @keyframes accordion-up {
-    from {
-      height: var(--reka-accordion-content-height);
-    }
-
-    to {
-      height: 0;
-    }
-  }
 }
 
 /*
@@ -459,21 +411,15 @@
     transition: none;
   }
 
-  @media (prefers-reduced-motion: reduce) {
-    .animate-layout-panels > [data-panel] {
-      transition: none;
-    }
-  }
-
   /*
     User-controlled reduced motion. The Appearance setting toggles
     `data-reduced-motion` on <html> (see `src/modules/theme.ts`); this is the
-    explicit-opt-out twin of the OS `prefers-reduced-motion` media query above.
+    explicit-opt-out twin of the OS `prefers-reduced-motion` media query below.
     A blanket kill-switch is the established pattern for honoring reduced
     motion — near-zero (not 0) durations keep transition/animation `end`
-    events firing so JS that waits on them doesn't stall. Lives in `@layer
-    base` so its `!important` reliably wins over later-layer and scoped
-    component transitions.
+    events firing so JS that waits on them doesn't stall. `!important` in
+    `@layer components` beats every utilities-layer and unlayered transition
+    (important declarations invert layer order).
   */
   :root[data-reduced-motion],
   :root[data-reduced-motion] *,
@@ -539,8 +485,9 @@
     Scroll-fade animations are position-driven, not time-driven (W3C
     guidance treats 1:1 scroll-linked effects as non-vestibular), and a
     zeroed duration could pin the fade masks in a wrong state — so restore
-    the timeline-derived duration. Same layer as the kill-switch, higher
-    specificity, later in the sheet, so it wins its !important tie.
+    the timeline-derived duration. It wins because `@layer base` precedes the
+    kill-switch's `@layer components`, and important declarations invert
+    layer order.
   */
   :root[data-reduced-motion]
     :is(.scroll-fade, .scroll-fade-y, .scroll-fade-x, .scroll-fade-b) {
@@ -673,8 +620,8 @@
     these surfaces ("chat" / "changelog-sheet" / "changelog-page"), so
     the rules stay isolated to its output. Kept UNLAYERED (like the
     driver.js overrides below) so they reliably win over markstream's
-    base CSS, which is imported into `layer(components)` at the top of
-    this file.
+    base CSS, which `src/styles/markdown.css` imports into
+    `layer(components)`.
 */
 
 /* ── Shared rhythm: all three surfaces ─────────────────────────────────
@@ -905,35 +852,22 @@
 
 .driver-popover.driverjs-theme
   .driver-popover-arrow-side-left.driver-popover-arrow {
-  @apply border-l-background;
+  @apply border-l-popover/75;
 }
 
 .driver-popover.driverjs-theme
   .driver-popover-arrow-side-right.driver-popover-arrow {
-  @apply border-r-background;
+  @apply border-r-popover/75;
 }
 
 .driver-popover.driverjs-theme
   .driver-popover-arrow-side-top.driver-popover-arrow {
-  @apply border-t-background;
+  @apply border-t-popover/75;
 }
 
 .driver-popover.driverjs-theme
   .driver-popover-arrow-side-bottom.driver-popover-arrow {
-  @apply border-b-background;
-}
-
-/* Small transition helpers
-  - Reusable fade transitions for simple enter/leave animations.
-*/
-.fade-enter-active,
-.fade-leave-active {
-  @apply transition-opacity;
-}
-
-.fade-enter-from,
-.fade-leave-to {
-  @apply opacity-0;
+  @apply border-b-popover/75;
 }
 
 [data-slot="sidebar-inner"] {
@@ -945,7 +879,7 @@
   DropdownMenuContent ships `w-(--reka-dropdown-menu-trigger-width) min-w-48`
   (src/components/ui/dropdown-menu/DropdownMenuContent.vue): reka writes the
   trigger's measured width into that custom property, so a menu opened from a
-  small icon button is pinned to the 16rem (`min-w-64`) floor and longer labels
+  small icon button is pinned to the 12rem (`min-w-48`) floor and longer labels
   ("Recently closed", "Enabled for the team") wrap onto a second line. That
   trigger-width binding is right for `<Select>` (SelectContent keeps it on
   purpose) but wrong for an action menu, which should fit its widest item.
@@ -953,11 +887,11 @@
   Let the menu grow to its content instead. `width: max-content` is the
   single-line width of the longest row, so every label fits on one line and the
   per-item `ml-auto` shortcuts/chevrons still right-align to that edge. The
-  trigger width becomes a MINIMUM, not a cap (`max()` keeps it >=16rem so short
+  trigger width becomes a MINIMUM, not a cap (`max()` keeps it >=8rem so short
   menus aren't cramped, and >= the trigger so a wide trigger still yields a wide
   menu); `max-width` caps growth at the space reka measured, so a pathologically
   long item wraps in place rather than running off-screen. Unlayered like the
-  rules around it, so it beats the `w-(...)`/`min-w-64` utilities without editing
+  rules around it, so it beats the `w-(...)`/`min-w-48` utilities without editing
   the shadcn component. Sub-content and context menus carry no trigger-width
   binding, so they already auto-size and are intentionally left alone.
 */
@@ -1036,7 +970,7 @@
 } */
 
 a[target="_blank"]:not(:empty, :has(*))::after {
-  content: "↗";
+  content: "↗" / "";
   display: inline-block;
   margin-inline-start: 0.125rem;
 }

@@ -52,14 +52,6 @@ declare module 'vue-router/auto-routes' {
       { username: ParamValue<false> },
       | never
     >,
-    '/agents': RouteRecordInfo<
-      '/agents',
-      '/agents',
-      Record<never, never>,
-      Record<never, never>,
-      | '/agents/'
-      | '/agents/[id]'
-    >,
     '/agents/': RouteRecordInfo<
       '/agents/',
       '/agents',
@@ -272,16 +264,6 @@ declare module 'vue-router/auto-routes' {
         | never
       pathParamNames:
         | 'username'
-    }
-    'src/pages/agents.vue': {
-      routes:
-        | '/agents'
-        | '/agents/'
-        | '/agents/[id]'
-      views:
-        | 'default'
-      pathParamNames:
-        | never
     }
     'src/pages/agents/index.vue': {
       routes:

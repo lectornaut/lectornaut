@@ -6,6 +6,7 @@ import { useGlobalHotkeys } from "@/composables/useGlobalHotkeys"
 import { useGlobalHotkeySequences } from "@/composables/useGlobalHotkeySequences"
 import { useMenuActionHotkey } from "@/composables/useMenuActionHotkey"
 import { useNativeNotificationDelivery } from "@/composables/useNativeNotificationDelivery"
+import { useTabRouterSync } from "@/composables/useTabRouterSync"
 import { useCurrentUser } from "vuefire"
 
 const user = useCurrentUser()
@@ -33,6 +34,10 @@ useCloseConfirmation()
 
 // Desktop main window only: surface server-routed alerts as OS notifications.
 useNativeNotificationDelivery()
+
+// Route ⇄ tab-strip sync. Here, not in Tabbar: Tabbar remounts on every layout
+// change, and the sync's state has to outlive that.
+useTabRouterSync()
 
 // Only handle redirecting logged-in users away from guest-only pages.
 // Logout redirects are NOT handled here - the router beforeEach guard

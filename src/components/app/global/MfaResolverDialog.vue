@@ -221,7 +221,7 @@ onUnmounted(() => {
           v-for="hint in resolver?.hints"
           :key="hint.uid"
           variant="outline"
-          class="justify-start gap-3"
+          class="justify-start"
           @click="selectHint(hint)"
         >
           <IconKeyRound

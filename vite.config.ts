@@ -227,7 +227,10 @@ export default defineConfig({
     }),
     ViteImageOptimizer(),
     Icons({
-      defaultClass: "inline-flex shrink-0 size-4",
+      // No `size-4` here: a size class on every icon defeats the components'
+      // `[&_svg:not([class*=size-])]` rules. The 16px fallback is `.icon` in
+      // src/styles/index.css (zero specificity, base layer).
+      defaultClass: "icon inline-flex shrink-0",
     }),
     VueI18nPlugin({
       include: resolve(

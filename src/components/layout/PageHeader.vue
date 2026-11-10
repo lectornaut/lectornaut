@@ -18,7 +18,7 @@ useMacOSWindowControls(windowControlsHeader)
     class="grid grid-cols-2 gap-2 self-stretch p-2"
     :class="{ 'pl-macos-window-controls': macOSTrafficLightsVisible }"
   >
-    <div class="flex items-center justify-start gap-2">
+    <div class="flex items-center gap-2">
       <Button variant="ghost" size="icon-sm" as-child>
         <RouterLink to="/start" :aria-label="$t('actions.goBack')">
           <IconArrowLeft />

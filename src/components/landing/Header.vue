@@ -101,7 +101,7 @@ watch(
         class="bg-background/25 grid w-full grid-cols-3 gap-2 p-2 backdrop-blur-2xl"
         :class="{ 'pl-macos-window-controls': macOSTrafficLightsVisible }"
       >
-        <div class="flex grow items-center justify-start gap-2">
+        <div class="flex grow items-center gap-2">
           <ContextMenu>
             <ContextMenuTrigger as-child>
               <Button variant="ghost" as-child>
@@ -150,7 +150,7 @@ watch(
                       >
                         <RouterLink :to="item.url">
                           <div
-                            class="flex size-full items-start justify-start p-4"
+                            class="flex size-full items-start p-4"
                             :class="item.style.bg"
                           >
                             <Component
@@ -210,7 +210,7 @@ watch(
                           >
                             <RouterLink :to="item.url">
                               <div
-                                class="flex size-full items-start justify-start p-4"
+                                class="flex size-full items-start p-4"
                                 :class="item.style.bg"
                               >
                                 <Component
@@ -255,7 +255,7 @@ watch(
                       >
                         <RouterLink :to="item.url">
                           <div
-                            class="flex size-full items-start justify-start p-4"
+                            class="flex size-full items-start p-4"
                             :class="item.style.bg"
                           >
                             <Component
@@ -296,7 +296,7 @@ watch(
                       >
                         <RouterLink :to="item.url">
                           <div
-                            class="flex size-full items-start justify-start p-4"
+                            class="flex size-full items-start p-4"
                             :class="item.style.bg"
                           >
                             <Component

@@ -18,7 +18,7 @@ definePage({
   path: "/bot/:id?",
   meta: {
     requiresUser: true,
-    layout: "bot",
+    layout: "app",
     sidebar: "Bot",
     breadcrumb: "Bot",
   },
@@ -33,7 +33,7 @@ const windowControlsHeader = useTemplateRef<HTMLElement>("windowControlsHeader")
 useMacOSWindowControls(windowControlsHeader)
 
 // Detached windows retain their conversation across shared preference refreshes.
-// The bot layout remounts the page when switching presentation modes.
+// The app layout remounts the page when switching presentation modes.
 const botChat = useBotChat({ pinnedContext: isStandalone.value })
 provide(BotChatContextKey, botChat)
 

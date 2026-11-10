@@ -253,9 +253,7 @@ const opStyle = (op: string) => OP_STYLE[op] ?? OP_STYLE.update
                   class="flex items-start gap-2 border-b border-l-2 px-2 py-1.5 last:border-b-0"
                   :class="opStyle(c.op).bar"
                 >
-                  <span
-                    class="text-muted-foreground w-2 shrink-0 text-center select-none"
-                  >
+                  <span class="text-muted-foreground w-2 shrink-0 text-center">
                     {{ opStyle(c.op).sign }}
                   </span>
                   <span

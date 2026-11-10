@@ -42,6 +42,7 @@ declare module 'vue' {
     AppAvatar: typeof import('./src/components/app/global/AppAvatar.vue')['default']
     AppMarkdown: typeof import('./src/components/app/markdown/AppMarkdown.vue')['default']
     AppMarkdownImage: typeof import('./src/components/app/markdown/AppMarkdownImage.vue')['default']
+    AppShell: typeof import('./src/components/app/layout/AppShell.vue')['default']
     AspectRatio: typeof import('./src/components/ui/aspect-ratio/AspectRatio.vue')['default']
     Attachment: typeof import('./src/components/ui/attachment/Attachment.vue')['default']
     AttachmentAction: typeof import('./src/components/ui/attachment/AttachmentAction.vue')['default']

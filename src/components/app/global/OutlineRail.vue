@@ -42,7 +42,7 @@ const rowIndent = (depth = 1) => `${0.75 + Math.max(depth - 1, 0) * 0.75}rem`
             v-for="item in items"
             :key="item.id"
             type="button"
-            class="group flex cursor-pointer py-1"
+            class="group flex py-1"
             :aria-label="item.label"
             @click="emit('select', item.id)"
           >

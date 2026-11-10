@@ -24,6 +24,7 @@ const { t } = useI18n()
         <span class="font-semibold">
           {{ t("landing.overview.agentsTitle") }}
         </span>
+        {{ " " }}
         <span class="text-muted-foreground">
           {{ t("landing.overview.agentsDescription") }}
         </span>
@@ -35,6 +36,7 @@ const { t } = useI18n()
         <span class="font-semibold">
           {{ t("landing.overview.createTitle") }}
         </span>
+        {{ " " }}
         <span class="text-muted-foreground">
           {{ t("landing.overview.createDescription") }}
         </span>
@@ -46,6 +48,7 @@ const { t } = useI18n()
         <span class="font-semibold">
           {{ t("landing.overview.communicateTitle") }}
         </span>
+        {{ " " }}
         <span class="text-muted-foreground">
           {{ t("landing.overview.communicateDescription") }}
         </span>
@@ -62,27 +65,24 @@ const { t } = useI18n()
             </HoverCardTrigger>
             <HoverCardContent class="px-3 py-2">
               {{ t("landing.overview.privacyTooltip") }}
-            </HoverCardContent>
-          </HoverCard>
-          ,
+            </HoverCardContent> </HoverCard
+          >,
           <HoverCard :open-delay="0" :close-delay="0">
             <HoverCardTrigger class="cursor-help underline">
               {{ t("landing.overview.longevity") }}
             </HoverCardTrigger>
             <HoverCardContent class="px-3 py-2">
               {{ t("landing.overview.longevityTooltip") }}
-            </HoverCardContent>
-          </HoverCard>
-          , and
+            </HoverCardContent> </HoverCard
+          >, and
           <HoverCard :open-delay="0" :close-delay="0">
             <HoverCardTrigger class="cursor-help underline">
               {{ t("landing.overview.beauty") }}
             </HoverCardTrigger>
             <HoverCardContent class="px-3 py-2">
               {{ t("landing.overview.beautyTooltip") }}
-            </HoverCardContent>
-          </HoverCard>
-          . {{ t("landing.overview.watchBackstory") }}
+            </HoverCardContent> </HoverCard
+          >. {{ t("landing.overview.watchBackstory") }}
         </span>
       </p>
     </li>
@@ -97,7 +97,7 @@ const { t } = useI18n()
             </HoverCardTrigger>
             <HoverCardContent class="w-auto px-3 py-2">
               <div class="flex items-center gap-3">
-                <IconApple class="h-8 w-8" />
+                <IconApple class="size-8" />
                 <div class="flex flex-col">
                   <p class="text-muted-foreground">
                     {{ t("landing.overview.downloadOnThe") }}
@@ -107,16 +107,15 @@ const { t } = useI18n()
                   }}</span>
                 </div>
               </div>
-            </HoverCardContent>
-          </HoverCard>
-          ,
+            </HoverCardContent> </HoverCard
+          >,
           <HoverCard :open-delay="0" :close-delay="0">
             <HoverCardTrigger class="cursor-help underline">
               {{ t("landing.overview.windows") }}
             </HoverCardTrigger>
             <HoverCardContent class="w-auto px-3 py-2">
               <div class="flex items-center gap-3">
-                <IconMicrosoftIcon class="h-8 w-8" />
+                <IconMicrosoftIcon class="size-8" />
                 <div class="flex flex-col">
                   <p class="text-muted-foreground">
                     {{ t("landing.overview.getItFrom") }}
@@ -126,16 +125,15 @@ const { t } = useI18n()
                   }}</span>
                 </div>
               </div>
-            </HoverCardContent>
-          </HoverCard>
-          ,
+            </HoverCardContent> </HoverCard
+          >,
           <HoverCard :open-delay="0" :close-delay="0">
             <HoverCardTrigger class="cursor-help underline">
               {{ t("landing.overview.linux") }}
             </HoverCardTrigger>
             <HoverCardContent class="w-auto px-3 py-2">
               <div class="flex items-center gap-3">
-                <IconFlathub class="h-8 w-8" />
+                <IconFlathub class="size-8" />
                 <div class="flex flex-col">
                   <p class="text-muted-foreground">
                     {{ t("landing.overview.downloadOn") }}
@@ -145,16 +143,15 @@ const { t } = useI18n()
                   }}</span>
                 </div>
               </div>
-            </HoverCardContent>
-          </HoverCard>
-          ,
+            </HoverCardContent> </HoverCard
+          >,
           <HoverCard :open-delay="0" :close-delay="0">
             <HoverCardTrigger class="cursor-help underline">
               {{ t("landing.overview.ios") }}
             </HoverCardTrigger>
             <HoverCardContent class="w-auto px-3 py-2">
               <div class="flex items-center gap-3">
-                <IconAppleAppStore class="h-8 w-8" />
+                <IconAppleAppStore class="size-8" />
                 <div class="flex flex-col">
                   <p class="text-muted-foreground">
                     {{ t("landing.overview.downloadOnThe") }}
@@ -164,16 +161,15 @@ const { t } = useI18n()
                   }}</span>
                 </div>
               </div>
-            </HoverCardContent>
-          </HoverCard>
-          ,
+            </HoverCardContent> </HoverCard
+          >,
           <HoverCard :open-delay="0" :close-delay="0">
             <HoverCardTrigger class="cursor-help underline">
               {{ t("landing.overview.android") }}
             </HoverCardTrigger>
             <HoverCardContent class="w-auto px-3 py-2">
               <div class="flex items-center gap-3">
-                <IconGooglePlayIcon class="h-8 w-8" />
+                <IconGooglePlayIcon class="size-8" />
                 <div class="flex flex-col">
                   <p class="text-muted-foreground">
                     {{ t("landing.overview.getItOn") }}
@@ -192,7 +188,7 @@ const { t } = useI18n()
             </HoverCardTrigger>
             <HoverCardContent class="w-auto px-3 py-2">
               <div class="flex items-center gap-3">
-                <IconCircle class="h-8 w-8 fill-current" />
+                <IconCircle class="size-8 fill-current" />
                 <div class="flex flex-col">
                   <p class="text-muted-foreground">
                     {{ t("landing.overview.open") }}
@@ -202,18 +198,16 @@ const { t } = useI18n()
                   </span>
                 </div>
               </div>
-            </HoverCardContent>
-          </HoverCard>
-          . {{ t("landing.overview.lovedBy") }}
+            </HoverCardContent> </HoverCard
+          >. {{ t("landing.overview.lovedBy") }}
           <HoverCard :open-delay="0" :close-delay="0">
             <HoverCardTrigger class="cursor-help underline">
               {{ t("landing.overview.users") }}</HoverCardTrigger
             >
             <HoverCardContent>
               <WallOfLove />
-            </HoverCardContent>
-          </HoverCard>
-          .
+            </HoverCardContent> </HoverCard
+          >.
         </span>
       </p>
     </li>

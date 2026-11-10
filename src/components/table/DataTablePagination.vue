@@ -29,7 +29,7 @@ defineSlots<{
   <div
     class="flex shrink-0 items-center justify-between gap-2 overflow-x-auto p-2"
   >
-    <div class="flex grow items-center justify-start gap-2">
+    <div class="flex grow items-center gap-2">
       <template v-if="table.getFilteredSelectedRowModel().rows.length">
         <!-- Slotted bulk actions: the count chip becomes a dropdown trigger. -->
         <DropdownMenu v-if="$slots['selection-actions']">

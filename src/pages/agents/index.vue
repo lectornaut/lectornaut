@@ -16,8 +16,9 @@ import { storeToRefs } from "pinia"
  */
 
 definePage({
-  // The parent `agents.vue` is layout-free (so the public [id] profile
-  // can render bare); this child opts back into the app chrome + auth.
+  // No parent `agents.vue` on purpose: a parent component would push the
+  // app layout one level deeper than every other page, so entering/leaving
+  // /agents would remount the whole shell. Each child picks its own layout.
   meta: {
     requiresUser: true,
     layout: "app",

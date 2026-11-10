@@ -577,9 +577,9 @@ const closeTab = (id: string) => {
                                   id="bottom-sidebar"
                                   class="bg-background flex size-full min-h-0 min-w-0 flex-col overflow-clip overscroll-none"
                                 >
-                                  <div class="flex items-stretch gap-2 p-2">
+                                  <div class="flex gap-2 p-2">
                                     <div
-                                      class="relative flex min-w-0 grow items-stretch justify-start gap-2"
+                                      class="relative flex min-w-0 grow gap-2"
                                     >
                                       <TabsList
                                         v-if="source.length > 0"
@@ -599,7 +599,7 @@ const closeTab = (id: string) => {
                                         >
                                           <IconTerminal />
                                           <span
-                                            class="flex grow items-center justify-start truncate"
+                                            class="flex grow items-center truncate"
                                           >
                                             {{ tab.label }}
                                           </span>

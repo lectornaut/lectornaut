@@ -70,7 +70,7 @@ onMounted(async () => {
         <pre>
         {{ authenticateError }}
         </pre>
-        <Button variant="link" class="gap-1" as-child>
+        <Button variant="link" as-child>
           <RouterLink to="/">
             <IconChevronLeft /> {{ t("common.backToHome") }}
           </RouterLink>

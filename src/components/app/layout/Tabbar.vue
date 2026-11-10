@@ -3,8 +3,9 @@ import { useSidebar } from "@/components/ui/sidebar"
 import { useCopy } from "@/composables/useCopy"
 import { useMacOSWindowControls } from "@/composables/useMacOSWindowControls"
 import { useMacOSTrafficLightsVisible } from "@/composables/usePlatform"
+import { useMenuAwareHoverCard } from "@/composables/useMenuAwareHoverCard"
 import { useShortcutKeys } from "@/composables/useShortcutKeys"
-import { useTabRouterSync } from "@/composables/useTabRouterSync"
+import { useTabActions } from "@/composables/useTabRouterSync"
 import { useTabs } from "@/composables/useTabs"
 import {
   IconCheck,
@@ -38,6 +39,8 @@ import { storeToRefs } from "pinia"
 // ----------------------------------------------------------------------------
 const macOSTrafficLightsVisible = useMacOSTrafficLightsVisible()
 const { open, isMobile } = useSidebar()
+const sidebarPeekOpen = ref(false)
+const sidebarPeek = useMenuAwareHoverCard((v) => (sidebarPeekOpen.value = v))
 
 const el = ref<HTMLElement>()
 const windowControlsHeader = useTemplateRef<HTMLElement>("windowControlsHeader")
@@ -179,9 +182,9 @@ function handleRenameKeydown(event: KeyboardEvent) {
 }
 
 // ----------------------------------------------------------------------------
-// Route ⇄ store sync, navigation entry points, and the Tabs.* mitt bridge.
-// Inline rename stays in this component (above); the composable triggers it
-// through the `beginRename` callback.
+// Navigation entry points and the Tabs.* mitt bridge (route ⇄ store sync is
+// app-level, in App.vue). Inline rename stays in this component (above); the
+// composable triggers it through the `beginRename` callback.
 // ----------------------------------------------------------------------------
 const {
   onTabClick,
@@ -189,7 +192,7 @@ const {
   handleCloseTab,
   handleDuplicateTab,
   handleToggleTabPinned,
-} = useTabRouterSync({ beginRename: handleRenameTab })
+} = useTabActions({ beginRename: handleRenameTab })
 
 // Reset the per-tab "copied" check mark when the clipboard flag clears.
 watch(copied, (isCopied) => {
@@ -217,8 +220,10 @@ watch(copied, (isCopied) => {
         >
           <HoverCard
             v-if="!isMobile && !open && !sidebarPinned"
+            :open="sidebarPeekOpen"
             :open-delay="500"
             :close-delay="0"
+            @update:open="sidebarPeek.onUpdateOpen"
           >
             <HoverCardTrigger as-child>
               <SidebarTrigger v-motion-fade />
@@ -227,6 +232,7 @@ watch(copied, (isCopied) => {
               side="bottom"
               align="start"
               :side-offset="8"
+              v-bind="sidebarPeek.contentAttrs"
               class="flex max-h-[calc(var(--reka-hover-card-content-available-height)-3.5rem)] flex-col overflow-clip p-0"
             >
               <MainSidebar preview />
@@ -257,10 +263,7 @@ watch(copied, (isCopied) => {
           >
             <BackForth />
           </span>
-          <nav
-            ref="el"
-            class="relative flex min-w-0 items-stretch justify-start gap-2 empty:hidden"
-          >
+          <nav ref="el" class="relative flex min-w-0 gap-2 empty:hidden">
             <template v-if="pending">
               <Skeleton v-for="n in 3" :key="n" class="bg-accent h-8 w-60" />
             </template>
@@ -315,7 +318,7 @@ watch(copied, (isCopied) => {
                       <ContextMenuTrigger as-child class="context-trigger">
                         <Button
                           variant="secondary"
-                          class="group w-[-webkit-fill-available] min-w-0 gap-2"
+                          class="group w-[-webkit-fill-available] min-w-0"
                           :class="[
                             {
                               'bg-secondary/50 text-secondary-foreground/50 hover:bg-secondary/75 hover:text-secondary-foreground/75':
@@ -491,7 +494,7 @@ watch(copied, (isCopied) => {
                         </Tooltip>
                       </TooltipProvider>
                       <span
-                        class="text-muted-foreground mr-auto min-w-0 justify-center truncate font-mono text-sm font-medium"
+                        class="text-muted-foreground mr-auto min-w-0 truncate font-mono text-sm font-medium"
                       >
                         {{ tab.fullPath }}
                       </span>
@@ -508,7 +511,7 @@ watch(copied, (isCopied) => {
               </div>
             </template>
           </nav>
-          <div class="flex shrink-0 grow items-stretch justify-between gap-2">
+          <div class="flex shrink-0 grow justify-between gap-2">
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger as-child>
@@ -524,7 +527,7 @@ watch(copied, (isCopied) => {
                 <TooltipContent> {{ t("tabs.newTab") }} </TooltipContent>
               </Tooltip>
             </TooltipProvider>
-            <div class="flex items-stretch justify-center gap-2">
+            <div class="flex justify-center gap-2">
               <UpdateButton />
               <CommandKTrigger />
               <Notifications />

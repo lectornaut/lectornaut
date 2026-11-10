@@ -1,4 +1,5 @@
 <script lang="ts" setup>
+import "@/styles/markdown.css" // markstream + KaTeX ship with this chunk, not the entry CSS
 /**
  * AppMarkdown — single entry point for every markdown surface in the
  * app. Wraps `markstream-vue` with the shared config (theme tracking,

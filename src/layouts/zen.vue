@@ -1,6 +1,7 @@
 <script lang="ts" setup>
 import { useMacOSWindowControls } from "@/composables/useMacOSWindowControls"
 import { useMacOSTrafficLightsVisible } from "@/composables/usePlatform"
+import { useMenuAwareHoverCard } from "@/composables/useMenuAwareHoverCard"
 import { IconLeaf } from "@/data/icons"
 import { SIDEBAR_MOBILE_BREAKPOINT } from "@/components/ui/sidebar/utils"
 import { useMediaQuery } from "@vueuse/core"
@@ -15,6 +16,7 @@ useMacOSWindowControls(windowControlsHeader)
 
 // Zen renders no sidebar, so the trigger (and ⌘B) opens the preview instead.
 const previewOpen = ref(false)
+const preview = useMenuAwareHoverCard((v) => (previewOpen.value = v))
 </script>
 
 <template>
@@ -34,9 +36,10 @@ const previewOpen = ref(false)
         :class="{ 'pl-macos-window-controls': macOSTrafficLightsVisible }"
       >
         <HoverCard
-          v-model:open="previewOpen"
+          :open="previewOpen"
           :open-delay="500"
           :close-delay="0"
+          @update:open="preview.onUpdateOpen"
         >
           <HoverCardTrigger as-child>
             <SidebarTrigger v-motion-fade />
@@ -45,6 +48,7 @@ const previewOpen = ref(false)
             side="bottom"
             align="start"
             :side-offset="8"
+            v-bind="preview.contentAttrs"
             class="flex h-[80svh] flex-col overflow-clip p-0"
           >
             <MainSidebar preview />

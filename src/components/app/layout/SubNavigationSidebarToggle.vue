@@ -1,5 +1,6 @@
 <script lang="ts" setup>
 import { useSidebar } from "@/components/ui/sidebar"
+import { useMenuAwareHoverCard } from "@/composables/useMenuAwareHoverCard"
 import { useShortcutKeys } from "@/composables/useShortcutKeys"
 import {
   sidebarPreviewTargetId,
@@ -66,7 +67,10 @@ const canPreview = computed(() => isCollapsed.value && !isMobile.value)
 
 // The HoverCard is only rendered while `canPreview` (see template), so reka
 // only emits here when previewing is allowed.
-function onPreviewUpdate(open: boolean) {
+// Menus opened inside the peek veto the close until they shut.
+const preview = useMenuAwareHoverCard(applyPreview)
+
+function applyPreview(open: boolean) {
   if (open) {
     // Just open the popover. The slot is teleported in by the watcher below,
     // once the popover's target actually exists in the DOM.
@@ -108,7 +112,7 @@ watch(canPreview, (ok) => {
     :open="previewOpen"
     :open-delay="500"
     :close-delay="0"
-    @update:open="onPreviewUpdate"
+    @update:open="preview.onUpdateOpen"
   >
     <HoverCardTrigger as-child>
       <Button
@@ -120,14 +124,19 @@ watch(canPreview, (ok) => {
         <slot><Component :is="icon" /></slot>
       </Button>
     </HoverCardTrigger>
-    <!-- Cap at the main content's bottom edge: reka's available height
+    <!-- Reach the main content's bottom edge: reka's available height
          (trigger → viewport) minus BottomBar (size-8 AiBar + p-2 = 3rem)
-         and a 0.5rem gap matching the 8px side-offset = 3.5rem. -->
+         and a 0.5rem gap matching the 8px side-offset = 3.5rem.
+         Must be a definite `h-`, not `max-h-`: sidebar content sizes itself
+         with `size-full` chains, which only resolve against a definite
+         height. A max-h lets it grow to content height and get clipped,
+         so nothing inside ever scrolls. -->
     <HoverCardContent
       side="bottom"
       :align="side === 'left' ? 'start' : 'end'"
       :side-offset="8"
-      class="flex max-h-[calc(var(--reka-hover-card-content-available-height)-3.5rem)] flex-col overflow-clip p-0"
+      v-bind="preview.contentAttrs"
+      class="flex h-[calc(var(--reka-hover-card-content-available-height)-3.5rem)] flex-col overflow-clip p-0"
     >
       <div
         :id="previewTargetId"

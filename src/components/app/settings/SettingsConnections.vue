@@ -501,7 +501,7 @@ const openInfoDialog = (provider: ConnectionProvider): void => {
               </TabsTrigger>
             </TabsList>
             <InputGroup
-              class="border-border border"
+              class="border-border"
               :class="searchExpanded ? 'max-w-64' : 'w-auto'"
             >
               <!-- Collapsed: tooltipped button standing in for the search field. -->

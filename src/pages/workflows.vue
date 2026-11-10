@@ -199,7 +199,7 @@ const formatWhen = (ts: unknown): string =>
             {{ t("settings.workflows.new") }}
           </Button>
           <InputGroup
-            class="border-border border"
+            class="border-border"
             :class="searchExpanded ? 'max-w-64' : 'w-auto'"
           >
             <InputGroupAddon v-if="!searchExpanded" key="search-compact">

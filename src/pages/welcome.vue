@@ -310,7 +310,7 @@ const handleFinalStepAction = async () => {
                   class="relative"
                 >
                   <SidebarMenuButton as-child :is-active="state === 'active'">
-                    <StepperTrigger class="flex flex-row items-center">
+                    <StepperTrigger class="flex-row items-center">
                       <StepperIndicator
                         class="size-4 bg-transparent group-data-[state=active]:bg-transparent"
                       >

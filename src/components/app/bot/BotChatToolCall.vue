@@ -1465,7 +1465,7 @@ const traceStatus = computed<"pending" | "running" | "error" | undefined>(
             </div>
             <div
               v-if="driveWriteDraft.contentPreview"
-              class="text-muted-foreground border-border border-l-2 pl-2 text-xs whitespace-pre-wrap"
+              class="text-muted-foreground border-l-2 pl-2 text-xs whitespace-pre-wrap"
             >
               {{ driveWriteDraft.contentPreview }}
             </div>
@@ -1523,7 +1523,7 @@ const traceStatus = computed<"pending" | "running" | "error" | undefined>(
             </div>
             <div
               v-if="gitHubWriteDraft.bodyPreview"
-              class="text-muted-foreground border-border border-l-2 pl-2 text-xs whitespace-pre-wrap"
+              class="text-muted-foreground border-l-2 pl-2 text-xs whitespace-pre-wrap"
             >
               {{ gitHubWriteDraft.bodyPreview }}
             </div>
@@ -1599,7 +1599,7 @@ const traceStatus = computed<"pending" | "running" | "error" | undefined>(
             </div>
             <div
               v-if="gmailSendDraft.bodyPreview"
-              class="text-muted-foreground border-border border-l-2 pl-2 text-xs whitespace-pre-wrap"
+              class="text-muted-foreground border-l-2 pl-2 text-xs whitespace-pre-wrap"
             >
               {{ gmailSendDraft.bodyPreview }}
             </div>

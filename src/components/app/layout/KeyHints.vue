@@ -71,7 +71,7 @@ const run = (id: string) => {
         </Kbd>
       </KbdGroup>
       <ul
-        class="no-scrollbar scroll-fade-x flex min-w-0 items-center gap-2 overflow-x-auto"
+        class="no-scrollbar scroll-fade-x relative flex min-w-0 items-center gap-2 overflow-x-auto"
       >
         <li v-for="option in hint.options" :key="option.id" class="shrink-0">
           <Button
