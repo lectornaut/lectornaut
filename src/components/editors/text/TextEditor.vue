@@ -200,6 +200,23 @@ const FONT_FAMILIES = [
 const LINE_HEIGHTS = ["1", "1.25", "1.5", "2"]
 
 const IMAGE_WIDTHS = ["25%", "33%", "50%", "75%", "100%"]
+const IMAGE_ALIGNS = [
+  {
+    value: "left",
+    icon: IconAlignLeft,
+    labelKey: "components.textEditor.alignLeftButton",
+  },
+  {
+    value: "center",
+    icon: IconAlignCenter,
+    labelKey: "components.textEditor.alignCenterButton",
+  },
+  {
+    value: "right",
+    icon: IconAlignRight,
+    labelKey: "components.textEditor.alignRightButton",
+  },
+] as const
 
 /**
  * Block types for the bubble menu's selector. Labels reuse the slash-menu
@@ -1387,210 +1404,223 @@ const scrollToTableOfContentsItem = (id: string) => {
     <div
       class="bg-popover text-popover-foreground cn-menu-translucent ring-foreground/5 dark:ring-foreground/10 flex max-w-[calc(100vw-2rem)] items-center gap-1 overflow-x-auto rounded-3xl p-1.5 shadow-lg ring-1"
     >
-      <DropdownMenu>
-        <DropdownMenuTrigger as-child>
-          <Button
-            variant="ghost"
-            :aria-label="t('components.textEditor.blockType')"
-            :title="t('components.textEditor.blockType')"
-          >
-            <component :is="activeBlock.icon" />
-            {{ t(activeBlock.labelKey) }}
-            <IconChevronDown class="opacity-60" />
-          </Button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="start">
-          <DropdownMenuItem
-            v-for="block in BLOCK_TYPES"
-            :key="block.id"
-            :data-active="block.id === activeBlock.id || undefined"
-            class="data-active:bg-accent"
-            @click="editor && block.apply(editor)"
-          >
-            <component :is="block.icon" />
-            {{ t(block.labelKey) }}
-          </DropdownMenuItem>
-        </DropdownMenuContent>
-      </DropdownMenu>
+      <!-- An image is a node selection: marks don't apply, so show only
+           its own controls (also keeps the bar short enough to fit). -->
+      <template v-if="!editor?.isActive('image')">
+        <DropdownMenu>
+          <DropdownMenuTrigger as-child>
+            <Button
+              variant="ghost"
+              :aria-label="t('components.textEditor.blockType')"
+              :title="t('components.textEditor.blockType')"
+            >
+              <component :is="activeBlock.icon" />
+              {{ t(activeBlock.labelKey) }}
+              <IconChevronDown class="opacity-60" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="start">
+            <DropdownMenuItem
+              v-for="block in BLOCK_TYPES"
+              :key="block.id"
+              :data-active="block.id === activeBlock.id || undefined"
+              class="data-active:bg-accent"
+              @click="editor && block.apply(editor)"
+            >
+              <component :is="block.icon" />
+              {{ t(block.labelKey) }}
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
 
-      <Separator orientation="vertical" />
+        <Separator orientation="vertical" class="my-2" />
 
-      <Toggle
-        v-for="mark in MARK_TOGGLES"
-        :key="mark.name"
-        variant="outline"
-        :aria-label="t(mark.labelKey)"
-        :title="t(mark.labelKey)"
-        :pressed="editor?.isActive(mark.name)"
-        @click="editor?.chain().focus().toggleMark(mark.name).run()"
-      >
-        <component :is="mark.icon" />
-      </Toggle>
+        <Toggle
+          v-for="mark in MARK_TOGGLES"
+          :key="mark.name"
+          :aria-label="t(mark.labelKey)"
+          :title="t(mark.labelKey)"
+          :model-value="editor?.isActive(mark.name)"
+          class="aspect-square px-0"
+          @click="editor?.chain().focus().toggleMark(mark.name).run()"
+        >
+          <component :is="mark.icon" />
+        </Toggle>
 
-      <Separator orientation="vertical" />
+        <Separator orientation="vertical" class="my-2" />
 
-      <TextEditorColorPicker
-        :colors="TEXT_COLORS"
-        :active-color="
-          (editor?.getAttributes('textStyle').color as string | undefined) ??
-          null
-        "
-        :title="t('components.textEditor.textColorTitle')"
-        @select="editor?.chain().focus().setColor($event).run()"
-        @clear="editor?.chain().focus().unsetColor().run()"
-      >
-        <template #trigger>
-          <IconPalette />
-        </template>
-      </TextEditorColorPicker>
+        <TextEditorColorPicker
+          :colors="TEXT_COLORS"
+          :active-color="
+            (editor?.getAttributes('textStyle').color as string | undefined) ??
+            null
+          "
+          :title="t('components.textEditor.textColorTitle')"
+          @select="editor?.chain().focus().setColor($event).run()"
+          @clear="editor?.chain().focus().unsetColor().run()"
+        >
+          <template #trigger>
+            <IconPalette />
+          </template>
+        </TextEditorColorPicker>
 
-      <TextEditorColorPicker
-        :colors="HIGHLIGHT_COLORS"
-        :active-color="
-          (editor?.getAttributes('highlight').color as string | undefined) ??
-          null
-        "
-        :title="t('components.textEditor.highlightTitle')"
-        @select="editor?.chain().focus().setHighlight({ color: $event }).run()"
-        @clear="editor?.chain().focus().unsetHighlight().run()"
-      >
-        <template #trigger>
-          <IconHighlighter />
-        </template>
-      </TextEditorColorPicker>
+        <TextEditorColorPicker
+          :colors="HIGHLIGHT_COLORS"
+          :active-color="
+            (editor?.getAttributes('highlight').color as string | undefined) ??
+            null
+          "
+          :title="t('components.textEditor.highlightTitle')"
+          @select="
+            editor?.chain().focus().setHighlight({ color: $event }).run()
+          "
+          @clear="editor?.chain().focus().unsetHighlight().run()"
+        >
+          <template #trigger>
+            <IconHighlighter />
+          </template>
+        </TextEditorColorPicker>
 
-      <TextEditorColorPicker
-        :colors="HIGHLIGHT_COLORS"
-        :active-color="
-          (editor?.getAttributes('textStyle').backgroundColor as
-            string | undefined) ?? null
-        "
-        :title="t('components.textEditor.backgroundColorTitle')"
-        @select="editor?.chain().focus().setBackgroundColor($event).run()"
-        @clear="editor?.chain().focus().unsetBackgroundColor().run()"
-      >
-        <template #trigger>
-          <IconPaintBucket />
-        </template>
-      </TextEditorColorPicker>
+        <TextEditorColorPicker
+          :colors="HIGHLIGHT_COLORS"
+          :active-color="
+            (editor?.getAttributes('textStyle').backgroundColor as
+              string | undefined) ?? null
+          "
+          :title="t('components.textEditor.backgroundColorTitle')"
+          @select="editor?.chain().focus().setBackgroundColor($event).run()"
+          @clear="editor?.chain().focus().unsetBackgroundColor().run()"
+        >
+          <template #trigger>
+            <IconPaintBucket />
+          </template>
+        </TextEditorColorPicker>
 
-      <DropdownMenu>
-        <DropdownMenuTrigger as-child>
-          <Button
-            variant="outline"
-            size="icon"
-            :aria-label="t('components.textEditor.textStyle')"
-            :title="t('components.textEditor.textStyle')"
-          >
-            <IconALargeSmall />
-          </Button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent>
-          <DropdownMenuSub>
-            <DropdownMenuSubTrigger>
-              {{ t("components.textEditor.fontSize") }}
-            </DropdownMenuSubTrigger>
-            <DropdownMenuSubContent>
-              <DropdownMenuItem
-                @click="editor?.chain().focus().unsetFontSize().run()"
-              >
-                {{ t("components.textEditor.fontDefault") }}
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem
-                v-for="size in FONT_SIZES"
-                :key="size"
-                @click="editor?.chain().focus().setFontSize(size).run()"
-              >
-                {{ size }}
-              </DropdownMenuItem>
-            </DropdownMenuSubContent>
-          </DropdownMenuSub>
-          <DropdownMenuSub>
-            <DropdownMenuSubTrigger>
-              {{ t("components.textEditor.fontFamily") }}
-            </DropdownMenuSubTrigger>
-            <DropdownMenuSubContent>
-              <DropdownMenuItem
-                @click="editor?.chain().focus().unsetFontFamily().run()"
-              >
-                {{ t("components.textEditor.fontDefault") }}
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem
-                v-for="family in FONT_FAMILIES"
-                :key="family.id"
-                :style="{ fontFamily: family.value }"
-                @click="
-                  editor?.chain().focus().setFontFamily(family.value).run()
-                "
-              >
-                {{ t(family.labelKey) }}
-              </DropdownMenuItem>
-            </DropdownMenuSubContent>
-          </DropdownMenuSub>
-          <DropdownMenuSub>
-            <DropdownMenuSubTrigger>
-              {{ t("components.textEditor.lineHeight") }}
-            </DropdownMenuSubTrigger>
-            <DropdownMenuSubContent>
-              <DropdownMenuItem
-                @click="editor?.chain().focus().unsetLineHeight().run()"
-              >
-                {{ t("components.textEditor.fontDefault") }}
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem
-                v-for="height in LINE_HEIGHTS"
-                :key="height"
-                @click="editor?.chain().focus().setLineHeight(height).run()"
-              >
-                {{ height }}
-              </DropdownMenuItem>
-            </DropdownMenuSubContent>
-          </DropdownMenuSub>
-          <DropdownMenuSeparator />
-          <DropdownMenuCheckboxItem
-            :model-value="editor?.isActive('subscript')"
-            @select="editor?.chain().focus().toggleSubscript().run()"
-          >
-            {{ t("components.textEditor.subscript") }}
-          </DropdownMenuCheckboxItem>
-          <DropdownMenuCheckboxItem
-            :model-value="editor?.isActive('superscript')"
-            @select="editor?.chain().focus().toggleSuperscript().run()"
-          >
-            {{ t("components.textEditor.superscript") }}
-          </DropdownMenuCheckboxItem>
-        </DropdownMenuContent>
-      </DropdownMenu>
+        <DropdownMenu>
+          <DropdownMenuTrigger as-child>
+            <Button
+              variant="ghost"
+              size="icon"
+              :aria-label="t('components.textEditor.textStyle')"
+              :title="t('components.textEditor.textStyle')"
+            >
+              <IconALargeSmall />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent>
+            <DropdownMenuSub>
+              <DropdownMenuSubTrigger>
+                {{ t("components.textEditor.fontSize") }}
+              </DropdownMenuSubTrigger>
+              <DropdownMenuSubContent>
+                <DropdownMenuItem
+                  @click="editor?.chain().focus().unsetFontSize().run()"
+                >
+                  {{ t("components.textEditor.fontDefault") }}
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  v-for="size in FONT_SIZES"
+                  :key="size"
+                  @click="editor?.chain().focus().setFontSize(size).run()"
+                >
+                  {{ size }}
+                </DropdownMenuItem>
+              </DropdownMenuSubContent>
+            </DropdownMenuSub>
+            <DropdownMenuSub>
+              <DropdownMenuSubTrigger>
+                {{ t("components.textEditor.fontFamily") }}
+              </DropdownMenuSubTrigger>
+              <DropdownMenuSubContent>
+                <DropdownMenuItem
+                  @click="editor?.chain().focus().unsetFontFamily().run()"
+                >
+                  {{ t("components.textEditor.fontDefault") }}
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  v-for="family in FONT_FAMILIES"
+                  :key="family.id"
+                  :style="{ fontFamily: family.value }"
+                  @click="
+                    editor?.chain().focus().setFontFamily(family.value).run()
+                  "
+                >
+                  {{ t(family.labelKey) }}
+                </DropdownMenuItem>
+              </DropdownMenuSubContent>
+            </DropdownMenuSub>
+            <DropdownMenuSub>
+              <DropdownMenuSubTrigger>
+                {{ t("components.textEditor.lineHeight") }}
+              </DropdownMenuSubTrigger>
+              <DropdownMenuSubContent>
+                <DropdownMenuItem
+                  @click="editor?.chain().focus().unsetLineHeight().run()"
+                >
+                  {{ t("components.textEditor.fontDefault") }}
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  v-for="height in LINE_HEIGHTS"
+                  :key="height"
+                  @click="editor?.chain().focus().setLineHeight(height).run()"
+                >
+                  {{ height }}
+                </DropdownMenuItem>
+              </DropdownMenuSubContent>
+            </DropdownMenuSub>
+            <DropdownMenuSeparator />
+            <DropdownMenuCheckboxItem
+              :model-value="editor?.isActive('subscript')"
+              @select="editor?.chain().focus().toggleSubscript().run()"
+            >
+              {{ t("components.textEditor.subscript") }}
+            </DropdownMenuCheckboxItem>
+            <DropdownMenuCheckboxItem
+              :model-value="editor?.isActive('superscript')"
+              @select="editor?.chain().focus().toggleSuperscript().run()"
+            >
+              {{ t("components.textEditor.superscript") }}
+            </DropdownMenuCheckboxItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
 
-      <Button
-        variant="outline"
-        size="icon"
-        :aria-label="t('components.textEditor.link')"
-        :title="t('components.textEditor.link')"
-        @click="openLinkDialog"
-      >
-        <IconLink />
-      </Button>
-      <Button
-        v-if="editor?.isActive('link')"
-        variant="outline"
-        size="icon"
-        :aria-label="t('components.textEditor.unlink')"
-        :title="t('components.textEditor.unlink')"
-        @click="
-          editor?.chain().focus().extendMarkRange('link').unsetLink().run()
-        "
-      >
-        <IconUnlink />
-      </Button>
+        <Separator orientation="vertical" class="my-2" />
+
+        <Button
+          variant="ghost"
+          size="icon"
+          :aria-label="t('components.textEditor.link')"
+          :title="t('components.textEditor.link')"
+          @click="openLinkDialog"
+        >
+          <IconLink />
+        </Button>
+        <Button
+          v-if="editor?.isActive('link')"
+          variant="ghost"
+          size="icon"
+          :aria-label="t('components.textEditor.unlink')"
+          :title="t('components.textEditor.unlink')"
+          @click="
+            editor?.chain().focus().extendMarkRange('link').unsetLink().run()
+          "
+        >
+          <IconUnlink />
+        </Button>
+      </template>
+
+      <Separator
+        v-if="editor?.isActive('table') && !editor?.isActive('image')"
+        orientation="vertical"
+      />
 
       <DropdownMenu v-if="editor?.isActive('table')">
         <DropdownMenuTrigger as-child>
           <Button
-            variant="outline"
+            variant="ghost"
             size="icon"
             :aria-label="t('components.textEditor.tableTitle')"
             :title="t('components.textEditor.tableTitle')"
@@ -1639,24 +1669,25 @@ const scrollToTableOfContentsItem = (id: string) => {
         </DropdownMenuContent>
       </DropdownMenu>
 
-      <div
-        v-if="editor?.isActive('image')"
-        class="border-border/70 bg-muted/30 flex items-center gap-1 border px-1 py-0.5"
-      >
-        <Button variant="ghost" @click="applyImageAttrs({ align: 'left' })">
-          {{ t("components.textEditor.alignLeftButton") }}
-        </Button>
-        <Button variant="ghost" @click="applyImageAttrs({ align: 'center' })">
-          {{ t("components.textEditor.alignCenterButton") }}
-        </Button>
-        <Button variant="ghost" @click="applyImageAttrs({ align: 'right' })">
-          {{ t("components.textEditor.alignRightButton") }}
-        </Button>
+      <template v-if="editor?.isActive('image')">
+        <Toggle
+          v-for="align in IMAGE_ALIGNS"
+          :key="align.value"
+          :aria-label="t(align.labelKey)"
+          :title="t(align.labelKey)"
+          :model-value="
+            (editor.getAttributes('image').align ?? 'center') === align.value
+          "
+          class="aspect-square px-0"
+          @click="applyImageAttrs({ align: align.value })"
+        >
+          <component :is="align.icon" />
+        </Toggle>
         <Select
           :model-value="String(editor.getAttributes('image').width || '100%')"
           @update:model-value="applyImageAttrs({ width: $event })"
         >
-          <SelectTrigger>
+          <SelectTrigger class="hover:bg-muted bg-transparent tabular-nums">
             <SelectValue :placeholder="t('components.textEditor.widthLabel')" />
           </SelectTrigger>
           <SelectContent>
@@ -1671,7 +1702,7 @@ const scrollToTableOfContentsItem = (id: string) => {
             </SelectGroup>
           </SelectContent>
         </Select>
-      </div>
+      </template>
     </div>
   </BubbleMenu>
 

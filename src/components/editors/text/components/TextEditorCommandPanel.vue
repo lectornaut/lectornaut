@@ -125,44 +125,48 @@ watch(
         >
           {{ emptyText }}
         </div>
-        <CommandGroup
-          v-for="[groupName, groupItems] in groupedItems"
+        <template
+          v-for="([groupName, groupItems], groupIndex) in groupedItems"
           :key="groupName"
-          :heading="groupName"
-          class="**:data-[slot=command-group-heading]:text-muted-foreground **:data-[slot=command-group-heading]:py-2 **:data-[slot=command-group-heading]:pl-2 **:data-[slot=command-group-heading]:text-xs **:data-[slot=command-group-heading]:font-medium"
         >
-          <CommandItem
-            v-for="item in groupItems"
-            :id="`${panelId}-${item.index}`"
-            :key="item.id"
-            :value="item.id"
-            :data-index="item.index"
-            class="data-highlighted:bg-muted data-highlighted:text-foreground data-highlighted:**:[svg]:text-foreground gap-3"
-            @mousemove="emit('hover', item.index)"
-            @select="emit('select', item.index)"
+          <CommandSeparator v-if="groupIndex > 0" />
+          <CommandGroup
+            :heading="groupName"
+            class="**:data-[slot=command-group-heading]:text-muted-foreground **:data-[slot=command-group-heading]:py-2 **:data-[slot=command-group-heading]:pl-2 **:data-[slot=command-group-heading]:text-xs **:data-[slot=command-group-heading]:font-medium"
           >
-            <component
-              :is="item.icon"
-              v-if="item.icon"
-              class="text-muted-foreground"
-            />
-            <div class="min-w-0 flex-1">
-              <div class="truncate">{{ item.title }}</div>
-              <div
-                v-if="item.description"
-                class="text-muted-foreground truncate text-xs"
-              >
-                {{ item.description }}
-              </div>
-            </div>
-            <CommandShortcut
-              v-if="item.shortcut"
-              class="font-mono tracking-normal"
+            <CommandItem
+              v-for="item in groupItems"
+              :id="`${panelId}-${item.index}`"
+              :key="item.id"
+              :value="item.id"
+              :data-index="item.index"
+              class="data-highlighted:bg-muted data-highlighted:text-foreground data-highlighted:**:[svg]:text-foreground gap-3"
+              @mousemove="emit('hover', item.index)"
+              @select="emit('select', item.index)"
             >
-              {{ item.shortcut }}
-            </CommandShortcut>
-          </CommandItem>
-        </CommandGroup>
+              <component
+                :is="item.icon"
+                v-if="item.icon"
+                class="text-muted-foreground"
+              />
+              <div class="min-w-0 flex-1">
+                <div class="truncate">{{ item.title }}</div>
+                <div
+                  v-if="item.description"
+                  class="text-muted-foreground truncate text-xs"
+                >
+                  {{ item.description }}
+                </div>
+              </div>
+              <CommandShortcut
+                v-if="item.shortcut"
+                class="font-mono tracking-normal"
+              >
+                {{ item.shortcut }}
+              </CommandShortcut>
+            </CommandItem>
+          </CommandGroup>
+        </template>
       </CommandList>
     </Command>
   </div>

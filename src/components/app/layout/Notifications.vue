@@ -1,5 +1,6 @@
 <script lang="ts" setup>
 import { useNotifications } from "@/composables/useNotifications"
+import { useShortcutKeys } from "@/composables/useShortcutKeys"
 import {
   IconBell,
   IconBookmark,
@@ -22,6 +23,7 @@ import { emitter } from "@/modules/mitt"
 import { createReusableTemplate } from "@vueuse/core"
 
 const { t } = useI18n()
+const toggleKeys = useShortcutKeys("Dialog.Notifications.Toggle")
 
 type ScrollContainerRef = ComponentPublicInstance<{
   getScrollElement: () => HTMLElement | undefined
@@ -370,36 +372,48 @@ useInfiniteScroll(
       </div>
     </Tabs>
   </DefineNotificationsPanel>
-  <Popover v-model:open="popoverOpen">
-    <PopoverTrigger as-child>
-      <Button
-        id="tour-tasks-notifications"
-        variant="outline"
-        :size="unreadCount > 0 ? 'sm' : 'icon-sm'"
-        :aria-label="t('components.notifications.title')"
-      >
-        <IconBell />
-        <Badge
-          v-if="unreadCount > 0"
-          variant="secondary"
-          class="bg-sidebar-primary text-sidebar-primary-foreground aspect-square h-4 rounded-full px-1"
+  <TooltipProvider>
+    <Tooltip>
+      <Popover v-model:open="popoverOpen">
+        <TooltipTrigger as-child>
+          <PopoverTrigger as-child>
+            <Button
+              id="tour-tasks-notifications"
+              variant="outline"
+              :size="unreadCount > 0 ? 'sm' : 'icon-sm'"
+              :aria-label="t('components.notifications.title')"
+            >
+              <IconBell />
+              <Badge
+                v-if="unreadCount > 0"
+                variant="secondary"
+                class="bg-sidebar-primary text-sidebar-primary-foreground aspect-square h-4 rounded-full px-1"
+              >
+                {{ unreadCount }}
+              </Badge>
+            </Button>
+          </PopoverTrigger>
+        </TooltipTrigger>
+        <TooltipContent class="flex items-center gap-2 pr-2">
+          {{ t("components.notifications.title") }}
+          <KbdGroup v-if="toggleKeys?.length">
+            <Kbd v-for="key in toggleKeys" :key="key">{{ key }}</Kbd>
+          </KbdGroup>
+        </TooltipContent>
+        <PopoverContent
+          v-if="!isDocked"
+          class="mx-2 w-lg max-w-[calc(100vw-1rem)] p-2"
+          @close-auto-focus="
+            (event) => {
+              if (isDocked) event.preventDefault()
+            }
+          "
         >
-          {{ unreadCount }}
-        </Badge>
-      </Button>
-    </PopoverTrigger>
-    <PopoverContent
-      v-if="!isDocked"
-      class="mx-2 w-lg max-w-[calc(100vw-1rem)] p-2"
-      @close-auto-focus="
-        (event) => {
-          if (isDocked) event.preventDefault()
-        }
-      "
-    >
-      <NotificationsPanel />
-    </PopoverContent>
-  </Popover>
+          <NotificationsPanel />
+        </PopoverContent>
+      </Popover>
+    </Tooltip>
+  </TooltipProvider>
   <Teleport v-if="isDocked" defer to="#left-dock">
     <div
       ref="dockedNotifications"
