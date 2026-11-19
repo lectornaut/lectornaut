@@ -1,3 +1,4 @@
+import type { IMembershipRole } from "@lectornaut/shared/permissions"
 /**
  * Membership Store — the signed-in user's team memberships + the current team's
  * member roster.
@@ -34,7 +35,6 @@ import {
   type IAgentMembership,
   type IMembership,
   type IMembershipAgentSnapshot,
-  type IMembershipRole,
   type IMembershipWorkspaceRecord,
   type ITeamMember,
 } from "@/types/membership"
@@ -546,7 +546,11 @@ export const useMembershipStore = defineStore("memberships", () => {
     }
   }
 
-  async function removeMember(teamId: string, userId: string): Promise<void> {
+  async function removeMember(
+    teamId: string,
+    userId: string,
+    deletePrivateContent = false
+  ): Promise<void> {
     if (!currentUser.value) return
 
     const isCurrent = currentTeamId.value === teamId
@@ -615,7 +619,7 @@ export const useMembershipStore = defineStore("memberships", () => {
           }
         },
         async () => {
-          await removeMemberFn({ teamId, userId })
+          await removeMemberFn({ teamId, userId, deletePrivateContent })
         }
       )
     } finally {

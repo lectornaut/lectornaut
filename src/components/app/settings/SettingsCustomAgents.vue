@@ -7,6 +7,7 @@ import { useDismissGuard } from "@/composables/useDismissGuard"
 import { emitter } from "@/modules/mitt"
 import { useAgentConfigStore } from "@/stores/agentConfigStore"
 import { useAuthStore } from "@/stores/authStore"
+import { useIntegrationsStore } from "@/stores/integrationsStore"
 import { useTeamCustomToolsStore } from "@/stores/teamCustomToolsStore"
 import type {
   IBotAgentConfig,
@@ -67,13 +68,22 @@ const {
   update,
 } = useTeamAgents(messagesGetter)
 
-// Read the team's currently *saved* tool toggles. Drives the per-agent
-// switches' `enabledAtTeam` gating below.
+// Read the team's currently *saved* feature gates (custom tools below).
 const agentConfigStore = useAgentConfigStore()
 const { config: teamConfig } = storeToRefs(agentConfigStore)
 const teamTools = computed<IBotAgentConfig["tools"]>(
   () => teamConfig.value.tools
 )
+
+// A built-in tool is available to agents only while its integration is
+// installed AND enabled — the same check the server's dispatcher makes.
+const integrationsStore = useIntegrationsStore()
+const builtInToolOnAtTeam = (name: string): boolean => {
+  const i = integrationsStore.toolIntegrations.find(
+    (t) => t.source === "builtin" && t.sourceKey === name
+  )
+  return !i || (i.installed && i.enabled)
+}
 
 // Silent consumer of the custom tools store — we only need the catalog
 // (no CRUD here). Bypasses `useTeamCustomTools` so the dialog doesn't
@@ -330,7 +340,7 @@ const toolRows = computed<ToolRow[]>(() => [
     name: tool.name,
     label: t(`settings.agents.tools.${tool.name}.label`),
     description: t(`settings.agents.tools.${tool.name}.description`),
-    enabledAtTeam: teamTools.value[tool.name] !== false,
+    enabledAtTeam: builtInToolOnAtTeam(tool.name),
   })),
   {
     name: "manageContent" as const,

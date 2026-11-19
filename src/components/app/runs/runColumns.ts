@@ -38,6 +38,8 @@ export interface RunRow {
   model: string
   totalTokens: number
   costUsd: number
+  /** Per-member run: the member it ran for (name, or uid if they left). */
+  forName: string
   queuedAtMs: number | null
   durationMs: number | null
   preview: string
@@ -48,7 +50,11 @@ const tsMs = (ts: unknown): number | null =>
   (ts as { toDate?: () => Date })?.toDate?.()?.getTime() ?? null
 
 /** Flatten a run doc into the table view-model (resolves workflow name + usage). */
-export function toRunRow(run: IWorkflowRun, workflowName: string): RunRow {
+export function toRunRow(
+  run: IWorkflowRun,
+  workflowName: string,
+  forName = ""
+): RunRow {
   const tb = run.triggeredBy
   const usage = run.usage
   const startedAtMs = tsMs(run.startedAt)
@@ -68,6 +74,7 @@ export function toRunRow(run: IWorkflowRun, workflowName: string): RunRow {
       ? (usage.inputTokens ?? 0) + (usage.outputTokens ?? 0)
       : 0,
     costUsd: usage?.estimatedCostUsd ?? 0,
+    forName,
     queuedAtMs: tsMs(run.queuedAt),
     durationMs: finishedAtMs && startedAtMs ? finishedAtMs - startedAtMs : null,
     preview: run.replyPreview || run.error || "",
@@ -119,8 +126,7 @@ const facetedFilterFn = (
 ) => value.includes(row.getValue(id) as string)
 
 /** Faceted "Workflow" filter — matches on the row's workflow doc id (not its
- *  display name) so renamed/duplicate-named workflows still filter precisely,
- *  and a preset's several legacy docs can be selected as one unit. */
+ *  display name) so renamed/duplicate-named workflows still filter precisely. */
 const workflowFilterFn = (
   row: { original: RunRow },
   _id: string,
@@ -326,6 +332,22 @@ export function runColumns(
           "span",
           { class: "text-muted-foreground tabular-nums" },
           fmtCost(row.original.costUsd)
+        ),
+      enableSorting: true,
+    },
+    {
+      accessorKey: "forName",
+      header: ({ column }) =>
+        h(DataTableColumnHeader, {
+          column: toUnknownColumn(column),
+          title: "Run for",
+        }),
+      // Empty for shared runs (one run for the whole workspace).
+      cell: ({ row }) =>
+        h(
+          "span",
+          { class: "text-muted-foreground" },
+          row.original.forName || "—"
         ),
       enableSorting: true,
     },

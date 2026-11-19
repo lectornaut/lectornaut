@@ -30,7 +30,6 @@ import { Timestamp } from "firebase/firestore"
 const STORAGE_KEY = "lectornaut.query-cache.v1"
 const MAX_AGE_MS = 1000 * 60 * 60 * 24 // 24h — drop anything older on restore.
 // Bump to discard incompatible persisted caches after a cache-shape change.
-// v2: Dates are tagged; v1 blobs hold `{}` where rows had `Date` fields.
 const CACHE_BUSTER = "v2"
 
 /**

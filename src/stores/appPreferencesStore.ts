@@ -155,33 +155,49 @@ export const useAppPreferencesStore = defineStore("appPreferences", () => {
     { immediate: true }
   )
 
-  async function applyTauriPreference(
-    key: "runOnStartup" | "menuBar",
-    value: boolean
-  ): Promise<void> {
-    if (!isMainTauriWindow.value) return
-
-    try {
-      if (key === "runOnStartup") {
-        if (value) await enable()
-        else await disable()
-      } else if (key === "menuBar") {
-        await invoke("set_tray_visible", { visible: value })
-      }
-    } catch (error) {
-      console.error(`[appPreferencesStore] Failed to apply ${key}:`, error)
-    }
-  }
-
-  // Sync Tauri state when preferences load from Firestore
   watch(
-    [runOnStartup, menuBar],
-    ([newRunOnStartup, newMenuBar]) => {
-      void applyTauriPreference("runOnStartup", newRunOnStartup)
-      void applyTauriPreference("menuBar", newMenuBar)
+    menuBar,
+    (visible) => {
+      if (!isMainTauriWindow.value) return
+      void invoke("set_tray_visible", { visible }).catch((error: unknown) => {
+        console.error("[appPreferencesStore] Failed to apply menuBar:", error)
+      })
     },
     { immediate: true }
   )
+
+  // ── Run on startup ──────────────────────────────────────────────────
+  //
+  // The OS owns this switch: System Settings → Login Items (macOS) and Task
+  // Manager → Startup apps (Windows) can turn it off behind our back. So it
+  // is read back from the OS (`autostart_status`) rather than re-asserted
+  // from the stored intent on every launch, which would silently override
+  // the user's choice on Windows. "blocked" = we registered it, but macOS
+  // won't run it until the user allows it in Login Items.
+  const autostartStatus = ref<"enabled" | "disabled" | "blocked" | null>(null)
+
+  async function refreshAutostartStatus(): Promise<void> {
+    try {
+      autostartStatus.value = await invoke("autostart_status")
+      runOnStartup.value = autostartStatus.value !== "disabled"
+    } catch (error) {
+      console.error("[appPreferencesStore] Failed to read autostart:", error)
+    }
+  }
+
+  async function setRunOnStartup(value: boolean): Promise<void> {
+    runOnStartup.value = value
+    try {
+      if (value) await enable()
+      else await disable()
+    } catch (error) {
+      console.error(
+        "[appPreferencesStore] Failed to apply runOnStartup:",
+        error
+      )
+    }
+    await refreshAutostartStatus()
+  }
 
   // Sync file drop overlay drag-and-drop preference to native side
   watch(
@@ -236,9 +252,8 @@ export const useAppPreferencesStore = defineStore("appPreferences", () => {
       .map((part) => {
         const key = part.trim().toLowerCase()
         switch (key) {
-          // `Mod` (and legacy `cmd`) → ⌘ on macOS, Ctrl elsewhere.
+          // `Mod` → ⌘ on macOS, Ctrl elsewhere.
           case "mod":
-          case "cmd":
           case "command":
           case "meta":
             return "CommandOrControl"
@@ -397,6 +412,9 @@ export const useAppPreferencesStore = defineStore("appPreferences", () => {
 
   return {
     runOnStartup,
+    autostartStatus,
+    refreshAutostartStatus,
+    setRunOnStartup,
     menuBar,
     badgeCount,
     automaticUpdates,

@@ -15,8 +15,7 @@ import { teamSchema, userProfileSchema } from "./domain"
  * Two principal kinds share the `teams/{teamId}/memberships/{id}`
  * collection:
  *   - "user"  — a human, keyed by `userId`, carries a `user` snapshot.
- *               `kind` is OPTIONAL/absent on legacy docs (predates agents),
- *               which normalize to "user".
+ *               `kind` is absent (only agent memberships write it).
  *   - "agent" — a team agent acting as a member, keyed by `agentId`,
  *               carries an `agent` snapshot. Always role "member".
  *
@@ -83,8 +82,8 @@ export const membershipAgentSnapshotSchema = z.object({
 // ─── Full memberships (record + resolved snapshots) ──────────────────────────
 
 /**
- * A human (user) membership. `kind` is optional so docs written before
- * agent memberships existed still validate (they normalize to "user").
+ * A human (user) membership. The server never writes `kind` for humans;
+ * only agent memberships carry `kind: "agent"`.
  */
 export const membershipSchema = membershipRecordSchema.extend({
   kind: z.literal("user").optional(),

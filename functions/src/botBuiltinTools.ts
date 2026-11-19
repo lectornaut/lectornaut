@@ -91,10 +91,8 @@ export interface BotActionContext {
    * override is null (= "follow the chat's current model"). Populated
    * by the dispatcher with the post-clamp `effectiveModel`, so an
    * admin-disabled provider can't sneak back in via a sub-tool.
-   * Absent on legacy code paths that haven't been updated to pass it
-   * — handlers fall back to a hardcoded default model in that case.
    */
-  effectiveModel?: string
+  effectiveModel: string
   /**
    * Records a model call's usage against the team's monthly counter (and a
    * Workflows run's accumulator). Tools that make their OWN `ai.generate`

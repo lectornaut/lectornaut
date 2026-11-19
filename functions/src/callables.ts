@@ -696,62 +696,16 @@ export const getPublicAgentProfile = onCall(CALLABLE_OPTS, async (request) => {
     return { status: "found" as const, agent, team: null }
   }
 
-  // Primary: direct lookup via the `id` field custom integration docs
-  // carry in their body (written at create; older docs are healed by
-  // `listIntegrations` and by the fallback below). Resolves every custom
-  // agent regardless of team-member enrollment.
-  let teamId: string | null = null
-  let agentDoc: DocumentSnapshot | null = null
-
+  // Direct lookup via the `id` field custom integration docs carry in
+  // their body (collectionGroup can't filter on document id alone).
   const integrationSnap = await db
     .collectionGroup("integrations")
     .where("id", "==", agentId)
     .limit(1)
     .get()
-  const integrationHit = integrationSnap.docs[0]
-  if (integrationHit && integrationHit.data()?.type === "agent") {
-    agentDoc = integrationHit
-    teamId = integrationHit.ref.parent.parent?.id ?? null
-  }
-
-  // Fallback: enrollment membership — covers docs written before the body
-  // `id` field shipped (their membership has carried a queryable `agentId`
-  // since agents-as-members).
-  if (!teamId) {
-    const membershipSnap = await db
-      .collectionGroup("memberships")
-      .where("agentId", "==", agentId)
-      .limit(1)
-      .get()
-    const membershipData = membershipSnap.docs[0]?.data() as
-      { teamId?: unknown } | undefined
-    teamId =
-      typeof membershipData?.teamId === "string" ? membershipData.teamId : null
-  }
-
-  if (!teamId) {
-    return { status: "not_found" as const }
-  }
-
-  // Live agent doc — read BEFORE the visibility gate because the per-agent
-  // `isPublic` flag participates in it. The collectionGroup hit IS the live
-  // doc; the membership-fallback path reads it now. A missing doc means the
-  // agent was hard-deleted and the membership is residue.
-  if (!agentDoc) {
-    const directSnap = await db
-      .doc(`teams/${teamId}/integrations/${agentId}`)
-      .get()
-    if (directSnap.exists) {
-      agentDoc = directSnap
-      // Targeted heal: this doc just proved reachable only through its
-      // membership — backfill the queryable id so it keeps resolving even
-      // if the enrollment is later removed. Fire-and-forget.
-      void directSnap.ref
-        .set({ id: agentId }, { merge: true })
-        .catch(() => undefined)
-    }
-  }
-  if (!agentDoc?.exists) {
+  const agentDoc = integrationSnap.docs[0]
+  const teamId = agentDoc?.ref.parent.parent?.id
+  if (!agentDoc || !teamId) {
     return { status: "not_found" as const }
   }
   const agentData = agentDoc.data() ?? {}
@@ -770,9 +724,8 @@ export const getPublicAgentProfile = onCall(CALLABLE_OPTS, async (request) => {
 
   // Effective public visibility: the team's privacy is the outer boundary;
   // the per-agent flag opts an individual agent out within a public team.
-  // Missing flag = true (opt-out convention shared with `enabled`).
   const publiclyVisible =
-    teamData.isPublic === true && agentData.isPublic !== false
+    teamData.isPublic === true && agentData.isPublic === true
 
   let canRead = publiclyVisible
   if (!canRead && request.auth?.uid) {

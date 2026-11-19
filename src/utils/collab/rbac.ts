@@ -1,7 +1,10 @@
 import { auth, firestore } from "@/modules/firebase"
-import { isMembershipRole, type IMembershipRole } from "@/types/membership"
 import type { WorkspaceNodeScope } from "@/types/nodes"
 import { Capabilities, roleCan } from "@/types/permissions"
+import {
+  isMembershipRole,
+  type IMembershipRole,
+} from "@lectornaut/shared/permissions"
 import { doc, getDoc } from "firebase/firestore"
 
 type CollabRole = "editor" | "viewer" | "none"

@@ -4,5 +4,9 @@
   <dict>
     <key>CFBundleIconName</key>
     <string>AppIcon</string>
+    <key>NSMicrophoneUsageDescription</key>
+    <string>Lectornaut uses the microphone to dictate messages by voice.</string>
+    <key>NSSpeechRecognitionUsageDescription</key>
+    <string>Lectornaut turns your speech into text when you dictate messages.</string>
   </dict>
 </plist>

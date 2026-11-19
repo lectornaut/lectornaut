@@ -38,7 +38,7 @@ const nodeBaseObject = z.object({
   createdBy: z.string(),
   updatedAt: timestampSchema,
   updatedBy: z.string(),
-  sortKey: z.string().optional(),
+  sortKey: z.string(),
 })
 
 export const nodeBaseSchema = nodeBaseObject

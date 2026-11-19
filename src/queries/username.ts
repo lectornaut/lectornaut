@@ -9,99 +9,14 @@ import {
 } from "@/helpers/username"
 import { firestore } from "@/modules/firebase"
 import type { IUsernameClaim } from "@/types/domain"
-import {
-  collection,
-  doc,
-  getDoc,
-  getDocs,
-  limit,
-  query,
-  where,
-} from "firebase/firestore"
+import { doc, getDoc } from "firebase/firestore"
 
-type UsernameClaimEntityType = IUsernameClaim["entityType"]
-
-type UsernameDocData = Partial<IUsernameClaim> & {
-  type?: UsernameClaimEntityType
-  uid?: string
-  userId?: string
-  teamId?: string
-}
-
-const readClaimEntityType = (
-  data: UsernameDocData | null | undefined
-): UsernameClaimEntityType | null => {
-  if (!data) return null
-  if (data.entityType === "user" || data.entityType === "team") {
-    return data.entityType
-  }
-  if (data.type === "user" || data.type === "team") {
-    return data.type
-  }
-  return null
-}
-
-const readString = (value: unknown): string | null => {
-  return typeof value === "string" && value.trim().length > 0 ? value : null
-}
-
-const resolveUserClaimId = (
-  data: UsernameDocData | null | undefined
-): string | null => {
-  const entityType = readClaimEntityType(data)
-
-  if (entityType === "user") {
-    return readString(data?.entityId)
-  }
-
-  if (entityType === null) {
-    return readString(data?.uid) ?? readString(data?.userId)
-  }
-
-  return null
-}
-
-const resolveTeamClaimId = (
-  data: UsernameDocData | null | undefined
-): string | null => {
-  const entityType = readClaimEntityType(data)
-
-  if (entityType === "team") {
-    return readString(data?.entityId)
-  }
-
-  if (entityType === null) {
-    return readString(data?.teamId)
-  }
-
-  return null
-}
-
-const findPublicUserDocByUsername = async (normalized: string) => {
-  const snapshot = await getDocs(
-    query(
-      collection(firestore, "users"),
-      where("username", "==", normalized),
-      where("isPublic", "==", true),
-      limit(1)
-    )
-  )
-
-  return snapshot.docs[0] ?? null
-}
-
-const findPublicTeamDocByUsername = async (normalized: string) => {
-  const snapshot = await getDocs(
-    query(
-      collection(firestore, "teams"),
-      where("username", "==", normalized),
-      where("isPublic", "==", true),
-      limit(1)
-    )
-  )
-
-  return snapshot.docs[0] ?? null
-}
+/** The claim's target id when it points at an entity of `type`. */
+const claimTarget = (
+  data: IUsernameClaim | undefined,
+  type: IUsernameClaim["entityType"]
+): string | null =>
+  data?.entityType === type && data.entityId ? data.entityId : null
 
 /**
  * Checks if a username is available.
@@ -181,44 +96,14 @@ export const getUserByUsername = async (
     }
 
     const usernameDoc = await getDoc(doc(firestore, "usernames", normalized))
-    const usernameData = usernameDoc.exists()
-      ? (usernameDoc.data() as UsernameDocData)
-      : null
+    const uid = claimTarget(
+      usernameDoc.data() as IUsernameClaim | undefined,
+      "user"
+    )
+    if (!uid) return { status: "not_found" }
 
-    if (!usernameDoc.exists() || readClaimEntityType(usernameData) === null) {
-      const fallbackUserDoc = await findPublicUserDocByUsername(normalized)
-      if (!fallbackUserDoc) {
-        return { status: "not_found" }
-      }
-
-      return { status: "found", data: fallbackUserDoc.data() }
-    }
-
-    if (readClaimEntityType(usernameData) === "team") {
-      return { status: "not_found" }
-    }
-
-    const uid = resolveUserClaimId(usernameData)
-    if (!uid) {
-      const fallbackUserDoc = await findPublicUserDocByUsername(normalized)
-      if (!fallbackUserDoc) {
-        return { status: "not_found" }
-      }
-
-      return { status: "found", data: fallbackUserDoc.data() }
-    }
-
-    const userDocRef = doc(firestore, "users", uid)
-    const userDoc = await getDoc(userDocRef)
-
-    if (!userDoc.exists()) {
-      const fallbackUserDoc = await findPublicUserDocByUsername(normalized)
-      if (!fallbackUserDoc) {
-        return { status: "not_found" }
-      }
-
-      return { status: "found", data: fallbackUserDoc.data() }
-    }
+    const userDoc = await getDoc(doc(firestore, "users", uid))
+    if (!userDoc.exists()) return { status: "not_found" }
 
     const data = userDoc.data()
     // Only show public profiles - private profiles should use /profile page
@@ -257,55 +142,14 @@ export const getTeamByUsername = async (
     }
 
     const usernameDoc = await getDoc(doc(firestore, "usernames", normalized))
-    const usernameData = usernameDoc.exists()
-      ? (usernameDoc.data() as UsernameDocData)
-      : null
+    const teamId = claimTarget(
+      usernameDoc.data() as IUsernameClaim | undefined,
+      "team"
+    )
+    if (!teamId) return { status: "not_found" }
 
-    if (!usernameDoc.exists() || readClaimEntityType(usernameData) === null) {
-      const fallbackTeamDoc = await findPublicTeamDocByUsername(normalized)
-      if (!fallbackTeamDoc) {
-        return { status: "not_found" }
-      }
-
-      return {
-        status: "found",
-        teamId: fallbackTeamDoc.id,
-        data: fallbackTeamDoc.data(),
-      }
-    }
-
-    if (readClaimEntityType(usernameData) === "user") {
-      return { status: "not_found" }
-    }
-
-    const teamId = resolveTeamClaimId(usernameData)
-    if (!teamId) {
-      const fallbackTeamDoc = await findPublicTeamDocByUsername(normalized)
-      if (!fallbackTeamDoc) {
-        return { status: "not_found" }
-      }
-
-      return {
-        status: "found",
-        teamId: fallbackTeamDoc.id,
-        data: fallbackTeamDoc.data(),
-      }
-    }
-    const teamDocRef = doc(firestore, "teams", teamId)
-    const teamDoc = await getDoc(teamDocRef)
-
-    if (!teamDoc.exists()) {
-      const fallbackTeamDoc = await findPublicTeamDocByUsername(normalized)
-      if (!fallbackTeamDoc) {
-        return { status: "not_found" }
-      }
-
-      return {
-        status: "found",
-        teamId: fallbackTeamDoc.id,
-        data: fallbackTeamDoc.data(),
-      }
-    }
+    const teamDoc = await getDoc(doc(firestore, "teams", teamId))
+    if (!teamDoc.exists()) return { status: "not_found" }
 
     const data = teamDoc.data()
     if (!data.isPublic) {

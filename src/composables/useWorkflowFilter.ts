@@ -5,7 +5,7 @@
  *
  * Filters: `search` (name + description), `triggers` (schedule/event/manual),
  * `statuses` (enabled/disabled). View options: `groupBy` (kind = Predefined
- * then Custom | trigger | none) and `sortBy` (recency = last activity | name).
+ * then Custom | trigger | visibility | none) and `sortBy` (recency = last activity | name).
  * Match semantics are pure so callers can pipe lists through `.filter`.
  */
 import type { IWorkflow } from "@/types/domain"
@@ -18,7 +18,13 @@ export type WorkflowTriggerType = (typeof WORKFLOW_TRIGGER_VALUES)[number]
 export const WORKFLOW_STATUS_VALUES = ["enabled", "disabled"] as const
 export type WorkflowStatusFilter = (typeof WORKFLOW_STATUS_VALUES)[number]
 
-export const WORKFLOW_GROUP_BY_VALUES = ["kind", "trigger", "none"] as const
+// Same order as the chat filter (`BOT_SESSION_GROUP_BY_VALUES`): none first.
+export const WORKFLOW_GROUP_BY_VALUES = [
+  "none",
+  "kind",
+  "trigger",
+  "visibility",
+] as const
 export type WorkflowGroupBy = (typeof WORKFLOW_GROUP_BY_VALUES)[number]
 
 export const WORKFLOW_SORT_BY_VALUES = ["recency", "alphabetical"] as const
@@ -107,6 +113,17 @@ export function useWorkflowFilter() {
     if (sorted.length === 0) return []
 
     if (state.groupBy === "none") return [{ key: "all", items: sorted }]
+
+    if (state.groupBy === "visibility") {
+      // Same vocabulary and order as chats: private (a per-member workflow,
+      // whose result is each member's own chat), then shared.
+      const personal = sorted.filter((w) => w.audience === "personal")
+      const shared = sorted.filter((w) => w.audience !== "personal")
+      return [
+        { key: "private", items: personal },
+        { key: "shared", items: shared },
+      ].filter((g) => g.items.length > 0)
+    }
 
     if (state.groupBy === "trigger") {
       const buckets: Record<WorkflowTriggerType, IWorkflow[]> = {

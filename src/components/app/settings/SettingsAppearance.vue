@@ -1,4 +1,5 @@
 <script lang="ts" setup>
+import type { ThemeId } from "@/helpers/defaults"
 import type {
   AccentId,
   BaseId,
@@ -26,7 +27,7 @@ import { isTauri, platform } from "@/composables/usePlatform"
 import { state as resolvedTheme } from "@/modules/theme"
 import { useAppPreferencesStore } from "@/stores/appPreferencesStore"
 import { useThemeStore } from "@/stores/themeStore"
-import type { ChatWindowMode, ThemeMode } from "@/types/settings"
+import type { ChatWindowMode } from "@/types/settings"
 import { normalizeHexColor } from "@/utils/theme/customTheme"
 import { storeToRefs } from "pinia"
 import { toast } from "vue-sonner"
@@ -39,7 +40,7 @@ const { dockIcon, nativeFontSmoothing } = storeToRefs(useAppPreferencesStore())
 
 const selectedTheme = computed({
   get: () => themeSettings.value.mode,
-  set: (value: ThemeMode) => {
+  set: (value: ThemeId) => {
     themeSettings.value.mode = value
   },
 })

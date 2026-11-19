@@ -321,30 +321,6 @@ const isJSONDoc = (value: unknown): value is JSONContent =>
   value !== null &&
   (value as { type?: unknown }).type === "doc"
 
-const stripLegacyMentionNodes = (node: JSONContent): JSONContent => {
-  if (node.type === "mention") {
-    const attrs = (node.attrs ?? {}) as Record<string, unknown>
-    const label =
-      (typeof attrs.label === "string" && attrs.label.trim()) ||
-      (typeof attrs.id === "string" && attrs.id.trim()) ||
-      "mention"
-
-    return {
-      type: "text",
-      text: `@${label}`,
-    }
-  }
-
-  if (!node.content?.length) {
-    return node
-  }
-
-  return {
-    ...node,
-    content: node.content.map((child) => stripLegacyMentionNodes(child)),
-  }
-}
-
 const parseModelValue = (raw: string | undefined): JSONContent => {
   const trimmed = raw?.trim() ?? ""
   if (!trimmed.length) {
@@ -354,7 +330,7 @@ const parseModelValue = (raw: string | undefined): JSONContent => {
   try {
     const parsed = JSON.parse(trimmed) as unknown
     if (isJSONDoc(parsed)) {
-      return stripLegacyMentionNodes(parsed)
+      return parsed
     }
   } catch {
     // Fallback to paragraph text.

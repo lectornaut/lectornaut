@@ -107,16 +107,6 @@ async function sendInvitationNotification(
         invitation.role
       )}". Falling back to "${role}".`
     )
-
-    // Self-heal malformed invitation docs for future reads.
-    try {
-      await db.doc(`invitations/${invitationId}`).update({ role })
-    } catch (error) {
-      logger.error(
-        `Failed to normalize invitation role for ${invitationId}`,
-        error
-      )
-    }
   }
 
   const templateData = {

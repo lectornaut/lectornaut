@@ -227,8 +227,7 @@ async function executePromptTemplate(
   //   1. Admin-specified override (if the provider is still configured).
   //   2. The chat's current effective model (post-clamp; threaded
   //      through via `BotActionContext.effectiveModel`).
-  //   3. The plan-floor model, so the call doesn't blow up on legacy code
-  //      paths that never set `effectiveModel`.
+  //   3. The plan-floor model, only when the tool runs with no turn context.
   // An override retired from the catalog falls through to (2).
   let modelName: string
   const adminProvider = action.model ? modelProvider(action.model) : null
@@ -239,10 +238,8 @@ async function executePromptTemplate(
     isAiModelProviderConfigured(adminProvider)
   ) {
     modelName = action.model
-  } else if (context?.effectiveModel) {
-    modelName = context.effectiveModel
   } else {
-    modelName = PLAN_FLOOR_MODEL
+    modelName = context?.effectiveModel ?? PLAN_FLOOR_MODEL
   }
   // The generation call deliberately avoids `output: { schema }`
   // because the tool's outputSchema is admin-defined and may be

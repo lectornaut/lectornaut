@@ -310,10 +310,17 @@ export const AUDIT_ACTIONS = [
   // Firing a workflow off-schedule — the human decision behind an otherwise
   // autonomous agent run.
   "workflow.run.start",
+  // A member opting themselves in/out of a per-member workflow — the consent
+  // edge for runs that read their own connected accounts.
+  "workflow.subscribe",
+  "workflow.unsubscribe",
   // bot session (chat) — only the two acts an ADMIN may perform on another
   // member's session are audited; owner-only cosmetics (rename/archive/pin)
   // are not.
   "session.visibility.update",
+  // An admin unlocked other members' PRIVATE chats or memories in a workspace
+  // (the logged "view as admin" step; see `startAdminView`).
+  "admin.private_view.start",
   "session.delete",
   // billing (team-scoped, Stripe-backed). `portal.open` records no state change
   // of its own: it is the door through which a member makes changes INSIDE
@@ -492,9 +499,8 @@ export type BotToolPermissionMode = (typeof BOT_TOOL_PERMISSION_MODES)[number]
 /**
  * Per-turn reasoning-effort levels the composer can request. A canonical
  * ordinal scale mapped per provider at dispatch (`buildTurnConfig`):
- * Anthropic `effort`, Gemini 3 `thinkingConfig.thinkingLevel`. Unset/null
- * means "provider default" — the wire field is optional so legacy clients
- * that never send it behave exactly as before the knob existed.
+ * Anthropic `effort`, Gemini 3 `thinkingConfig.thinkingLevel`. `null`
+ * means "provider default".
  */
 export const BOT_CHAT_EFFORTS = ["low", "medium", "high"] as const
 export type BotChatEffort = (typeof BOT_CHAT_EFFORTS)[number]
@@ -508,8 +514,7 @@ export type BotChatRole = (typeof BOT_CHAT_ROLES)[number]
  * turn that ended in a server-side graceful fallback (turn deadline, tool
  * budget exhausted, missing tool, invalid tool args) — persisted so the
  * failure survives reload and renders distinctly from a normal reply. The
- * field is optional on the wire: absent on every normal message, never set
- * on user messages, and ignored by clients that pre-date it.
+ * field is absent on every normal message and never set on user messages.
  */
 export const BOT_CHAT_MESSAGE_STATUSES = ["error"] as const
 export type BotChatMessageStatus = (typeof BOT_CHAT_MESSAGE_STATUSES)[number]
@@ -707,6 +712,29 @@ export const CONNECTION_WRITE_TOOL_NAMES: readonly string[] = [
   ...GITHUB_WRITE_TOOL_NAMES,
   ...GOOGLE_GMAIL_WRITE_TOOL_NAMES,
 ]
+
+/**
+ * EVERY connection tool wire-name, reads and writes: a call to any of these
+ * touched a member's personal connected account. Keys the "this chat holds
+ * connected-app content" checks (share confirm, memory extraction, transcript
+ * account label).
+ */
+export const CONNECTION_TOOL_NAMES: readonly string[] = [
+  ...CONNECTION_TOOL_KEYS,
+  GOOGLE_DRIVE_READ_FILE_TOOL_NAME,
+  GITHUB_READ_FILE_TOOL_NAME,
+  GOOGLE_GMAIL_READ_MESSAGE_TOOL_NAME,
+  ...CONNECTION_WRITE_TOOL_NAMES,
+]
+
+/** What a logged "view as admin" grant unlocks (one grant doc per kind). */
+export const ADMIN_VIEW_KINDS = ["sessions", "memories"] as const
+export type AdminViewKind = (typeof ADMIN_VIEW_KINDS)[number]
+/** How long one grant lasts; the rules compare `expiresAt` to request time. */
+export const ADMIN_VIEW_TTL_MS = 15 * 60 * 1000
+/** Grant doc id under `workspaces/{w}/adminViewGrants`; mirrored in rules. */
+export const adminViewGrantId = (uid: string, kind: AdminViewKind): string =>
+  `${uid}_${kind}`
 
 // ── OAuth scope hierarchy ───────────────────────────────────────────────────
 // Shared so the server's write gate (`hasGrantedScope` in connectionTools)

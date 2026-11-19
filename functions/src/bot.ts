@@ -161,6 +161,7 @@ import {
   BOT_CHAT_EFFORTS,
   BOT_CHAT_MESSAGE_STATUSES,
   BOT_TOOL_PERMISSION_MODES,
+  CONNECTION_TOOL_KEYS,
   CONNECTION_WRITE_TOOL_NAMES,
   delegateToolName,
   GITHUB_TOOL_KEY,
@@ -205,6 +206,11 @@ import { extractMemoriesFromTurn } from "./memoryExtract.js"
 import { buildMemoryContextBlock } from "./memoryRag.js"
 import { recallMemoryTool, saveMemoryTool } from "./memoryTools.js"
 import { can, Capabilities } from "./permissions.js"
+import {
+  connectionsAllowedForTurn,
+  isConnectionToolName,
+  threadUsedConnectionTool,
+} from "./privacyCore.js"
 import { GENKIT_OPTS } from "./runtimeConfig.js"
 import { aiProviderSecrets, CONNECTION_OAUTH_SECRETS } from "./secrets.js"
 import type { TeamAgentDoc } from "./teamAgents.js"
@@ -337,8 +343,7 @@ export interface ChatMessage {
   parentSnapshotId?: string
   /**
    * ISO time from {@link SENT_AT_METADATA_KEY}: when a user message was sent,
-   * or when an agent bubble's last model/tool message was committed. Absent
-   * on legacy messages.
+   * or when an agent bubble's last model/tool message was committed.
    */
   sentAt?: string
 }
@@ -535,15 +540,7 @@ export function extractChatMessages(
     const sentAt = raw.metadata?.[SENT_AT_METADATA_KEY]
     if (typeof sentAt === "string") ensureAgent().sentAt = sentAt
 
-    // Coalesce model + tool turns into the same agent bubble. Genkit
-    // sometimes emits a string content for legacy model messages; treat
-    // that as a single text part.
-    if (typeof content === "string") {
-      const agent = ensureAgent()
-      if (isErrorTurn) agent.status = "error"
-      appendText(agent, content)
-      continue
-    }
+    // Coalesce model + tool turns into the same agent bubble.
     if (!Array.isArray(content)) continue
 
     const agent = ensureAgent()
@@ -566,9 +563,9 @@ export function extractChatMessages(
       if (part?.toolRequest && part.toolRequest.name) {
         const segments = agent.segments!
         // Two ways a request can be an interrupt: Genkit's part-level
-        // metadata flag (set on the live ToolRequestPart), or our own
-        // name-based fallback for older docs that pre-date that
-        // annotation. Either signal flips the UI into form mode.
+        // `metadata.interrupt` (pending ones), or the interrupt tool's name
+        // (an answered one, whose metadata Genkit rewrites to
+        // `resolvedInterrupt` on resume). Either flips the UI into form mode.
         const isInterrupt =
           !!part.metadata?.interrupt ||
           INTERRUPT_TOOL_NAMES.has(part.toolRequest.name)
@@ -702,9 +699,9 @@ interface SessionPersistInfo {
    * Reasoning-effort level for the turn that triggered this save.
    * Persisted as a denormalized `lastEffort` field (same rehydrate role
    * as `lastModel`). Tri-state: `undefined` leaves the doc's prior value
-   * untouched (legacy clients that never send the field), `null` clears
-   * back to "provider default" (the user picked Default), a level writes
-   * it. Mirrors `turnActiveAgentId`'s null-clearing semantics.
+   * untouched (headless runs), `null` clears back to "provider default"
+   * (the user picked Default), a level writes it. Mirrors
+   * `turnActiveAgentId`'s null-clearing semantics.
    */
   readonly turnEffort?: BotChatEffort | null
 
@@ -714,10 +711,16 @@ interface SessionPersistInfo {
    * doc — drives the "sticky agent" behavior across turns and lets
    * the client rehydrate the composer's agent badge on session
    * re-open. `null` (or undefined) is the default-persona case and
-   * results in `activeAgentId: null` being written, which is
-   * deliberately distinct from the field being absent (legacy docs).
+   * results in `activeAgentId: null` being written.
    */
   readonly turnActiveAgentId?: string | null
+
+  /**
+   * The turn brought in connected-app content outside a tool call (a Drive
+   * file imported as an attachment). Sets the sticky `usedConnections`
+   * flag, the same way a connection tool call in the thread does.
+   */
+  readonly turnUsedConnections?: boolean
 }
 
 /**
@@ -947,6 +950,11 @@ export async function projectChatRecord(
     // The complete chip set, pinned node included; re-written every turn so
     // a detach shrinks it. (A version switch carries none: leave it.)
     if (p.contextNodes) update.contextNodes = p.contextNodes
+    // Sticky: once a chat holds connected-app content, sharing it warns first
+    // (never cleared, an earlier version of the chat may still carry it).
+    if (p.turnUsedConnections || threadUsedConnectionTool(thread)) {
+      update.usedConnections = true
+    }
     if (parentId) {
       update.snapshotChildren = {
         [parentId]: FieldValue.arrayUnion(snapshotId),
@@ -1116,13 +1124,9 @@ const botChatAgent = ai.defineCustomAgent(
       // deadline + client-Stop controller there — so this cancels the model.
       // `SessionRunner.run` has already appended `input.message` (the user
       // turn) to the session, so `getMessages()` is the full history to
-      // generate from. Strip any `system` message defensively: `gen.system` is
-      // (re-)injected at index 0 by `toGenerateRequest`, so a stale in-thread
-      // system entry (e.g. a doc persisted before the write-side filter landed)
-      // would otherwise produce a SECOND, non-leading system message the
-      // Anthropic adapter can reject — and the heal only lands on the next
-      // successful write. Filtering here closes that window on read too.
-      const history = sess.getMessages().filter((m) => m.role !== "system")
+      // generate from (`system` is never persisted; `gen.system` is injected
+      // at index 0 by `toGenerateRequest`).
+      const history = sess.getMessages()
       const gen = ai.generateStream({
         ...rt.gen,
         messages: history,
@@ -1245,7 +1249,7 @@ function defineSubAgent(name: string, agentId: string) {
     await sess.run(async () => {
       const rt = turnRuntime.getStore()
       if (!rt?.delegate) throw new Error("Sub-agent ran outside a chat turn.")
-      const messages = sess.getMessages().filter((m) => m.role !== "system")
+      const messages = sess.getMessages()
       const task = [...messages]
         .reverse()
         .find((m) => m.role === "user")
@@ -1436,16 +1440,14 @@ function pickChatTools(
   // as long as the server has the Gemini secret configured.
   const googleSecretConfigured = isAiModelProviderConfigured("google")
   // Agent-level intersection: a tool fires only when the team has it on
-  // AND the active agent (if any) has it on. `!== false` treats missing
-  // keys as enabled — keeps a newly-added tool key available to
-  // existing agents without a migration. When `agent` is null this is
-  // always `true`, preserving the default-persona behavior exactly.
+  // AND the active agent (if any) has it on (`normalizeToolToggles` fills
+  // every key). When `agent` is null this is always `true`.
   //
   // Parameter is narrowed to `ChatToolName` (the per-agent-relevant
   // subset) so we can never accidentally call `agentAllows("customAgents")`
   // — that flag is team-only and has no per-agent counterpart.
   const agentAllows = (name: ChatToolName): boolean =>
-    !agent || agent.tools[name] !== false
+    !agent || agent.tools[name]
   // A built-in tool fires when its integration is installed + enabled (the
   // unified `teams/{teamId}/integrations` collection, resolved upstream into
   // `enabledBuiltInTools`). Per-agent intersection (`agentAllows`) and the
@@ -1706,6 +1708,7 @@ async function runTransferTurnIfRequested(opts: {
   headless?: boolean
   /** Workflows-only (P3) — the handed-off turn keeps the run's identity. */
   connectionsActsAsUid?: string
+  useMyConnections?: boolean
   archivedSessionMessage: string
   sendChunk: (chunk: SendBotMessageStreamPayload) => void
 }): Promise<Awaited<ChatStreamResult["response"]>> {
@@ -1771,6 +1774,7 @@ async function runTransferTurnIfRequested(opts: {
       targetScope: opts.targetScope,
       allowInterrupts: opts.allowInterrupts,
       connectionsActsAsUid: opts.connectionsActsAsUid,
+      useMyConnections: opts.useMyConnections,
       // Pin is a one-shot at session creation; the first turn already
       // wrote it (or we're resuming, in which case it was written ages
       // ago). Passing it again would be a no-op at best and a doc
@@ -2109,13 +2113,14 @@ export interface BotSessionDocSummary {
   archived: boolean
   /** The snapshot the chat currently shows; null before its first save. */
   headSnapshotId: string | null
+  /** Messages in the head thread, as last projected. */
+  messageCount: number
   /**
    * Persisted active custom-agent id from the previous turn. Used by
    * the dispatcher to "stick" the agent across turns even when the
    * client doesn't re-send `activeAgentId` (resumes, interrupt
    * responses, etc.). Null when the session uses the team default
-   * persona — which is also the legacy state for sessions saved
-   * before this feature shipped.
+   * persona.
    */
   activeAgentId: string | null
 }
@@ -2175,8 +2180,29 @@ export async function readSessionDoc(
     archived: !!data.archivedAt,
     headSnapshotId:
       typeof data.headSnapshotId === "string" ? data.headSnapshotId : null,
+    messageCount: data.messageCount as number,
     activeAgentId,
   }
+}
+
+/**
+ * Is someone mid-turn in this chat: a reply running (its turn lock is held)
+ * or a question on the head waiting for an answer? A headless run checks this
+ * before continuing a member's chat, so it never races or buries their turn.
+ */
+export async function sessionTurnPending(
+  key: BotSessionKey,
+  headSnapshotId: string | null
+): Promise<boolean> {
+  const lock = await turnLockRef(
+    key.teamId,
+    key.workspaceId,
+    key.sessionId
+  ).get()
+  if (lockStateOf(lock, Date.now()) !== "free") return true
+  if (!headSnapshotId) return false
+  const thread = await readSnapshotThread(key, headSnapshotId)
+  return findPendingInterruptParts(thread ?? []).length > 0
 }
 
 // ===========================================================================
@@ -2211,10 +2237,9 @@ const SendBotMessageInput = z.object({
   message: z.string(),
   /**
    * Action-context mode for this turn. Drives the system prompt, tool
-   * exposure, and any context.mode-aware tool branching. Defaults to
-   * `auto` — older clients that don't send the field still work.
+   * exposure, and any context.mode-aware tool branching.
    */
-  mode: z.enum(BOT_CHAT_MODES).default("auto"),
+  mode: z.enum(BOT_CHAT_MODES),
   toolPermissionMode: z.enum(BOT_TOOL_PERMISSION_MODES).default("ask"),
   /**
    * Per-turn model override picked by the user in the composer's model
@@ -2231,11 +2256,10 @@ const SendBotMessageInput = z.object({
    * Per-turn reasoning-effort level. Tri-state: a level requests that
    * depth (applied only where the provider has a knob — see
    * `buildTurnConfig`), explicit `null` clears the session back to the
-   * provider default, absent (legacy clients) leaves the persisted
-   * `lastEffort` untouched. Unknown values are rejected by the enum
-   * before they can reach a provider.
+   * provider default. Unknown values are rejected by the enum before they
+   * can reach a provider.
    */
-  effort: z.enum(BOT_CHAT_EFFORTS).nullable().optional(),
+  effort: z.enum(BOT_CHAT_EFFORTS).nullable(),
   /**
    * Custom agent the user has selected for this turn. `null`/absent
    * means "use the team default persona". The server resolves the
@@ -2313,6 +2337,12 @@ const SendBotMessageInput = z.object({
    */
   continueFailedTurn: z.boolean().optional(),
   /**
+   * The sender agreed to let this turn use THEIR connected accounts in a chat
+   * they do not own (the client confirms first). Without it such a turn gets
+   * no connection tools. Ignored in the sender's own chats.
+   */
+  useMyConnections: z.boolean().optional(),
+  /**
    * Set only when creating a new session, to bind it to a specific
    * workspace node. Enables `findBotSessionByPinnedNode` to resume the
    * same chat the next time the node's inspector tab opens. Ignored on
@@ -2348,8 +2378,7 @@ const SendBotMessageStream = z.object({
   /**
    * Rides along with a graceful-fallback `chunk` so the live bubble flips
    * to its failure rendering immediately, without waiting for the
-   * persisted doc's snapshot reconcile. Absent on every normal chunk;
-   * legacy clients ignore it.
+   * persisted doc's snapshot reconcile. Absent on every normal chunk.
    */
   status: z.enum(BOT_CHAT_MESSAGE_STATUSES).optional(),
   toolCall: z
@@ -3161,8 +3190,8 @@ async function prepareChatTurn(opts: {
   /**
    * Per-turn reasoning-effort pick. Tri-state end to end: a level applies
    * (where the provider has a knob), explicit `null` means the user chose
-   * Default, `undefined` means the client never sent the field (legacy) —
-   * the persisted `lastEffort` is left untouched in that case.
+   * Default, `undefined` (headless runs) leaves the persisted `lastEffort`
+   * untouched.
    */
   effort: BotChatEffort | null | undefined
   pinnedNode?: NodeRef
@@ -3204,6 +3233,8 @@ async function prepareChatTurn(opts: {
    * `BotActionContext.connectionsActsAsUid`.
    */
   connectionsActsAsUid?: string
+  /** See `SendBotMessageInput.useMyConnections`. */
+  useMyConnections?: boolean
   /**
    * Start from this snapshot instead of the chat's head (edit / regenerate,
    * and the handoff seed). Checked to belong to this chat.
@@ -3303,7 +3334,16 @@ async function prepareChatTurn(opts: {
     if (existingSession.archived) {
       throw new HttpsError("failed-precondition", archivedSessionMessage)
     }
-    if (!canEditChat(actingId, existingSession, role, actingWorkspaceRole)) {
+    // A per-member workflow run's session is owned by the member it runs
+    // for; the agent's handed-off second turn must still be able to write it.
+    const isRunForOwner =
+      principal.kind === "agent" &&
+      !!connectionsActsAsUid &&
+      existingSession.ownerUid === connectionsActsAsUid
+    if (
+      !isRunForOwner &&
+      !canEditChat(actingId, existingSession, role, actingWorkspaceRole)
+    ) {
       throw new HttpsError(
         "permission-denied",
         "You don't have permission to send messages in this chat."
@@ -3452,7 +3492,14 @@ async function prepareChatTurn(opts: {
   // sessions. Rewriting `ownerUid` on every save would silently transfer
   // shared chats to whichever admin replied most recently. (Headless agent
   // runs create their own sessions, so the agent id becomes the owner.)
-  const sessionOwnerUid = existingSession?.ownerUid ?? actingId
+  // Per-member workflow runs (agent principal + `connectionsActsAsUid`) are
+  // owned by the member they run for, so the result is THEIR private chat —
+  // the same owner/visibility rule as any session, no new access path.
+  const sessionOwnerUid =
+    existingSession?.ownerUid ??
+    (principal.kind === "agent" && connectionsActsAsUid
+      ? connectionsActsAsUid
+      : actingId)
 
   // Node-CRUD authorization for this turn. Two regimes:
   //
@@ -3530,6 +3577,31 @@ async function prepareChatTurn(opts: {
       scope: "workspace",
       teamRole: role,
     })
+    // Per-member run: the result is delivered to `connectionsActsAsUid`, so
+    // that member must be able to open this workspace too (the intersection
+    // interactive turns apply to human + agent). A member who left the team
+    // or was excluded from the workspace fails the run instead of receiving
+    // content they cannot open. Every role can read, so there is no partial
+    // case to narrow to.
+    if (connectionsActsAsUid) {
+      const [memberRole, memberParticipation] = await Promise.all([
+        getMembershipRoleOrNull(teamId, connectionsActsAsUid),
+        resolveParticipation(teamId, workspaceId, connectionsActsAsUid),
+      ])
+      if (
+        !memberRole ||
+        memberParticipation.excluded ||
+        !can(connectionsActsAsUid, Capabilities.READ_WORKSPACE, {
+          scope: "workspace",
+          teamRole: memberRole,
+        })
+      ) {
+        throw new HttpsError(
+          "permission-denied",
+          "The member this run is for can't open this workspace."
+        )
+      }
+    }
   }
 
   // Feature-toggle layer ON TOP of the membership gates. `canManageNodes` /
@@ -3543,12 +3615,16 @@ async function prepareChatTurn(opts: {
   // read-only agent vs. an editing one) and can only narrow within what
   // membership already grants. These drive tool registration AND the node
   // system-prompt directive, so a toggled-off agent is never told it can use
-  // tools it has none of. `!== false` keeps a missing key (older agent docs)
-  // meaning "enabled."
+  // tools it has none of.
+  // Per-member runs never write workspace documents (their result is one
+  // member's private chat), so the write tools are not offered at all.
+  const isPerMemberRun = principal.kind === "agent" && !!connectionsActsAsUid
   const nodeWriteEnabled =
-    canManageNodes && activeAgent?.tools.manageContent !== false
+    canManageNodes &&
+    (!activeAgent || activeAgent.tools.manageContent) &&
+    !isPerMemberRun
   const nodeReadEnabled =
-    canReadNodes && activeAgent?.tools.readContent !== false
+    canReadNodes && (!activeAgent || activeAgent.tools.readContent)
 
   // What gets persisted on the doc this turn. Three cases:
   //   - undefined: client didn't send the field → leave the doc's
@@ -3615,6 +3691,7 @@ async function prepareChatTurn(opts: {
     turnModel: effectiveModel,
     turnEffort: opts.effort,
     turnActiveAgentId: persistedActiveAgentId,
+    turnUsedConnections: hasPendingDriveImports,
   }
 
   // The snapshot this turn starts from, and its thread. A resume starts from
@@ -3707,6 +3784,17 @@ async function prepareChatTurn(opts: {
       .filter((t) => t.source !== "custom")
       .map((t) => t.sourceKey ?? "")
   )
+  // Connection tools act through the SENDER's personal accounts. In a chat
+  // the sender does not own, they are offered only after the sender agreed.
+  if (
+    !connectionsAllowedForTurn({
+      userUid: principal.kind === "user" ? principal.uid : null,
+      sessionOwnerUid,
+      consented: opts.useMyConnections === true,
+    })
+  ) {
+    for (const key of CONNECTION_TOOL_KEYS) enabledBuiltInTools.delete(key)
+  }
   // Custom tools additionally require the team-wide customTools feature gate.
   const dispatchableCustomToolIntegrations = agentConfig.tools.customTools
     ? dispatchableToolIntegrations.filter((t) => t.source === "custom")
@@ -4095,6 +4183,8 @@ interface RunAgentTurnOptions {
   headless?: boolean
   /** Workflows-only (P3) — see `BotActionContext.connectionsActsAsUid`. */
   connectionsActsAsUid?: string
+  /** See `SendBotMessageInput.useMyConnections`. */
+  useMyConnections?: boolean
 }
 
 /**
@@ -4114,7 +4204,13 @@ interface RunAgentTurnOptions {
 async function runAgentTurn(
   opts: RunAgentTurnOptions
 ): Promise<{ sessionId: string; reply: string }> {
-  const sendChunk = opts.sendChunk ?? (() => {})
+  // Watch the stream for connection tool calls: a turn that read a connected
+  // account must not feed memory extraction (below).
+  let calledConnectionTool = false
+  const sendChunk = (chunk: SendBotMessageStreamPayload) => {
+    if (isConnectionToolName(chunk.toolCall?.name)) calledConnectionTool = true
+    opts.sendChunk?.(chunk)
+  }
   const archivedSessionMessage =
     opts.archivedSessionMessage ??
     "This chat is archived. Restore it before sending new messages."
@@ -4195,6 +4291,7 @@ async function runAgentTurn(
       targetScope: opts.targetScope,
       disableTransfer: continuing || opts.disableTransfer,
       connectionsActsAsUid: opts.connectionsActsAsUid,
+      useMyConnections: opts.useMyConnections,
     })
 
     lock ??= await acquireSessionTurnLock(
@@ -4275,6 +4372,7 @@ async function runAgentTurn(
         allowInterrupts: opts.allowInterrupts,
         headless: opts.headless,
         connectionsActsAsUid: opts.connectionsActsAsUid,
+        useMyConnections: opts.useMyConnections,
         archivedSessionMessage,
         sendChunk,
       })
@@ -4297,11 +4395,19 @@ async function runAgentTurn(
     // throws — so it can't add latency or fail the reply. Skipped for headless
     // agent principals (no human owner) and empty turns. Auto-extracted
     // memories are private + `source:"agent"`, routed through near-dup merge.
+    // Skipped once the chat holds connected-app content (a connection tool
+    // call this turn or earlier, or a Drive file attached now): a memory can
+    // later be shared, and that would carry a personal account's data out.
+    const hasConnectionContent =
+      calledConnectionTool ||
+      threadUsedConnectionTool(baseThread) ||
+      (opts.pendingDriveImports?.length ?? 0) > 0
     if (
       memoryEnabled &&
       opts.principal.kind === "user" &&
       opts.message &&
-      final.text
+      final.text &&
+      !hasConnectionContent
     ) {
       const ownerUid = opts.principal.uid
       void extractMemoriesFromTurn({
@@ -4394,6 +4500,12 @@ export async function runHeadlessAgentTurn(opts: {
    * `BotActionContext.connectionsActsAsUid`.
    */
   connectionsActsAsUid?: string
+  /**
+   * Continue this chat instead of starting one. Per-member runs only: the
+   * worker passes the member's ongoing chat for this workflow after checking
+   * it is still theirs and not archived.
+   */
+  sessionId?: string
 }): Promise<{
   sessionId: string
   reply: string
@@ -4413,8 +4525,9 @@ export async function runHeadlessAgentTurn(opts: {
     teamId: opts.teamId,
     workspaceId: opts.workspaceId,
     // Fresh session per run — bounds context growth and keeps run history
-    // cleanly separable in the agent-owned botSessions list.
-    sessionId: null,
+    // cleanly separable in the agent-owned botSessions list. A per-member
+    // run continues the member's one chat for this workflow instead.
+    sessionId: opts.sessionId ?? null,
     message: opts.message,
     mode: opts.mode ?? "agent",
     model: opts.model,
@@ -4485,6 +4598,7 @@ const sendBotMessageFlow = ai.defineFlow(
       pendingAttachments: input.pendingAttachments,
       pendingDriveImports: input.pendingDriveImports,
       fromSnapshotId: input.fromSnapshotId,
+      useMyConnections: input.useMyConnections,
       sendChunk,
       abortSignal,
       archivedSessionMessage:
@@ -4571,9 +4685,9 @@ const RespondToBotInterruptInput = z.object({
   sessionId: z.string().min(1),
   /**
    * The `ref` carried on the original interrupt's toolRequest part.
-   * Optional because some models / older sessions may not have one;
-   * when missing we fall back to a name-based match against the most
-   * recent unresolved interrupt of the same name.
+   * Optional because some models don't emit one; when missing we fall
+   * back to a name-based match against the most recent unresolved
+   * interrupt of the same name.
    */
   ref: z.string().optional(),
   name: z.string().min(1),
@@ -4585,8 +4699,10 @@ const RespondToBotInterruptInput = z.object({
    * mismatch.
    */
   response: z.unknown(),
+  /** See `SendBotMessageInput.useMyConnections` (same rule on a resume). */
+  useMyConnections: z.boolean().optional(),
   /** Mode at the moment of response — drives system prompt + tool set. */
-  mode: z.enum(BOT_CHAT_MODES).default("auto"),
+  mode: z.enum(BOT_CHAT_MODES),
   toolPermissionMode: z.enum(BOT_TOOL_PERMISSION_MODES).default("ask"),
   /**
    * Per-turn model override. Same semantics + allowlist clamp as
@@ -4601,7 +4717,7 @@ const RespondToBotInterruptInput = z.object({
    * `SendBotMessageInput.effort` — forwarded so resuming from an
    * interrupt keeps the depth the user had dialed in.
    */
-  effort: z.enum(BOT_CHAT_EFFORTS).nullable().optional(),
+  effort: z.enum(BOT_CHAT_EFFORTS).nullable(),
   /**
    * Same shape as `SendBotMessageInput.contextNodes` — passed through so
    * a chat that resumes from an interrupt keeps the attached files in
@@ -4636,9 +4752,9 @@ interface ToolRequestPartLike {
  *
  * "Pending" means: a model-message `toolRequest` with `metadata.interrupt`
  * (or a name in our interrupt-tool catalog) for which no later
- * `toolResponse` resolves it. Prefer `ref` when present; for older/ref-less
- * sessions, pair by tool name in thread order so answered legacy
- * interrupts don't stay pending forever. We scan the entire thread (not
+ * `toolResponse` resolves it. Prefer `ref` when present; models that emit
+ * no ref (Gemini function calls can lack ids) pair by tool name in thread
+ * order. We scan the entire thread (not
  * just the last message) for safety; in practice pending interrupts only
  * ever live on the latest model message.
  */
@@ -4748,6 +4864,7 @@ const respondToBotInterruptFlow = ai.defineFlow(
           activeAgentId: input.activeAgentId,
           model: input.model,
           effort: input.effort,
+          useMyConnections: input.useMyConnections,
           // No `pinnedNode` — interrupts always run on an existing session.
           requireExistingSession: true,
           archivedSessionMessage:
@@ -4775,8 +4892,7 @@ const respondToBotInterruptFlow = ai.defineFlow(
 
       // Find the interrupt part the user is responding to. We prefer
       // `ref` (Genkit's stable per-call id) and fall back to "most recent
-      // pending of the same name" — handles older sessions or models that
-      // don't emit refs.
+      // pending of the same name" — handles models that don't emit refs.
       const pending = findPendingInterruptParts(baseThread)
       if (pending.length === 0) {
         throw new HttpsError(
@@ -4981,6 +5097,7 @@ const respondToBotInterruptFlow = ai.defineFlow(
           contextNodes: input.contextNodes,
           model: input.model,
           effort: input.effort,
+          useMyConnections: input.useMyConnections,
           archivedSessionMessage:
             "This chat is archived. Restore it before continuing.",
           sendChunk,

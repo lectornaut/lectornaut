@@ -20,10 +20,17 @@ import {
   IconSparkles,
 } from "@/data/icons"
 import { useAuthStore } from "@/stores/authStore"
+import { useIntegrationsStore } from "@/stores/integrationsStore"
 import { useMembershipStore } from "@/stores/membershipStore"
 import { useTeamAgentsStore } from "@/stores/teamAgentsStore"
+import {
+  workflowSubscribersSource,
+  type IWorkflowSubscriber,
+} from "@/stores/teamWorkflowsStore"
 import type { IWorkflow } from "@/types/domain"
 import { isAgentMembership, isUserMembership } from "@/types/membership"
+import { useCollectionQuery } from "@/utils/firebase/firebase-query"
+import { getConnectionResourceProvider } from "@lectornaut/shared/connectionResources"
 import { storeToRefs } from "pinia"
 import { computed, ref, watch } from "vue"
 
@@ -31,8 +38,6 @@ const props = defineProps<{
   open: boolean
   /** null/undefined = create; a workflow = edit (agent + workspace locked). */
   workflow?: IWorkflow | null
-  /** Preselected agent for a new workflow. */
-  defaultAgentId?: string
 }>()
 
 const emit = defineEmits<{
@@ -99,8 +104,7 @@ const agentAvatarSeed = (agent: {
 }): string => agent.avatarSeed.trim() || agent.name.trim() || agent.id
 
 const authStore = useAuthStore()
-const { currentTeamId, currentWorkspaceId, currentUser } =
-  storeToRefs(authStore)
+const { currentTeamId, currentWorkspaceId } = storeToRefs(authStore)
 
 interface WorkflowFormDraft {
   name: string
@@ -120,14 +124,14 @@ interface WorkflowFormDraft {
   updateMode: "automatic" | "require_review"
   contextNodes: WorkflowNodeRefInput[]
   /** P3 — member whose connection bindings headless runs act through. */
-  actsAsUid: string | null
+  audience: "shared" | "personal"
 }
 
 const emptyDraft = (): WorkflowFormDraft => ({
   name: "",
   description: "",
   avatarSeed: "",
-  agentId: props.defaultAgentId || DEFAULT_AGENT_ID,
+  agentId: DEFAULT_AGENT_ID,
   instructions: "",
   additionalPrompt: "",
   triggerType: "manual",
@@ -140,7 +144,7 @@ const emptyDraft = (): WorkflowFormDraft => ({
   targetScope: "write",
   updateMode: "require_review",
   contextNodes: [],
-  actsAsUid: null,
+  audience: "shared",
 })
 
 const draft = ref<WorkflowFormDraft>(emptyDraft())
@@ -194,31 +198,70 @@ const selectedAgent = computed<{
   return pickerAgents.value.find((agent) => agent.id === id) ?? null
 })
 
-// ── Connections access (P3) ─────────────────────────────────────────────────
-// "Run with my connected accounts": headless runs may read connection-backed
-// tools (e.g. Google Calendar) through the binding owner's account. Consent
-// is structural — the server accepts only the CALLER's own uid — so the
-// toggle always writes MY uid; turning it on over someone else's binding
-// replaces it with mine (their grant is surfaced in the hint below). OFF
-// clears (`null`) — any editor may revoke.
-const actsAsBindingOn = computed(() => draft.value.actsAsUid !== null)
-const actsAsIsOther = computed(
-  () =>
-    draft.value.actsAsUid !== null &&
-    draft.value.actsAsUid !== (currentUser.value?.uid ?? null)
+// ── Audience ────────────────────────────────────────────────────────────────
+// `shared` runs once with no personal account. `personal` runs once for each
+// member who opted in THEMSELVES ("Run for me" on the Workflows page), with
+// that member's own connected accounts, into their own private chat — so an
+// admin can't point a workflow at anyone's data from here; this form only
+// picks the mode and shows who has opted in.
+const isPersonal = computed(() => draft.value.audience === "personal")
+// One run per member on every content edit would be costly noise; the server
+// rejects the pairing too.
+const audienceConflict = computed(
+  () => isPersonal.value && draft.value.triggerType === "event"
 )
-const actsAsOtherName = computed<string>(() => {
-  const uid = draft.value.actsAsUid
-  if (!uid) return ""
-  const member = teamMembers.value.find(
-    (m) => isUserMembership(m) && m.userId === uid
-  )
-  if (!member || !isUserMembership(member)) return ""
-  return member.user?.displayName || member.user?.email || ""
+// Opt-ins live in a subcollection only admins (and each member, for their
+// own doc) can read, so this list is admin-only by the rules as well as by
+// this dialog's `canManage` gate.
+const subscribersQuery = useCollectionQuery<IWorkflowSubscriber>(() =>
+  props.open && canManage.value && props.workflow?.audience === "personal"
+    ? workflowSubscribersSource(props.workflow)
+    : null
+)
+const optedInNames = computed<string>(() => {
+  const rev = props.workflow?.consentRev ?? 0
+  return (subscribersQuery.data.value ?? [])
+    .filter((sub) => sub.approvedRev === rev && !sub.paused)
+    .map(({ uid }) => {
+      const member = teamMembers.value.find(
+        (m) => isUserMembership(m) && m.userId === uid
+      )
+      return member && isUserMembership(member)
+        ? member.user?.displayName || member.user?.email || ""
+        : ""
+    })
+    .filter(Boolean)
+    .join(", ")
 })
-const handleToggleActsAs = (on: boolean): void => {
-  draft.value.actsAsUid = on ? (currentUser.value?.uid ?? null) : null
-}
+// Switching a per-member workflow back to the team drops every opt-in for
+// good (the server never resurrects old consent), so confirm it first.
+const optInsDropped = computed(() =>
+  props.workflow?.audience === "personal" && !isPersonal.value
+    ? (subscribersQuery.data.value?.length ?? 0)
+    : 0
+)
+const confirmDropOpen = ref(false)
+
+// Connected-app tools (Drive, Gmail, Calendar, GitHub) have no per-agent
+// switch: every agent gets the ones the team has installed and enabled. A
+// shared run has no personal account, so each of those tools would answer
+// "not connected" at run time. Say so here instead.
+const { toolIntegrations } = storeToRefs(useIntegrationsStore())
+const unusableConnectionTools = computed<string>(() =>
+  isPersonal.value
+    ? ""
+    : toolIntegrations.value
+        .filter(
+          (tool) =>
+            tool.installed &&
+            tool.enabled &&
+            !tool.archivedAt &&
+            !!tool.sourceKey &&
+            !!getConnectionResourceProvider("tool", tool.sourceKey)
+        )
+        .map((tool) => tool.name)
+        .join(", ")
+)
 
 const ctxScope = ref<"code" | "write">("code")
 const ctxNodeId = ref("")
@@ -284,22 +327,20 @@ const initDraft = (): void => {
   const wf = props.workflow
   if (!wf) {
     draft.value = emptyDraft()
-    // New workflow: collapse to the Default agent unless the opener
-    // preselected a specific one.
-    runAsSpecificAgent.value = draft.value.agentId !== DEFAULT_AGENT_ID
+    runAsSpecificAgent.value = false
     return
   }
   const d = emptyDraft()
   d.name = wf.name
-  d.description = wf.description ?? ""
-  d.avatarSeed = wf.avatarSeed ?? ""
+  d.description = wf.description
+  d.avatarSeed = wf.avatarSeed
   d.agentId = wf.agentId
-  d.instructions = wf.instructions ?? ""
-  d.additionalPrompt = wf.additionalPrompt ?? ""
+  d.instructions = wf.instructions
+  d.additionalPrompt = wf.additionalPrompt
   d.targetScope = wf.targetScope ?? "write"
-  d.updateMode = wf.updateMode ?? "require_review"
-  d.contextNodes = (wf.contextNodes ?? []).map((n) => ({ ...n }))
-  d.actsAsUid = wf.actsAsUid ?? null
+  d.updateMode = wf.updateMode
+  d.contextNodes = wf.contextNodes.map((n) => ({ ...n }))
+  d.audience = wf.audience
   const trig = wf.trigger
   d.triggerType = trig.type
   if (trig.type === "event") {
@@ -475,11 +516,20 @@ const canSave = computed(() => {
   if (!editingId.value && !currentWorkspaceId.value) return false
   // Editing with nothing changed would only re-write the same workflow.
   if (editingId.value && !isDirty.value) return false
+  if (audienceConflict.value) return false
   return true
 })
 
 const handleSave = async (): Promise<void> => {
   if (!canSave.value) return
+  if (optInsDropped.value > 0) {
+    confirmDropOpen.value = true
+    return
+  }
+  await save()
+}
+
+const save = async (): Promise<void> => {
   const d = draft.value
   const shared = {
     name: d.name.trim(),
@@ -491,7 +541,7 @@ const handleSave = async (): Promise<void> => {
     updateMode: d.updateMode,
     trigger: buildTrigger(d),
     contextNodes: d.contextNodes,
-    actsAsUid: d.actsAsUid,
+    audience: d.audience,
   }
   if (editingId.value) {
     const ok = await update(editingId.value, shared)
@@ -1223,33 +1273,61 @@ const handleSave = async (): Promise<void> => {
                 </FieldDescription>
               </Field>
 
-              <!-- ── Connections access (P3) ─────────────────────────── -->
+              <!-- ── Audience ────────────────────────────────────────── -->
               <Field>
-                <FieldLabel for="wf-acts-as">
-                  {{ t("settings.workflows.connectionsLabel") }}
-                </FieldLabel>
-                <div class="flex items-center justify-between gap-2">
-                  <span class="text-sm">
-                    {{ t("settings.workflows.connectionsToggle") }}
-                  </span>
-                  <Switch
-                    id="wf-acts-as"
-                    :model-value="actsAsBindingOn"
-                    @update:model-value="(v) => handleToggleActsAs(Boolean(v))"
-                  />
-                </div>
+                <FieldLabel for="wf-audience">{{
+                  t("settings.workflows.audienceLabel")
+                }}</FieldLabel>
+                <Select v-model="draft.audience">
+                  <SelectTrigger id="wf-audience">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectGroup>
+                      <!-- A connection-provided workflow reads a personal
+                           account, so it can never be shared. -->
+                      <SelectItem
+                        value="shared"
+                        :disabled="!!props.workflow?.connectionProvider"
+                      >
+                        {{ t("settings.workflows.audienceShared") }}
+                      </SelectItem>
+                      <SelectItem value="personal">
+                        {{ t("settings.workflows.audiencePersonal") }}
+                      </SelectItem>
+                    </SelectGroup>
+                  </SelectContent>
+                </Select>
                 <FieldDescription>
-                  {{ t("settings.workflows.connectionsHint") }}
-                </FieldDescription>
-                <!-- Bound by ANOTHER member: their consented grant powers
-                     runs; toggling replaces it with yours, off revokes. -->
-                <FieldDescription v-if="actsAsIsOther">
                   {{
-                    t("settings.workflows.connectionsOther", {
-                      name:
-                        actsAsOtherName ||
-                        t("settings.workflows.connectionsOtherFallback"),
+                    isPersonal
+                      ? t("settings.workflows.audiencePersonalHint")
+                      : t("settings.workflows.audienceSharedHint")
+                  }}
+                </FieldDescription>
+                <FieldDescription
+                  v-if="unusableConnectionTools"
+                  class="text-foreground flex items-start gap-1.5"
+                >
+                  <IconAlertTriangle class="mt-0.5 size-3.5 shrink-0" />
+                  {{
+                    t("settings.workflows.audienceSharedNoApps", {
+                      tools: unusableConnectionTools,
                     })
+                  }}
+                </FieldDescription>
+                <FieldError v-if="audienceConflict">
+                  {{ t("settings.workflows.audienceNoEvent") }}
+                </FieldError>
+                <!-- Whose accounts runs currently use: only members who
+                     opted in themselves, at the current instructions. -->
+                <FieldDescription v-else-if="isPersonal && props.workflow">
+                  {{
+                    optedInNames
+                      ? t("settings.workflows.audienceOptedIn", {
+                          names: optedInNames,
+                        })
+                      : t("settings.workflows.audienceNoneOptedIn")
                   }}
                 </FieldDescription>
               </Field>
@@ -1284,5 +1362,20 @@ const handleSave = async (): Promise<void> => {
     :cancel-label="t('common.keepEditing')"
     destructive
     :on-confirm="guard.discard"
+  />
+
+  <ConfirmAction
+    v-model:open="confirmDropOpen"
+    :title="t('settings.workflows.audienceDropTitle')"
+    :description="
+      t(
+        'settings.workflows.audienceDropDescription',
+        { count: optInsDropped },
+        optInsDropped
+      )
+    "
+    :action-label="t('settings.workflows.audienceDropAction')"
+    destructive
+    :on-confirm="save"
   />
 </template>

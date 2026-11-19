@@ -1,3 +1,7 @@
+import {
+  isMembershipRole,
+  type IMembershipRole,
+} from "@lectornaut/shared/permissions"
 /**
  * Invitation Store - Team Invitation Management
  *
@@ -38,11 +42,7 @@ import { invitationSchema } from "@/schemas/invitation"
 import { membershipSchema } from "@/schemas/membership"
 import { useAuthStore } from "@/stores/authStore"
 import { useMembershipStore } from "@/stores/membershipStore"
-import {
-  isMembershipRole,
-  type IMembership,
-  type IMembershipRole,
-} from "@/types/membership"
+import { type IMembership } from "@/types/membership"
 import { can, Capabilities, type Capability } from "@/types/permissions"
 import { getMembershipRef } from "@/utils/firebase/firebase-helpers"
 import { useRunWrite } from "@/utils/firebase/firebase-mutation"

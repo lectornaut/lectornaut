@@ -7,14 +7,10 @@ const props = defineProps<{
   selectedIds: Set<string>
 }>()
 
-const emit = defineEmits<{ toggle: [workflowIds: string[]]; clear: [] }>()
+const emit = defineEmits<{ toggle: [workflowId: string]; clear: [] }>()
 
 const { t } = useI18n()
 const anySelected = computed(() => props.selectedIds.size > 0)
-
-// A row is checked only when every doc it represents is in the selection.
-const isSelected = (workflowIds: string[]): boolean =>
-  workflowIds.length > 0 && workflowIds.every((id) => props.selectedIds.has(id))
 </script>
 
 <template>
@@ -46,8 +42,8 @@ const isSelected = (workflowIds: string[]): boolean =>
         class="hover:bg-accent rounded-control flex cursor-pointer items-center gap-2 px-1 py-0.5 text-sm"
       >
         <Checkbox
-          :model-value="isSelected(item.workflowIds)"
-          @update:model-value="emit('toggle', item.workflowIds)"
+          :model-value="selectedIds.has(item.workflowId)"
+          @update:model-value="emit('toggle', item.workflowId)"
         />
         <span class="grow truncate">{{ item.name }}</span>
       </label>

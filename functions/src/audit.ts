@@ -56,7 +56,7 @@ import {
 // Call-time-only use (post-removal cascade) — the module cycle
 // audit → connections → bot → botNodeTools → audit is init-safe, same class
 // as the existing authGuards ↔ bot edge.
-import { cleanupMemberConnectionBindings } from "./connections.js"
+import { cleanupDepartedMember } from "./memberCleanup.js"
 import { removeMemberFromWorkspaces } from "./workspaceMembership.js"
 
 // =============================================================================
@@ -3412,11 +3412,53 @@ export const listWorkspaceMemberRoles = onCall(
   }
 )
 
-export const removeMember = onCall(CALLABLE_OPTS, async (request) => {
+/**
+ * Post-removal cascades (best-effort, outside the authoritative txn): drop the
+ * departed member from every workspace's participation list, then sweep what
+ * they left behind (memberCleanup.ts: connection tokens, workflow opt-ins and,
+ * only when asked, their private chats and memories). The sweep's counts are
+ * appended to the removal's own audit entry. Never throws.
+ */
+async function runMemberRemovalCascades(
+  teamId: string,
+  userId: string,
+  logId: string,
+  deletePrivateContent: boolean
+): Promise<void> {
+  try {
+    const [, counts] = await Promise.all([
+      removeMemberFromWorkspaces(teamId, userId).catch((error: unknown) =>
+        logger.warn("[removeMember] workspace list cleanup failed (ignored)", {
+          teamId,
+          userId,
+          error,
+        })
+      ),
+      cleanupDepartedMember(teamId, userId, { deletePrivateContent }),
+    ])
+    await db.doc(`logs/${logId}`).update({
+      "changes.after": { deletePrivateContent, ...counts },
+      "changes.fields": FieldValue.arrayUnion("cleanup"),
+    })
+  } catch (error) {
+    logger.warn("[removeMember] cleanup or its audit update failed (ignored)", {
+      teamId,
+      userId,
+      error,
+    })
+  }
+}
+
+// Longer timeout than CALLABLE_OPTS: the optional private-content sweep
+// deletes chat histories after the membership removal has committed.
+const REMOVE_MEMBER_OPTS = { ...CALLABLE_OPTS, timeoutSeconds: 300 }
+
+export const removeMember = onCall(REMOVE_MEMBER_OPTS, async (request) => {
   assertAuthenticated(request)
 
   const teamId = assertString(request.data?.teamId, "teamId")
   const targetUserId = assertString(request.data?.userId, "userId")
+  const deletePrivateContent = request.data?.deletePrivateContent === true
 
   const actorId = request.auth.uid
   const actorEmail = request.auth.token.email ?? undefined
@@ -3533,23 +3575,22 @@ export const removeMember = onCall(CALLABLE_OPTS, async (request) => {
     }
   })
 
-  // Post-removal cascades (best-effort, outside the authoritative txn):
-  // drop the removed member from every workspace's participation list, and
-  // tear down their connection OAuth bindings (revoke + delete tokens —
-  // connections.ts; never throws).
-  await Promise.all([
-    removeMemberFromWorkspaces(teamId, targetUserId),
-    cleanupMemberConnectionBindings(teamId, targetUserId),
-  ])
+  await runMemberRemovalCascades(
+    teamId,
+    targetUserId,
+    result.logId,
+    deletePrivateContent
+  )
 
   return result
 })
 
-export const removeMembers = onCall(CALLABLE_OPTS, async (request) => {
+export const removeMembers = onCall(REMOVE_MEMBER_OPTS, async (request) => {
   assertAuthenticated(request)
 
   const teamId = assertString(request.data?.teamId, "teamId")
   const userIds = request.data?.userIds
+  const deletePrivateContent = request.data?.deletePrivateContent === true
 
   if (!Array.isArray(userIds) || userIds.length === 0) {
     throw new HttpsError(
@@ -3711,14 +3752,16 @@ export const removeMembers = onCall(CALLABLE_OPTS, async (request) => {
     }
   })
 
-  // Post-removal cascades (best-effort, outside the authoritative txn):
-  // workspace participation lists + connection OAuth binding teardown for
-  // every removed member (revoke + delete tokens — connections.ts).
+  // `logIds` is index-aligned with `userIds` (one entry per removed member).
   await Promise.all(
-    (userIds as string[]).flatMap((userId) => [
-      removeMemberFromWorkspaces(teamId, userId),
-      cleanupMemberConnectionBindings(teamId, userId),
-    ])
+    (userIds as string[]).map((userId, index) =>
+      runMemberRemovalCascades(
+        teamId,
+        userId,
+        result.logIds[index],
+        deletePrivateContent
+      )
+    )
   )
 
   return result

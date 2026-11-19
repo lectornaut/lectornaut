@@ -53,16 +53,7 @@ import type { z } from "zod"
 /**
  * Domain type aliases.
  *
- * These types used to be hand-written interfaces. They are now re-exported
  * `z.infer` aliases from the single source of truth in `src/schemas/domain.ts`.
- * Store and composable code that imports from `@/types/domain` keeps working
- * with zero changes because the inferred shapes are structurally identical
- * to the previous interfaces.
- *
- * One minor caveat: per-field `readonly` modifiers (e.g. `readonly id: string`
- * on ITeam) are dropped by `z.infer`. This is a type-level loosening that
- * matters only if code was relying on the compiler to block field mutation —
- * which no call site in this codebase does.
  */
 
 export type BillingPlanKey = z.infer<typeof billingPlanKeySchema>

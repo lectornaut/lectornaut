@@ -136,11 +136,7 @@ type UsernameClaimEntityType = "user" | "team"
 
 type UsernameClaimData = {
   entityType?: UsernameClaimEntityType
-  type?: UsernameClaimEntityType
   entityId?: string
-  uid?: string
-  userId?: string
-  teamId?: string
 }
 
 function normalizeUsername(username: string): string {
@@ -229,9 +225,6 @@ function readClaimEntityType(
   if (data.entityType === "user" || data.entityType === "team") {
     return data.entityType
   }
-  if (data.type === "user" || data.type === "team") {
-    return data.type
-  }
   return null
 }
 
@@ -245,9 +238,6 @@ function resolveUserClaimId(
   const entityType = readClaimEntityType(data)
   if (entityType === "user") {
     return readString(data?.entityId)
-  }
-  if (entityType === null) {
-    return readString(data?.uid) ?? readString(data?.userId)
   }
   return null
 }
@@ -467,9 +457,10 @@ function validateUpdateOwnUserProfilePayload(
     } else {
       const trimmed = rawPhotoURL.trim()
       if (!trimmed) {
-        // Empty string = clear. Mirrors the client's earlier normalization
-        // (`photoURL === ""` → null) so old callers keep working.
-        payload.photoURL = null
+        throw new HttpsError(
+          "invalid-argument",
+          "photoURL must be a URL, or null to clear it."
+        )
       } else {
         if (trimmed.length > PHOTO_URL_MAX_LENGTH) {
           throw new HttpsError(

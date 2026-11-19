@@ -168,8 +168,8 @@ export function createSelectionWriteController<
  * onto the rejection error (see `applyRemoteSettlement`), so this is a
  * structural check, never message matching. Used as the self-correction
  * trigger for the cached ack stamp: a conflict means the cached token
- * disagreed with the doc (e.g. a skewed-high millis from an old-server
- * settlement), so the cache must be dropped in favor of the live listener.
+ * disagreed with the doc (e.g. a skewed-high millis from another device),
+ * so the cache must be dropped in favor of the live listener.
  */
 export function isFailedPreconditionRejection(error: unknown): boolean {
   return (
@@ -184,7 +184,7 @@ export function isFailedPreconditionRejection(error: unknown): boolean {
  * Freshest-of selection for an OCC token: epoch-ms candidates from a write
  * ack and the live listener; the largest finite number wins (per-doc
  * `updatedAt` stamps are monotonic across settlements). Non-numeric
- * candidates (absent doc, an old-server ack without millis) are ignored.
+ * candidates (absent doc, an ack without millis) are ignored.
  */
 export function selectFreshestUpdatedAtMillis(
   candidates: ReadonlyArray<number | string | null | undefined>
@@ -270,7 +270,7 @@ export const useAuthStore = defineStore("auth", () => {
   const currentTeamId = computed(
     () => userPreferences.value.currentTeamId ?? null
   )
-  const onboarding = computed(() => userPreferences.value.onboarding ?? false)
+  const onboarding = computed(() => userPreferences.value.onboarding)
 
   // ── Membership preferences doc (carries currentWorkspaceId, per team) ───────
   const membershipPreferencesDocRef = computed(() => {
@@ -606,8 +606,8 @@ export const useAuthStore = defineStore("auth", () => {
                 ),
               })
               // Refresh the cached token from the ack so the next chained
-              // switch carries a current baseVersion (absent on old-server
-              // verdicts — the listener value covers those).
+              // switch carries a current baseVersion (absent when the
+              // settlement stamped none — the listener value covers those).
               ackedPreferencesUpdatedAtMillis = selectFreshestUpdatedAtMillis([
                 ackedPreferencesUpdatedAtMillis,
                 result.updatedAtMillis,
@@ -666,9 +666,7 @@ export const useAuthStore = defineStore("auth", () => {
     if (!user || !baseProfile) return
 
     const { displayName, photoURL } = updates
-    // Empty string is the legacy "clear" signal — normalize to null.
-    const normalizedPhotoURL =
-      photoURL === "" || photoURL === null ? null : photoURL
+    const normalizedPhotoURL = photoURL
 
     // Send only touched keys; the server treats absent keys as "leave as-is".
     // displayName is dropped when not a string (the callable rejects null).

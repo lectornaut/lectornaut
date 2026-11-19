@@ -6,13 +6,13 @@ import type {
   EditorThemeId,
   FontId,
   SizeId,
+  ThemeId,
 } from "@/helpers/defaults"
 import {
   defaultCustomAccentColor,
   defaultCustomBaseColor,
 } from "@/helpers/defaults"
 import { useThemeStore } from "@/stores/themeStore"
-import type { ThemeMode } from "@/types/settings"
 import {
   buildCustomAccentTokens,
   buildCustomBaseTokens,
@@ -52,7 +52,7 @@ export const initTheme = () => {
     store,
     (value) => {
       if (value && value !== themeSettings.value.mode) {
-        themeSettings.value.mode = value as ThemeMode
+        themeSettings.value.mode = value as ThemeId
       }
     },
     { flush: "sync" }

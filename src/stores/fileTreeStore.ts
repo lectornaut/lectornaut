@@ -165,8 +165,8 @@ export const useFileTreeStore = defineStore("fileTree", () => {
       if (nodeA.typeOrder !== nodeB.typeOrder) {
         return nodeA.typeOrder - nodeB.typeOrder
       }
-      const sortA = String(nodeA.sortKey ?? nodeA.nameLower)
-      const sortB = String(nodeB.sortKey ?? nodeB.nameLower)
+      const sortA = nodeA.sortKey
+      const sortB = nodeB.sortKey
       if (sortA !== sortB) {
         return sortA.localeCompare(sortB)
       }

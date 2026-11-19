@@ -1,6 +1,5 @@
 import {
   FieldValue,
-  Timestamp,
   type DocumentData,
   type FirestoreDataConverter,
   type QueryDocumentSnapshot,
@@ -123,47 +122,6 @@ export function assertValid<T>(
   throw new SchemaValidationError(context, result.error, data)
 }
 
-// ─── Legacy timestamp coercion ──────────────────────────────────────────────
-
-/**
- * Recursively converts legacy numeric timestamps (epoch seconds or
- * milliseconds) into Firestore `Timestamp` instances.
- *
- * All current write paths use `Timestamp.now()` or `serverTimestamp()`,
- * but older documents may still contain plain numbers. This function
- * normalizes them at the read boundary so schemas can stay strict
- * (`z.instanceof(Timestamp)`) without rejecting legacy data.
- */
-const TIMESTAMP_FIELDS = new Set([
-  "createdAt",
-  "updatedAt",
-  "archivedAt",
-  "lastActiveAt",
-  "resentAt",
-])
-
-function coerceNumericTimestamps(
-  data: Record<string, unknown>
-): Record<string, unknown> {
-  const result = { ...data }
-  for (const [key, value] of Object.entries(result)) {
-    if (typeof value === "number" && TIMESTAMP_FIELDS.has(key)) {
-      const secs = value > 1e12 ? Math.floor(value / 1000) : value
-      const nanos = value > 1e12 ? (value % 1000) * 1e6 : 0
-      result[key] = new Timestamp(secs, nanos)
-    } else if (
-      value !== null &&
-      typeof value === "object" &&
-      !(value instanceof Timestamp) &&
-      !(value instanceof FieldValue) &&
-      !Array.isArray(value)
-    ) {
-      result[key] = coerceNumericTimestamps(value as Record<string, unknown>)
-    }
-  }
-  return result
-}
-
 // ─── Firestore converter factory ─────────────────────────────────────────────
 
 /**
@@ -193,9 +151,7 @@ export function zodConverter<T extends DocumentData>(
    * for server-side convenience but are *canonically* defined by the doc's
    * location — e.g. a doc at `teams/{teamId}/workspaces/{workspaceId}/…`
    * passes `{ teamId: 1, workspaceId: 3 }`. The path value always wins (the
-   * location can't lie), and — like `id` — this heals legacy/partial docs
-   * written before the field was denormalized, so a strict `z.string()`
-   * schema parses cleanly without a data migration.
+   * location can't lie).
    */
   pathFields?: Readonly<Record<string, number>>
 ): FirestoreDataConverter<T> {
@@ -204,12 +160,11 @@ export function zodConverter<T extends DocumentData>(
       return value as DocumentData
     },
     fromFirestore(snap: QueryDocumentSnapshot, options?: SnapshotOptions): T {
-      const data = coerceNumericTimestamps(snap.data(options))
+      const data = snap.data(options)
       // Inject `snap.id` (and any `pathFields`) into the parsed data. The
       // doc's path-derived id is canonical; storing it in the body is
-      // denormalization. This makes schemas with `id: z.string()` parse
-      // cleanly even when the body was written without explicit `id`
-      // (legacy docs, or docs written by code that didn't denormalize).
+      // denormalization, so schemas with `id: z.string()` parse even when
+      // the body doesn't store `id`.
       // Spread before the injected keys so the canonical path value wins.
       const enriched: Record<string, unknown> = { ...data, id: snap.id }
       if (pathFields) {

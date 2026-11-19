@@ -176,12 +176,7 @@ watch(
         ).filter((member): member is PublicProfileMember => !!member)
 
         profileMembers.value = members
-        profileMemberCount.value = Math.max(
-          typeof response.data?.memberCount === "number"
-            ? response.data.memberCount
-            : members.length,
-          members.length
-        )
+        profileMemberCount.value = response.data.memberCount
       } catch (err) {
         if (requestId !== profileHeaderRequestId) return
         console.error("Failed to load team members for profile:", err)
@@ -199,12 +194,7 @@ watch(
         ).filter((team): team is PublicProfileTeam => !!team)
 
         profileTeams.value = teams
-        profileTeamCount.value = Math.max(
-          typeof response.data?.teamCount === "number"
-            ? response.data.teamCount
-            : teams.length,
-          teams.length
-        )
+        profileTeamCount.value = response.data.teamCount
       } catch (err) {
         if (requestId !== profileHeaderRequestId) return
         console.error("Failed to load profile teams:", err)

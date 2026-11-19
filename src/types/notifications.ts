@@ -22,11 +22,6 @@ import type { z } from "zod"
  * `parseSafe(userNotificationSettingsSchema, …)` instead.
  */
 
-// `DEFAULT_NOTIFICATION_SETTINGS` + `NOTIFICATION_FREQUENCIES` now live in
-// `@lectornaut/shared/domain` (one source for client + server); re-exported
-// here so existing `@/types/notifications` importers are unaffected.
-export { DEFAULT_NOTIFICATION_SETTINGS, NOTIFICATION_FREQUENCIES }
-
 export type NotificationFrequency = z.infer<typeof notificationFrequencySchema>
 
 export type NotificationCategorySettings = z.infer<

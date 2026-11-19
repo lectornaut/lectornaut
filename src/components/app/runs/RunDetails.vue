@@ -1,6 +1,7 @@
 <script lang="ts" setup>
 import { buttonVariants } from "@/components/ui/button"
 import {
+  IconAlertTriangle,
   IconCheck,
   IconChevronRight,
   IconCircleDashed,
@@ -13,6 +14,8 @@ import {
   runStatusOptions,
   runStatusTextClass,
 } from "@/data/workflowRunConstants"
+import { useMemberNames } from "@/composables/useMemberNames"
+import { useTeamWorkflowsStore } from "@/stores/teamWorkflowsStore"
 import type { IWorkflowRun, IWorkflowRunChange } from "@/types/domain"
 import { tsToMillis } from "@/utils/firebase/firebase-timestamps"
 import { formatTimeAgo } from "@vueuse/core"
@@ -38,6 +41,22 @@ const stamp = (ms: number | null) => ({
 })
 
 const usage = computed(() => props.run.usage ?? null)
+
+// Per-member run: who it ran for.
+const { memberName } = useMemberNames()
+const forName = computed(() =>
+  props.run.forUid ? memberName(props.run.forUid) : ""
+)
+
+// Staged changes produced under instructions the workflow no longer has:
+// still awaiting review (live comparison), or already approved that way (the
+// server stamps `promptChangedSinceRun`).
+const workflows = useTeamWorkflowsStore()
+const staleReview = computed(
+  () =>
+    props.run.status === "awaiting_review" &&
+    workflows.isRunPromptStale(props.run.id)
+)
 const changes = computed<IWorkflowRunChange[]>(() => props.run.changes ?? [])
 
 /** Human description of what fired the run (rendered under the "Queued" step). */
@@ -188,7 +207,22 @@ const opStyle = (op: string) => OP_STYLE[op] ?? OP_STYLE.update
         </span>
         <span>${{ (usage.estimatedCostUsd ?? 0).toFixed(4) }}</span>
       </template>
+      <span v-if="forName">
+        {{ t("settings.workflows.runForMember", { name: forName }) }}
+      </span>
     </div>
+
+    <Alert v-if="staleReview || run.promptChangedSinceRun">
+      <IconAlertTriangle />
+      <AlertTitle>{{ t("settings.workflows.runStaleTitle") }}</AlertTitle>
+      <AlertDescription>
+        {{
+          staleReview
+            ? t("settings.workflows.runStalePending")
+            : t("settings.workflows.runStaleApproved")
+        }}
+      </AlertDescription>
+    </Alert>
 
     <!-- Lifecycle timeline — read-only vertical Stepper (mirrors NodeActivityLog). -->
     <Stepper

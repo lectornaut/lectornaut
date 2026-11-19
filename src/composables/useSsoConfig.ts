@@ -164,12 +164,10 @@ export function useSsoConfig(teamId: MaybeRefOrGetter<string | null>) {
       }
     )
 
-  // Backward-compatible loading refs
   const saving = computed(() => loading.isLoading("save"))
   const deleting = computed(() => loading.isLoading("delete"))
   const testing = computed(() => loading.isLoading("test"))
   const verifying = computed(() => loading.isLoading("verify"))
-  const savingLoginMethods = computed(() => loading.isLoading("loginMethods"))
   const savingApprovedDomains = computed(() =>
     loading.isLoading("approvedDomains")
   )
@@ -186,7 +184,6 @@ export function useSsoConfig(teamId: MaybeRefOrGetter<string | null>) {
     deleting: readonly(deleting),
     testing: readonly(testing),
     verifying: readonly(verifying),
-    savingLoginMethods: readonly(savingLoginMethods),
     savingApprovedDomains: readonly(savingApprovedDomains),
 
     // Actions

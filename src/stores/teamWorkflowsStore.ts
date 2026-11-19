@@ -7,6 +7,9 @@
  *   - Workflows:   teams/{teamId}/workspaces/{workspaceId}/workflows/{id} — the
  *     per-workspace deployments (materialized, opt-in; trigger/run/schedule
  *     runtime). Provenance is `presetKey` (null = custom).
+ *   - Opt-ins:     …/workflows/{id}/subscribers/{uid} — who a per-member
+ *     workflow runs for. Each member reads only their own doc (admins read
+ *     the list), so the member-readable workflow doc never says who opted in.
  *   - Run history: teams/{teamId}/workspaces/{workspaceId}/workflowRuns/{runId}
  *   - Read:  workflows + runs are read team-wide via a collectionGroup on the
  *     denormalized `teamId` (live subscription). Writes are callable-only
@@ -32,6 +35,7 @@ import {
   runTeamWorkflowNow as runTeamWorkflowNowFn,
   setTeamWorkflowAvailability as setTeamWorkflowAvailabilityFn,
   setTeamWorkflowEnabled as setTeamWorkflowEnabledFn,
+  setTeamWorkflowSubscription as setTeamWorkflowSubscriptionFn,
   updateTeamWorkflow as updateTeamWorkflowFn,
   type CreateWorkflowDraft,
   type UpdateWorkflowPatch,
@@ -39,6 +43,7 @@ import {
 } from "@/composables/useFunctions"
 import { firestore } from "@/modules/firebase"
 import { queryClient } from "@/modules/queryClient"
+import type { workflowSubscriberSchema } from "@/schemas/domain"
 import { useAuthStore } from "@/stores/authStore"
 import type { IWorkflow, IWorkflowRun } from "@/types/domain"
 import {
@@ -53,40 +58,28 @@ import {
 import {
   collection,
   collectionGroup,
+  doc,
   limit,
   orderBy,
   query,
   Timestamp,
   where,
+  type DocumentReference,
   type FirestoreDataConverter,
 } from "firebase/firestore"
 import { defineStore, storeToRefs } from "pinia"
 import { computed, ref } from "vue"
+import type { z } from "zod"
 
 /** Most recent run docs to subscribe to for the history view. */
 const RECENT_RUNS_LIMIT = 50
 
 // Workflow/run docs are written only server-side (admin SDK) and validated
-// there, so the client converter trusts the shape and just injects the id +
-// teamId read from the doc (denormalized — workflows are nested under a
-// workspace now, so the path no longer yields the team). `avatarSeed` needs
-// a runtime fallback: it shipped after the first workflows, so docs written
-// before it exists have no value, and the row/editor call `.trim()` on it.
-// Normalize here (mirroring teamAgentsStore) so `IWorkflow.avatarSeed` is
-// always a string in practice, matching its schema type.
+// there, so the client converter trusts the shape and just injects the id.
 const workflowConverter: FirestoreDataConverter<IWorkflow> = {
   toFirestore: () => ({}),
-  fromFirestore: (snapshot) => {
-    const data = snapshot.data()
-    return {
-      id: snapshot.id,
-      ...data,
-      teamId: typeof data.teamId === "string" ? data.teamId : "",
-      // `presetKey` (null = custom) is the workflow's provenance field.
-      presetKey: typeof data.presetKey === "string" ? data.presetKey : null,
-      avatarSeed: typeof data.avatarSeed === "string" ? data.avatarSeed : "",
-    } as IWorkflow
-  },
+  fromFirestore: (snapshot) =>
+    ({ id: snapshot.id, ...snapshot.data() }) as IWorkflow,
 }
 
 const workflowRunConverter: FirestoreDataConverter<IWorkflowRun> = {
@@ -94,6 +87,38 @@ const workflowRunConverter: FirestoreDataConverter<IWorkflowRun> = {
   fromFirestore: (snapshot) =>
     ({ id: snapshot.id, ...snapshot.data() }) as IWorkflowRun,
 }
+
+/** One member's opt-in to a per-member workflow ("Run for me"). */
+export type IWorkflowSubscriber = z.infer<typeof workflowSubscriberSchema>
+
+const workflowSubscriberConverter: FirestoreDataConverter<IWorkflowSubscriber> =
+  {
+    toFirestore: () => ({}),
+    fromFirestore: (snapshot) =>
+      ({ ...snapshot.data(), uid: snapshot.id }) as IWorkflowSubscriber,
+  }
+
+const workflowSubscribersPath = (wf: IWorkflow): string =>
+  `teams/${wf.teamId}/workspaces/${wf.workspaceId}/workflows/${wf.id}/subscribers`
+
+/** A member's own opt-in doc (rules: readable by that member + admins). */
+export const workflowSubscriberRef = (
+  wf: IWorkflow,
+  uid: string
+): DocumentReference<IWorkflowSubscriber> =>
+  doc(firestore, workflowSubscribersPath(wf), uid).withConverter(
+    workflowSubscriberConverter
+  )
+
+/** Every opt-in to a workflow — admin-only by the rules. */
+export const workflowSubscribersSource = (
+  wf: IWorkflow
+): CollectionQuerySource => ({
+  query: collection(firestore, workflowSubscribersPath(wf)).withConverter(
+    workflowSubscriberConverter
+  ),
+  path: workflowSubscribersPath(wf),
+})
 
 /**
  * Team availability docs (`teams/{teamId}/availableWorkflows/{presetKey}`) —
@@ -116,9 +141,8 @@ export const useTeamWorkflowsStore = defineStore("teamWorkflows", () => {
   const isSaving = ref(false)
 
   // Workflows live under each workspace now; read the team's whole set via a
-  // collectionGroup on the denormalized `teamId`, so the team-wide list,
-  // grandfather union, and runs explorer keep working unchanged. The
-  // per-workspace surfaces filter this via the `ws*` computeds below.
+  // collectionGroup on the denormalized `teamId` (the team-wide list and runs
+  // explorer). The per-workspace surfaces filter it via the `ws*` computeds.
   const workflowsQuery = useCollectionQuery<IWorkflow>(
     (): CollectionQuerySource | null => {
       const teamId = currentTeamId.value
@@ -303,12 +327,12 @@ export const useTeamWorkflowsStore = defineStore("teamWorkflows", () => {
 
   const runCacheWrite = async <T>(
     key: FirestoreQueryKey,
-    applyOptimistic: (current: T[]) => T[],
+    applyOptimistic: (current: T | undefined) => T,
     run: () => Promise<unknown>
   ): Promise<void> => {
-    const previous = queryClient.getQueryData<T[]>(key)
+    const previous = queryClient.getQueryData<T>(key)
     const release = holdOptimistic(key)
-    queryClient.setQueryData<T[]>(key, applyOptimistic(previous ?? []))
+    queryClient.setQueryData<T>(key, applyOptimistic(previous))
     try {
       await run()
     } catch (error) {
@@ -354,14 +378,68 @@ export const useTeamWorkflowsStore = defineStore("teamWorkflows", () => {
   ): Promise<void> => {
     const teamId = requireTeam()
     const workspaceId = requireWorkflowWorkspaceId(workflowId)
-    await runCacheWrite<IWorkflow>(
+    await runCacheWrite<IWorkflow[]>(
       workflowsCacheKey(teamId),
-      (current) =>
+      (current = []) =>
         current.map((w) => (w.id === workflowId ? { ...w, enabled } : w)),
       () =>
         setTeamWorkflowEnabledFn({ teamId, workspaceId, workflowId, enabled })
     )
   }
+
+  /**
+   * Write the current user's own opt-in: patch their cached subscriber doc
+   * (what `useWorkflowSubscription` renders), then call the server.
+   */
+  const writeMySubscription = async (
+    workflowId: string,
+    applyOptimistic: (
+      current: IWorkflowSubscriber | null | undefined,
+      wf: IWorkflow,
+      uid: string
+    ) => IWorkflowSubscriber | null,
+    change: { subscribed?: boolean; notify?: boolean }
+  ): Promise<void> => {
+    const teamId = requireTeam()
+    const wf = getById(workflowId)
+    const uid = authStore.currentUser?.uid
+    if (!wf || !uid) throw new Error("Workflow not found.")
+    await runCacheWrite<IWorkflowSubscriber | null>(
+      queryKeys.doc(workflowSubscriberRef(wf, uid).path),
+      (current) => applyOptimistic(current, wf, uid),
+      () =>
+        setTeamWorkflowSubscriptionFn({
+          teamId,
+          workspaceId: wf.workspaceId,
+          workflowId,
+          ...change,
+        })
+    )
+  }
+
+  /** "Run for me": opt the current user in or out of a per-member workflow. */
+  const setSubscribed = (workflowId: string, subscribed: boolean) =>
+    writeMySubscription(
+      workflowId,
+      (current, wf, uid) =>
+        subscribed
+          ? {
+              ...current,
+              uid,
+              approvedRev: wf.consentRev,
+              paused: null,
+            }
+          : null,
+      { subscribed }
+    )
+
+  /** "Notify me": whether the current user hears about their own runs. */
+  const setNotify = (workflowId: string, notify: boolean) =>
+    writeMySubscription(
+      workflowId,
+      (current) => (current ? { ...current, notify } : null),
+      { notify }
+    )
 
   const archive = async (
     workflowId: string,
@@ -369,9 +447,9 @@ export const useTeamWorkflowsStore = defineStore("teamWorkflows", () => {
   ): Promise<void> => {
     const teamId = requireTeam()
     const workspaceId = requireWorkflowWorkspaceId(workflowId)
-    await runCacheWrite<IWorkflow>(
+    await runCacheWrite<IWorkflow[]>(
       workflowsCacheKey(teamId),
-      (current) =>
+      (current = []) =>
         current.map((w) =>
           w.id === workflowId
             ? { ...w, archivedAt: archived ? Timestamp.now() : null }
@@ -384,9 +462,9 @@ export const useTeamWorkflowsStore = defineStore("teamWorkflows", () => {
   const remove = async (workflowId: string): Promise<void> => {
     const teamId = requireTeam()
     const workspaceId = requireWorkflowWorkspaceId(workflowId)
-    await runCacheWrite<IWorkflow>(
+    await runCacheWrite<IWorkflow[]>(
       workflowsCacheKey(teamId),
-      (current) => current.filter((w) => w.id !== workflowId),
+      (current = []) => current.filter((w) => w.id !== workflowId),
       () => deleteTeamWorkflowFn({ teamId, workspaceId, workflowId })
     )
   }
@@ -402,10 +480,26 @@ export const useTeamWorkflowsStore = defineStore("teamWorkflows", () => {
     return data.runId
   }
 
+  /**
+   * Whether a run's staged changes came from instructions the workflow no
+   * longer has (same composition as the server's `composePrompt`). The server
+   * refuses to approve such a run unless the admin acknowledges it.
+   */
+  const isRunPromptStale = (runId: string): boolean => {
+    const run = recentRuns.value.find((r) => r.id === runId)
+    const wf = run ? getById(run.workflowId) : null
+    if (!run?.prompt || !wf) return false
+    const live = wf.additionalPrompt
+      ? `${wf.instructions}\n\n${wf.additionalPrompt}`
+      : wf.instructions
+    return live !== run.prompt
+  }
+
   /** Approve (apply staged edits) or reject a `require_review` run. */
   const reviewRun = async (
     runId: string,
-    decision: WorkflowReviewDecision
+    decision: WorkflowReviewDecision,
+    acknowledgeStale = false
   ): Promise<string> => {
     const teamId = requireTeam()
     const workspaceId = recentRuns.value.find(
@@ -417,6 +511,7 @@ export const useTeamWorkflowsStore = defineStore("teamWorkflows", () => {
       workspaceId,
       runId,
       decision,
+      ...(acknowledgeStale ? { acknowledgeStale } : {}),
     })
     return data.status
   }
@@ -428,9 +523,9 @@ export const useTeamWorkflowsStore = defineStore("teamWorkflows", () => {
       (r) => r.id === runId
     )?.workspaceId
     if (!workspaceId) throw new Error("Run not found.")
-    await runCacheWrite<IWorkflowRun>(
+    await runCacheWrite<IWorkflowRun[]>(
       runsCacheKey(teamId, workspaceId),
-      (current) => current.filter((r) => r.id !== runId),
+      (current = []) => current.filter((r) => r.id !== runId),
       () => deleteTeamWorkflowRunFn({ teamId, workspaceId, runId })
     )
   }
@@ -489,9 +584,12 @@ export const useTeamWorkflowsStore = defineStore("teamWorkflows", () => {
     create,
     update,
     setEnabled,
+    setSubscribed,
+    setNotify,
     archive,
     remove,
     runNow,
+    isRunPromptStale,
     reviewRun,
     removeRun,
     enablePreset,

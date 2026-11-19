@@ -64,6 +64,7 @@
       "icons/icon.png": "icons/icon.png"
     },
     "macOS": {
+      "entitlements": "Entitlements.plist",
       "dmg": {
         "background": "icons/dmg/background.png"
       },

@@ -35,6 +35,9 @@
           {{#if isBlocked}}
           This automation run was blocked before it could finish.
           {{/if}}
+          {{#if notice}}
+          {{ notice }}
+          {{/if}}
         </mj-text>
 
         <mj-text>
@@ -43,8 +46,12 @@
             statusLabel
           }}</span>
         </mj-text>
+        {{#if triggerLabel}}
         <mj-text><strong>Trigger:</strong> {{ triggerLabel }}</mj-text>
+        {{/if}}
+        {{#if agentName}}
         <mj-text><strong>Agent:</strong> {{ agentName }}</mj-text>
+        {{/if}}
         {{#if workspaceName}}
         <mj-text><strong>Workspace:</strong> {{ workspaceName }}</mj-text>
         {{/if}}
@@ -84,7 +91,7 @@
         {{/if}}
 
         <mj-button href="{{ ctaUrl }}" align="left" padding-top="16px">
-          View run
+          {{#if notice}}Open workflows{{else}}View run{{/if}}
         </mj-button>
       </mj-column>
     </mj-section>

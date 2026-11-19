@@ -15,10 +15,6 @@ import type { z } from "zod"
  * Membership type aliases — re-exported `z.infer` types from
  * `src/schemas/membership.ts`.
  *
- * Role primitives (`IMembershipRole`, `MEMBERSHIP_ROLES`, `isMembershipRole`)
- * are re-exported from the shared permissions module so existing imports
- * like `import { IMembershipRole } from "@/types/membership"` keep working.
- *
  * Two principal kinds share the memberships collection:
  *   - `IMembership`      — a human membership (keeps the historical name +
  *                          shape so the bulk of the codebase, which only
@@ -29,12 +25,6 @@ import type { z } from "zod"
  *   - `ITeamMember`      — the union; the shape of a row in a team's
  *                          members list.
  */
-
-export {
-  isMembershipRole,
-  MEMBERSHIP_ROLES,
-  type IMembershipRole,
-} from "@lectornaut/shared/permissions"
 
 export type IMembershipRecord = z.infer<typeof membershipRecordSchema>
 export type IMembershipUserSnapshot = z.infer<

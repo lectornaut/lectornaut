@@ -44,6 +44,7 @@ const {
   memories,
   isLoading,
   canManage,
+  isTeamAdmin,
   memoryEnabled,
   isMutating,
   create,
@@ -276,14 +277,12 @@ const columns = computed<ColumnDef<AppTableFeatures, IMemory>[]>(() => [
         "onUpdate:modelValue": (value: unknown) =>
           table.toggleAllPageRowsSelected(!!value),
         ariaLabel: t("components.dataTable.selectAll"),
-        class: "mr-2",
       }),
     cell: ({ row }) =>
       h(Checkbox, {
         modelValue: row.getIsSelected(),
         "onUpdate:modelValue": (value: unknown) => row.toggleSelected(!!value),
         ariaLabel: t("components.dataTable.selectAll"),
-        class: "mr-2",
       }),
     enablePinning: true,
     enableSorting: false,
@@ -636,6 +635,8 @@ const submitBulkDelete = async (): Promise<boolean> => {
             </div>
           </Field>
 
+          <AdminViewNotice v-if="isTeamAdmin" kind="memories" />
+
           <!-- Governance-only banner when the master toggle is off. -->
           <Field v-if="!memoryEnabled" orientation="horizontal">
             <FieldContent>
@@ -896,8 +897,7 @@ const submitBulkDelete = async (): Promise<boolean> => {
       <template #description>
         <span class="text-foreground font-medium">{{
           t("settings.memory.selectedCount", { count: selectionCount })
-        }}</span
-        >. {{ t("settings.memory.bulkDeleteConfirm") }}
+        }}</span>. {{ t("settings.memory.bulkDeleteConfirm") }}
       </template>
     </ConfirmAction>
   </div>

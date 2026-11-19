@@ -293,6 +293,15 @@
 }
 
 /*
+  Stock shadcn zeroes the right padding of a cell holding a checkbox
+  (`[&:has([role=checkbox])]:pr-0`); restore the cell's own `px-3`.
+*/
+[data-slot="table-head"]:has([role="checkbox"]),
+[data-slot="table-cell"]:has([role="checkbox"]) {
+  @apply pr-3;
+}
+
+/*
   Command: one `--radius-command` drives the shell, the search field (p-1 + the
   input wrapper's p-1) and the rows (p-1 + the group's overlay inset). It
   defaults to the surface radius, matches a `p-0` popover it fills, and a host
@@ -526,6 +535,23 @@
 */
 [data-table-viewport] > [data-slot="table-container"] {
   @apply scroll-fade min-h-0 grow scrollbar-thin scrollbar-gutter-stable overflow-auto;
+}
+
+/*
+  Sticky header: the scroller's mask starts at its top edge, which is where
+  the pinned header sits, so the stock top fade dims the header. Keep the
+  header band fully opaque and start the top fade right under it. Same
+  animated `--scroll-fade-t`/`-b` as the stock utility, only offset.
+*/
+[data-table-viewport][data-sticky-header] > [data-slot="table-container"] {
+  --scroll-fade-mask: linear-gradient(
+    to bottom,
+    #000 var(--table-head-h, 0px),
+    transparent var(--table-head-h, 0px),
+    #000 calc(var(--table-head-h, 0px) + var(--scroll-fade-t, 0px)),
+    #000 calc(100% - var(--scroll-fade-b, 0px)),
+    transparent 100%
+  );
 }
 
 /*

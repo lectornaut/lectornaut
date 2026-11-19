@@ -1,5 +1,5 @@
 import type { BillingPlanKey, ITeamBilling } from "@/types/domain"
-import type { IMembershipRole } from "@/types/membership"
+import type { IMembershipRole } from "@lectornaut/shared/permissions"
 
 export const BILLING_PLAN_ORDER: readonly BillingPlanKey[] = [
   "personal",

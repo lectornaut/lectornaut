@@ -53,6 +53,22 @@ service cloud.firestore {
       return /databases/$(database)/documents/teams/$(teamId)/workspaces/$(workspaceId)/botSessions/$(sessionId);
     }
 
+    function adminViewGrantPath(teamId, workspaceId, kind) {
+      return /databases/$(database)/documents/teams/$(teamId)/workspaces/$(workspaceId)/adminViewGrants/$(request.auth.uid + "_" + kind);
+    }
+
+    // The logged "view as admin" step. A team admin reads other members'
+    // PRIVATE chats ("sessions") or memories ("memories") only while a grant
+    // written by the audited `startAdminView` callable is live. Being an admin
+    // is not enough on its own. The grant is a FIXED doc (the caller's own, for
+    // this workspace + kind), so it does not vary per result document and is
+    // safe in `list` rules, like isWorkspaceExcluded.
+    function hasAdminView(teamId, workspaceId, kind) {
+      return isTeamAdmin(teamId)
+        && exists(adminViewGrantPath(teamId, workspaceId, kind))
+        && get(adminViewGrantPath(teamId, workspaceId, kind)).data.expiresAt > request.time;
+    }
+
     // Mirror the botSessions read predicate for attachment-subcollection reads
     // so a private chat's attachments aren't enumerable by other members. The
     // repeated get() is cached within one rule evaluation (single read).
@@ -61,7 +77,7 @@ service cloud.firestore {
         && (
           get(botSessionPath(teamId, workspaceId, sessionId)).data.ownerUid == request.auth.uid
           || get(botSessionPath(teamId, workspaceId, sessionId)).data.visibility == "shared"
-          || isTeamAdmin(teamId)
+          || hasAdminView(teamId, workspaceId, "sessions")
         );
     }
 
@@ -437,16 +453,16 @@ service cloud.firestore {
         //     lives in Cloud Functions (writes here are always denied).
         //   - public:  reserved for future — rule path not yet implemented.
         // Writes always happen via Cloud Functions (sendBotMessage,
-        // updateBotSessionVisibility). Sessions written before the
-        // visibility field existed have no value, which evaluates as
-        // owner-only here (the shared predicate requires the explicit
-        // string match).
+        // updateBotSessionVisibility). A new chat has no visibility field,
+        // which evaluates as owner-only here (the shared predicate requires
+        // the explicit string match).
         match /botSessions/{sessionId} {
           // Three read paths:
           //   - owner: read your own sessions, any visibility.
           //   - team member: read sessions explicitly shared with the team.
-          //   - team admin/owner: read every session in the workspace, used
-          //     by the admin-only Sessions tab in Settings.
+          //   - team admin/owner with a live "view as admin" grant: read every
+          //     session in the workspace (the Sessions tab in Settings, after
+          //     the logged `startAdminView` step). No grant = same as a member.
           // Writes always happen via Cloud Functions (sendBotMessage,
           // archiveBotSession, deleteBotSession, …).
           allow read: if isTeamMember(teamId)
@@ -454,7 +470,7 @@ service cloud.firestore {
             && (
               resource.data.ownerUid == request.auth.uid
               || resource.data.visibility == "shared"
-              || isTeamAdmin(teamId)
+              || hasAdminView(teamId, workspaceId, "sessions")
             );
           allow write: if false;
 
@@ -472,12 +488,11 @@ service cloud.firestore {
         // is identical to botSessions:
         //   - owner: read your own memories, any visibility.
         //   - team member: read memories explicitly shared with the workspace.
-        //   - team admin/owner: read every memory (the management UI).
-        // A memory written before the visibility field existed has no value,
-        // which evaluates as owner-only (the shared predicate requires the
-        // explicit string match). Writes always happen via Cloud Functions
+        //   - team admin/owner with a live "view as admin" grant: read every
+        //     memory (the management UI, after the logged step).
+        // Writes always happen via Cloud Functions
         // (createMemory, updateMemory, …) so embedding + audit + authorize live
-        // in the callable path. NOTE: the admin read override is for the
+        // in the callable path. NOTE: the admin grant is for the
         // management UI only — server-side recall (functions/src/memory.ts)
         // deliberately does NOT use it, so a private memory is never injected
         // into another member's prompt.
@@ -487,7 +502,7 @@ service cloud.firestore {
             && (
               resource.data.ownerUid == request.auth.uid
               || resource.data.visibility == "shared"
-              || isTeamAdmin(teamId)
+              || hasAdminView(teamId, workspaceId, "memories")
             );
           allow write: if false;
         }
@@ -498,6 +513,18 @@ service cloud.firestore {
         match /workflowRuns/{runId} {
           allow read: if isTeamAdmin(teamId)
             && !isWorkspaceExcluded(teamId, workspaceId);
+          allow write: if false;
+        }
+
+        // Opt-ins to a per-member workflow ("Run for me"): doc id is the
+        // member's uid. Kept OFF the member-readable workflow doc so members
+        // can't see who else opted in — only the member themselves and team
+        // admins read it. Written only by setTeamWorkflowSubscription and
+        // the run worker via the admin SDK. (The workflow doc itself is
+        // covered by the collection-group rule at the bottom.)
+        match /workflows/{workflowId}/subscribers/{userId} {
+          allow read: if isTeamMember(teamId)
+            && (isSelf(userId) || isTeamAdmin(teamId));
           allow write: if false;
         }
 

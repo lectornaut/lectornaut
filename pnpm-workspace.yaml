@@ -142,11 +142,11 @@ minimumReleaseAgeExclude:
   - "@tiptap/vue-3@3.33.0"
 
 permissions:
-  '@tanstack/vue-hotkeys':
+  "@tanstack/vue-hotkeys":
     skills: true
-  '@tanstack/vue-table':
+  "@tanstack/vue-table":
     skills: true
-  '@unhead/vue':
+  "@unhead/vue":
     skills: true
 
 skills:

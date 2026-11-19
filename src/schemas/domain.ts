@@ -93,15 +93,10 @@ export const userWriteSchema = userProfileSchema.extend({
 
 export const userPreferencesSchema = z.object({
   currentTeamId: z.string().nullable(),
-  // Genuine body data, not path-derivable — and legacy/partial docs exist that
-  // were written by a `currentTeamId`-only merge (or predate this field). A
-  // required `z.boolean()` makes the read converter throw (DEV) on those docs
-  // and the hydration cache get discarded. Optional + the read-side `?? false`
-  // (authStore) heals them without a migration.
-  onboarding: z.boolean().optional(),
-  // Synced app preferences (appPreferencesStore round-trip). All optional:
-  // most docs predate each field, and every reader falls back to its
-  // useStorage default. Must stay in lockstep with the server whitelist in
+  onboarding: z.boolean(),
+  // Synced app preferences (appPreferencesStore round-trip). Optional: a
+  // field is only written once the user changes it; readers fall back to
+  // their useStorage default. Must stay in lockstep with the server whitelist in
   // functions/src/syncSettlement.ts (validateUserPreferencesPayload).
   badgeCount: z.boolean().optional(),
   fileDropOverlayDragDrop: z.boolean().optional(),
@@ -183,22 +178,17 @@ export const workspaceWriteSchema = workspaceSchema.extend({
  * `teams/{teamId}/workspaces/{workspaceId}/groupGrants/{groupId}` (elevate-only,
  * within-workspace only), never on the group itself. Functions-only write
  * (createGroup / updateGroup / deleteGroup); the client only ever reads.
- *
- * `createdByUid` is `.optional()` so a legacy/partial doc never trips the
- * read-path converter (over-strict read schemas silently drop rows). `teamId`
- * is path-injected by the converter (`{ teamId: 1 }`), so it stays required.
  */
 export const groupSchema = z.object({
   id: z.string(),
   teamId: z.string(),
   name: z.string(),
-  // Optional: groups created before descriptions existed have none; `null` is
-  // the explicit "cleared" value written by the update callable.
-  description: z.string().nullable().optional(),
-  memberIds: z.array(z.string()).default([]),
-  // Optional: groups created before avatars existed have no `photoURL`.
+  // `null` = no description (create writes it; update can clear it).
+  description: z.string().nullable(),
+  memberIds: z.array(z.string()),
+  // Absent until a photo is uploaded; `null` once cleared.
   photoURL: z.string().nullable().optional(),
-  createdByUid: z.string().optional(),
+  createdByUid: z.string(),
   createdAt: timestampSchema,
   updatedAt: timestampSchema,
 })
@@ -309,17 +299,14 @@ export const botSessionMessageSchema = z.object({
   /**
    * Set to `"error"` on agent messages persisted by a server-side graceful
    * fallback (turn deadline, tool budget, missing tool, invalid tool args)
-   * so the bubble renders as a failure instead of a normal reply. MUST stay
-   * `.optional()` — every message written before this field existed (and
-   * every normal message after) omits it, and a required field here would
-   * silently drop those rows at the converter.
+   * so the bubble renders as a failure instead of a normal reply. Absent on
+   * normal messages.
    */
   status: z.enum(BOT_CHAT_MESSAGE_STATUSES).optional(),
   /**
    * Structured parts. Present on agent messages that include tool calls,
-   * absent for plain text-only messages (and all legacy messages saved
-   * before this field existed). When absent, the renderer falls back to
-   * a single `content` text bubble.
+   * absent for plain text-only messages, which render as a single `content`
+   * text bubble.
    */
   segments: z.array(botMessageSegmentSchema).optional(),
   /**
@@ -329,9 +316,6 @@ export const botSessionMessageSchema = z.object({
    * session's `ownerUid` is no longer a safe proxy — admins can also
    * post into shared chats, so the owner-uid heuristic would falsely
    * attribute their turns to the chat creator.
-   *
-   * Absent on legacy messages saved before this field existed; the UI
-   * falls back to the session's `ownerUid` for those.
    */
   authorUid: z.string().optional(),
   /**
@@ -339,8 +323,8 @@ export const botSessionMessageSchema = z.object({
    * regenerate resend from it (`fromSnapshotId`).
    */
   parentSnapshotId: z.string().optional(),
-  /** ISO time the message was sent (user) or finished (agent). Absent on legacy messages. */
-  sentAt: z.string().optional(),
+  /** ISO time the message was sent (user) or finished (agent). */
+  sentAt: z.string(),
 })
 
 /**
@@ -348,10 +332,6 @@ export const botSessionMessageSchema = z.object({
  * session store; the record points at its current snapshot
  * (`headSnapshotId`) and carries the fields derived on each save so the
  * history sidebar renders without loading any transcript.
- *
- * Sessions written before the visibility field existed have no value on
- * disk — the schema's `.default("private")` keeps them owner-only at the
- * type layer without a data migration.
  */
 // ─── Workspace agent (bot) config ────────────────────────────────────────────
 
@@ -395,8 +375,8 @@ export const botAgentModelTogglesSchema = z.record(
 )
 
 /**
- * Per-tool feature flags. Disabled tools are simply not registered with
- * the chat — the model never sees them in its tool catalog.
+ * Per-agent tool toggles. A disabled tool is not registered for that
+ * agent — the model never sees it in its tool catalog.
  */
 export const botAgentToolTogglesSchema = z.object({
   rollDice: z.boolean(),
@@ -470,9 +450,7 @@ export const botAgentToolTogglesSchema = z.object({
    * conflict with, membership). The write tools register only when the
    * driving user AND the active agent are each content-capable members AND
    * this per-agent toggle allows — so the toggle can only narrow within what
-   * membership already grants, never widen it. The field stays in the shared
-   * team shape (schema uniformity) but the team value is not consulted.
-   * Normalizes missing → `true`, so existing agents keep node editing.
+   * membership already grants, never widen it.
    */
   manageContent: z.boolean(),
   /**
@@ -484,9 +462,7 @@ export const botAgentToolTogglesSchema = z.object({
    * (held by every role, including guests) rather than
    * `MANAGE_WORKSPACE_CONTENT`. Unlike `manageContent`, READ is low-risk
    * enough that it has NO team-wide switch — it's a per-agent toggle only,
-   * intersected with the READ_WORKSPACE membership at dispatch. The field
-   * stays part of the shared team shape (so the schema is uniform) but the
-   * team value is no longer consulted. Normalizes missing → `true`.
+   * intersected with the READ_WORKSPACE membership at dispatch.
    */
   readContent: z.boolean(),
   /**
@@ -504,9 +480,6 @@ export const botAgentToolTogglesSchema = z.object({
    * or out of. Per-agent records carry this field too (the schema is
    * shared) but it's ignored there; only the team config's value
    * gates anything.
-   *
-   * Server normalizes missing keys to `true` on read so teams that
-   * predate this field keep the feature enabled by default.
    */
   customAgents: z.boolean(),
   /**
@@ -514,9 +487,7 @@ export const botAgentToolTogglesSchema = z.object({
    * (Settings → Workflows). When false, members/admins can't create new
    * custom workflows — predefined workflows are unaffected. Sibling of
    * `customAgents`; per-agent docs carry it for shape alignment but it's
-   * ignored there (only the team config's value gates anything). Server
-   * normalizes a missing key to `true`, so teams predating it keep the
-   * feature enabled.
+   * ignored there (only the team config's value gates anything).
    */
   customWorkflows: z.boolean(),
   /**
@@ -529,6 +500,13 @@ export const botAgentToolTogglesSchema = z.object({
    * of admin-authored tools as a category."
    */
   customTools: z.boolean(),
+})
+
+/** Team-wide feature gates on the agent config (`IBotAgentConfig.tools`). */
+export const botAgentFeatureTogglesSchema = botAgentToolTogglesSchema.pick({
+  customAgents: true,
+  customWorkflows: true,
+  customTools: true,
 })
 
 /**
@@ -548,22 +526,18 @@ export const botAgentConfigSchema = z.object({
   models: botAgentModelTogglesSchema,
   model: botAgentModelSchema,
   maxOutputTokens: z.number().int().min(256).max(65536),
-  // `.catch(true)` mirrors the server's forgiving normalization and keeps the
-  // client resilient if a response predates the field (deploy ordering).
-  thinking: z.boolean().catch(true),
-  autoContext: z.boolean().catch(false),
-  // Master Memory switch (recall + extraction + memory tools). On by default;
-  // `.catch(true)` keeps a pre-field response resilient (deploy ordering) and
-  // mirrors the server's `cappedToolToggle(DEFAULT_BOT_AGENT_CONFIG.memoryEnabled)`.
-  memoryEnabled: z.boolean().catch(true),
+  thinking: z.boolean(),
+  autoContext: z.boolean(),
+  // Master Memory switch (recall + extraction + memory tools). On by default.
+  memoryEnabled: z.boolean(),
   defaultMode: botAgentDefaultModeSchema,
   systemPromptBase: z.string().max(4000),
-  tools: botAgentToolTogglesSchema,
+  tools: botAgentFeatureTogglesSchema,
   // Team-set monthly token cap (Settings → Usage); `null` = plan allowance
-  // alone. `.catch(null)` keeps a pre-field response resilient (deploy order).
-  monthlyTokenCap: z.number().int().nullable().catch(null),
+  // alone.
+  monthlyTokenCap: z.number().int().nullable(),
   // Estimated monthly cost cap in USD cents; null = no cost cap.
-  monthlyCostCapCents: z.number().int().nullable().catch(null),
+  monthlyCostCapCents: z.number().int().nullable(),
 })
 
 // ─── Team-scoped custom agents (multi-agent network) ────────────────────────
@@ -647,9 +621,6 @@ export const teamAgentSchema = z.object({
    * default persona even when a session has the agent persisted as
    * `activeAgentId`. Re-enabling makes the agent dispatchable again
    * for any session that still points at it.
-   *
-   * Server normalizes missing keys to `true` on read so docs written
-   * before this field shipped continue to dispatch normally.
    */
   enabled: z.boolean(),
   /**
@@ -672,19 +643,6 @@ export const teamAgentSchema = z.object({
   createdAt: timestampSchema,
   updatedAt: timestampSchema,
   createdByUid: z.string(),
-})
-
-/**
- * Write variant — accepts FieldValue sentinels for timestamps and lets
- * the server fill in id / teamId / createdByUid on create.
- */
-export const teamAgentWriteSchema = teamAgentSchema.extend({
-  id: z.string().optional(),
-  teamId: z.string().optional(),
-  createdByUid: z.string().optional(),
-  archivedAt: z.union([timestampInputSchema, z.null()]).optional(),
-  createdAt: timestampInputSchema,
-  updatedAt: timestampInputSchema,
 })
 
 // ─── Team-scoped custom tools (admin-authored bot tool catalog) ─────────────
@@ -852,32 +810,11 @@ export const teamCustomToolSchema = z.object({
   createdByUid: z.string(),
 })
 
-export const teamCustomToolWriteSchema = teamCustomToolSchema.extend({
-  id: z.string().optional(),
-  teamId: z.string().optional(),
-  createdByUid: z.string().optional(),
-  archivedAt: z.union([timestampInputSchema, z.null()]).optional(),
-  createdAt: timestampInputSchema,
-  updatedAt: timestampInputSchema,
-})
-
 export const botSessionSchema = z.object({
   id: z.string(),
-  // teamId + workspaceId are injected from the doc path by `botSessionConverter`
-  // (see firebase-helpers.ts), so they parse cleanly even on legacy/partial
-  // docs that never denormalized them into the body.
   teamId: z.string(),
   workspaceId: z.string(),
-  /**
-   * Owner uid is genuine body data — unlike teamId/workspaceId it is NOT
-   * derivable from the doc path, so it can't be healed at the read boundary.
-   * Optional on read so the unfiltered admin query (Settings → Sessions)
-   * doesn't throw on legacy/partial docs that predate ownerUid
-   * denormalization; consumers treat an absent owner as "unknown". Every
-   * server write path (`FirestoreBotSessionStore.save`) still sets it, so
-   * docs touched after that change always carry it.
-   */
-  ownerUid: z.string().optional(),
+  ownerUid: z.string(),
   title: z.string().optional(),
   preview: z.string().optional(),
   messageCount: z.number().optional(),
@@ -898,6 +835,8 @@ export const botSessionSchema = z.object({
     .object({ sessionId: z.string(), snapshotId: z.string() })
     .optional(),
   visibility: botSessionVisibilitySchema.default("private"),
+  /** True once a turn called a connection tool (Drive, Gmail, ...). */
+  usedConnections: z.boolean().optional(),
   createdAt: timestampSchema.optional(),
   updatedAt: timestampSchema.optional(),
   /** Set when archived; null/undefined when active. */
@@ -918,7 +857,7 @@ export const botSessionSchema = z.object({
    * on every send so detaches propagate to the doc. Includes the
    * pinned node, if any. Empty array means "no attachments this turn";
    * `undefined` on a session doc means the chip list isn't known yet
-   * (cold-load race or pre-feature doc) and the UI shows no chips.
+   * (cold-load race) and the UI shows no chips.
    */
   contextNodes: z
     .array(
@@ -931,9 +870,7 @@ export const botSessionSchema = z.object({
   /**
    * Most recent turn's mode. Written by `FirestoreBotSessionStore.save`
    * on every save and overwritten by subsequent turns. Drives the
-   * mode filter in the history sidebar; absent on sessions created
-   * before the field was introduced — treat as "unknown" in filters,
-   * not as a specific mode.
+   * mode filter in the history sidebar.
    */
   lastMode: z.enum(["auto", "agent", "manual"]).optional(),
   /**
@@ -942,28 +879,19 @@ export const botSessionSchema = z.object({
    * the composer's model picker when the user re-opens a chat, so the
    * conversation continues on whichever model the last turn ran on
    * (rather than snapping back to the team's admin default each visit).
-   * Absent on sessions created before the field was introduced — the
-   * client falls back to the team's default model in that case. The
-   * server validates against the team's current provider/model allowlist
+   * The server validates against the team's current provider/model allowlist
    * before writing, so a model an admin has since disabled cannot be
    * persisted further (the next send falls back to the team default
    * and overwrites this field accordingly).
-   *
-   * `.catch(undefined)` so a value retired from `BOT_AGENT_MODELS` (e.g. an
-   * old thread whose last turn ran on a model we've since renamed/removed)
-   * reads as "absent" rather than failing the whole doc — the same
-   * fall-back-to-default path handles it, and the next turn rewrites it.
    */
-  lastModel: botAgentModelSchema.optional().catch(undefined),
+  lastModel: botAgentModelSchema.optional(),
   /**
    * Most recent turn's reasoning-effort pick. Written by
    * `FirestoreBotSessionStore.save` with `lastModel`'s overwrite-on-save
    * shape, plus an explicit-null state meaning "user chose Default".
-   * Rehydrates the composer's Effort submenu on session re-open. Absent on
-   * sessions that predate the field; `.catch(undefined)` so a retired
-   * level reads as absent rather than failing the whole doc.
+   * Rehydrates the composer's Effort submenu on session re-open.
    */
-  lastEffort: botChatEffortSchema.nullable().optional().catch(undefined),
+  lastEffort: botChatEffortSchema.nullable().optional(),
   /**
    * Currently active custom agent for this session. `null` (or absent)
    * means the team's default bot persona handles every turn. Set by the
@@ -1033,35 +961,36 @@ export const workflowSchema = z.object({
   id: z.string(),
   teamId: z.string(),
   /** null = custom; non-null (e.g. "_grammar") = a seeded predefined instance. */
-  presetKey: z.string().nullable().default(null),
+  presetKey: z.string().nullable(),
   name: z.string(),
-  description: z.string().default(""),
+  description: z.string(),
   /**
    * Seed for `vue-boring-avatars` — same convention as ITeamAgent.avatarSeed
    * and ITeamCustomTool.avatarSeed. Falls back to `name` at render time when
-   * empty. `.default("")` keeps workflow docs written before this field
-   * shipped readable. Predefined presets seed a stable value (see
+   * empty. Predefined presets seed a stable value (see
    * `workflowPresets.ts`) so their generated avatar stays recognizable.
    */
-  avatarSeed: z.string().max(40).default(""),
+  avatarSeed: z.string().max(40),
   agentId: z.string(),
   workspaceId: z.string(),
   /** Tree the workflow may edit. null = the workspace's `write` tree. */
-  targetScope: z.enum(NODE_SCOPES).nullable().default(null),
+  targetScope: z.enum(NODE_SCOPES).nullable(),
   /** The procedure the agent follows each run (the brief's `instructions`). */
-  instructions: z.string().default(""),
+  instructions: z.string(),
   /** Optional supplementary instructions appended to `instructions`. */
-  additionalPrompt: z.string().default(""),
+  additionalPrompt: z.string(),
   trigger: workflowTriggerSchema,
-  contextNodes: z.array(workflowNodeRefSchema).default([]),
-  updateMode: workflowUpdateModeSchema.default("require_review"),
+  contextNodes: z.array(workflowNodeRefSchema),
+  updateMode: workflowUpdateModeSchema,
   enabled: z.boolean(),
   /**
-   * P3 — the member whose connection bindings headless runs act through
-   * ("runs with {member}'s connected accounts"). Self-only at write time;
-   * `.optional()` keeps docs from before the field shipped readable.
+   * Who a run is for. `shared`: one run, no personal account, shared result.
+   * `personal`: one run per opted-in member with their own connected
+   * accounts, into their own private session.
    */
-  actsAsUid: z.string().nullable().optional(),
+  audience: z.enum(["shared", "personal"]),
+  /** Bumped when the prompt changes; an opt-in only counts at this value. */
+  consentRev: z.number(),
   archivedAt: timestampSchema.nullable().optional(),
   nextRunAt: timestampSchema.nullable().optional(),
   lastRunAt: timestampSchema.nullable().optional(),
@@ -1084,6 +1013,26 @@ export const workflowWriteSchema = workflowSchema.extend({
   lastRunAt: z.union([timestampInputSchema, z.null()]).optional(),
   createdAt: timestampInputSchema.optional(),
   updatedAt: timestampInputSchema.optional(),
+})
+
+/**
+ * One member's opt-in to a per-member workflow ("Run for me") —
+ * `workflows/{id}/subscribers/{uid}`. Readable by that member and team
+ * admins only; written server-side.
+ */
+export const workflowSubscriberSchema = z.object({
+  uid: z.string(),
+  /** The workflow `consentRev` this member approved. */
+  approvedRev: z.number(),
+  /**
+   * Set by the server when the opt-in stopped without the member turning it
+   * off: the agent or its connected apps changed, or runs kept failing.
+   */
+  paused: z.enum(["tools", "failures"]).nullable().optional(),
+  /** "Notify me" preference; absent = on. */
+  notify: z.boolean().optional(),
+  lastRunAt: timestampSchema.nullable().optional(),
+  lastRunStatus: workflowRunStatusSchema.nullable().optional(),
 })
 
 /** One node edit a run proposed (require_review) or applied (automatic). */
@@ -1126,18 +1075,22 @@ export const workflowRunSchema = z.object({
   agentId: z.string(),
   workspaceId: z.string(),
   presetKey: z.string().nullable().optional(),
+  /** Per-member run: the member it ran for (and whose usage it is). */
+  forUid: z.string().nullable().optional(),
   /** Snapshot of the workflow's update mode at enqueue (drives the review UI). */
   updateMode: workflowUpdateModeSchema.optional(),
   status: workflowRunStatusSchema,
   triggeredBy: workflowRunTriggeredBySchema.optional(),
   /** Node edits this run proposed/applied; empty until the agent acts. */
-  changes: z.array(workflowRunChangeSchema).default([]),
+  changes: z.array(workflowRunChangeSchema),
   usage: workflowRunUsageSchema.nullable().optional(),
   /** Snapshot of the composed instruction the agent ran (for history). */
   prompt: z.string().optional(),
   sessionId: z.string().optional(),
   replyPreview: z.string().optional(),
   error: z.string().optional(),
+  /** Approved although the workflow's instructions changed after the run. */
+  promptChangedSinceRun: z.boolean().optional(),
   /** Admin who approved/rejected a require_review run. */
   reviewedByUid: z.string().nullable().optional(),
   queuedAt: timestampSchema.nullable().optional(),

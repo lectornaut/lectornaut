@@ -27,8 +27,8 @@
 
         <mj-text>
           <strong>{{ memberName }}</strong> has joined
-          <strong>{{ teamName }}</strong
-          >. Welcome them to the team and start collaborating!
+          <strong>{{ teamName }}</strong>. Welcome them to the team and start
+          collaborating!
         </mj-text>
 
         <mj-button href="{{ ctaUrl }}" align="left"> View Team </mj-button>

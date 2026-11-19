@@ -22,7 +22,9 @@
  * `teams/{teamId}/workspaces/{workspaceId}/{workflows,workflowRuns}` and are
  * read team-wide via a collectionGroup on the denormalized `teamId`. Both are
  * written server-only (admin SDK); the rules expose member reads for workflows
- * (the picker/automations UI) and admin-only reads for runs.
+ * (the picker/automations UI) and admin-only reads for runs. A per-member
+ * workflow's opt-ins live in `workflows/{id}/subscribers/{uid}` (readable by
+ * that member and admins only) — see the audience block in connectionsCore.ts.
  */
 
 import { FieldValue, Timestamp } from "firebase-admin/firestore"
@@ -45,7 +47,12 @@ import { buildContext, logEvent } from "./audit.js"
 import { requireVerifiedAuth } from "./auth.js"
 import { assertAdminRole as assertTeamAdminRole } from "./authGuards.js"
 import { estimateTokenCostUsd } from "./billingConfig.js"
-import { getMembershipRoleOrNull, runHeadlessAgentTurn } from "./bot.js"
+import {
+  getMembershipRoleOrNull,
+  readSessionDoc,
+  runHeadlessAgentTurn,
+  sessionTurnPending,
+} from "./bot.js"
 import { loadTeamAgentConfig } from "./botAgentConfig.js"
 import { CONTEXT_NODE_MAX } from "./botContext.js"
 import {
@@ -55,7 +62,19 @@ import {
 } from "./botNodeTools.js"
 import { BUILT_IN_AGENTS_BY_ID, isBuiltInAgentId } from "./builtInAgents.js"
 import { assertConnectionAvailable } from "./connections.js"
-import { actsAsUidViolation, isEligibleActsAsUid } from "./connectionsCore.js"
+import {
+  buildWorkflowFingerprint,
+  fingerprintWidened,
+  MAX_WORKFLOW_SUBSCRIBERS,
+  nextFailureStreak,
+  runRecipients,
+  SUBSCRIBER_FAILURE_LIMIT,
+  WORKFLOW_AUDIENCES,
+  workflowRunId,
+  type WorkflowAudience,
+  type WorkflowFingerprint,
+  type WorkflowSubscriber,
+} from "./connectionsCore.js"
 import {
   NODE_SCOPES,
   WORKFLOW_UPDATE_MODES,
@@ -64,6 +83,8 @@ import {
 import { db } from "./firebase.js"
 import { makeEventIdempotencyKey, runIdempotentEvent } from "./idempotency.js"
 import { sendNotificationToMany } from "./notifier.js"
+import { effectiveRole, RoleGroups } from "./permissions.js"
+import { runSessionPlan } from "./privacyCore.js"
 import {
   CALLABLE_OPTS,
   GENKIT_OPTS,
@@ -78,6 +99,7 @@ import {
 import { getTeamAdminsAndOwners } from "./teams.js"
 import type { LogEventParams, WorkspaceNodeScope } from "./types.js"
 import { getWorkflowPreset } from "./workflowPresets.js"
+import { resolveParticipation } from "./workspaceRoles.js"
 
 /** Max scheduled workflows enqueued per dispatcher tick (fits one 300s run). */
 const DISPATCH_BATCH = 200
@@ -153,13 +175,12 @@ const workflowDraftSchema = z.object({
   updateMode: updateModeSchema.optional(),
   enabled: z.boolean().optional(),
   /**
-   * P3 (docs/connections-feature.prompt.md): the HUMAN member whose
-   * connection bindings headless runs may act through ("runs with
-   * {member}'s connected accounts"). Consent is structural: the callables
-   * reject any value other than the CALLER's own uid (`actsAsUidViolation`),
-   * and the run executor re-validates live membership. `null` clears.
+   * Who a run is for. `shared` (default): one run, no personal account,
+   * shared result. `personal`: one run per opted-in member, with that
+   * member's own connected accounts, into their own private session. See
+   * the audience block in connectionsCore.ts.
    */
-  actsAsUid: z.string().min(1).max(200).nullish(),
+  audience: z.enum(WORKFLOW_AUDIENCES).optional(),
 })
 type WorkflowDraft = z.infer<typeof workflowDraftSchema>
 
@@ -193,8 +214,9 @@ interface WorkflowDoc {
   updateMode: "automatic" | "require_review"
   enabled: boolean
   archivedAt: Timestamp | null
-  /** P3 — connection-binding identity for headless runs (absent on old docs). */
-  actsAsUid?: string | null
+  audience: WorkflowAudience
+  /** Bumped when the prompt changes; pauses every opt-in until re-approved. */
+  consentRev: number
 }
 
 async function workflowConnectionActive(
@@ -255,31 +277,81 @@ const assertAdminRole = (teamId: string, uid: string) =>
     "Only team owners and admins can manage workflows."
   )
 
-/** Throw unless the caller may set this `actsAsUid` (self-only; null clears). */
-function assertActsAsAllowed(
-  callerUid: string,
-  requested: string | null | undefined
-): void {
-  const violation = actsAsUidViolation(callerUid, requested)
-  if (violation) throw new HttpsError("permission-denied", violation)
+const subscribersOf = (ref: FirebaseFirestore.DocumentReference) =>
+  ref.collection("subscribers")
+
+async function loadSubscribers(
+  ref: FirebaseFirestore.DocumentReference
+): Promise<WorkflowSubscriber[]> {
+  const snap = await subscribersOf(ref).get()
+  return snap.docs.map((d) => ({
+    ...(d.data() as WorkflowSubscriber),
+    uid: d.id,
+  }))
+}
+
+async function loadSubscriber(
+  ref: FirebaseFirestore.DocumentReference,
+  uid: string
+): Promise<WorkflowSubscriber | null> {
+  const snap = await subscribersOf(ref).doc(uid).get()
+  return snap.exists ? { ...(snap.data() as WorkflowSubscriber), uid } : null
 }
 
 /**
- * Resolve the connection-binding identity a queued run may act through (P3).
- * Reads the LIVE workflow doc's `actsAsUid` (not the run snapshot) so
- * clearing the binding revokes even already-queued runs, then re-validates:
- * eligible shape (human uid, not a `_` agent sentinel) AND a live team
- * membership — a member who disconnected merely degrades the tool ("not
- * connected"), but a member who LEFT the team stops powering runs entirely.
- * Returns undefined when the run should proceed identity-less.
+ * What a run of this agent can reach right now: its stored spec (null for an
+ * uncustomized built-in, whose persona only changes with a deploy) and the
+ * team's enabled connected-app tools — those have no per-agent gate, so
+ * installing an app widens every agent.
+ * ponytail: covers the workflow's own agent only; a Default-agent run may
+ * hand off to a specialist whose edits aren't fingerprinted. Add the roster
+ * here if that matters.
  */
-async function resolveRunActsAsUid(
+async function liveFingerprint(
   teamId: string,
-  actsAsUid: string | null | undefined
-): Promise<string | undefined> {
-  if (!isEligibleActsAsUid(actsAsUid)) return undefined
-  const role = await getMembershipRoleOrNull(teamId, actsAsUid)
-  return role ? actsAsUid : undefined
+  agentId: string
+): Promise<WorkflowFingerprint> {
+  const [agentSnap, toolsSnap] = await Promise.all([
+    db.doc(`${integrationsPath(teamId)}/${agentId}`).get(),
+    db.collection(integrationsPath(teamId)).where("type", "==", "tool").get(),
+  ])
+  return buildWorkflowFingerprint(
+    agentSnap.data()?.spec ?? null,
+    toolsSnap.docs
+      .map((d) => d.data())
+      .filter(
+        (t) =>
+          t.enabled !== false &&
+          !t.archivedAt &&
+          typeof t.sourceKey === "string" &&
+          !!getConnectionResourceProvider("tool", t.sourceKey)
+      )
+      .map((t) => t.sourceKey as string)
+  )
+}
+
+/**
+ * A per-member workflow fans out to one run per opted-in member, so it may
+ * not fire on every content edit; and a connection-provided workflow reads a
+ * personal account, so it may not be shared.
+ */
+function assertAudienceAllowed(
+  audience: WorkflowAudience,
+  trigger: WorkflowTrigger,
+  connectionProvider: unknown
+): void {
+  if (audience === "personal" && trigger.type === "event") {
+    throw new HttpsError(
+      "failed-precondition",
+      "A workflow that runs for each member can't be triggered by content changes. Use a schedule or run it manually."
+    )
+  }
+  if (audience === "shared" && connectionProvider) {
+    throw new HttpsError(
+      "failed-precondition",
+      "This workflow reads a connected app, so it must run for each member."
+    )
+  }
 }
 
 /**
@@ -417,6 +489,18 @@ function nextRunAtField(
 // ─── Run queue ────────────────────────────────────────────────────────────────
 
 /**
+ * The single instruction the agent runs: instructions + the optional
+ * supplementary prompt. Snapshotted on each run so it is self-contained;
+ * also what a review compares against to spot a since-edited workflow.
+ */
+const composePrompt = (
+  wf: Pick<WorkflowDoc, "instructions" | "additionalPrompt">
+): string =>
+  wf.additionalPrompt
+    ? `${wf.instructions}\n\n${wf.additionalPrompt}`
+    : wf.instructions
+
+/**
  * Create a `queued` run doc — the durable hand-off to the worker. Captures the
  * prompt/agent/workspace/context so the run is self-contained even if the
  * source workflow changes or is deleted before the worker picks it up.
@@ -444,16 +528,19 @@ async function enqueueWorkflowRun(params: {
    * (schedule/manual runs pass none — they have no triggering node).
    */
   triggerNode?: { scope: WorkspaceNodeScope; nodeId: string } | null
+  /** Per-member run: the opted-in member this run is for. */
+  forUid?: string
+  /**
+   * Deterministic doc id (`workflowRunId`) for triggers that can be retried,
+   * so a redelivered tick or event re-creates the same run instead of a
+   * duplicate. Omitted for manual runs (a click is never retried).
+   */
+  runId?: string
 }): Promise<string> {
   const wf = params.workflow
-  const runRef = db
-    .collection(workflowRunsPath(params.teamId, wf.workspaceId))
-    .doc()
-  // Compose the single instruction the agent runs from instructions + the
-  // optional supplementary prompt. Snapshotted so the run is self-contained.
-  const prompt = wf.additionalPrompt
-    ? `${wf.instructions}\n\n${wf.additionalPrompt}`
-    : wf.instructions
+  const runs = db.collection(workflowRunsPath(params.teamId, wf.workspaceId))
+  const runRef = params.runId ? runs.doc(params.runId) : runs.doc()
+  const prompt = composePrompt(wf)
   // Ground the run in the node that triggered it. An event run otherwise
   // carries NO pointer to the changed node — the agent gets only the static
   // instructions and can't tell which document to act on (it asks the caller
@@ -470,7 +557,7 @@ async function enqueueWorkflowRun(params: {
         ),
       ].slice(0, CONTEXT_NODE_MAX)
     : configuredNodes
-  await runRef.set({
+  const data = {
     workflowId: params.workflowId,
     agentId: wf.agentId,
     workspaceId: wf.workspaceId,
@@ -481,12 +568,59 @@ async function enqueueWorkflowRun(params: {
     updateMode: wf.updateMode ?? "require_review",
     triggeredBy: params.triggeredBy,
     triggerEventId: params.triggerEventId ?? null,
+    forUid: params.forUid ?? null,
     status: "queued" satisfies RunStatus,
     changes: [],
     usage: null,
     queuedAt: FieldValue.serverTimestamp(),
+  }
+  if (!params.runId) {
+    await runRef.set(data)
+    return runRef.id
+  }
+  // `create` fails when a previous attempt already queued this run (gRPC
+  // ALREADY_EXISTS = 6) — exactly the duplicate being prevented.
+  await runRef.create(data).catch((err: { code?: unknown }) => {
+    if (err.code !== 6) throw err
   })
   return runRef.id
+}
+
+/**
+ * Enqueue a trigger's runs for the workflow's audience: one run for a shared
+ * workflow, one per opted-in member for a personal one (possibly none).
+ * `occurrence` (the scheduled tick or trigger event id) makes every run id
+ * deterministic, so a retry after a partial fan-out is idempotent.
+ */
+async function enqueueRunsForAudience(
+  ref: FirebaseFirestore.DocumentReference,
+  params: Omit<
+    Parameters<typeof enqueueWorkflowRun>[0],
+    "workflow" | "forUid" | "runId"
+  > & { occurrence: string | number },
+  workflow: WorkflowDoc
+): Promise<void> {
+  const { occurrence, ...run } = params
+  const wf = workflow
+  if (wf.audience !== "personal") {
+    await enqueueWorkflowRun({
+      ...run,
+      workflow: wf,
+      runId: workflowRunId(run.workflowId, occurrence),
+    })
+    return
+  }
+  // Fan-out is bounded by MAX_WORKFLOW_SUBSCRIBERS (enforced at opt-in).
+  await Promise.all(
+    runRecipients(wf, await loadSubscribers(ref)).map((forUid) =>
+      enqueueWorkflowRun({
+        ...run,
+        workflow: wf,
+        forUid,
+        runId: workflowRunId(run.workflowId, occurrence, forUid),
+      })
+    )
+  )
 }
 
 // ─── CRUD callables (admin-gated) ─────────────────────────────────────────────
@@ -518,7 +652,8 @@ function buildWorkflowDocData(
     updateMode: draft.updateMode ?? "require_review",
     enabled,
     archivedAt: null,
-    actsAsUid: draft.actsAsUid ?? null,
+    audience: draft.audience ?? "shared",
+    consentRev: 0,
     createdByUid: uid,
     createdAt: FieldValue.serverTimestamp(),
     updatedAt: FieldValue.serverTimestamp(),
@@ -552,7 +687,11 @@ export const createTeamWorkflow = onCall<{ teamId: string; draft: unknown }>(
         `Invalid workflow: ${parsed.error.message}`
       )
     }
-    assertActsAsAllowed(auth.uid, parsed.data.actsAsUid)
+    assertAudienceAllowed(
+      parsed.data.audience ?? "shared",
+      parsed.data.trigger,
+      null
+    )
     await assertAgentRunnable(teamId, parsed.data.agentId)
     await assertWorkflowSlotAvailable(teamId)
 
@@ -562,8 +701,6 @@ export const createTeamWorkflow = onCall<{ teamId: string; draft: unknown }>(
     await ref.set(
       buildWorkflowDocData(teamId, parsed.data, auth.uid, Date.now())
     )
-    // `actsAsUid` rides the trail — it's the connection-consent edge ("runs
-    // with {member}'s accounts"), the part of a workflow worth auditing most.
     await logEvent({
       teamId,
       workspaceId: parsed.data.workspaceId,
@@ -576,12 +713,12 @@ export const createTeamWorkflow = onCall<{ teamId: string; draft: unknown }>(
       },
       context: buildContext(request),
       changes: {
-        fields: ["name", "agentId", "trigger", "actsAsUid"],
+        fields: ["name", "agentId", "trigger", "audience"],
         after: {
           name: parsed.data.name,
           agentId: parsed.data.agentId,
           trigger: parsed.data.trigger.type,
-          actsAsUid: parsed.data.actsAsUid ?? null,
+          audience: parsed.data.audience ?? "shared",
         },
       },
     })
@@ -615,10 +752,6 @@ export const updateTeamWorkflow = onCall<{
       `Invalid workflow patch: ${parsed.error.message}`
     )
   }
-  // Self-only consent for the connection-binding identity; `null` (clearing)
-  // is open to any editor — revocation must never be harder than the grant.
-  assertActsAsAllowed(auth.uid, parsed.data.actsAsUid)
-
   const ref = db.doc(`${workflowsPath(teamId, workspaceId)}/${workflowId}`)
   const snap = await ref.get()
   if (!snap.exists) {
@@ -632,17 +765,56 @@ export const updateTeamWorkflow = onCall<{
   const nextEnabled = parsed.data.enabled ?? current.enabled
   const nextTrigger = parsed.data.trigger ?? current.trigger
 
+  const prevAudience = current.audience
+  const nextAudience = parsed.data.audience ?? prevAudience
+  const audienceChanged = nextAudience !== prevAudience
+  assertAudienceAllowed(nextAudience, nextTrigger, current.connectionProvider)
+  // What a member consented to is what the agent is told to do. The client
+  // sends the whole form on every save, so compare values, not presence.
+  const promptChanged =
+    (parsed.data.instructions !== undefined &&
+      parsed.data.instructions !== current.instructions) ||
+    (parsed.data.additionalPrompt !== undefined &&
+      parsed.data.additionalPrompt !== (current.additionalPrompt ?? "")) ||
+    (parsed.data.contextNodes !== undefined &&
+      JSON.stringify(parsed.data.contextNodes) !==
+        JSON.stringify(current.contextNodes ?? []))
+  const consentRev = current.consentRev + (promptChanged ? 1 : 0)
+  // Members this edit is about to pause (prompt change) or drop (audience
+  // switch) — read before the write so they can be told.
+  const active =
+    prevAudience === "personal" && (promptChanged || audienceChanged)
+      ? runRecipients(current, await loadSubscribers(ref))
+      : []
+
   await ref.update({
     ...parsed.data,
+    consentRev,
     updatedAt: FieldValue.serverTimestamp(),
     nextRunAt: nextRunAtField(nextEnabled, nextTrigger, Date.now()),
   })
+  if (audienceChanged && prevAudience === "personal") {
+    // Switching audience drops every opt-in (flipping back must not
+    // resurrect old consent).
+    await db.recursiveDelete(subscribersOf(ref))
+  } else if (promptChanged && active.includes(auth.uid)) {
+    // The editor approved what they just wrote; everyone else re-approves.
+    await subscribersOf(ref).doc(auth.uid).update({ approvedRev: consentRev })
+  }
+  await notifyOptInChange({
+    teamId,
+    workflowId,
+    workflowName: parsed.data.name ?? current.name,
+    uids: active.filter((uid) => uid !== auth.uid),
+    message: audienceChanged
+      ? "This workflow no longer runs for each member, so it stopped running for you."
+      : "The instructions changed. Turn on Run for me again to keep it running for you.",
+  })
   // Changed-field NAMES for everything (instructions/prompts are long text —
-  // values would bloat the log); before/after VALUES only for `actsAsUid`,
+  // values would bloat the log); before/after VALUES only for `audience`,
   // the consent edge whose exact transition matters.
   const changedFields = Object.keys(parsed.data)
   if (changedFields.length > 0) {
-    const actsAsChanged = "actsAsUid" in parsed.data
     await logEvent({
       teamId,
       workspaceId,
@@ -652,10 +824,10 @@ export const updateTeamWorkflow = onCall<{
       context: buildContext(request),
       changes: {
         fields: changedFields,
-        ...(actsAsChanged
+        ...(audienceChanged
           ? {
-              before: { actsAsUid: current.actsAsUid ?? null },
-              after: { actsAsUid: parsed.data.actsAsUid ?? null },
+              before: { audience: prevAudience },
+              after: { audience: nextAudience },
             }
           : {}),
       },
@@ -778,7 +950,8 @@ export const deleteTeamWorkflow = onCall<{
   // stays an idempotent no-op worth no entry.
   const ref = db.doc(`${workflowsPath(teamId, workspaceId)}/${workflowId}`)
   const snap = await ref.get()
-  await ref.delete()
+  // Recursive: the opt-ins subcollection goes with the workflow.
+  await db.recursiveDelete(ref)
   if (snap.exists) {
     const data = snap.data() as WorkflowDoc
     await logEvent({
@@ -820,22 +993,32 @@ export const runTeamWorkflowNow = onCall<{
   if (typeof workflowId !== "string" || !workflowId) {
     throw new HttpsError("invalid-argument", "workflowId is required.")
   }
-  const role = await assertAdminRole(teamId, auth.uid)
+  // Membership first, so a non-member learns nothing about the workflow.
+  const memberRole = await getMembershipRoleOrNull(teamId, auth.uid)
+  if (!memberRole) {
+    throw new HttpsError("permission-denied", "You are not a team member.")
+  }
 
-  const snap = await db
-    .doc(`${workflowsPath(teamId, workspaceId)}/${workflowId}`)
-    .get()
+  const ref = db.doc(`${workflowsPath(teamId, workspaceId)}/${workflowId}`)
+  const snap = await ref.get()
   if (!snap.exists) {
     throw new HttpsError("not-found", "Workflow not found.")
   }
   const wf = snap.data() as WorkflowDoc
+  // A per-member workflow runs for the CALLER only — any member who opted in
+  // may fire their own run. A shared one stays an admin action.
+  const forUid = wf.audience === "personal" ? auth.uid : undefined
+  const mine = forUid ? await loadSubscriber(ref, forUid) : null
+  if (forUid && !runRecipients(wf, mine ? [mine] : []).includes(forUid)) {
+    throw new HttpsError(
+      "failed-precondition",
+      "Turn on Run for me for this workflow first."
+    )
+  }
+  const role = forUid ? memberRole : await assertAdminRole(teamId, auth.uid)
   await assertWorkflowConnectionActive(teamId, wf)
   if (wf.connectionProvider) {
-    await assertConnectionAvailable(
-      teamId,
-      wf.connectionProvider,
-      await resolveRunActsAsUid(teamId, wf.actsAsUid)
-    )
+    await assertConnectionAvailable(teamId, wf.connectionProvider, forUid)
   }
   if (wf.archivedAt) {
     throw new HttpsError("failed-precondition", "This workflow is archived.")
@@ -849,6 +1032,7 @@ export const runTeamWorkflowNow = onCall<{
     workflowId,
     workflow: wf,
     triggeredBy: { type: "manual", uid: auth.uid },
+    forUid,
   })
 
   // The human decision behind an otherwise autonomous run. Every other
@@ -872,6 +1056,138 @@ export const runTeamWorkflowNow = onCall<{
 })
 
 /**
+ * Opt the CALLER in or out of a per-member workflow ("Run for me"), or flip
+ * their "Notify me" preference. Self-only by construction — there is no uid
+ * parameter, so nobody can enrol anyone else — and pinned to what the member
+ * can see right now: the current `consentRev` and the agent/tool
+ * fingerprint. A later change to either pauses the opt-in until the member
+ * calls this again.
+ */
+export const setTeamWorkflowSubscription = onCall<{
+  teamId: string
+  workspaceId: string
+  workflowId: string
+  subscribed?: boolean
+  notify?: boolean
+}>({ ...CALLABLE_OPTS, enforceAppCheck: true }, async (request) => {
+  const auth = requireVerifiedAuth(request.auth)
+  const { teamId, workspaceId, workflowId, subscribed, notify } =
+    request.data ?? {}
+  if (typeof teamId !== "string" || !teamId) {
+    throw new HttpsError("invalid-argument", "teamId is required.")
+  }
+  if (typeof workspaceId !== "string" || !workspaceId) {
+    throw new HttpsError("invalid-argument", "workspaceId is required.")
+  }
+  if (typeof workflowId !== "string" || !workflowId) {
+    throw new HttpsError("invalid-argument", "workflowId is required.")
+  }
+  if (typeof subscribed !== "boolean" && typeof notify !== "boolean") {
+    throw new HttpsError(
+      "invalid-argument",
+      "subscribed or notify must be a boolean."
+    )
+  }
+  const [role, participation] = await Promise.all([
+    getMembershipRoleOrNull(teamId, auth.uid),
+    resolveParticipation(teamId, workspaceId, auth.uid),
+  ])
+  if (!role || participation.excluded) {
+    throw new HttpsError(
+      "permission-denied",
+      "You are not a member of this workspace."
+    )
+  }
+
+  const ref = db.doc(`${workflowsPath(teamId, workspaceId)}/${workflowId}`)
+  const snap = await ref.get()
+  if (!snap.exists) {
+    throw new HttpsError("not-found", "Workflow not found.")
+  }
+  const wf = snap.data() as WorkflowDoc
+  const audience = {
+    personal: wf.audience === "personal",
+    consentRev: wf.consentRev,
+  }
+  const subRef = subscribersOf(ref).doc(auth.uid)
+  const existing = await subRef.get()
+
+  // "Notify me" alone: a preference on an existing opt-in, never a
+  // (re-)approval — so it can't quietly renew a paused opt-in.
+  if (typeof subscribed !== "boolean") {
+    if (!existing.exists) {
+      throw new HttpsError(
+        "failed-precondition",
+        "Turn on Run for me for this workflow first."
+      )
+    }
+    await subRef.update({ notify })
+    return { ok: true }
+  }
+
+  if (subscribed) {
+    // Opting OUT is always allowed — revocation must never be harder than
+    // the grant — so every gate below applies to opting in only.
+    if (!audience.personal || wf.archivedAt) {
+      throw new HttpsError(
+        "failed-precondition",
+        "This workflow doesn't run for individual members."
+      )
+    }
+    // Each opt-in is a run on the team's budget: full members only.
+    const effective = effectiveRole(role, participation.role)
+    if (!effective || !RoleGroups.MEMBERS.some((r) => r === effective)) {
+      throw new HttpsError(
+        "permission-denied",
+        "Guests can't turn on Run for me. Ask a team admin for member access."
+      )
+    }
+    // ponytail: count-then-write, so two simultaneous opt-ins can land one
+    // over the cap; make it a transaction if the cap must be exact.
+    if (!existing.exists) {
+      const count = await subscribersOf(ref).count().get()
+      if (count.data().count >= MAX_WORKFLOW_SUBSCRIBERS) {
+        throw new HttpsError(
+          "failed-precondition",
+          `This workflow already runs for the maximum of ${MAX_WORKFLOW_SUBSCRIBERS} members.`
+        )
+      }
+    }
+    await subRef.set(
+      {
+        uid: auth.uid,
+        teamId,
+        approvedRev: audience.consentRev,
+        fingerprint: await liveFingerprint(teamId, wf.agentId),
+        paused: null,
+        failures: 0,
+        notify:
+          typeof notify === "boolean"
+            ? notify
+            : (existing.data()?.notify ?? true),
+        subscribedAt: FieldValue.serverTimestamp(),
+      },
+      { merge: true }
+    )
+  } else {
+    await subRef.delete()
+  }
+  await logEvent({
+    teamId,
+    workspaceId,
+    actor: { userId: auth.uid, email: auth.token.email ?? undefined, role },
+    action: subscribed ? "workflow.subscribe" : "workflow.unsubscribe",
+    resource: { type: "workflow", id: workflowId, parentId: workspaceId },
+    context: buildContext(request),
+    changes: {
+      fields: ["subscribers"],
+      after: { consentRev: subscribed ? audience.consentRev : null },
+    },
+  })
+  return { ok: true }
+})
+
+/**
  * Approve (apply the staged changeset) or reject (discard) a `require_review`
  * run. Admin-gated — the approving admin's role is the authority for the
  * writes, which stay attributed to the workflow's agent. Only an
@@ -882,9 +1198,12 @@ export const reviewTeamWorkflowRun = onCall<{
   workspaceId: string
   runId: string
   decision: "approve" | "reject"
+  /** Approve even though the workflow's instructions changed since the run. */
+  acknowledgeStale?: boolean
 }>({ ...CALLABLE_OPTS, enforceAppCheck: true }, async (request) => {
   const auth = requireVerifiedAuth(request.auth)
-  const { teamId, workspaceId, runId, decision } = request.data ?? {}
+  const { teamId, workspaceId, runId, decision, acknowledgeStale } =
+    request.data ?? {}
   if (typeof teamId !== "string" || !teamId) {
     throw new HttpsError("invalid-argument", "teamId is required.")
   }
@@ -910,6 +1229,7 @@ export const reviewTeamWorkflowRun = onCall<{
     agentId?: string
     workspaceId?: string
     workflowId?: string
+    prompt?: string
   }
   if (run.status !== "awaiting_review") {
     throw new HttpsError(
@@ -920,7 +1240,10 @@ export const reviewTeamWorkflowRun = onCall<{
 
   // Audit shape shared by both decisions: resource id is the RUN, parented
   // to its workflow when the doc carries the reference.
-  const reviewAudit = (after: RunStatus): LogEventParams => ({
+  const reviewAudit = (
+    after: RunStatus,
+    extra: Record<string, unknown> = {}
+  ): LogEventParams => ({
     teamId,
     workspaceId,
     actor: { userId: auth.uid, email: auth.token.email ?? undefined, role },
@@ -934,7 +1257,7 @@ export const reviewTeamWorkflowRun = onCall<{
     changes: {
       fields: ["status"],
       before: { status: "awaiting_review" },
-      after: { status: after },
+      after: { status: after, ...extra },
     },
   })
 
@@ -961,6 +1284,26 @@ export const reviewTeamWorkflowRun = onCall<{
       await logEvent(reviewAudit("cancelled"), { transaction: tx })
     })
     return { ok: true, status: "cancelled" }
+  }
+
+  // The staged changes were produced under the instructions snapshotted on
+  // the run. If the workflow has been edited since, the admin is approving
+  // output of instructions that no longer exist — make that an explicit
+  // choice (the client confirms, then resends with `acknowledgeStale`).
+  const liveWf = run.workflowId
+    ? await db
+        .doc(`${workflowsPath(teamId, workspaceId)}/${run.workflowId}`)
+        .get()
+    : null
+  const promptChanged =
+    !!liveWf?.exists &&
+    typeof run.prompt === "string" &&
+    composePrompt(liveWf.data() as WorkflowDoc) !== run.prompt
+  if (promptChanged && acknowledgeStale !== true) {
+    throw new HttpsError(
+      "failed-precondition",
+      "This workflow's instructions changed after this run. Check the staged changes again before approving."
+    )
   }
 
   // Approve — replay each staged proposal through the SAME commit core the
@@ -1077,6 +1420,7 @@ export const reviewTeamWorkflowRun = onCall<{
         reviewedByUid: auth.uid,
         reviewedAt: FieldValue.serverTimestamp(),
         finishedAt: FieldValue.serverTimestamp(),
+        ...(promptChanged ? { promptChangedSinceRun: true } : {}),
         ...(summaries.length > 0 ? { changes: summaries } : {}),
         error:
           failures > 0
@@ -1096,7 +1440,9 @@ export const reviewTeamWorkflowRun = onCall<{
   // Only the call that actually executed the replay logs the approval —
   // `after.status` records the real outcome (applied / partially_applied /
   // error), not just the intent.
-  await logEvent(reviewAudit(finalStatus))
+  await logEvent(
+    reviewAudit(finalStatus, promptChanged ? { promptChanged: true } : {})
+  )
   return { ok: true, status: finalStatus }
 })
 
@@ -1198,6 +1544,11 @@ export const enableTeamWorkflowPreset = onCall<{
     trigger: preset.defaultTrigger,
     updateMode: preset.defaultUpdateMode,
     enabled: true,
+    // A connection-provided preset reads a personal account.
+    audience:
+      connectionProvider || ("audience" in preset && preset.audience)
+        ? "personal"
+        : "shared",
   })
   if (!parsed.success) {
     throw new HttpsError("internal", `Invalid preset: ${parsed.error.message}`)
@@ -1449,12 +1800,18 @@ export const dispatchScheduledWorkflows = onSchedule(
         if (!ok) continue
       }
       try {
-        await enqueueWorkflowRun({
-          teamId,
-          workflowId: doc.id,
-          workflow: wf,
-          triggeredBy: { type: "schedule" },
-        })
+        await enqueueRunsForAudience(
+          doc.ref,
+          {
+            teamId,
+            workflowId: doc.id,
+            triggeredBy: { type: "schedule" },
+            // The due slot: stable until `nextRunAt` advances below, so a
+            // retried tick re-creates the same run docs.
+            occurrence: (doc.get("nextRunAt") as Timestamp).toMillis(),
+          },
+          wf
+        )
         await doc.ref.update({
           nextRunAt: Timestamp.fromMillis(
             computeNextRunMs(wf.trigger.schedule, nowMs)
@@ -1553,15 +1910,19 @@ function makeWorkflowTrigger(scope: WorkspaceNodeScope) {
         await runIdempotentEvent(
           { key: makeEventIdempotencyKey(`workflowEvent:${doc.id}`, event.id) },
           async () => {
-            await enqueueWorkflowRun({
-              teamId,
-              workflowId: doc.id,
-              workflow: wf,
-              triggeredBy: { type: "event", scope, nodeId },
-              triggerEventId: event.id,
-              // Attach the node that changed so the agent can scan its content.
-              triggerNode: { scope, nodeId },
-            })
+            await enqueueRunsForAudience(
+              doc.ref,
+              {
+                teamId,
+                workflowId: doc.id,
+                triggeredBy: { type: "event", scope, nodeId },
+                triggerEventId: event.id,
+                occurrence: event.id,
+                // Attach the node that changed so the agent can scan it.
+                triggerNode: { scope, nodeId },
+              },
+              wf
+            )
             if (debounceMs > 0) {
               await doc.ref.update({
                 lastEventEnqueuedAt: FieldValue.serverTimestamp(),
@@ -1607,7 +1968,11 @@ async function resolveAgentName(
 const RUN_NOTIFY: Partial<
   Record<
     RunStatus,
-    { label: string; kind: "review" | "error" | "blocked"; color: string }
+    {
+      label: string
+      kind: "review" | "error" | "blocked" | "done" | "paused"
+      color: string
+    }
   >
 > = {
   awaiting_review: {
@@ -1632,6 +1997,58 @@ function runTriggerLabel(triggeredBy: unknown): string {
 }
 
 /**
+ * Tell members their opt-in to a per-member workflow stopped running without
+ * them turning it off (instructions edited, audience switched, the agent or
+ * its connected apps changed). Reuses the `workflow.run` type so the same
+ * per-user channel preferences apply. Best-effort, like every notification
+ * here: a failure is logged, never thrown.
+ */
+async function notifyOptInChange(params: {
+  teamId: string
+  workflowId: string
+  workflowName: string
+  uids: string[]
+  message: string
+}): Promise<void> {
+  if (params.uids.length === 0) return
+  try {
+    const members = await db.getAll(
+      ...params.uids.map((uid) =>
+        db.doc(`teams/${params.teamId}/memberships/${uid}`)
+      )
+    )
+    const workflowName = params.workflowName || "Workflow"
+    await sendNotificationToMany(
+      members
+        .filter((m) => m.exists)
+        .map((m) => ({
+          userId: m.id,
+          userEmail: m.data()?.user?.email,
+          type: "workflow.run" as const,
+          title: `${workflowName}: Paused`,
+          description: params.message,
+          url: "/workflows",
+          source: { entityType: "workflow", entityId: params.workflowId },
+          emailData: {
+            templateData: {
+              workflowName,
+              statusLabel: "Paused",
+              statusColor: "#d97706",
+              notice: params.message,
+            },
+          },
+        }))
+    )
+  } catch (err) {
+    logger.warn("[workflows] opt-in notification failed", {
+      teamId: params.teamId,
+      workflowId: params.workflowId,
+      errorMessage: err instanceof Error ? err.message : String(err),
+    })
+  }
+}
+
+/**
  * Notify team admins/owners when a run finishes in a noteworthy state
  * (awaiting review, error, blocked) — a no-op for every other status. Reuses
  * the shared notifier (`sendNotificationToMany`), so per-user channel/category
@@ -1649,14 +2066,41 @@ async function notifyRunCompletion(params: {
   run: FirebaseFirestore.DocumentData
   status: RunStatus
   extra: Record<string, unknown>
+  /** Per-member run: the member's opt-in (their "Notify me" preference). */
+  subscriber?: WorkflowSubscriber | null
+  /** Per-member run: this failure just paused the member's opt-in. */
+  pausedForFailures?: boolean
 }): Promise<void> {
-  const meta = RUN_NOTIFY[params.status]
+  // A per-member run is FOR one member: they alone hear about it, and a
+  // routine success is the whole point (their result is ready), not noise.
+  const forUid = typeof params.run.forUid === "string" ? params.run.forUid : ""
+  // "Notify me" off mutes a member's routine results and one-off failures.
+  // The pause notice still goes out: it's sent once and needs their action.
+  if (
+    forUid &&
+    !params.pausedForFailures &&
+    params.subscriber?.notify === false
+  )
+    return
+  const meta = params.pausedForFailures
+    ? { label: "Paused", kind: "paused" as const, color: "#d97706" }
+    : (RUN_NOTIFY[params.status] ??
+      (forUid && params.status === "success"
+        ? { label: "Ready", kind: "done" as const, color: "#16a34a" }
+        : undefined))
   if (!meta) return // only the noteworthy statuses notify
 
   try {
     const { teamId, workspaceId, workflow, run, extra } = params
 
-    const recipients = await getTeamAdminsAndOwners(teamId)
+    let recipients: { userId: string; email?: string }[]
+    if (forUid) {
+      const member = await db.doc(`teams/${teamId}/memberships/${forUid}`).get()
+      if (!member.exists) return
+      recipients = [{ userId: forUid, email: member.data()?.user?.email }]
+    } else {
+      recipients = await getTeamAdminsAndOwners(teamId)
+    }
     if (recipients.length === 0) return
 
     const workflowName = workflow?.name || "Workflow"
@@ -1699,18 +2143,27 @@ async function notifyRunCompletion(params: {
         ? `$${usage.estimatedCostUsd.toFixed(2)}`
         : ""
 
+    // A per-member result is that member's private data (it may quote their
+    // Drive or Gmail): it stays in their chat and never rides a notification
+    // or an email out of the app.
     const replyPreview =
-      typeof extra.replyPreview === "string" ? extra.replyPreview : ""
+      !forUid && typeof extra.replyPreview === "string"
+        ? extra.replyPreview
+        : ""
     const errorMessage = typeof extra.error === "string" ? extra.error : ""
     const triggerLabel = runTriggerLabel(run.triggeredBy)
 
-    const title = `${workflowName} — ${meta.label}`
+    const title = `${workflowName}: ${meta.label}`
     let description: string
     if (meta.kind === "review") {
       const noun = changeCount === 1 ? "change" : "changes"
       description = `${changeCount} ${noun} staged for review · via ${triggerLabel}`
     } else if (meta.kind === "error") {
       description = errorMessage ? `Run failed: ${errorMessage}` : "Run failed."
+    } else if (meta.kind === "done") {
+      description = "Your run finished. Open the chat to see the result."
+    } else if (meta.kind === "paused") {
+      description = `Paused after ${SUBSCRIBER_FAILURE_LIMIT} failed runs in a row. Fix the problem, then turn on Run for me again.`
     } else {
       description = errorMessage
         ? `Run blocked: ${errorMessage}`
@@ -1735,6 +2188,7 @@ async function notifyRunCompletion(params: {
       changeList,
       replyPreview,
       errorMessage,
+      notice: meta.kind === "paused" ? description : "",
       tokens: tokenTotal ? tokenTotal.toLocaleString("en-US") : "",
       costUsd,
     }
@@ -1746,7 +2200,13 @@ async function notifyRunCompletion(params: {
         type: "workflow.run" as const,
         title,
         description,
-        url: "/runs",
+        // Run history is admin-only; a member's own result is their session.
+        url:
+          forUid && typeof extra.sessionId === "string"
+            ? `/bot/${encodeURIComponent(extra.sessionId)}`
+            : forUid
+              ? "/workflows"
+              : "/runs",
         source: { entityType: "workflow", entityId: workflowId },
         emailData: { templateData },
       }))
@@ -1805,6 +2265,11 @@ export const executeWorkflowRun = onDocumentCreated(
           startedAt: FieldValue.serverTimestamp(),
         })
 
+        // Per-member run: the member it is for, and (resolved below, before
+        // any finish() call) their opt-in.
+        const forUid = typeof run.forUid === "string" ? run.forUid : undefined
+        let subscriber: WorkflowSubscriber | null = null
+
         const finish = async (
           status: RunStatus,
           extra: Record<string, unknown> = {}
@@ -1814,13 +2279,31 @@ export const executeWorkflowRun = onDocumentCreated(
             finishedAt: FieldValue.serverTimestamp(),
             ...extra,
           })
-          // Best-effort lastRun stamp on the source workflow (may be gone).
-          await workflowRef
-            .update({
-              lastRunAt: FieldValue.serverTimestamp(),
-              lastRunStatus: status,
-            })
-            .catch(() => undefined)
+          // Best-effort lastRun stamp (the doc may be gone). A per-member
+          // run stamps the member's OWN opt-in, never the member-readable
+          // workflow doc — one member's outcome isn't everyone's business,
+          // and concurrent members would overwrite each other anyway.
+          const lastRun = {
+            lastRunAt: FieldValue.serverTimestamp(),
+            lastRunStatus: status,
+          }
+          let pausedForFailures = false
+          if (forUid) {
+            // A broken or expired account would otherwise fail (and notify)
+            // on every tick forever: pause after a streak and say so once.
+            const streak = nextFailureStreak(subscriber?.failures, status)
+            pausedForFailures = streak.pause
+            await subscribersOf(workflowRef)
+              .doc(forUid)
+              .update({
+                ...lastRun,
+                failures: streak.failures,
+                ...(streak.pause ? { paused: "failures" } : {}),
+              })
+              .catch(() => undefined)
+          } else {
+            await workflowRef.update(lastRun).catch(() => undefined)
+          }
 
           // Best-effort: notify admins/owners on noteworthy outcomes (awaiting
           // review / error / blocked). A no-op for routine success; guarded
@@ -1834,6 +2317,8 @@ export const executeWorkflowRun = onDocumentCreated(
             run,
             status,
             extra,
+            subscriber,
+            pausedForFailures,
           })
         }
 
@@ -1864,8 +2349,63 @@ export const executeWorkflowRun = onDocumentCreated(
           return
         }
 
+        // Per-member run: re-validate the opt-in LIVE, so opting out, a
+        // prompt edit (revision bump), leaving the team, being excluded from
+        // the workspace, or a change to what the agent can reach stops even
+        // runs that were already queued.
+        if (forUid) {
+          const skip = async (error: string) =>
+            snap.ref.update({
+              status: "skipped" satisfies RunStatus,
+              finishedAt: FieldValue.serverTimestamp(),
+              error,
+            })
+          const [sub, memberRole, participation] = await Promise.all([
+            loadSubscriber(workflowRef, forUid),
+            getMembershipRoleOrNull(teamId, forUid),
+            resolveParticipation(teamId, workspaceId, forUid),
+          ])
+          subscriber = sub
+          if (
+            !wf ||
+            !sub ||
+            !runRecipients(wf, [sub]).includes(forUid) ||
+            !memberRole ||
+            participation.excluded
+          ) {
+            await skip("The member is no longer opted in to this workflow.")
+            return
+          }
+          const live = await liveFingerprint(teamId, run.agentId)
+          if (fingerprintWidened(sub.fingerprint, live)) {
+            // Same effect as a stale `consentRev`: no run until the member
+            // re-approves. Marking it paused also makes this notice one-off.
+            await subscribersOf(workflowRef)
+              .doc(forUid)
+              .update({ paused: "tools" })
+            await notifyOptInChange({
+              teamId,
+              workflowId: run.workflowId,
+              workflowName: wf.name,
+              uids: [forUid],
+              message:
+                "This workflow's agent or connected apps changed. Turn on Run for me again to keep it running for you.",
+            })
+            await skip(
+              "The workflow's agent or connected apps changed since the member opted in."
+            )
+            return
+          }
+        }
+
+        // A per-member run never applies edits: it carries one member's
+        // private data, so nothing may land in shared workspace content.
+        // ponytail: edits are staged then dropped; add member-approved
+        // changesets if personal workflows ever need to write.
         const updateMode: "automatic" | "require_review" =
-          run.updateMode === "automatic" ? "automatic" : "require_review"
+          !forUid && run.updateMode === "automatic"
+            ? "automatic"
+            : "require_review"
         const targetScope =
           (run.targetScope as WorkspaceNodeScope | null | undefined) ?? null
 
@@ -1873,13 +2413,10 @@ export const executeWorkflowRun = onDocumentCreated(
         // assertWithinBudget inside runAgentTurn (plan allowance, or the
         // team's own monthlyTokenCap when lower) — no entitlement gate.
 
-        // P3: the workflow may run with a member's connection bindings
-        // ("runs with {member}'s connected accounts") — validated live so
-        // clearing the field or leaving the team revokes queued runs too.
-        const connectionsActsAsUid = await resolveRunActsAsUid(
-          teamId,
-          wf?.actsAsUid
-        )
+        // Only a per-member run carries a personal account — the member's
+        // own. bot.ts also makes that member the session owner, so the
+        // result is their private chat.
+        const connectionsActsAsUid = forUid
 
         try {
           if (wf?.connectionProvider) {
@@ -1889,11 +2426,45 @@ export const executeWorkflowRun = onDocumentCreated(
               connectionsActsAsUid
             )
           }
+          // One ongoing chat per workflow per member (see `runSessionPlan`):
+          // continue it, start a new one when it is gone or full (stored
+          // below), or skip while the member is mid-turn in it.
+          const priorSessionId = subscriber?.sessionId
+          let sessionId: string | undefined
+          if (forUid && priorSessionId) {
+            const prior = await readSessionDoc(
+              teamId,
+              workspaceId,
+              priorSessionId
+            )
+            const plan = runSessionPlan(
+              prior,
+              forUid,
+              !!prior &&
+                (await sessionTurnPending(
+                  { teamId, workspaceId, sessionId: priorSessionId },
+                  prior.headSnapshotId
+                ))
+            )
+            if (plan === "skip") {
+              await snap.ref.update({
+                status: "skipped" satisfies RunStatus,
+                finishedAt: FieldValue.serverTimestamp(),
+                error:
+                  "The member was in the middle of a reply in this workflow's chat.",
+              })
+              return
+            }
+            if (plan === "continue") sessionId = priorSessionId
+          }
           const result = await runHeadlessAgentTurn({
             agentId: run.agentId,
             teamId,
             workspaceId: run.workspaceId,
+            // Per-member runs get no write tools (bot.ts), so no prompt
+            // caveat about edits is needed.
             message: run.prompt,
+            sessionId,
             contextNodes: run.contextNodes ?? [],
             updateMode,
             targetScope,
@@ -1931,26 +2502,41 @@ export const executeWorkflowRun = onDocumentCreated(
             sourceNodeId: c.sourceNodeId ?? null,
           }))
 
-          if (updateMode === "require_review") {
-            // One doc per change keeps the run doc under Firestore's 1MB cap.
-            if (result.changes.length > 0) {
-              const batch = db.batch()
-              result.changes.forEach((c, i) => {
-                batch.set(
-                  snap.ref.collection("proposedChanges").doc(String(i)),
-                  {
-                    index: i,
-                    op: c.op,
-                    scope: c.scope,
-                    nodeId: c.nodeId ?? null,
-                    summary: c.summary,
-                    sourceNodeId: c.sourceNodeId ?? null,
-                    input: c.input,
-                  }
-                )
-              })
-              await batch.commit()
+          if (forUid) {
+            if (result.sessionId !== priorSessionId) {
+              // Best-effort: a miss only means the next run starts a new chat.
+              await subscribersOf(workflowRef)
+                .doc(forUid)
+                .update({ sessionId: result.sessionId })
+                .catch(() => {})
             }
+            // No reply preview: the run doc is admin-readable and outlives
+            // the member's chat. The run links to the session instead.
+            await finish("success", {
+              sessionId: result.sessionId,
+              usage,
+              changes: [],
+            })
+          } else if (
+            updateMode === "require_review" &&
+            result.changes.length > 0
+          ) {
+            // Nothing staged = nothing to review: that run falls through to
+            // a plain success below instead of paging admins.
+            // One doc per change keeps the run doc under Firestore's 1MB cap.
+            const batch = db.batch()
+            result.changes.forEach((c, i) => {
+              batch.set(snap.ref.collection("proposedChanges").doc(String(i)), {
+                index: i,
+                op: c.op,
+                scope: c.scope,
+                nodeId: c.nodeId ?? null,
+                summary: c.summary,
+                sourceNodeId: c.sourceNodeId ?? null,
+                input: c.input,
+              })
+            })
+            await batch.commit()
             await finish("awaiting_review", {
               sessionId: result.sessionId,
               replyPreview: result.reply.slice(0, REPLY_PREVIEW_MAX),

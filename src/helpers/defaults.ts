@@ -700,16 +700,6 @@ export const defaultBotAgentConfig: IBotAgentConfig = {
     "find a relevant node. Write replies in Markdown and keep them " +
     "concise.",
   tools: {
-    rollDice: true,
-    browseInternet: true,
-    askQuestion: true,
-    searchWorkspaceNodes: true,
-    listWorkspaceNodes: true,
-    summarizeNode: true,
-    compareNodes: true,
-    findRelatedNodes: true,
-    manageContent: true,
-    readContent: true,
     customAgents: true,
     customWorkflows: true,
     customTools: true,

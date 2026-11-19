@@ -33,12 +33,12 @@
     "@genkit-ai/google-genai": "1.44.0",
     "@genkit-ai/middleware": "0.12.0",
     "@google-cloud/functions-framework": "5.0.5",
-    "firebase-admin": "^14.5.0",
+    "firebase-admin": "^14.5.1",
     "firebase-functions": "7.4.0",
     "genkit": "1.44.0",
     "handlebars": "^4.7.10",
     "mjml": "^5.4.1",
-    "postmark": "^5.1.0",
+    "postmark": "^5.1.1",
     "stripe": "^23.1.0",
     "uuid": "^14.0.3"
   },
@@ -47,15 +47,15 @@
     "@lectornaut/shared": "workspace:*",
     "@types/mjml": "5.4.2",
     "esbuild": "^0.28.2",
-    "eslint": "^10.14.0",
+    "eslint": "^10.15.0",
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-prettier": "^5.5.7",
-    "firebase-tools": "^15.35.0",
+    "firebase-tools": "^15.36.0",
     "globals": "^17.14.0",
-    "prettier": "^3.9.10",
+    "prettier": "^3.10.1",
     "prettier-plugin-organize-imports": "^4.3.0",
     "rimraf": "^6.1.4",
     "typescript": "^6.0.3",
-    "typescript-eslint": "^8.72.1"
+    "typescript-eslint": "^8.73.0"
   }
 }

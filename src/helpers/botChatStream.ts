@@ -88,8 +88,6 @@ export interface BotChatMessage {
    * user-role messages — agent turns have no human author. Drives
    * per-sender avatar rendering so shared/public sessions, where
    * multiple admins can post, attribute each turn to the right person.
-   * Undefined on legacy messages (saved before authorship was tracked
-   * server-side); the UI falls back to the session's `ownerUid` then.
    */
   authorUid?: string
   /**
@@ -101,9 +99,8 @@ export interface BotChatMessage {
   /**
    * ISO time the message was sent (user) or finished (agent). Live bubbles
    * are stamped locally; the transcript reconcile swaps in the server's.
-   * Absent on legacy messages saved before the server stamped them.
    */
-  sentAt?: string
+  sentAt: string
 }
 
 /**
@@ -145,7 +142,7 @@ export const createMessage = (m: {
   segments?: BotChatSegment[]
   authorUid?: string
   parentSnapshotId?: string
-  sentAt?: string
+  sentAt: string
 }): BotChatMessage => ({
   id: crypto.randomUUID(),
   role: m.role,

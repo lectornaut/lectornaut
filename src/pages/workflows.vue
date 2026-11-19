@@ -3,7 +3,10 @@ import { runColumns, type RunRow } from "@/components/app/runs/runColumns"
 import type { AppTableFeatures } from "@/components/table/features"
 import { useRunsExplorer } from "@/composables/useRunsExplorer"
 import { useTeamAgents } from "@/composables/useTeamAgents"
-import { useTeamWorkflows } from "@/composables/useTeamWorkflows"
+import {
+  useTeamWorkflows,
+  useWorkflowSubscription,
+} from "@/composables/useTeamWorkflows"
 import { useWorkflowFilter } from "@/composables/useWorkflowFilter"
 import {
   IconChevronRight,
@@ -35,6 +38,8 @@ const {
   wsActiveWorkflows,
   wsArchivedWorkflows,
   canManage,
+  setSubscribed,
+  setNotify,
   setEnabled,
   archive,
   remove,
@@ -96,6 +101,8 @@ const groupLabel = (key: string): string => {
   if (key === "schedule") return t("settings.workflows.triggerScheduleOpt")
   if (key === "event") return t("settings.workflows.triggerEventOpt")
   if (key === "manual") return t("settings.workflows.triggerManualOpt")
+  if (key === "private") return t("ai.visibilityPrivate")
+  if (key === "shared") return t("ai.visibilityShared")
   return t("pages.workflows.allWorkflows")
 }
 
@@ -117,6 +124,28 @@ const selectedWorkflow = computed<IWorkflow | null>(() => {
     if (found) return found
   }
   return list[0] ?? null
+})
+// The viewer's own standing on the selected workflow ("Run for me"). For a
+// per-member workflow the last run shown is theirs, from their opt-in.
+const {
+  state: subscriptionState,
+  canRun,
+  subscription,
+} = useWorkflowSubscription(selectedWorkflow)
+const lastRunStatus = computed(() =>
+  selectedWorkflow.value?.audience === "personal"
+    ? subscription.value?.lastRunStatus
+    : selectedWorkflow.value?.lastRunStatus
+)
+// Why "Run for me" stopped without the member turning it off.
+const subscriptionNotice = computed<string>(() => {
+  if (subscriptionState.value === "stale")
+    return t("settings.workflows.subscribeStale")
+  if (subscriptionState.value === "changed")
+    return t("settings.workflows.subscribeChanged")
+  if (subscriptionState.value === "failed")
+    return t("settings.workflows.subscribeFailed")
+  return ""
 })
 // Selecting a workflow shows its details on the right AND filters the table to
 // its runs (preserving the page's "click a workflow → see its runs" flow). The
@@ -172,7 +201,7 @@ const triggerSummary = (wf: IWorkflow): string => {
 const agentName = (id: string): string =>
   selectableAgents.value.find((a) => a.id === id)?.name ?? id
 const modeLabel = (wf: IWorkflow): string =>
-  (wf.updateMode ?? "require_review") === "automatic"
+  wf.updateMode === "automatic"
     ? t("settings.workflows.modeAutomatic")
     : t("settings.workflows.modeReview")
 const formatWhen = (ts: unknown): string =>
@@ -390,7 +419,7 @@ const formatWhen = (ts: unknown): string =>
             <div class="flex flex-wrap gap-2">
               <Button
                 variant="outline"
-                :disabled="!canManage"
+                :disabled="!canRun"
                 @click="runNow(selectedWorkflow.id)"
               >
                 {{ t("settings.workflows.runNow") }}
@@ -404,9 +433,65 @@ const formatWhen = (ts: unknown): string =>
               </Button>
             </div>
 
+            <!-- Per-member workflow: every member opts THEMSELVES in. The
+                 instructions are shown because they are what's being agreed
+                 to; an edit pauses the opt-in until it's turned on again. -->
+            <Field v-if="subscriptionState !== 'none'">
+              <div class="flex items-center justify-between gap-2">
+                <FieldLabel for="wf-run-for-me">
+                  {{ t("settings.workflows.subscribe") }}
+                </FieldLabel>
+                <Switch
+                  id="wf-run-for-me"
+                  :model-value="subscriptionState === 'on'"
+                  @update:model-value="
+                    (v: boolean) => setSubscribed(selectedWorkflow!.id, v)
+                  "
+                />
+              </div>
+              <FieldError v-if="subscriptionNotice">
+                {{ subscriptionNotice }}
+              </FieldError>
+              <FieldDescription v-else>
+                {{ t("settings.workflows.subscribeHint") }}
+              </FieldDescription>
+              <div
+                v-if="subscriptionState === 'on'"
+                class="flex items-center justify-between gap-2"
+              >
+                <FieldLabel for="wf-notify-me">
+                  {{ t("settings.workflows.notify") }}
+                </FieldLabel>
+                <Switch
+                  id="wf-notify-me"
+                  :model-value="subscription?.notify !== false"
+                  @update:model-value="
+                    (v: boolean) => setNotify(selectedWorkflow!.id, v)
+                  "
+                />
+              </div>
+              <p
+                class="text-muted-foreground max-h-40 overflow-y-auto text-xs whitespace-pre-wrap"
+              >
+                {{ selectedWorkflow.instructions }}
+              </p>
+            </Field>
+
             <Separator />
 
             <dl class="flex flex-col gap-2 text-sm">
+              <div class="flex justify-between gap-2">
+                <dt class="text-muted-foreground">
+                  {{ t("settings.workflows.audienceLabel") }}
+                </dt>
+                <dd class="text-right">
+                  {{
+                    selectedWorkflow.audience === "personal"
+                      ? t("settings.workflows.audiencePersonal")
+                      : t("settings.workflows.audienceShared")
+                  }}
+                </dd>
+              </div>
               <div class="flex justify-between gap-2">
                 <dt class="text-muted-foreground">
                   {{ t("settings.workflows.trigger") }}
@@ -429,18 +514,15 @@ const formatWhen = (ts: unknown): string =>
                 </dt>
                 <dd class="text-right">{{ modeLabel(selectedWorkflow) }}</dd>
               </div>
-              <div
-                v-if="selectedWorkflow.lastRunStatus"
-                class="flex justify-between gap-2"
-              >
+              <div v-if="lastRunStatus" class="flex justify-between gap-2">
                 <dt class="text-muted-foreground">
                   {{ t("pages.workflows.lastRun") }}
                 </dt>
                 <dd
                   class="text-right"
-                  :class="runStatusTextClass(selectedWorkflow.lastRunStatus)"
+                  :class="runStatusTextClass(lastRunStatus)"
                 >
-                  {{ runStatusLabel(selectedWorkflow.lastRunStatus) }}
+                  {{ runStatusLabel(lastRunStatus) }}
                 </dd>
               </div>
               <div

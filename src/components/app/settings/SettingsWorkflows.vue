@@ -317,7 +317,7 @@ const triggerSummary = (wf: IWorkflow): string => {
   })
 }
 const modeLabel = (wf: IWorkflow): string =>
-  (wf.updateMode ?? "require_review") === "automatic"
+  wf.updateMode === "automatic"
     ? t("settings.workflows.modeAutomatic")
     : t("settings.workflows.modeReview")
 const rowDescription = (wf: IWorkflow): string =>

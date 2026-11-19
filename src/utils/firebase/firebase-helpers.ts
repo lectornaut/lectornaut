@@ -88,13 +88,7 @@ const membershipConverter = zodConverter<IMembershipDocData>(
   membershipDocDataSchema,
   "membership"
 )
-const groupConverter = zodConverter<IGroup>(
-  groupSchema,
-  "group",
-  // `teams/{teamId}/groups/{groupId}` — inject teamId (index 1) from the path so
-  // a doc that never denormalized it into the body still satisfies the schema.
-  { teamId: 1 }
-)
+const groupConverter = zodConverter<IGroup>(groupSchema, "group")
 const membershipPreferencesConverter = zodConverter<IMembershipPreferences>(
   membershipPreferencesSchema,
   "membershipPreferences"
@@ -105,21 +99,14 @@ const membershipWorkspaceConverter = zodConverter<IMembershipWorkspaceRecord>(
 )
 const botSessionConverter = zodConverter<IBotSession>(
   botSessionSchema,
-  "botSession",
-  // `teams/{teamId}/workspaces/{workspaceId}/botSessions/{id}` — teamId and
-  // workspaceId are canonically defined by the doc's location. Inject them
-  // from the path so legacy/partial docs that never denormalized them into
-  // the body still satisfy the schema (the unfiltered admin Sessions query
-  // is the only surface that reads such docs).
-  { teamId: 1, workspaceId: 3 }
+  "botSession"
 )
 const memoryConverter = zodConverter<IMemory>(
   memorySchema,
   "memory",
-  // `teams/{teamId}/workspaces/{workspaceId}/memories/{id}` — same path-field
-  // injection as botSessions: teamId (segment 1) + workspaceId (segment 3) are
-  // canonical from the location, so the admin (unfiltered) memory query parses
-  // cleanly without those fields being denormalized into every doc body.
+  // `teams/{teamId}/workspaces/{workspaceId}/memories/{id}` — teamId (segment
+  // 1) + workspaceId (segment 3) are canonical from the location and not
+  // stored in every doc body.
   { teamId: 1, workspaceId: 3 }
 )
 const connectionConverter = zodConverter<IConnection>(

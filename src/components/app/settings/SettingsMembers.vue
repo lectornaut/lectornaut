@@ -1,4 +1,5 @@
 <script lang="ts" setup>
+import type { IMembershipRole } from "@lectornaut/shared/permissions"
 import { useCanViewTeamSettings } from "@/composables/useCanViewTeamSettings"
 import { useConfirmationDialog } from "@/composables/useConfirmationDialog"
 import { useTeamActions } from "@/composables/useTeamActions"
@@ -7,7 +8,6 @@ import {
   isAgentMembership,
   type IAgentMembership,
   type IMembership,
-  type IMembershipRole,
   type ITeamMember,
 } from "@/types/membership"
 import { useCurrentUser } from "vuefire"
@@ -115,8 +115,18 @@ const handleChangeRole = (userId: string, role: IMembershipRole) => {
   changeRole(userId, role)
 }
 
+// Off by default and reset on every open: deleting a member's private chats
+// and memories is permanent, so it is never carried over from the last removal.
+const deletePrivateContent = ref(false)
+const deletePrivateContentId = useId()
+watch(removeMemberDialog.isOpen, (isOpen) => {
+  if (isOpen) deletePrivateContent.value = false
+})
+
 const handleRemoveMember = () =>
-  removeMemberDialog.confirm((member) => removeMember(member.userId))
+  removeMemberDialog.confirm((member) =>
+    removeMember(member.userId, deletePrivateContent.value)
+  )
 
 const isRemovingSelf = computed(
   () => removeMemberDialog.item.value?.userId === user.value?.uid
@@ -514,7 +524,27 @@ const formatCreatedAt = (
     "
     destructive
     :on-confirm="handleRemoveMember"
-  />
+  >
+    <Field orientation="horizontal">
+      <Checkbox
+        :id="deletePrivateContentId"
+        :model-value="deletePrivateContent"
+        @update:model-value="(value) => (deletePrivateContent = value === true)"
+      />
+      <FieldContent>
+        <FieldLabel :for="deletePrivateContentId">
+          {{
+            isRemovingSelf
+              ? t("settings.members.deletePrivateContentSelf")
+              : t("settings.members.deletePrivateContent")
+          }}
+        </FieldLabel>
+        <FieldDescription>
+          {{ t("settings.members.deletePrivateContentDescription") }}
+        </FieldDescription>
+      </FieldContent>
+    </Field>
+  </ConfirmAction>
 
   <!-- Team Invite Dialog -->
   <TeamDialog

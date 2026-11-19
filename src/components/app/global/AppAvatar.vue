@@ -28,32 +28,22 @@ const DEFAULT_AVATAR_COLORS = [
 // The root IS the shadcn <Avatar>, so `class` / `:class` / `@click` / `:style`
 // fall through and merge via cn(). Override the fallback (icon, +N, mixed) via
 // #fallback; show an upload spinner with `loading`.
-const props = withDefaults(
-  defineProps<{
-    /** Photo URL. When falsy, only the fallback renders (no empty <img>). */
-    src?: string | null
-    /** Display name: initials + default alt (photo mode), or the seed (generative mode). */
-    name?: string | null
-    /** Alt text override (defaults to `name`). */
-    alt?: string
-    /** shadcn size variant (sm | default | lg). `size-*` utility classes still work. */
-    size?: AvatarVariants["size"]
-    /** Image referrerpolicy. Defaults to "no-referrer" (privacy for external photos). */
-    referrerpolicy?: string
-    /** When true, a centered <Spinner> replaces the avatar content (upload in flight). */
-    loading?: boolean
-    /** Render a generative vue-boring-avatars blob instead of photo + initials. */
-    variant?: BoringVariant
-    /** Generative palette (defaults to the chart-* CSS vars). */
-    colors?: string[]
-  }>(),
-  {
-    referrerpolicy: "no-referrer",
-  }
-)
+const props = defineProps<{
+  /** Photo URL. When falsy, only the fallback renders (no empty <img>). */
+  src?: string | null
+  /** Display name: initials + default alt (photo mode), or the seed (generative mode). */
+  name?: string | null
+  /** Alt text override (defaults to `name`). */
+  alt?: string
+  /** shadcn size variant (sm | default | lg). `size-*` utility classes still work. */
+  size?: AvatarVariants["size"]
+  /** When true, a centered <Spinner> replaces the avatar content (upload in flight). */
+  loading?: boolean
+  /** Render a generative vue-boring-avatars blob instead of photo + initials. */
+  variant?: BoringVariant
+}>()
 
 const initials = computed(() => getInitials(props.name ?? ""))
-const palette = computed(() => props.colors ?? DEFAULT_AVATAR_COLORS)
 </script>
 
 <template>
@@ -63,7 +53,7 @@ const palette = computed(() => props.colors ?? DEFAULT_AVATAR_COLORS)
       v-else-if="variant"
       :name="name ?? ''"
       :variant="variant"
-      :colors="palette"
+      :colors="DEFAULT_AVATAR_COLORS"
       class="size-full rounded-[inherit]"
       role="img"
       :aria-label="alt ?? name ?? undefined"
@@ -73,7 +63,7 @@ const palette = computed(() => props.colors ?? DEFAULT_AVATAR_COLORS)
         v-if="src"
         :src="src"
         :alt="alt ?? name ?? undefined"
-        :referrerpolicy="referrerpolicy"
+        referrerpolicy="no-referrer"
         class="rounded-[inherit]"
       />
       <AvatarFallback class="rounded-[inherit] font-medium">

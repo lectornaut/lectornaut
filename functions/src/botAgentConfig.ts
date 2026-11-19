@@ -209,15 +209,9 @@ const DEFAULT_BOT_AGENT_MODEL_TOGGLES: BotAgentModelToggles =
 // ===========================================================================
 
 /**
- * Names of tools whose per-team and per-agent toggles gate registration
- * in `pickChatTools`. Shared with `teamAgents.ts` so `TeamAgentDoc.tools`
- * carries the exact same keys — preventing a per-agent record from
- * having a stale key the chat dispatcher would ignore (or a missing
- * key it expected to find).
- *
- * `customAgents` is intentionally NOT in this set: it's a feature
- * flag, not a tool name, and lives only on the team-level
- * `BotAgentToolToggles` (see below). Per-agent docs don't carry it.
+ * Model-callable built-in tool names. Each is gated per agent
+ * (`TeamAgentDoc.tools`) on top of its integration being installed and
+ * enabled; the team config carries no per-tool switch.
  */
 export const CHAT_TOOL_NAMES = [
   "rollDice",
@@ -231,32 +225,8 @@ export const CHAT_TOOL_NAMES = [
 ] as const
 export type ChatToolName = (typeof CHAT_TOOL_NAMES)[number]
 
-/**
- * Per-tool registration toggles for the team config. Includes every
- * `ChatToolName` plus the team-wide `customAgents` + `customTools`
- * feature flags.
- */
-export interface BotAgentToolToggles extends Record<ChatToolName, boolean> {
-  /**
-   * Team-wide gate for the agent node-WRITE tools (`NODE_WRITE_TOOLS` in
-   * `botNodeTools.ts`). A capability gate over a block, not a single
-   * `ChatToolName` — so it's NOT in `CHAT_TOOL_NAMES` and never reaches
-   * `pickChatTools`. Instead the dispatcher registers the write tools
-   * only when this is on AND the active agent's per-agent `manageContent`
-   * is on AND `canManageNodes` (the user×agent `MANAGE_WORKSPACE_CONTENT`
-   * intersection) holds. Off here strips the write tools — and the
-   * matching system-prompt directive — for every agent. Normalized to
-   * `true` on read so teams predating this field keep node editing.
-   */
-  manageContent: boolean
-  /**
-   * Team-wide gate for the node-READ tool (`NODE_READ_TOOLS` = `readNode`),
-   * which returns a file's full content. Sibling of `manageContent` but
-   * gated on the lighter `READ_WORKSPACE` membership (held by guests too),
-   * so an agent can read workspace content without edit rights. Same
-   * block-gate semantics; normalized to `true` on read.
-   */
-  readContent: boolean
+/** Team-wide feature gates for admin-authored extensions. */
+export interface BotAgentToolToggles {
   /**
    * Team-wide gate for the entire custom-agents feature. When false,
    * dispatch silently substitutes the team default persona even for
@@ -266,16 +236,14 @@ export interface BotAgentToolToggles extends Record<ChatToolName, boolean> {
   /**
    * Team-wide gate for custom (user-authored) workflows (Settings →
    * Workflows). When false, members/admins can't create new custom
-   * workflows; predefined workflows are unaffected. Normalized missing →
-   * `true`.
+   * workflows; predefined workflows are unaffected.
    */
   customWorkflows: boolean
   /**
    * Team-wide gate for admin-authored custom tools. When false,
    * `listTeamCustomTools` is skipped on the dispatch path and no
    * `defineTool`-built custom tools are registered with Genkit that
-   * turn — equivalent to "the team has opted out of admin-authored
-   * tools as a category."
+   * turn.
    */
   customTools: boolean
 }
@@ -325,7 +293,7 @@ export interface BotAgentConfig {
   defaultMode: BotChatMode
   /** Workspace-level system prompt; mode-specific suffix appended at runtime. */
   systemPromptBase: string
-  /** Per-tool feature flags. Disabled tools are simply not registered. */
+  /** Team-wide feature gates for custom agents, workflows and tools. */
   tools: BotAgentToolToggles
   /**
    * Team-set monthly token cap (Settings → Usage). `null` = no team cap, the
@@ -366,16 +334,6 @@ const DEFAULT_BOT_AGENT_CONFIG: BotAgentConfig = {
     "find a relevant node. Write replies in Markdown and keep them " +
     "concise.",
   tools: {
-    rollDice: true,
-    browseInternet: true,
-    askQuestion: true,
-    searchWorkspaceNodes: true,
-    listWorkspaceNodes: true,
-    summarizeNode: true,
-    compareNodes: true,
-    findRelatedNodes: true,
-    manageContent: true,
-    readContent: true,
     customAgents: true,
     customWorkflows: true,
     customTools: true,
@@ -432,16 +390,6 @@ const botAgentConfigUpdateSchema = z.object({
     .optional(),
   tools: z
     .object({
-      rollDice: z.boolean(),
-      browseInternet: z.boolean(),
-      askQuestion: z.boolean(),
-      searchWorkspaceNodes: z.boolean(),
-      listWorkspaceNodes: z.boolean(),
-      summarizeNode: z.boolean(),
-      compareNodes: z.boolean(),
-      findRelatedNodes: z.boolean(),
-      manageContent: z.boolean(),
-      readContent: z.boolean(),
       customAgents: z.boolean(),
       customWorkflows: z.boolean(),
       customTools: z.boolean(),
@@ -662,34 +610,6 @@ const botAgentConfigDocSchema = z
     ),
     tools: z
       .object({
-        rollDice: cappedToolToggle(DEFAULT_BOT_AGENT_CONFIG.tools.rollDice),
-        browseInternet: cappedToolToggle(
-          DEFAULT_BOT_AGENT_CONFIG.tools.browseInternet
-        ),
-        askQuestion: cappedToolToggle(
-          DEFAULT_BOT_AGENT_CONFIG.tools.askQuestion
-        ),
-        searchWorkspaceNodes: cappedToolToggle(
-          DEFAULT_BOT_AGENT_CONFIG.tools.searchWorkspaceNodes
-        ),
-        listWorkspaceNodes: cappedToolToggle(
-          DEFAULT_BOT_AGENT_CONFIG.tools.listWorkspaceNodes
-        ),
-        summarizeNode: cappedToolToggle(
-          DEFAULT_BOT_AGENT_CONFIG.tools.summarizeNode
-        ),
-        compareNodes: cappedToolToggle(
-          DEFAULT_BOT_AGENT_CONFIG.tools.compareNodes
-        ),
-        findRelatedNodes: cappedToolToggle(
-          DEFAULT_BOT_AGENT_CONFIG.tools.findRelatedNodes
-        ),
-        manageContent: cappedToolToggle(
-          DEFAULT_BOT_AGENT_CONFIG.tools.manageContent
-        ),
-        readContent: cappedToolToggle(
-          DEFAULT_BOT_AGENT_CONFIG.tools.readContent
-        ),
         customAgents: cappedToolToggle(
           DEFAULT_BOT_AGENT_CONFIG.tools.customAgents
         ),

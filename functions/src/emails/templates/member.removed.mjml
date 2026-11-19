@@ -28,9 +28,8 @@
         <mj-text> Hello, </mj-text>
 
         <mj-text>
-          You have been removed from <strong>{{ teamName }}</strong
-          >. If you believe this was a mistake, please contact your team
-          administrator.
+          You have been removed from <strong>{{ teamName }}</strong>. If you
+          believe this was a mistake, please contact your team administrator.
         </mj-text>
 
         <mj-button href="{{ ctaUrl }}" align="left">

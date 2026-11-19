@@ -152,9 +152,6 @@ export function useBotSessionFilter() {
     }
 
     if (state.modes.size > 0) {
-      // Sessions saved before `lastMode` existed have no mode field.
-      // Treat them as not matching any specific mode filter — opening
-      // them in a chat will populate `lastMode` on the next save.
       const m = session.lastMode
       if (!m || !state.modes.has(m)) return false
     }

@@ -1,3 +1,4 @@
+import type { ThemeId } from "@/helpers/defaults"
 /**
  * Theme Store
  * ===========
@@ -51,11 +52,7 @@ import {
 import { firestore } from "@/modules/firebase"
 import { parseSafe } from "@/schemas/_utils"
 import { settingsThemeDocSchema } from "@/schemas/settings"
-import type {
-  ChatWindowMode,
-  SettingsThemeDoc,
-  ThemeMode,
-} from "@/types/settings"
+import type { ChatWindowMode, SettingsThemeDoc } from "@/types/settings"
 import { createDebouncedCloudSync } from "@/utils/firebase/firebase-optimistic"
 import { useDocumentQuery } from "@/utils/firebase/firebase-query"
 import { safeSetDocument as safeSetDoc } from "@/utils/firebase/firebase-sync-engine"
@@ -81,7 +78,7 @@ const toSettingsThemeDoc = (value: unknown): SettingsThemeDoc | null =>
 export const useThemeStore = defineStore("theme", () => {
   const user = useCurrentUser()
 
-  const mode = useStorage<ThemeMode>("theme", defaultTheme)
+  const mode = useStorage<ThemeId>("theme", defaultTheme)
   const base = useStorage<BaseId>("base", defaultBase)
   const accent = useStorage<AccentId>("accent", defaultAccent)
   const customBaseColor = useStorage<string>(
@@ -119,10 +116,9 @@ export const useThemeStore = defineStore("theme", () => {
     "chatWindowMode",
     "floating"
   )
-  // Keep persisted keys and cloud fields stable while exposing symmetric names.
-  const leftDockPinned = useStorage<boolean>("leftDockVisible", false)
+  const leftDockPinned = useStorage<boolean>("leftDockPinned", false)
   const leftDockOpen = useStorage<boolean>("leftDockOpen", true)
-  const rightDockOpen = useStorage<boolean>("rightDockVisible", false)
+  const rightDockOpen = useStorage<boolean>("rightDockOpen", false)
   const rightDockPinned = computed({
     get: () => chatWindowMode.value === "sidebar",
     set: (pinned: boolean) => {
@@ -182,9 +178,9 @@ export const useThemeStore = defineStore("theme", () => {
         reducedMotion: reducedMotion.value,
         pointerCursors: pointerCursors.value,
         chatWindowMode: chatWindowMode.value,
-        leftDockVisible: leftDockPinned.value,
+        leftDockPinned: leftDockPinned.value,
         leftDockOpen: leftDockOpen.value,
-        rightDockVisible: rightDockOpen.value,
+        rightDockOpen: rightDockOpen.value,
       },
       "settings.themes.persist"
     )
@@ -219,10 +215,10 @@ export const useThemeStore = defineStore("theme", () => {
         chatWindowMode.value = themeDoc.chatWindowMode
       }
       if (
-        typeof themeDoc.leftDockVisible === "boolean" &&
-        themeDoc.leftDockVisible !== leftDockPinned.value
+        typeof themeDoc.leftDockPinned === "boolean" &&
+        themeDoc.leftDockPinned !== leftDockPinned.value
       ) {
-        leftDockPinned.value = themeDoc.leftDockVisible
+        leftDockPinned.value = themeDoc.leftDockPinned
       }
       if (
         typeof themeDoc.leftDockOpen === "boolean" &&
@@ -231,10 +227,10 @@ export const useThemeStore = defineStore("theme", () => {
         leftDockOpen.value = themeDoc.leftDockOpen
       }
       if (
-        typeof themeDoc.rightDockVisible === "boolean" &&
-        themeDoc.rightDockVisible !== rightDockOpen.value
+        typeof themeDoc.rightDockOpen === "boolean" &&
+        themeDoc.rightDockOpen !== rightDockOpen.value
       ) {
-        rightDockOpen.value = themeDoc.rightDockVisible
+        rightDockOpen.value = themeDoc.rightDockOpen
       }
 
       if ("mode" in themeDoc && themeDoc.mode && themeDoc.mode !== mode.value) {

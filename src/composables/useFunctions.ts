@@ -1,3 +1,4 @@
+import type { IMembershipRole } from "@lectornaut/shared/permissions"
 /**
  * Cloud Functions Composable
  *
@@ -24,10 +25,10 @@ import type {
   IToolIntegrationDraft,
   IToolIntegrationPatch,
 } from "@/types/domain"
-import type { IMembershipRole } from "@/types/membership"
 import type { WorkspaceNodeScope } from "@/types/nodes"
 import type { INotificationStatus } from "@/types/notification"
 import type {
+  AdminViewKind,
   BotToolPermissionMode,
   MemoryCategory,
   MemoryVisibility,
@@ -473,6 +474,8 @@ export interface GetTeamGroupUsageResponse {
 export interface RemoveMemberRequest {
   teamId: string
   userId: string
+  /** Also permanently delete the member's private chats and memories. */
+  deletePrivateContent?: boolean
 }
 
 export interface RemoveMemberResponse {
@@ -797,11 +800,8 @@ export interface SendBotMessageRequest {
   /** Pass null/undefined to start a new session; the response carries the new id. */
   sessionId?: string | null
   message: string
-  /**
-   * Per-turn capability mode. Optional — server defaults to `auto` when
-   * omitted, so older clients that predate the mode selector still work.
-   */
-  mode?: BotChatMode
+  /** Per-turn capability mode. */
+  mode: BotChatMode
   toolPermissionMode?: BotToolPermissionMode
   /**
    * Per-turn model override. Optional — server falls back to the team's
@@ -816,12 +816,10 @@ export interface SendBotMessageRequest {
   /**
    * Per-turn reasoning-effort level. Tri-state on the wire: a level
    * requests that depth (applied only where the provider has a knob —
-   * Claude 4.6+, Gemini 3), explicit `null` clears the session's
-   * persisted pick back to the provider default, and omitting the field
-   * leaves the persisted value untouched (legacy-client behavior). The
-   * composer always sends the field.
+   * Claude 4.6+, Gemini 3); `null` clears the session's persisted pick
+   * back to the provider default.
    */
-  effort?: IBotChatEffort | null
+  effort: IBotChatEffort | null
   /**
    * Workspace nodes the user attached for this turn. The server fetches
    * each node's content + attachment list and injects them into the
@@ -838,20 +836,16 @@ export interface SendBotMessageRequest {
   pinnedNode?: BotChatNodeRef
   /**
    * Custom agent the composer / sidebar has currently selected for
-   * this turn. `null` (or omitted) means "use the team default
-   * persona". Server semantics:
+   * this turn. Server semantics:
    *   - real id → that agent's persona handles the turn AND the new
    *     id is persisted on the session doc (sticks across sends).
    *   - null    → explicitly clear; the doc's `activeAgentId` is
    *     reset to null and subsequent turns use the team default.
-   *   - omitted → leave the doc untouched and fall back to the
-   *     session's prior `activeAgentId` if any. Use this from
-   *     legacy clients that don't know about agents.
    * The server falls back to the default if the id points to a
    * since-archived agent — the field on the doc stays unchanged so
    * restoring the agent re-binds the session automatically.
    */
-  activeAgentId?: string | null
+  activeAgentId: string | null
   /**
    * Chat-session attachment ids the user selected to include as media on this
    * turn (per-turn selectable). Resolved server-side to base64 media parts;
@@ -883,6 +877,11 @@ export interface SendBotMessageRequest {
    * new message; `message` is ignored). See the server's `continueFailedTurn`.
    */
   continueFailedTurn?: boolean
+  /**
+   * The sender agreed to use THEIR connected accounts in a chat they do not
+   * own. Without it the server offers such a turn no connection tools.
+   */
+  useMyConnections?: boolean
 }
 
 export interface SendBotMessageResponse {
@@ -927,7 +926,7 @@ export interface BotChatHistoryMessage {
   /** User-role only: the snapshot its turn started from. */
   parentSnapshotId?: string
   /** ISO time the message was sent (user) or finished (agent). */
-  sentAt?: string
+  sentAt: string
 }
 
 /**
@@ -985,6 +984,8 @@ export interface RespondToBotInterruptRequest {
   name: string
   /** Must conform to the interrupt tool's outputSchema. */
   response: unknown
+  /** Same rule as `SendBotMessageRequest.useMyConnections`. */
+  useMyConnections?: boolean
   mode?: BotChatMode
   toolPermissionMode?: BotToolPermissionMode
   /**
@@ -1159,10 +1160,6 @@ export interface UpdateTeamAgentConfigResponse {
  * Creation payload for an agent. `name` and `systemPromptBase` are required
  * because the agent can't function without them. Everything else defaults
  * server-side (empty strings for text, all-true for tools).
- *
- * Tools is partial — the server fills missing keys with `true`, so an
- * older client that doesn't know about a newly-added tool still creates
- * an agent that has access to it.
  */
 export interface CreateTeamAgentDraft {
   name: string
@@ -1264,11 +1261,10 @@ export interface UpdateUserProfileVisibilityResponse {
  * Self-edit of `displayName` and/or `photoURL` on the caller's own user
  * profile. Sibling of {@link claimUsername} (handles `username`) and
  * {@link updateUserProfileVisibility} (handles `isPublic`) — those
- * callables predate this one and remain canonical for their fields.
+ * callables remain canonical for their fields.
  *
- * Omit a key to leave that field untouched; pass `null` (or the empty
- * string, which the server normalizes to `null`) for `photoURL` to
- * clear it. `displayName` cannot be cleared — the settings UI always
+ * Omit a key to leave that field untouched; pass `null` for `photoURL`
+ * to clear it. `displayName` cannot be cleared — the settings UI always
  * provides one.
  *
  * The server updates Firestore AND Firebase Auth in one round-trip,
@@ -2002,6 +1998,16 @@ export const updateBotSessionVisibility = createTypedCallable<
   UpdateBotSessionVisibilityResponse
 >("updateBotSessionVisibility")
 
+/**
+ * The logged step before an admin reads other members' private chats or
+ * memories: writes an audit entry, then a short-lived grant the Firestore
+ * rules check. Admin-only (server-enforced).
+ */
+export const startAdminView = createTypedCallable<
+  { teamId: string; workspaceId: string; kind: AdminViewKind },
+  { kind: AdminViewKind; expiresAt: number }
+>("startAdminView")
+
 export interface BotSessionSnapshotRequest {
   teamId: string
   workspaceId: string
@@ -2125,12 +2131,8 @@ export interface CreateWorkflowDraft {
   /** `require_review` (default) stages edits for approval; `automatic` applies. */
   updateMode?: WorkflowUpdateModeInput
   enabled?: boolean
-  /**
-   * P3 — run headless turns with this member's connection bindings ("runs
-   * with {member}'s connected accounts"). The server accepts only the
-   * CALLER's own uid (consent is structural); null clears.
-   */
-  actsAsUid?: string | null
+  /** `shared` (default) runs once; `personal` runs for each opted-in member. */
+  audience?: "shared" | "personal"
 }
 
 /** Update can change anything except the immutable agent/workspace binding. */
@@ -2202,6 +2204,15 @@ export const deleteTeamWorkflow = createTypedCallable<
   { ok: boolean }
 >("deleteTeamWorkflow")
 
+/**
+ * Opt the CALLER in or out of a per-member workflow ("Run for me"), or (with
+ * `notify` alone) flip their "Notify me" preference on an existing opt-in.
+ */
+export const setTeamWorkflowSubscription = createTypedCallable<
+  RunTeamWorkflowNowRequest & { subscribed?: boolean; notify?: boolean },
+  { ok: boolean }
+>("setTeamWorkflowSubscription")
+
 export const runTeamWorkflowNow = createTypedCallable<
   RunTeamWorkflowNowRequest,
   RunTeamWorkflowNowResponse
@@ -2214,6 +2225,8 @@ export interface ReviewTeamWorkflowRunRequest {
   workspaceId: string
   runId: string
   decision: WorkflowReviewDecision
+  /** Approve even though the workflow's instructions changed since the run. */
+  acknowledgeStale?: boolean
 }
 export interface ReviewTeamWorkflowRunResponse {
   ok: boolean
@@ -2364,12 +2377,8 @@ export interface ConnectionMutationResponse {
  */
 export interface CompleteConnectionBindingRequest extends ConnectionRequest {
   code: string
-  /**
-   * Desktop (Tauri) system-browser flow only: the loopback redirect the
-   * authorization used. The server allowlists loopback hosts and falls back
-   * to the web flow's `postmessage` when omitted.
-   */
-  redirectUri?: string
+  /** The redirect URI the authorization used (allowlisted server-side). */
+  redirectUri: string
 }
 
 export interface CompleteConnectionBindingResponse {

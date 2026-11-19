@@ -74,7 +74,10 @@ import {
 } from "@/data/icons"
 import { useTeamAgentsStore } from "@/stores/teamAgentsStore"
 import { useTeamCustomToolsStore } from "@/stores/teamCustomToolsStore"
-import { delegateToolName } from "@lectornaut/shared/domain"
+import {
+  CONNECTION_TOOL_NAMES,
+  delegateToolName,
+} from "@lectornaut/shared/domain"
 import {
   GITHUB_WRITE_TOOL_NAMES,
   GOOGLE_CALENDAR_WRITE_TOOL_NAMES,
@@ -92,7 +95,16 @@ const props = defineProps<{
    * before mutating it. Not used for non-interrupt tools.
    */
   messageId: string
+  /**
+   * For connection tools (Drive, Gmail, Calendar, GitHub): the member whose
+   * connected account this call used. Shown beside the tool name.
+   */
+  accountName?: string | null
 }>()
+
+const usedAccountName = computed(() =>
+  CONNECTION_TOOL_NAMES.includes(props.tool.name) ? props.accountName : null
+)
 
 const botChat = inject(BotChatContextKey)
 const { t } = useI18n()
@@ -440,14 +452,9 @@ const driveWriteResult = computed<{
       obj.file && typeof obj.file === "object"
         ? (obj.file as Record<string, unknown>)
         : null
-    const outcome =
-      obj.outcome === "written" ||
-      obj.outcome === "declined" ||
-      obj.outcome === "failed"
-        ? obj.outcome
-        : obj.ok
-          ? "written"
-          : "failed"
+    const outcome = obj.outcome
+    if (outcome !== "written" && outcome !== "declined" && outcome !== "failed")
+      return null
     return {
       kind: outcome,
       link: file && typeof file.link === "string" ? file.link : null,
@@ -485,16 +492,9 @@ const calendarWriteResult = computed<{
       obj.event && typeof obj.event === "object"
         ? (obj.event as Record<string, unknown>)
         : null
-    // Trust the explicit discriminator; fall back by `ok` for any older
-    // output shape that predates it.
-    const outcome =
-      obj.outcome === "written" ||
-      obj.outcome === "declined" ||
-      obj.outcome === "failed"
-        ? obj.outcome
-        : obj.ok
-          ? "written"
-          : "failed"
+    const outcome = obj.outcome
+    if (outcome !== "written" && outcome !== "declined" && outcome !== "failed")
+      return null
     return {
       kind: outcome,
       link: event && typeof event.link === "string" ? event.link : null,
@@ -585,14 +585,9 @@ const gitHubWriteResult = computed<{
       obj.item && typeof obj.item === "object"
         ? (obj.item as Record<string, unknown>)
         : null
-    const outcome =
-      obj.outcome === "written" ||
-      obj.outcome === "declined" ||
-      obj.outcome === "failed"
-        ? obj.outcome
-        : obj.ok
-          ? "written"
-          : "failed"
+    const outcome = obj.outcome
+    if (outcome !== "written" && outcome !== "declined" && outcome !== "failed")
+      return null
     return {
       kind: outcome,
       link: item && typeof item.url === "string" ? item.url : null,
@@ -669,14 +664,9 @@ const gmailSendResult = computed<{
       obj.email && typeof obj.email === "object"
         ? (obj.email as Record<string, unknown>)
         : null
-    const outcome =
-      obj.outcome === "written" ||
-      obj.outcome === "declined" ||
-      obj.outcome === "failed"
-        ? obj.outcome
-        : obj.ok
-          ? "written"
-          : "failed"
+    const outcome = obj.outcome
+    if (outcome !== "written" && outcome !== "declined" && outcome !== "failed")
+      return null
     return {
       kind: outcome,
       link: email && typeof email.link === "string" ? email.link : null,
@@ -1292,7 +1282,12 @@ const traceStatus = computed<"pending" | "running" | "error" | undefined>(
           <TraceIcon :title="t(statusBadge.tooltipKey)">
             <Component :is="traceIcon" />
           </TraceIcon>
-          <TraceTitle>{{ displayName }}</TraceTitle>
+          <TraceTitle>
+            {{ displayName }}
+            <span v-if="usedAccountName" class="text-muted-foreground">
+              {{ t("ai.toolCall.usedAccount", { name: usedAccountName }) }}
+            </span>
+          </TraceTitle>
           <span class="sr-only">{{ t(statusBadge.tooltipKey) }}</span>
         </TraceLine>
       </TraceCollapsibleTrigger>

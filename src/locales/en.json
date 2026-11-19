@@ -124,6 +124,17 @@
     "switchVersionError": "Couldn't switch versions",
     "editingMessage": "Editing message",
     "editingMessageHint": "Sending starts a new version from here.",
+    "connectionConsent": {
+      "offTitle": "Your connected apps are off in this chat",
+      "offDescription": "This chat belongs to another member, so your replies here don't use your Drive, Gmail, Calendar or GitHub.",
+      "onTitle": "Your connected apps are on in this chat",
+      "onDescription": "What the agent reads from your accounts is visible to everyone who can read this chat.",
+      "turnOn": "Use my accounts",
+      "turnOff": "Stop using them",
+      "confirmTitle": "Use your connected apps in this chat?",
+      "confirmDescription": "This chat belongs to another member. Anything the agent reads from your Drive, Gmail, Calendar or GitHub for your replies will be saved in this chat and visible to everyone who can read it.",
+      "confirmAction": "Use my accounts"
+    },
     "messageCopied": "Copied to clipboard",
     "outline": "Chat outline",
     "readAloud": "Read aloud",
@@ -179,10 +190,11 @@
       "restoreFromArchive": "Restore from archive",
       "deleteChat": "Delete chat",
       "cannotManage": "Only the owner or a team admin can manage this chat.",
-      "cannotChangeVisibility": "Only the owner or a team admin can change visibility.",
+      "cannotChangeVisibility": "Only the owner can change visibility.",
       "visibility": "Visibility",
       "shareConfirmTitle": "Share this chat with the team?",
       "shareConfirmDescription": "Members of this workspace will be able to read every message in this chat. Owner and admins will also be able to send new messages. You can switch back to private at any time.",
+      "shareConfirmConnectedDescription": "This chat used a connected app (Drive, Gmail, Calendar or GitHub). What it read from that account will become readable by every member of this workspace, along with every other message. You can switch back to private at any time.",
       "shareConfirmAction": "Share with team",
       "visibilityPrivateSelf": "Only you can see this chat.",
       "visibilityPrivateOther": "Only the owner can see this chat.",
@@ -206,6 +218,7 @@
       "owner": "Owner"
     },
     "toolCall": {
+      "usedAccount": "with {name}'s account",
       "askAgent": "Ask {name}",
       "defaultAgent": "Default Assistant",
       "needsInput": "Needs your input",
@@ -580,7 +593,7 @@
         "needs_reauth": "Reconnect your account",
         "error": "Account status unavailable"
       },
-      "accountHint": "Manage your account under Connections. Workflows use the account configured in Runs with connected accounts.",
+      "accountHint": "Manage your account under Connections. Workflows that run for each member use your own account.",
       "updateDescription": "Install the latest app configuration. Keeps resource enable settings, connected accounts, and workspace workflow customizations. New account permissions may require reconnecting separately."
     },
     "integrations": {
@@ -1015,15 +1028,18 @@
       },
       "dictation": {
         "label": "Dictation",
-        "description": "Use your microphone to dictate messages by voice."
+        "description": "Use your microphone to dictate messages by voice.",
+        "micDenied": "Microphone access is blocked."
       },
       "updates": {
         "label": "Updates",
         "description": "Check for new versions and configure automatic updates."
       },
+      "openSystemSettings": "Open settings",
       "runOnStartup": {
         "label": "Run on startup",
-        "description": "Start app when you log in."
+        "description": "Start app when you log in.",
+        "blocked": "Turned off in System Settings, so it won't start when you log in."
       },
       "menuBar": {
         "label": "Menu bar",
@@ -1337,9 +1353,26 @@
         "error": "Couldn't export audit logs"
       }
     },
+    "adminView": {
+      "sessions": {
+        "offLabel": "Other members' private chats are hidden",
+        "confirmTitle": "View private chats as admin?"
+      },
+      "memories": {
+        "offLabel": "Other members' private memories are hidden",
+        "confirmTitle": "View private memories as admin?"
+      },
+      "offDescription": "You see shared items and your own. Viewing private items is recorded in the audit log.",
+      "onLabel": "Private items visible until {time}",
+      "onDescription": "This view was recorded in the audit log.",
+      "show": "View private items",
+      "confirmDescription": "Other members' private items in this workspace will be visible to you for 15 minutes. Your name, the workspace and the time are recorded in the audit log.",
+      "confirmAction": "View and record",
+      "error": "Couldn't start admin view"
+    },
     "sessions": {
       "sessionsLabel": "Workspace chat sessions",
-      "sessionsDescription": "Every bot chat created by any member in the selected workspace. Rename, archive, restore, and permanently delete in bulk. Server-side rules grant this view to team owners and admins only.",
+      "sessionsDescription": "Bot chats in the selected workspace. Rename, archive, restore, and permanently delete in bulk. Other members' private chats appear only after the recorded admin view step.",
       "noPermissionTitle": "Admin access required",
       "noPermissionDescription": "Only team owners and admins can manage workspace bot sessions.",
       "columnTitle": "Title",
@@ -1374,7 +1407,7 @@
     },
     "memory": {
       "memoriesLabel": "Workspace memories",
-      "memoriesDescription": "Durable notes for this workspace. Yours are private until you share them; admins see every member's memories. Agents recall the relevant ones before replying when Memory is on.",
+      "memoriesDescription": "Durable notes for this workspace. Yours are private until you share them; admins see other members' private memories only after a recorded admin view step. Agents recall the relevant ones before replying when Memory is on.",
       "noPermissionTitle": "Member access required",
       "noPermissionDescription": "Only workspace members can manage memories.",
       "newMemory": "New memory",
@@ -1805,16 +1838,34 @@
       "modeAutomaticOpt": "Apply automatically",
       "modeReviewHint": "Edits are captured as a changeset an admin approves before they land. Cost-bounded by a human.",
       "modeAutomaticHint": "The agent writes edits directly each run. Bounded by per-run metering and your team's budget.",
-      "connectionsLabel": "Connections access",
-      "connectionsToggle": "Run with my connected accounts",
-      "connectionsHint": "Lets runs read connected apps (like Google Calendar) through your linked account. Revoke anytime by turning this off or disconnecting the account under Settings → Connections.",
-      "connectionsOther": "Currently runs with {name}'s connected accounts. Turning the toggle off revokes it; on rebinds it to you.",
-      "connectionsOtherFallback": "another member",
+      "audienceLabel": "Runs for",
+      "audienceShared": "The team",
+      "audiencePersonal": "Each member",
+      "audienceSharedHint": "Runs once and shares the result with team admins and this workspace. It can't read anyone's connected apps.",
+      "audiencePersonalHint": "Runs once for each member who turns on Run for me, using their own connected apps. Each result is that member's private chat. These runs can't edit workspace documents.",
+      "audienceNoEvent": "A workflow that runs for each member can't be triggered by content changes, so it won't run until you pick a schedule or manual trigger.",
+      "audienceSharedNoApps": "A workflow that runs for the team can't read anyone's connected apps, so these tools will report that they're not connected: {tools}. Choose Each member to use them.",
+      "audienceDropTitle": "Stop Running For Members?",
+      "audienceDropDescription": "{count} member turned on Run for me. Switching to The team removes that opt-in for good, and the member is told it stopped. | {count} members turned on Run for me. Switching to The team removes those opt-ins for good, and the members are told it stopped.",
+      "audienceDropAction": "Switch and save",
+      "audienceOptedIn": "Currently runs for: {names}.",
+      "audienceNoneOptedIn": "No one has opted in yet. Members turn on Run for me from the Workflows page.",
+      "subscribe": "Run for me",
+      "subscribeHint": "Runs with your connected apps and puts the result in your private chats. It follows the instructions below.",
+      "subscribeStale": "The instructions changed. Turn this on again to keep it running for you.",
+      "subscribeChanged": "This workflow's agent or connected apps changed. Turn this on again to keep it running for you.",
+      "subscribeFailed": "Paused after several failed runs. Check your connected apps, then turn this on again.",
+      "notify": "Notify me",
+      "notifyError": "Couldn't update Notify me.",
+      "subscribeOn": "This workflow now runs for you.",
+      "subscribeOff": "This workflow no longer runs for you.",
+      "subscribeError": "Couldn't update Run for me.",
       "approve": "Approve",
       "reject": "Reject",
       "reviewApproved": "Changes applied.",
       "reviewRejected": "Changes rejected.",
       "reviewError": "Couldn't record your decision.",
+      "reviewStaleConfirm": "This workflow's instructions changed after this run, so these changes came from the old instructions. Apply them anyway?",
       "presetEnabled": "Predefined workflow enabled.",
       "adminOnly": "Only team owners and admins can view workflow runs.",
       "needsReview": "Needs review",
@@ -1830,6 +1881,10 @@
       "deleteRunSuccess": "Run deleted.",
       "deleteRunError": "Couldn't delete the run.",
       "runTriggerManual": "Triggered manually",
+      "runForMember": "Run for {name}",
+      "runStaleTitle": "Instructions changed since this run",
+      "runStalePending": "These changes came from the workflow's earlier instructions. Review them against what the workflow says now before you apply them.",
+      "runStaleApproved": "These changes were applied after the workflow's instructions had changed, so they reflect the earlier instructions.",
       "runTriggerSchedule": "Triggered by schedule",
       "runTriggerEvent": "Triggered by a change to {id} ({scope})",
       "timelineQueued": "Queued",
@@ -2386,6 +2441,9 @@
       "removeMember": "Remove Member",
       "exitConfirm": "Are you sure you want to leave this team? You will lose access to all team resources.",
       "removeConfirm": "Are you sure you want to remove {name} from this team?",
+      "deletePrivateContent": "Also delete their private chats and memories",
+      "deletePrivateContentSelf": "Also delete my private chats and memories",
+      "deletePrivateContentDescription": "Deleted chats and memories are gone permanently and can't be recovered. Shared ones are kept.",
       "noMembers": "No members found.",
       "agentBadge": "Agent",
       "agentSubtitle": "AI agent",
@@ -2715,16 +2773,16 @@
       "selectHint": "Select a workflow to see its runs and actions.",
       "lastRun": "Last run",
       "nextRun": "Next run",
-      "filter": "Filter workflows",
+      "filter": "Filter",
       "status": "Status",
-      "groupKind": "By kind",
-      "groupTrigger": "By trigger",
+      "groupKind": "Kind",
+      "groupTrigger": "Trigger",
       "groupPredefined": "Predefined",
       "groupCustom": "Custom",
       "allWorkflows": "All workflows",
       "searchPlaceholder": "Search workflows",
       "search": "Search",
-      "filterNoResults": "No workflows match your filters."
+      "filterNoResults": "No workflows match these filters."
     },
     "code": {
       "documents": "Documents",

@@ -30,6 +30,7 @@ const statusLabel = (status: WorkflowStatusFilter): string =>
 const groupByLabel = (g: WorkflowGroupBy): string => {
   if (g === "kind") return t("pages.workflows.groupKind")
   if (g === "trigger") return t("pages.workflows.groupTrigger")
+  if (g === "visibility") return t("ai.groupByVisibility")
   return t("ai.groupByNone")
 }
 

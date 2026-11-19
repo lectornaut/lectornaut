@@ -6,6 +6,7 @@
  * `connections.ts` (Firestore + fetch) and `connectionTools.ts` (Genkit).
  */
 
+import { createHash } from "node:crypto"
 // Package specifier, not `./domain.js` — see the re-export block below.
 import type { ConnectionStatus } from "@lectornaut/shared/domain"
 
@@ -370,36 +371,13 @@ function pickEventTime(
 }
 
 // ===========================================================================
-// OAuth scope vocabulary + checks (P2 — write tools)
-// ===========================================================================
-//
-// The scope constants + hierarchy + `hasGrantedScope` live in the shared
-// domain contract (both the server gate here AND the client's
-// `needsScopeUpgrade` hint must agree on what a broader grant satisfies, or
-// a `calendar` grant would nag "reconnect" forever while writes succeed).
-// Re-exported so existing `./connectionsCore.js` imports keep working.
-//
-// Imported from the workspace PACKAGE specifier, not the usual `./domain.js`
-// shim: this module is loaded directly by `node --test` (type-stripping),
-// which can't rewrite a relative `./domain.js` to `domain.ts` but DOES honor
-// `@lectornaut/shared`'s exports map (→ source `.ts`). esbuild resolves it
-// for the deploy bundle just the same.
-export {
-  GOOGLE_CALENDAR_EVENTS_READONLY_SCOPE,
-  GOOGLE_CALENDAR_EVENTS_SCOPE,
-  GOOGLE_CALENDAR_FULL_SCOPE,
-  hasGrantedScope,
-} from "@lectornaut/shared/domain"
-
-// ===========================================================================
 // Team-wide kill switch (admin disables a connection for everyone)
 // ===========================================================================
 
 /**
  * Whether a connection doc's data says the app is team-disabled
  * (`status: "disabled"` — the Owner/Admin kill switch). Centralizes the
- * default: a missing doc, missing field, or unexpected shape reads as
- * ACTIVE, so pre-kill-switch docs keep working unchanged. Every server gate
+ * default: a missing doc or field reads as ACTIVE. Every server gate
  * (tool registration, token minting, new connects) keys on this one
  * predicate so they can never disagree.
  */
@@ -412,34 +390,160 @@ export function isConnectionDisabled(data: unknown): boolean {
 }
 
 // ===========================================================================
-// Headless run identity (P3 — workflow "runs with {member}'s connections")
+// Workflow audience (who a run is FOR, and whose connected account it reads)
 // ===========================================================================
+//
+// One rule: a personal account's data only ever flows back to its owner.
+//   - `shared` workflows run once, identity-less — no personal account.
+//   - `personal` workflows run once PER opted-in member, with that member's
+//     own bindings, into that member's own private session.
+// Opt-in is self-only (the callable writes the caller's uid) and lives in
+// `workflows/{id}/subscribers/{uid}` — readable by that member and team
+// admins only, so the workflow doc (member-readable) never lists who opted
+// in. An opt-in is pinned to what the member approved: `approvedRev` (the
+// workflow's `consentRev`, bumped by a prompt edit) and `fingerprint` (the
+// agent's config + the connected-app tools a run can reach). A change to
+// either pauses the opt-in until the member re-approves — an admin can't
+// widen what a member agreed to after the fact.
 
-/**
- * Consent rule for SETTING a workflow's `actsAsUid`: only your OWN uid —
- * declaring "this workflow runs with my connected accounts" requires being
- * the account owner, which makes consent implicit and unforgeable (an admin
- * can never point a workflow at another member's Google account). Returns
- * the rejection message, or null when allowed. `null`/`undefined` always
- * passes: CLEARING the binding is open to anyone who can edit the workflow —
- * revocation must never be harder than the grant.
- */
-export function actsAsUidViolation(
-  callerUid: string,
-  requested: string | null | undefined
-): string | null {
-  if (requested === null || requested === undefined) return null
-  if (requested === callerUid) return null
-  return "A workflow can only run with your own connected accounts."
+export const WORKFLOW_AUDIENCES = ["shared", "personal"] as const
+export type WorkflowAudience = (typeof WORKFLOW_AUDIENCES)[number]
+
+/** Max opted-in members per workflow (each one is a run per trigger). */
+export const MAX_WORKFLOW_SUBSCRIBERS = 100
+/** Consecutive failed runs before a member's opt-in is paused. */
+export const SUBSCRIBER_FAILURE_LIMIT = 3
+
+export interface WorkflowAudienceFields {
+  audience: WorkflowAudience
+  consentRev: number
+}
+
+/** What a run can reach, as approved at opt-in. */
+export interface WorkflowFingerprint {
+  /** Hash of the agent's stored spec (instructions + tool toggles). */
+  agent: string
+  /** Enabled connected-app tool keys. */
+  tools: string[]
+}
+
+/** Why an opt-in stopped running without the member turning it off. */
+export type SubscriberPause = "tools" | "failures"
+
+/** `workflows/{id}/subscribers/{uid}` — one member's opt-in. */
+export interface WorkflowSubscriber {
+  uid: string
+  approvedRev: number
+  fingerprint: WorkflowFingerprint
+  paused?: SubscriberPause | null
+  /** "Notify me" preference; absent = on. */
+  notify?: boolean
+  failures?: number
+  /** The member's ongoing chat for this workflow; each run continues it. */
+  sessionId?: string
 }
 
 /**
- * Whether a STORED `actsAsUid` is even eligible to thread into a headless
- * run: a non-empty uid that isn't a built-in agent sentinel (`_`-prefixed —
- * synthesized principals, never humans with OAuth grants). Defense in depth
- * behind the write-time self-only rule; the run executor additionally
- * verifies LIVE team membership before threading, so a member who left the
- * team stops powering runs immediately.
+ * Members a personal workflow runs for: opted in at the CURRENT revision and
+ * not paused. (The fingerprint is compared live in the worker, where the
+ * agent and tool docs are read.)
+ */
+export function runRecipients(
+  wf: WorkflowAudienceFields,
+  subscribers: readonly WorkflowSubscriber[]
+): string[] {
+  if (wf.audience !== "personal") return []
+  return subscribers
+    .filter(
+      (s) =>
+        isEligibleActsAsUid(s.uid) &&
+        s.approvedRev === wf.consentRev &&
+        !s.paused
+    )
+    .map((s) => s.uid)
+}
+
+/** JSON with object keys sorted, so equal values always hash equally. */
+function stableStringify(value: unknown): string {
+  if (Array.isArray(value)) return `[${value.map(stableStringify).join(",")}]`
+  if (value && typeof value === "object") {
+    const o = value as Record<string, unknown>
+    return `{${Object.keys(o)
+      .sort()
+      .map((k) => `${JSON.stringify(k)}:${stableStringify(o[k])}`)
+      .join(",")}}`
+  }
+  return JSON.stringify(value) ?? "null"
+}
+
+export function buildWorkflowFingerprint(
+  agentSpec: unknown,
+  connectionToolKeys: readonly string[]
+): WorkflowFingerprint {
+  return {
+    agent: createHash("sha256")
+      .update(stableStringify(agentSpec ?? null))
+      .digest("hex"),
+    tools: [...new Set(connectionToolKeys)].sort(),
+  }
+}
+
+/**
+ * Whether a run can now do something the member didn't approve: the agent's
+ * config changed at all, or a connected-app tool was ADDED. Losing a tool
+ * only narrows the run, so it never pauses anyone.
+ */
+export function fingerprintWidened(
+  approved: WorkflowFingerprint,
+  live: WorkflowFingerprint
+): boolean {
+  return (
+    approved.agent !== live.agent ||
+    live.tools.some((tool) => !approved.tools.includes(tool))
+  )
+}
+
+/**
+ * Deterministic run id for one (workflow, trigger occurrence, member), so a
+ * retried fan-out re-creates the same docs instead of duplicate runs.
+ * `occurrence` is the scheduled tick or the trigger event id.
+ */
+export function workflowRunId(
+  workflowId: string,
+  occurrence: string | number,
+  forUid?: string
+): string {
+  return [workflowId, occurrence, ...(forUid ? [forUid] : [])]
+    .join("_")
+    .replace(/[^\w-]/g, "-")
+}
+
+/**
+ * A member's failure streak after a run: an error extends it, a success
+ * clears it, anything else (blocked on budget, skipped) leaves it alone.
+ * `pause` is true on the run that reaches the limit.
+ */
+export function nextFailureStreak(
+  failures: number | undefined,
+  status: string
+): { failures: number; pause: boolean } {
+  const next =
+    status === "error"
+      ? (failures ?? 0) + 1
+      : status === "success"
+        ? 0
+        : (failures ?? 0)
+  return {
+    failures: next,
+    pause: status === "error" && next >= SUBSCRIBER_FAILURE_LIMIT,
+  }
+}
+
+/**
+ * Whether a stored uid may power a headless run: non-empty and not a
+ * built-in agent sentinel (`_`-prefixed — synthesized principals, never
+ * humans with OAuth grants). The run executor additionally verifies LIVE
+ * team membership, so a member who left stops getting runs immediately.
  */
 export function isEligibleActsAsUid(uid: unknown): uid is string {
   return typeof uid === "string" && uid.length > 0 && !uid.startsWith("_")

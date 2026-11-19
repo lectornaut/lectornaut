@@ -231,13 +231,13 @@ export function useTeamActions(targetTeamId?: Ref<string | null | undefined>) {
       }
     )
 
-  const removeMember = async (userId: string) =>
+  const removeMember = async (userId: string, deletePrivateContent = false) =>
     memberActions.run(
       userId,
       async () => {
         const teamId = effectiveTeamId.value
         if (!teamId) return
-        await membershipStore.removeMember(teamId, userId)
+        await membershipStore.removeMember(teamId, userId, deletePrivateContent)
       },
       {
         success:

@@ -14,8 +14,7 @@ defineProps<{
 }>()
 
 // Optional bulk-actions menu for the current selection. When a consumer wires
-// this slot, the dashed count chip on the left turns into a dropdown trigger;
-// otherwise it stays a plain informational chip (backward compatible).
+// this slot, the dashed count chip on the left is a dropdown trigger.
 defineSlots<{
   "selection-actions"?: (props: {
     table: Table<AppTableFeatures, TData>
@@ -53,12 +52,6 @@ defineSlots<{
             />
           </DropdownMenuContent>
         </DropdownMenu>
-        <!-- No slot: keep the original non-interactive informational chip. -->
-        <Button v-else variant="outline" class="border-dashed">
-          {{ table.getFilteredSelectedRowModel().rows.length }} /
-          {{ table.getFilteredRowModel().rows.length }}
-          {{ $t("components.dataTable.selected") }}
-        </Button>
       </template>
     </div>
     <div class="flex grow items-center justify-end gap-2">

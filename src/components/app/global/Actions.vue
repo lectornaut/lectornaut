@@ -1,4 +1,5 @@
 <script lang="ts" setup>
+import type { ThemeId } from "@/helpers/defaults"
 import {
   getCurrentTauriWindow,
   isMainTauriWindow,
@@ -7,7 +8,6 @@ import {
 import { FILE_CAPTURE_WINDOW_LABEL } from "@/modules/fileCapture"
 import { emitter } from "@/modules/mitt"
 import { state, store } from "@/modules/theme"
-import type { ThemeMode } from "@/types/settings"
 import { useRegisterSW } from "virtual:pwa-register/vue"
 import { toast } from "vue-sonner"
 
@@ -52,7 +52,7 @@ useHead({
 })
 
 emitter.on("Theme.Change", (newTheme) => {
-  store.value = newTheme as ThemeMode
+  store.value = newTheme as ThemeId
 })
 
 const { offlineReady, needRefresh, updateServiceWorker } = useRegisterSW()

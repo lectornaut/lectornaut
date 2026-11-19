@@ -22,10 +22,7 @@ export const syncMutationTypeSchema = z.enum(SYNC_MUTATION_TYPES)
  * `parked` is purely client-local — an op that exhausted its send attempts
  * without ever receiving a server verdict — and in fact purely IN-MEMORY: it
  * maps to the remote `pending` status when written to Firestore (rules
- * constrain the op-doc enum) AND is demoted to `pending` when persisted to
- * the shared localStorage outbox (older app versions quarantine-and-drop
- * statuses outside their enum — see `toPersistedOperations`). The member
- * stays in this schema so in-memory snapshots still validate.
+ * constrain the op-doc enum).
  */
 export const syncOperationStatusSchema = z.enum([
   "pending",
@@ -57,8 +54,7 @@ export const syncMutatePayloadSchema = z.object({
  * `stripSettledOperationPayload` in `firebase-sync-queue.ts`) because settled
  * retention only serves duplicate-verdict dedup and metrics, while retaining
  * an hour of ~1MB snapshot payloads would blow the localStorage quota. Both
- * fields therefore MUST stay optional/absent-tolerant here — stripped entries
- * and old fat entries persisted by earlier builds parse alike.
+ * fields are therefore optional.
  */
 export const syncOutboxOperationSchema = syncMutatePayloadSchema.extend({
   id: z.string(),
@@ -81,16 +77,14 @@ export const syncOutboxOperationSchema = syncMutatePayloadSchema.extend({
    * True once the remote operation document was successfully created. Retries
    * of a created op re-invoke the `applySyncOperation` callable instead of
    * rewriting the doc (a rewrite is an update — `onDocumentCreated` never
-   * re-fires for it, so it can't help). Optional so entries persisted by
-   * older app versions still parse.
+   * re-fires for it, so it can't help). Absent until the create lands.
    */
   remoteCreated: z.boolean().optional(),
   /**
    * Consecutive fast retries since the last full (ladder) attempt. Fast
    * retries re-invoke the callable after a DETECTED transport failure and are
    * tracked separately from `attempts` so they cannot burn the attempt budget
-   * early. Optional (like every field below) so entries persisted by older
-   * app versions still parse.
+   * early. Absent when no fast retry is in flight.
    */
   fastRetries: z.number().optional(),
   /**

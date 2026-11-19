@@ -1,4 +1,5 @@
 <script lang="ts" setup>
+import { useWorkflowSubscription } from "@/composables/useTeamWorkflows"
 import { runStatusDotClass, runStatusLabel } from "@/data/workflowRunConstants"
 import {
   IconArchive,
@@ -35,6 +36,14 @@ const { t } = useI18n()
 
 const isCustom = computed(() => !props.workflow.presetKey)
 
+// Run now: admins for a shared workflow, opted-in members for a per-member
+// one. A per-member workflow's last run is the viewer's OWN (kept on their
+// opt-in), never another member's.
+const { canRun, subscription } = useWorkflowSubscription(() => props.workflow)
+const last = computed(() =>
+  props.workflow.audience === "personal" ? subscription.value : props.workflow
+)
+
 const dayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
 const minuteToTime = (min: number): string =>
   `${String(Math.floor(min / 60)).padStart(2, "0")}:${String(min % 60).padStart(2, "0")}`
@@ -56,7 +65,7 @@ const triggerSummary = computed<string>(() => {
 })
 
 const lastRun = computed<string>(() => {
-  const v = props.workflow.lastRunAt
+  const v = last.value?.lastRunAt
   if (!(v instanceof Timestamp)) return ""
   const date = v.toDate()
   const diffMs = Date.now() - date.getTime()
@@ -71,8 +80,8 @@ const lastRun = computed<string>(() => {
 })
 
 const dotClass = computed(() =>
-  props.workflow.lastRunStatus
-    ? runStatusDotClass(props.workflow.lastRunStatus)
+  last.value?.lastRunStatus
+    ? runStatusDotClass(last.value.lastRunStatus)
     : "bg-muted-foreground/40"
 )
 
@@ -107,9 +116,12 @@ const toggleIcon = computed(() =>
             </span>
             <span class="text-muted-foreground line-clamp-1 text-xs">
               {{ triggerSummary }}
-              <template v-if="workflow.lastRunStatus">
+              <template v-if="workflow.audience === 'personal'">
+                · {{ t("settings.workflows.audiencePersonal") }}
+              </template>
+              <template v-if="last?.lastRunStatus">
                 ·
-                {{ runStatusLabel(workflow.lastRunStatus) }}
+                {{ runStatusLabel(last.lastRunStatus) }}
               </template>
             </span>
           </span>
@@ -120,7 +132,7 @@ const toggleIcon = computed(() =>
       </ContextMenuTrigger>
       <ContextMenuContent>
         <template v-if="!isArchived">
-          <ContextMenuItem :disabled="!canManage" @click="emit('runNow')">
+          <ContextMenuItem :disabled="!canRun" @click="emit('runNow')">
             <IconPlay />
             {{ t("settings.workflows.runNow") }}
           </ContextMenuItem>
@@ -184,7 +196,7 @@ const toggleIcon = computed(() =>
           <DropdownMenuContent align="end" class="w-44">
             <template v-if="!isArchived">
               <DropdownMenuItem
-                :disabled="!canManage"
+                :disabled="!canRun"
                 data-hotkey="r"
                 @click="emit('runNow')"
               >

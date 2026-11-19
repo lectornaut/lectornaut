@@ -21,14 +21,12 @@ export const columns: ColumnDef<AppTableFeatures, Task>[] = [
         "onUpdate:modelValue": (value: unknown) =>
           table.toggleAllPageRowsSelected(!!value),
         ariaLabel: "Select all",
-        class: "mr-2",
       }),
     cell: ({ row }) =>
       h(Checkbox, {
         modelValue: row.getIsSelected(),
         "onUpdate:modelValue": (value: unknown) => row.toggleSelected(!!value),
         ariaLabel: "Select row",
-        class: "mr-2",
       }),
     enablePinning: true,
     enableSorting: false,

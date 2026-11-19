@@ -809,6 +809,27 @@ function myPrivateMemoriesQuery(
 }
 
 /**
+ * Delete every private memory `ownerUid` owns in a workspace (active AND
+ * archived); shared memories are never touched. Returns the deleted count.
+ * No authorization and no audit entry: both are the caller's.
+ */
+export async function purgePrivateMemories(
+  teamId: string,
+  workspaceId: string,
+  ownerUid: string
+): Promise<number> {
+  const snap = await myPrivateMemoriesQuery(teamId, workspaceId, ownerUid).get()
+  let deleted = 0
+  for (const docs of chunkRefs(snap.docs, MEMORY_BATCH_SIZE)) {
+    const batch = db.batch()
+    docs.forEach((doc) => batch.delete(doc.ref))
+    await batch.commit()
+    deleted += docs.length
+  }
+  return deleted
+}
+
+/**
  * Archive every ACTIVE private memory the caller owns in a workspace — the
  * "Archive my private memories" privacy action (Settings → Privacy). Shared
  * memories (even the caller's own) are left untouched. Already-archived rows
@@ -891,20 +912,7 @@ export const purgeMyPrivateMemories = defineCallable<
     const { teamId, workspaceId } = input
     const role = await authorizeOwnMemoryAccess(actorId, teamId, workspaceId)
 
-    const snap = await myPrivateMemoriesQuery(
-      teamId,
-      workspaceId,
-      actorId
-    ).get()
-    const refs = snap.docs.map((d) => d.ref)
-
-    let deleted = 0
-    for (const batchRefs of chunkRefs(refs, MEMORY_BATCH_SIZE)) {
-      const batch = db.batch()
-      batchRefs.forEach((ref) => batch.delete(ref))
-      await batch.commit()
-      deleted += batchRefs.length
-    }
+    const deleted = await purgePrivateMemories(teamId, workspaceId, actorId)
 
     const logRef = await logEvent({
       teamId,

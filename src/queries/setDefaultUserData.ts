@@ -10,9 +10,9 @@ import {
 } from "@/helpers/defaults"
 import { firestore } from "@/modules/firebase"
 import { syncCurrentUserAccountProfile } from "@/queries/userSettings"
-import { DEFAULT_NOTIFICATION_SETTINGS } from "@/types/notifications"
 import { getUserPreferencesRef } from "@/utils/firebase/firebase-helpers"
 import { mutateSetDocument } from "@/utils/firebase/firebase-sync-engine"
+import { DEFAULT_NOTIFICATION_SETTINGS } from "@lectornaut/shared/domain"
 import { doc } from "firebase/firestore"
 import { useCurrentUser } from "vuefire"
 

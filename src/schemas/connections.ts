@@ -29,18 +29,17 @@ export const connectionBindingStatusSchema = z.enum(CONNECTION_BINDING_STATUSES)
 export const connectionSchema = z.object({
   /** Doc id == provider key (`"google-calendar"`). */
   id: connectionProviderSchema,
-  // Injected from the doc path by the converter (`{ teamId: 1 }`) — the
-  // location is canonical, so legacy/partial docs parse cleanly.
+  // Injected from the doc path by the converter (`{ teamId: 1 }`); not
+  // stored in the body.
   teamId: z.string(),
   /** Mirror of the doc id, denormalized for query symmetry. */
   provider: connectionProviderSchema,
-  status: connectionStatusSchema.default("active"),
+  status: connectionStatusSchema,
   /** Admin who installed the app. */
   installedByUid: z.string(),
   /** OAuth scopes the provider's bindings request (declared, not granted). */
-  scopes: z.array(z.string()).default([]),
-  /** Absent on installations made before app revision tracking. */
-  installedRevision: z.number().int().positive().optional(),
+  scopes: z.array(z.string()),
+  installedRevision: z.number().int().positive(),
   /**
    * Kill-switch provenance (`setConnectionDisabled`): set while
    * `status === "disabled"`, nulled on re-enable. Optional+nullable — docs
@@ -48,8 +47,8 @@ export const connectionSchema = z.object({
    */
   disabledAt: timestampSchema.nullable().optional(),
   disabledByUid: z.string().nullable().optional(),
-  createdAt: timestampSchema.optional(),
-  updatedAt: timestampSchema.optional(),
+  createdAt: timestampSchema,
+  updatedAt: timestampSchema,
 })
 
 export const connectionBindingSchema = z.object({

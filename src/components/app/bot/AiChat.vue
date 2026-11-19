@@ -59,22 +59,15 @@ const scrollerSessionKey = computed(() => botChat?.sessionId.value ?? "draft")
 // Resolution order (per message):
 //   1. `message.authorUid` — server-stamped on every user turn in
 //      `FirestoreBotSessionStore.save()`. The most accurate signal.
-//   2. Session owner uid — fallback for legacy messages saved before
-//      authorship tracking existed. Imperfect (it'll wrongly attribute
-//      admin turns to the owner in old shared chats), but better than
-//      a single shared avatar for everyone.
-//   3. Current user uid — used for the brief window before the very
+//   2. Current user uid — used for the brief window before the very
 //      first server save, when neither `authorUid` nor `activeSession`
 //      is populated yet.
-//   4. Literal "User" — defensive fallback so the avatar component
+//   3. Literal "User" — defensive fallback so the avatar component
 //      never receives an empty string (which would hash to a
 //      degenerate same-everywhere avatar).
 const authStore = useAuthStore()
 const messageAvatarSeed = (message: BotChatMessage): string =>
-  message.authorUid ??
-  botChat?.activeSession.value?.ownerUid ??
-  authStore.currentUser?.uid ??
-  "User"
+  message.authorUid ?? authStore.currentUser?.uid ?? "User"
 
 // Is this user turn authored by the *current* logged-in viewer? Drives
 // right-alignment: your own messages sit on the right (avatar on the
@@ -127,6 +120,24 @@ const messageSenderName = (message: BotChatMessage): string | null => {
   if (!isGroupChat.value || message.role !== "user" || isOwnMessage(message))
     return null
   return memberNamesByUid.value.get(messageAvatarSeed(message)) ?? null
+}
+
+// Whose connected account the connection tool calls in an agent turn used:
+// the member who sent that turn's message. A per-member workflow run has no
+// human sender, so it falls back to the chat's owner (the member it ran for).
+// ponytail: a write card approved by a different member than the sender is
+// labelled with the sender; store the uid on the tool call if that matters.
+const connectionAccountName = (message: BotChatMessage): string | null => {
+  let uid: string | undefined
+  for (let i = messages.value.indexOf(message) - 1; i >= 0; i--) {
+    const previous = messages.value[i]
+    if (previous?.role === "user") {
+      uid = previous.authorUid
+      break
+    }
+  }
+  uid ??= botChat?.activeSession.value?.ownerUid
+  return (uid && memberNamesByUid.value.get(uid)) || null
 }
 
 // Same-sender runs — the `MessageGroup` idea from the kit, applied
@@ -383,7 +394,7 @@ const tailAwaitingNewChunk = computed(() => {
   const last = messages.value[messages.value.length - 1]
   if (last?.role !== "agent") return false
   const segments = last.segments
-  if (!segments || segments.length === 0) return last.content.length === 0
+  if (!segments?.length) return last.content.length === 0
   const tail = segments[segments.length - 1]
   if (tail.kind !== "tool") return false
   return tail.tool.output !== undefined && !tail.tool.isInterrupt
@@ -472,8 +483,7 @@ const renderedMessages = computed(() =>
       })
     } else {
       // No segments — single markdown block over `content`. Covers user
-      // messages (always) and agent messages from before tool support
-      // existed (legacy data and pure text turns).
+      // messages and pure-text agent turns.
       let text = message.content
       if (message.role === "user") {
         const split = splitUploadedFileLabels(text)
@@ -630,6 +640,7 @@ const renderedMessages = computed(() =>
                             v-else
                             :tool="block.segment.tool"
                             :message-id="message.id"
+                            :account-name="connectionAccountName(message)"
                           />
                         </template>
                       </BubbleContent>
@@ -888,7 +899,7 @@ const renderedMessages = computed(() =>
                              middot sits on whichever side faces the buttons;
                              2.5 (10px) on its text side matches the 6px icon
                              padding + 4px row gap on its button side. -->
-                        <Tooltip v-if="message.sentAt">
+                        <Tooltip>
                           <TooltipTrigger as-child>
                             <time
                               :datetime="message.sentAt"

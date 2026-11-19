@@ -20,7 +20,7 @@
  *   - rename / archive / pin / delete: owner OR team admin (`assertCanMutate`)
  */
 
-import { FieldValue } from "firebase-admin/firestore"
+import { FieldValue, Timestamp } from "firebase-admin/firestore"
 import { HttpsError } from "firebase-functions/v2/https"
 import { z } from "zod"
 import { buildContext, logEvent } from "./audit.js"
@@ -46,8 +46,14 @@ import {
 } from "./botBranches.js"
 import { deleteBotSessionHistory } from "./botSnapshotStore.js"
 import { defineCallable } from "./defineCallable.js"
+import {
+  ADMIN_VIEW_KINDS,
+  adminViewGrantId,
+  type AdminViewKind,
+} from "./domain.js"
 import { db } from "./firebase.js"
 import { isAdminRole } from "./permissions.js"
+import { adminViewExpiry } from "./privacyCore.js"
 import { SESSION_READ_CALLABLE_OPTS } from "./runtimeConfig.js"
 import { generateId } from "./utilities.js"
 import { resolveParticipation } from "./workspaceRoles.js"
@@ -177,8 +183,9 @@ interface UpdateBotSessionVisibilityResponse {
 }
 
 /**
- * Change a session's visibility. Only the session owner or a team admin can
- * change it. The "public" mode is rejected by the schema — its read path is not
+ * Change a session's visibility. Only the session owner can change it: an
+ * admin reads someone else's private chat through the logged admin-view
+ * grant, never by sharing it. The "public" mode is rejected by the schema — its read path is not
  * yet implemented and we don't want orphaned-public sessions accruing.
  */
 export const updateBotSessionVisibility = defineCallable({
@@ -195,18 +202,16 @@ export const updateBotSessionVisibility = defineCallable({
   }): Promise<UpdateBotSessionVisibilityResponse> => {
     const { teamId, workspaceId, sessionId, visibility } = input
 
-    const role = await getMembershipRole(teamId, auth.uid)
+    await getMembershipRole(teamId, auth.uid)
     const existing = await readSessionDoc(teamId, workspaceId, sessionId)
     if (!existing) {
       throw new HttpsError("not-found", "Session not found.")
     }
 
-    const isOwner = existing.ownerUid === auth.uid
-    const canChange = isOwner || isAdminRole(role)
-    if (!canChange) {
+    if (existing.ownerUid !== auth.uid) {
       throw new HttpsError(
         "permission-denied",
-        "Only the owner or a team admin can change visibility."
+        "Only the owner can change visibility."
       )
     }
 
@@ -224,10 +229,8 @@ export const updateBotSessionVisibility = defineCallable({
         { merge: true }
       )
 
-    // Audited because `canChange` admits a team ADMIN acting on someone else's
-    // chat: flipping a private session to "shared" exposes another member's
-    // conversation to the whole team. `ownerUid` is recorded so a reader can
-    // tell an owner's own toggle apart from an admin reaching into it.
+    // Audited: flipping a private session to "shared" exposes the owner's
+    // conversation to the whole team.
     //
     // Logged after the write rather than inside a transaction: this callable
     // does a plain merge-set, and wrapping it in one just to co-commit the log
@@ -638,5 +641,86 @@ export const stopBotTurn = defineCallable({
     return {
       stopped: await requestTurnStop(teamId, workspaceId, sessionId, auth.uid),
     }
+  },
+})
+
+// ===========================================================================
+// startAdminView — the logged step before an admin reads private content
+// ===========================================================================
+//
+// Firestore rules no longer let a team admin read other members' PRIVATE
+// chats or memories outright: the read needs a live grant doc at
+// `workspaces/{w}/adminViewGrants/{uid}_{kind}`. This callable is the only
+// writer of that doc, and it writes the audit entry FIRST, so access never
+// exists without its record. One grant covers one kind in one workspace for
+// `ADMIN_VIEW_TTL_MS`; opening again later is a new, separately logged grant.
+// ponytail: per workspace + kind, not per item, because the admin tables are
+// list queries and a rule can only vouch for a list through a fixed doc. Go
+// per-item (callable-served rows) if the audit needs to name each chat.
+
+interface StartAdminViewResponse {
+  kind: AdminViewKind
+  /** Epoch ms; the client drops back to its normal view at this time. */
+  expiresAt: number
+}
+
+export const startAdminView = defineCallable({
+  name: "startAdminView",
+  auth: "verified",
+  appCheck: true,
+  input: z.object({
+    teamId: z.string().min(1),
+    workspaceId: z.string().min(1),
+    kind: z.enum(ADMIN_VIEW_KINDS),
+  }),
+  handler: async ({
+    auth,
+    input,
+    request,
+  }): Promise<StartAdminViewResponse> => {
+    const { teamId, workspaceId, kind } = input
+    const role = await getMembershipRole(teamId, auth.uid)
+    if (!isAdminRole(role)) {
+      throw new HttpsError(
+        "permission-denied",
+        "Only a team admin can view private items."
+      )
+    }
+    const participation = await resolveParticipation(
+      teamId,
+      workspaceId,
+      auth.uid
+    )
+    if (participation.excluded) {
+      throw new HttpsError(
+        "permission-denied",
+        "You are not a member of this workspace."
+      )
+    }
+
+    const expiresAt = adminViewExpiry(Date.now())
+    await logEvent({
+      teamId,
+      workspaceId,
+      actor: { userId: auth.uid, email: auth.token.email ?? undefined, role },
+      action: "admin.private_view.start",
+      resource: { type: "workspace", id: workspaceId },
+      context: buildContext(request),
+      changes: {
+        fields: ["kind", "expiresAt"],
+        after: { kind, expiresAt: new Date(expiresAt).toISOString() },
+      },
+    })
+    await db
+      .doc(
+        `teams/${teamId}/workspaces/${workspaceId}/adminViewGrants/${adminViewGrantId(auth.uid, kind)}`
+      )
+      .set({
+        uid: auth.uid,
+        kind,
+        grantedAt: FieldValue.serverTimestamp(),
+        expiresAt: Timestamp.fromMillis(expiresAt),
+      })
+    return { kind, expiresAt }
   },
 })

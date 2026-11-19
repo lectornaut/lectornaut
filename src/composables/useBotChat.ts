@@ -76,12 +76,20 @@ import {
 } from "@/utils/firebase/firebase-query"
 import {
   BOT_TOOL_PERMISSION_MODES,
+  CONNECTION_WRITE_TOOL_NAMES,
   isModelAllowedOnPlan,
   type BotToolPermissionMode,
 } from "@lectornaut/shared/domain"
 import { until, useStorage } from "@vueuse/core"
 import { storeToRefs } from "pinia"
-import { computed, ref, watch, type InjectionKey, type Ref } from "vue"
+import {
+  computed,
+  reactive,
+  ref,
+  watch,
+  type InjectionKey,
+  type Ref,
+} from "vue"
 import { toast } from "vue-sonner"
 
 // Re-export so consumers (composer, side panel) only need to import from
@@ -241,6 +249,13 @@ export interface BotChatContext {
   activeSession: Ref<IBotSession | null>
   activeVisibility: Ref<IBotSessionVisibility>
   isActiveOwner: Ref<boolean>
+  /**
+   * In a chat the user does not own: whether they agreed to let their replies
+   * use THEIR connected accounts here. Off until they turn it on (per chat,
+   * for this app session); the server offers no connection tools without it.
+   */
+  useMyConnections: Ref<boolean>
+  setUseMyConnections: (allow: boolean) => void
   isActiveArchived: Ref<boolean>
   canEditActive: Ref<boolean>
   canChangeVisibilityActive: Ref<boolean>
@@ -1055,6 +1070,19 @@ export function useBotChat(options?: BotChatOptions): BotChatContext {
     return !!uid && session.ownerUid === uid
   })
 
+  const connectionConsent = reactive<Record<string, boolean>>({})
+  const useMyConnections = computed(
+    () => !!sessionId.value && connectionConsent[sessionId.value] === true
+  )
+  const setUseMyConnections = (allow: boolean) => {
+    if (sessionId.value) connectionConsent[sessionId.value] = allow
+  }
+  // Only sent where it matters; the server ignores it in the user's own chats.
+  const connectionConsentParam = () =>
+    !isActiveOwner.value && useMyConnections.value
+      ? { useMyConnections: true }
+      : {}
+
   const isActiveArchived = computed(
     () => !!activeSession.value && isArchived(activeSession.value)
   )
@@ -1065,17 +1093,18 @@ export function useBotChat(options?: BotChatOptions): BotChatContext {
     if (isActiveOwner.value) return true
     // Shared chats are collaborative: any full member (owner/admin/member)
     // can post into them. Guests — who lack MANAGE_WORKSPACE_CONTENT —
-    // remain read-only. Renaming/archiving/visibility stay admin-only
-    // (`canManageActive` / `canChangeVisibilityActive` below).
+    // remain read-only. Renaming/archiving stay owner-or-admin and
+    // visibility owner-only (`canManageActive` / `canChangeVisibilityActive`).
     return (
       activeVisibility.value === "shared" && canManageWorkspaceContent.value
     )
   })
 
-  const canChangeVisibilityActive = computed(() => {
-    if (!sessionId.value) return false
-    return isActiveOwner.value || isTeamAdmin.value
-  })
+  // Owner only: an admin reads a private chat through the logged admin view,
+  // never by sharing it (the server enforces the same rule).
+  const canChangeVisibilityActive = computed(
+    () => !!sessionId.value && isActiveOwner.value
+  )
 
   /** Owner OR team admin can rename, archive, delete. */
   const canManageActive = computed(() => {
@@ -1380,6 +1409,7 @@ export function useBotChat(options?: BotChatOptions): BotChatContext {
           // passes it here; otherwise this is null (server mints) or the
           // resumed session id.
           sessionId: sessionId.value ?? opts?.newSessionId ?? null,
+          ...connectionConsentParam(),
           message: trimmed,
           mode: mode.value,
           toolPermissionMode: toolPermissionMode.value,
@@ -1397,11 +1427,6 @@ export function useBotChat(options?: BotChatOptions): BotChatContext {
           ...(opts?.fromSnapshotId
             ? { fromSnapshotId: opts.fromSnapshotId }
             : {}),
-          // Always send `activeAgentId` (even when null) so the server
-          // knows the user's intent for this turn. Omitting the field
-          // is reserved for "use whatever the session already had" —
-          // useful for legacy clients but never something this client
-          // wants, since the picker always has a defined state.
           activeAgentId: activeAgentId.value,
         },
         { signal: controller.signal }
@@ -1506,6 +1531,7 @@ export function useBotChat(options?: BotChatOptions): BotChatContext {
           sessionId: sid,
           message: "",
           continueFailedTurn: true,
+          ...connectionConsentParam(),
           mode: mode.value,
           toolPermissionMode: toolPermissionMode.value,
           model: model.value,
@@ -1702,6 +1728,11 @@ export function useBotChat(options?: BotChatOptions): BotChatContext {
           ref,
           name,
           response: answer,
+          // Answering a connection write card is itself the go-ahead to act
+          // through the answering member's account.
+          ...(CONNECTION_WRITE_TOOL_NAMES.includes(name)
+            ? { useMyConnections: true }
+            : connectionConsentParam()),
           mode: mode.value,
           toolPermissionMode: toolPermissionMode.value,
           model: model.value,
@@ -1800,12 +1831,12 @@ export function useBotChat(options?: BotChatOptions): BotChatContext {
       // Rehydrate the model picker from the session's persisted
       // `lastModel` so the chat continues on whichever model produced
       // its history (Opus's reply followed by a switch to Haiku reads
-      // confusingly). Three fallback rungs cover the realistic gaps:
-      //   - `matched` missing (cold-load race) → team default
-      //   - `lastModel` missing (pre-feature session) → team default
+      // confusingly). Fallback rungs:
+      //   - `matched` or `lastModel` missing (cold-load race, or a chat
+      //     with no completed turn) → team default
       //   - `lastModel` no longer allowed (admin disabled it after
       //     this chat last ran) → team default
-      // In all three cases the user's next send will overwrite
+      // In every case the user's next send will overwrite
       // `lastModel` on the doc with whatever the picker shows.
       const persistedModel = matched?.lastModel
       model.value =
@@ -1813,9 +1844,8 @@ export function useBotChat(options?: BotChatOptions): BotChatContext {
           ? persistedModel
           : teamDefaultModel.value
       // Effort rides the same continuity: restore the chat's last pick
-      // (null/absent both mean provider default). No allowlist to clamp
-      // against — the schema's `.catch(undefined)` already swallowed any
-      // retired level, and the server drops picks the model can't take.
+      // (null/absent both mean provider default). The server drops picks
+      // the model can't take.
       effort.value = matched?.lastEffort ?? null
       // Same rehydration story for the active agent: pick up the
       // session's persisted id so the badge matches what the server
@@ -1974,6 +2004,8 @@ export function useBotChat(options?: BotChatOptions): BotChatContext {
     activeSession,
     activeVisibility,
     isActiveOwner,
+    useMyConnections,
+    setUseMyConnections,
     isActiveArchived,
     canEditActive,
     canChangeVisibilityActive,

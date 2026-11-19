@@ -21,7 +21,6 @@ import {
   hasConflictingNestedMergeKey,
   isDefinitiveNotFound,
   isFullAttemptSend,
-  isOldServerPayloadCarryNotFound,
   isUnsettledOperation,
   isVerdictEquivalentSubmissionCode,
   mergeOutboxSnapshots,
@@ -29,14 +28,11 @@ import {
   outboxSnapshotsEqual,
   planDispatch,
   planOutboxPersist,
-  planQuarantineRequeue,
   pruneExpiredOperations,
   resumeParkedOperations,
   shouldPark,
   stripSettledOperationPayload,
   toPersistedOperations,
-  toQuarantinedOutboxEntries,
-  type QuarantinedOutboxEntry,
 } from "@/utils/firebase/firebase-sync-queue"
 import { onIdTokenChanged } from "firebase/auth"
 import type { DocumentReference } from "firebase/firestore"
@@ -92,15 +88,6 @@ const OUTBOX_PERSIST_DEBOUNCE_MS = 16
 // only runs while parked ops exist.
 const PARKED_RESUME_INTERVAL_MS = 60_000
 
-/**
- * Re-export so existing call sites that import these types from this file
- * continue to work. The canonical definitions live alongside the runtime
- * validation schema in `@/schemas/sync`.
- */
-export type { SyncMutatePayload, SyncOutboxOperation }
-/** Row shape returned by {@link listQuarantinedOutboxEntries}. */
-export type { QuarantinedOutboxEntry }
-
 interface RemoteSyncOperationDocument {
   id: string
   userId: string
@@ -124,7 +111,7 @@ interface RemoteSyncOperationDocument {
     /**
      * Written by new-server settlements: the target document's
      * post-settlement `updatedAt` (epoch ms) when the settlement stamped
-     * one. Optional so docs settled by an old deploy still parse.
+     * one. Absent when the settlement stamped no `updatedAt`.
      */
     updatedAtMillis?: number | null
   } | null
@@ -158,14 +145,10 @@ interface SyncEngineState {
  *  - `listener`   — the clientId-scoped ack `onSnapshot`
  *  - `callable`   — the `applySyncOperation` direct-settlement response
  *  - `inspect`    — the post-send-failure remote-document inspection
- *  - `deadLetter` — retired: exhausted ops now park (waiter pending, no
- *    rollback) instead of terminally failing; the key stays for the metrics
- *    shape
  * Diagnostic: a healthy deploy settles mostly via `callable`; a fleet stuck
  * on `listener` means the callable path is failing (soft) somewhere.
  */
-export type SyncSettleSource =
-  "listener" | "callable" | "inspect" | "deadLetter"
+export type SyncSettleSource = "listener" | "callable" | "inspect"
 
 interface SyncMetricsState {
   outboxSize: ComputedRef<number>
@@ -203,8 +186,8 @@ export interface SyncCanonicalEvent {
  * (epoch ms), present when the server settlement stamped one (server-managed
  * `updatedAt` paths). Consumers can refresh an OCC base version from it
  * (`buildUpdatedAtBaseVersion`-compatible millis) without waiting for the
- * target snapshot to round-trip. Absent on verdicts from pre-carry server
- * deploys and on paths whose settlement stamps no `updatedAt`.
+ * target snapshot to round-trip. Absent on paths whose settlement stamps no
+ * `updatedAt`.
  */
 export interface SyncMutateResult {
   status: "ack"
@@ -346,9 +329,6 @@ const flushOutboxPersist = () => {
       settleWaitersFromAdoptedVerdicts(merged)
       scheduleSync()
     }
-    // Demote "parked" to "pending" at the storage boundary — the key is
-    // shared with older app versions whose stricter status enum would
-    // quarantine-and-drop a parked entry (see `toPersistedOperations`).
     const nextRaw = JSON.stringify(toPersistedOperations(merged))
     window.localStorage.setItem(OUTBOX_STORAGE_KEY, nextRaw)
     lastWrittenOutboxRaw = nextRaw
@@ -636,7 +616,6 @@ const settledBySource = ref<Record<SyncSettleSource, number>>({
   listener: 0,
   callable: 0,
   inspect: 0,
-  deadLetter: 0,
 })
 
 const recordSettleSource = (source: SyncSettleSource) => {
@@ -655,12 +634,6 @@ let syncTimer: ReturnType<typeof setTimeout> | null = null
 // and is reset on the first healthy snapshot.
 let ackRetryTimer: ReturnType<typeof setTimeout> | null = null
 let ackRetryAttempts = 0
-// Downgrade latch for the ack query's `createdAt` horizon: the bounded query
-// needs a composite index (clientId ASC, createdAt ASC) on `syncOperations`.
-// Against a backend without it, `onSnapshot` errors with failed-precondition
-// on every attach — flip to the legacy unbounded query instead of wedging the
-// ack listener in a retry loop that can never succeed.
-let ackHorizonUnsupported = false
 let storageSyncCleanup: (() => void) | null = null
 // Per-user leader election (Web Locks). Only the leader tab for the active
 // user sends; other tabs enqueue + persist and the leader adopts those ops.
@@ -1173,27 +1146,24 @@ const ensureAckListener = (userId: string) => {
   // collection-scope composite index (clientId ASC, createdAt ASC) in
   // firestore.indexes.json — kept worth its cost even at 2h server
   // retention because the listener replays ALL matching retained docs on
-  // every stale-resume-token re-attach, not just cold boots; if the index
-  // is missing, `ackHorizonUnsupported` latches the unbounded fallback.
+  // every stale-resume-token re-attach, not just cold boots.
   const operationsCollection = collection(
     firestore,
     "users",
     userId,
     "syncOperations"
   )
-  const ackQuery = ackHorizonUnsupported
-    ? query(operationsCollection, where("clientId", "==", clientId))
-    : query(
-        operationsCollection,
-        where("clientId", "==", clientId),
-        where(
-          "createdAt",
-          ">=",
-          Timestamp.fromMillis(
-            computeAckHorizonMillis(outbox.value, userId, Date.now())
-          )
-        )
+  const ackQuery = query(
+    operationsCollection,
+    where("clientId", "==", clientId),
+    where(
+      "createdAt",
+      ">=",
+      Timestamp.fromMillis(
+        computeAckHorizonMillis(outbox.value, userId, Date.now())
       )
+    )
+  )
 
   ackUnsubscribe = onSnapshot(
     ackQuery,
@@ -1222,17 +1192,6 @@ const ensureAckListener = (userId: string) => {
       ) {
         return
       }
-      // A failed-precondition on the bounded query means the composite index
-      // (clientId ASC, createdAt ASC) is missing — retrying the same query
-      // can never succeed, so latch the downgrade and let the re-attach below
-      // fall back to the legacy unbounded query. Acks matter more than the
-      // read savings.
-      if (
-        !ackHorizonUnsupported &&
-        hasFirebaseErrorCode(error, FirestoreErrorCodes.FAILED_PRECONDITION)
-      ) {
-        ackHorizonUnsupported = true
-      }
       console.error("[syncEngine] Failed to listen for operation acks:", error)
       // `onSnapshot` tears the listener down on error, so without an explicit
       // re-attach acks would never arrive again — the send loop keeps running
@@ -1260,8 +1219,7 @@ interface ApplySyncOperationRequest {
   operationId: string
   /**
    * Payload carry (create-if-absent): sent on first sends only — see
-   * `CarriedSyncOperationPayload`. Old servers strip the unknown key and
-   * answer not-found, which the engine downgrades to the setDoc path.
+   * `CarriedSyncOperationPayload`.
    */
   operation?: CarriedSyncOperationPayload
 }
@@ -1271,7 +1229,7 @@ interface ApplySyncOperationResponse {
   status: "ack" | "reject"
   code: string | null
   message: string | null
-  /** Absent on verdicts from server deploys that predate the ack-updatedAt contract. */
+  /** Absent when the settlement stamped no `updatedAt`. */
   updatedAtMillis?: number | null
 }
 
@@ -1326,11 +1284,9 @@ const applyCallableVerdict = (
  * Warm-path FIRST send: invoke `applySyncOperation` carrying the op payload,
  * so the server creates the op doc and settles it in a single transaction —
  * no op-doc `setDoc` round trip first. Resolves `true` when the engine must
- * FALL BACK to the setDoc path: the deployed server predates payload carry
- * (the old-server not-found downgrade — not a failure), the invocation
- * failed in transport, or the response carried no verdict. The fallback
- * keeps the pre-carry pipeline intact: setDoc stamps `remoteCreated`, the
- * create trigger backstop settles, and retries re-invoke the callable.
+ * FALL BACK to the setDoc path: the invocation failed in transport or the
+ * response carried no verdict. On fallback setDoc stamps `remoteCreated`,
+ * the create trigger backstop settles, and retries re-invoke the callable.
  */
 const requestCarriedSettlement = async (
   operation: SyncOutboxOperation
@@ -1342,15 +1298,6 @@ const requestCarriedSettlement = async (
     })
     return !applyCallableVerdict(operation.id, result.data)
   } catch (error) {
-    const current = outbox.value.find(
-      (candidate) => candidate.id === operation.id
-    )
-    if (current && isOldServerPayloadCarryNotFound(error, current)) {
-      // Quiet downgrade: the setDoc path is the contract the old server
-      // understands. (Never the P0 terminal disposition — that requires
-      // `remoteCreated`, and carried sends only happen without it.)
-      return true
-    }
     console.warn(
       "[syncEngine] Carried settlement request failed (non-fatal):",
       error
@@ -1480,7 +1427,7 @@ const sendOperation = async (operation: SyncOutboxOperation): Promise<void> => {
   if (!next.remoteCreated) {
     // Payload carry: the callable goes out IMMEDIATELY with the op payload —
     // no op-doc setDoc round trip first — so a warm-path write settles in one
-    // round trip. Only on fallback does the pre-carry pipeline run below.
+    // round trip. Only on fallback does the setDoc path run below.
     const needsFallback = await requestCarriedSettlement(next)
     if (!needsFallback) return
 
@@ -1496,7 +1443,7 @@ const sendOperation = async (operation: SyncOutboxOperation): Promise<void> => {
       (candidate) => candidate.id === operation.id
     )
     if (!created) return
-    // Fire-and-forget, matching the pre-carry pipeline: the waiter settles
+    // Fire-and-forget, matching the setDoc path: the waiter settles
     // via `applyRemoteSettlement` whichever path (callable response, ack
     // listener) reports first.
     void requestDirectSettlement(created)
@@ -1507,9 +1454,8 @@ const sendOperation = async (operation: SyncOutboxOperation): Promise<void> => {
 }
 
 /**
- * Create the remote op doc via `setDoc` — the pre-carry submission path, now
- * the FALLBACK when a carried settlement could not complete (old server,
- * transport failure): the doc create fires the trigger backstop, which
+ * Create the remote op doc via `setDoc` — the FALLBACK when a carried
+ * settlement could not complete (transport failure): the doc create fires the trigger backstop, which
  * settles it server-side. Returns false when the op was settled client-side
  * instead (a deterministic verdict-equivalent submission failure); ambiguous
  * submission errors — and verdict-equivalent ones whose post-failure inspect
@@ -2184,101 +2130,6 @@ export function useSyncMetricsState(): SyncMetricsState {
       }
     }),
   }
-}
-
-/** Raw quarantine-ring records, absent-and-corrupt tolerant. */
-const readQuarantineRecords = (): unknown[] => {
-  if (!hasWindow()) return []
-  try {
-    const raw = window.localStorage.getItem(OUTBOX_QUARANTINE_STORAGE_KEY)
-    if (!raw) return []
-    const parsed = JSON.parse(raw) as unknown
-    return Array.isArray(parsed) ? parsed : []
-  } catch {
-    return []
-  }
-}
-
-/**
- * Read the dead-letter quarantine ring — outbox entries dropped on read
- * because they failed schema validation (capped at 500, localStorage-backed).
- * Diagnostics counterpart to `useSyncMetricsState().quarantineCount`: returns
- * the raw entries so a console session (or a future UI) can inspect what was
- * dropped and decide whether to `requeueQuarantinedOutboxEntries()`.
- */
-export function listQuarantinedOutboxEntries(): QuarantinedOutboxEntry[] {
-  return toQuarantinedOutboxEntries(readQuarantineRecords())
-}
-
-/**
- * Re-enqueue quarantined entries that are viable under the CURRENT outbox
- * schema (see `planQuarantineRequeue`: unsettled, active user's, parseable —
- * e.g. rows quarantined by an older build's stricter schema). Each viable
- * entry re-enters the pipeline as a FRESH operation — new id, full payload
- * validation, normal verdict lifecycle — never by resurrecting the
- * quarantined record itself. An entry leaves the ring only AFTER its
- * validate+enqueue succeeded: one that fails the path schema (or a full
- * queue) stays quarantined instead of being dropped on the floor. Settlement
- * is not awaited: a server reject of a re-enqueued write surfaces through
- * the normal ack channels, not from this call.
- */
-export function requeueQuarantinedOutboxEntries(): {
-  requeued: number
-  kept: number
-} {
-  const records = readQuarantineRecords()
-  const userId = activeUserId.value ?? auth.currentUser?.uid ?? null
-  if (!userId || records.length === 0) {
-    return { requeued: 0, kept: records.length }
-  }
-
-  const { requeue, keep } = planQuarantineRequeue(records, userId)
-  let requeued = 0
-  for (const { operation, record } of requeue) {
-    const payload: SyncMutatePayload = {
-      source: operation.source,
-      targetPath: operation.targetPath,
-      type: operation.type,
-      data: operation.data,
-      merge: operation.merge,
-      baseVersion: operation.baseVersion,
-    }
-    try {
-      validateMutationPayload(payload)
-      const { settled } = enqueue(payload, { schedule: "microtask" })
-      settled.catch((error) => {
-        console.warn(
-          "[syncEngine] Re-enqueued quarantined operation did not settle as ack:",
-          error
-        )
-      })
-      requeued += 1
-    } catch (error) {
-      // Validation (or enqueue) refused the payload — keep the raw record
-      // quarantined so the entry is never silently lost.
-      keep.push(record)
-      console.warn(
-        "[syncEngine] Quarantined entry failed re-enqueue; keeping it quarantined:",
-        error
-      )
-    }
-  }
-
-  if (keep.length !== records.length) {
-    try {
-      window.localStorage.setItem(
-        OUTBOX_QUARANTINE_STORAGE_KEY,
-        JSON.stringify(keep)
-      )
-    } catch (error) {
-      console.warn(
-        "[syncEngine] Failed to rewrite the outbox quarantine ring",
-        error
-      )
-    }
-  }
-
-  return { requeued, kept: keep.length }
 }
 
 export function subscribeAcks(subscriber: AckSubscriber): Unsubscribe {

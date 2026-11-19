@@ -60,16 +60,13 @@ export function useRunsTableFilters(
   const selectedWorkflowIds = computed<Set<string>>(
     () => new Set((workflowColumn()?.getFilterValue() as string[]) ?? [])
   )
-  const isWorkflowSelected = (workflowIds: string[]): boolean =>
-    workflowIds.length > 0 &&
-    workflowIds.every((id) => selectedWorkflowIds.value.has(id))
-  const toggleWorkflow = (workflowIds: string[]): void => {
+  const isWorkflowSelected = (workflowId: string): boolean =>
+    selectedWorkflowIds.value.has(workflowId)
+  const toggleWorkflow = (workflowId: string): void => {
     const column = workflowColumn()
     if (!column) return
     const next = new Set(selectedWorkflowIds.value)
-    if (workflowIds.every((id) => next.has(id)))
-      workflowIds.forEach((id) => next.delete(id))
-    else workflowIds.forEach((id) => next.add(id))
+    if (!next.delete(workflowId)) next.add(workflowId)
     column.setFilterValue(next.size ? [...next] : undefined)
   }
   const clearWorkflows = (): void => {

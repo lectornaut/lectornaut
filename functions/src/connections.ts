@@ -18,9 +18,8 @@
  * OAuth flow: the client runs an authorization-code popup (web: redirect to
  * the `/connections/callback` SPA route; desktop: system-browser loopback)
  * and posts the one-time code to `completeConnectionBinding`; the exchange
- * happens HERE because only functions hold the client secret. (A legacy
- * `postmessage` redirect from the old Google GIS popup is still accepted for
- * rolling-deploy compatibility.) Token refresh is on-demand at tool-call time
+ * happens HERE because only functions hold the client secret. Token refresh
+ * is on-demand at tool-call time
  * (`resolveBindingAccessToken`), with `invalid_grant` flipping the binding to
  * `needs_reauth` (reconnect heals it).
  */
@@ -43,7 +42,7 @@ import { getCatalogEntry } from "./integrationCatalog.js"
 // Call-time-only use (lifecycle audit entries) — the direct audit ↔
 // connections module cycle is init-safe: both edges are hoisted function
 // declarations touched only inside handlers, same class as audit.ts's
-// existing call-time import of cleanupMemberConnectionBindings from here.
+// call-time use of cleanupMemberConnectionBindings (via memberCleanup.ts).
 import { buildContext, logEvent } from "./audit.js"
 import { assertAdminRole } from "./authGuards.js"
 import { getMembershipRole } from "./bot.js"
@@ -85,8 +84,6 @@ const bindingSecretDocPath = (
 
 // ─── OAuth endpoints (per-provider; substrate) ───────────────────────────────
 
-/** GIS popup code flow's fixed pseudo redirect — Google web only. */
-const POSTMESSAGE_REDIRECT_URI = "postmessage"
 /** GitHub's API requires a User-Agent on every request. */
 const GITHUB_API_USER_AGENT = "lectornaut-connections"
 
@@ -634,10 +631,9 @@ export const completeConnectionBinding = defineCallable({
     /**
      * The redirect URI used at authorization — desktop (Tauri) loopback OR
      * the web redirect flavor's SPA callback. Validated against the
-     * loopback + configured-web allowlist in the handler. Omitted by Google's
-     * GIS popup web flow (which pins `postmessage` server-side).
+     * loopback + configured-web allowlist in the handler.
      */
-    redirectUri: z.string().max(300).optional(),
+    redirectUri: z.string().min(1).max(300),
   }),
   handler: async ({ request, auth, input }) => {
     const { teamId, provider, code, redirectUri } = input
@@ -649,10 +645,7 @@ export const completeConnectionBinding = defineCallable({
     // endpoint — accept only values we can vouch for (loopback or a
     // configured web callback). Loosening this to an open https match would
     // make it a foothold.
-    if (
-      redirectUri &&
-      !isAllowedRedirectUri(redirectUri, expectedWebCallback(request))
-    ) {
+    if (!isAllowedRedirectUri(redirectUri, expectedWebCallback(request))) {
       logger.warn("[connections] redirect URI rejected", {
         provider,
         redirectUri,
@@ -690,7 +683,7 @@ export const completeConnectionBinding = defineCallable({
       code,
       client_id: config.clientId,
       client_secret: config.clientSecret,
-      redirect_uri: redirectUri ?? POSTMESSAGE_REDIRECT_URI,
+      redirect_uri: redirectUri,
     })
     if (!result.ok) {
       logger.warn("[connections] code exchange failed", {
@@ -700,7 +693,7 @@ export const completeConnectionBinding = defineCallable({
         // The issuer's error token (e.g. redirect_uri_mismatch,
         // bad_verification_code) — turns a generic "rejected" into a diagnosis.
         detail: result.message,
-        redirectUri: redirectUri ?? "postmessage",
+        redirectUri,
       })
       // Surface the cause in the message (kind + issuer error code) — all of
       // it is actionable during setup (incorrect_client_credentials,
@@ -843,7 +836,7 @@ async function revokeAndDeleteBinding(
   teamId: string,
   provider: ConnectionProvider,
   uid: string
-): Promise<void> {
+): Promise<boolean> {
   const secretRef = db.doc(bindingSecretDocPath(teamId, provider, uid))
   const secretSnap = await secretRef.get()
   if (secretSnap.exists) {
@@ -857,6 +850,7 @@ async function revokeAndDeleteBinding(
   batch.delete(secretRef)
   batch.delete(db.doc(bindingDocPath(teamId, provider, uid)))
   await batch.commit()
+  return secretSnap.exists
 }
 
 /**
@@ -903,7 +897,7 @@ export async function markBindingNeedsReauth(
  * the Google grant and delete `bindings/{uid}` + `bindingSecrets/{uid}`
  * across all providers. Stored-token minimization + an honest
  * "N members connected" count; the workflow executor's live-membership gate
- * (`resolveRunActsAsUid`) already stops removed members from powering runs,
+ * (`executeWorkflowRun`) already stops removed members from powering runs,
  * so this is hygiene, not the security boundary.
  *
  * Iterates the static `CONNECTION_PROVIDERS` list rather than reading the
@@ -915,15 +909,17 @@ export async function markBindingNeedsReauth(
  *
  * Deliberately NOT audit-logged per binding: the `membership.remove` entry
  * already records the removal that triggered this, and per-provider sweep
- * noise (mostly no-ops) would dilute the trail.
+ * noise (mostly no-ops) would dilute the trail. Returns how many bindings
+ * were actually removed so that entry can carry the count (memberCleanup.ts).
  */
 export async function cleanupMemberConnectionBindings(
   teamId: string,
   uid: string
-): Promise<void> {
+): Promise<number> {
+  let removed = 0
   for (const provider of CONNECTION_PROVIDERS) {
     try {
-      await revokeAndDeleteBinding(teamId, provider, uid)
+      if (await revokeAndDeleteBinding(teamId, provider, uid)) removed += 1
     } catch (error) {
       logger.warn("[connections] member binding cleanup failed (ignored)", {
         teamId,
@@ -933,6 +929,7 @@ export async function cleanupMemberConnectionBindings(
       })
     }
   }
+  return removed
 }
 
 // ─── Tool-side token resolution ──────────────────────────────────────────────
@@ -942,9 +939,8 @@ export type BindingTokenResult =
       ok: true
       accessToken: string
       /**
-       * Scopes Google actually granted on this binding (empty when the
-       * stored secret predates scope persistence — P1 bindings heal on
-       * their next refresh). Write tools gate on this via
+       * Scopes Google actually granted on this binding. Write tools gate on
+       * this via
        * `hasGrantedScope` and steer stale grants to reconnect.
        */
       grantedScopes: string[]
@@ -1072,8 +1068,7 @@ async function resolveBindingAccessTokenUnrecorded(
     return { ok: false, reason: "transient" }
   }
 
-  // The refresh response restates the grant — prefer it over the stored
-  // copy (it also HEALS P1-era secret docs that predate scope persistence).
+  // The refresh response restates the grant — prefer it over the stored copy.
   const refreshedScopes =
     result.parsed.scopes.length > 0 ? result.parsed.scopes : storedScopes
   try {
@@ -1156,7 +1151,7 @@ function connectionUnavailableMessage(
           ? "Ask an administrator to configure its server OAuth client."
           : reason === "transient"
             ? "Try again shortly."
-            : "Connect or reconnect the acting member's account under Settings → Connections. For workflows, also configure Runs with connected accounts."
+            : "Connect or reconnect your account under Settings → Connections."
   return `${name} is unavailable (${reason}). ${action}`
 }
 

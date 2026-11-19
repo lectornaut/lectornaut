@@ -14,7 +14,7 @@ export const SENT_AT_METADATA_KEY = "lectornautSentAt"
 /**
  * Stamp `at` on every message that has no sent-at yet. Already-stamped
  * messages keep theirs, so a thread re-saved turn after turn only stamps
- * what's new. Legacy messages saved before this existed stay unstamped.
+ * what's new.
  */
 export function stampSentAt(
   messages: readonly MessageData[],

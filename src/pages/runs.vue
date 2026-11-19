@@ -143,9 +143,9 @@ const stats = computed(() => {
                       >
                         <SidebarMenuButton as="label" class="cursor-pointer">
                           <Checkbox
-                            :model-value="isWorkflowSelected(item.workflowIds)"
+                            :model-value="isWorkflowSelected(item.workflowId)"
                             @update:model-value="
-                              toggleWorkflow(item.workflowIds)
+                              toggleWorkflow(item.workflowId)
                             "
                           />
                           <span class="grow truncate">{{ item.name }}</span>

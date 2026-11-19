@@ -44,7 +44,6 @@
  */
 
 import { FieldValue, Timestamp } from "firebase-admin/firestore"
-import * as logger from "firebase-functions/logger"
 import { HttpsError, onCall } from "firebase-functions/v2/https"
 import { z } from "zod"
 // Call-time-only use (lifecycle audit entries) — the indirect cycle
@@ -156,8 +155,7 @@ interface IntegrationDocBase {
   /**
    * Agent profile visibility: the public profile page resolves for
    * anonymous viewers only when the TEAM is public AND this flag is on
-   * (members always see it). Missing = true — opt-out convention, so
-   * docs that predate the field stay visible. Carried on the shared
+   * (members always see it). Carried on the shared
    * envelope; meaningless for tools and for built-in divergence docs
    * (built-in profiles are platform-level, resolved from the registry).
    */
@@ -496,7 +494,7 @@ function normalizeIntegrationDoc(
     description: typeof data.description === "string" ? data.description : "",
     avatarSeed: typeof data.avatarSeed === "string" ? data.avatarSeed : "",
     enabled: typeof data.enabled === "boolean" ? data.enabled : true,
-    isPublic: typeof data.isPublic === "boolean" ? data.isPublic : true,
+    isPublic: data.isPublic === true,
     archivedAt: data.archivedAt instanceof Timestamp ? data.archivedAt : null,
     createdAt:
       data.createdAt instanceof Timestamp ? data.createdAt : Timestamp.now(),
@@ -635,32 +633,9 @@ export async function listIntegrations(
 
   const snap = await db.collection(integrationsCollectionPath(teamId)).get()
   const docs: IntegrationDoc[] = []
-  // Data healing: custom docs written before the body `id` field shipped
-  // (2026-06-12, public agent profiles) get it backfilled opportunistically
-  // — fire-and-forget so the read path pays no latency. Converges on the
-  // first server read of the team's integrations (dispatch or any
-  // integration callable).
-  const missingIdRefs: FirebaseFirestore.DocumentReference[] = []
   for (const d of snap.docs) {
     const doc = normalizeIntegrationDoc(teamId, d.id, d.data())
-    if (doc) {
-      docs.push(doc)
-      if (doc.source === "custom" && d.data()?.id !== d.id) {
-        missingIdRefs.push(d.ref)
-      }
-    }
-  }
-  if (missingIdRefs.length > 0) {
-    const batch = db.batch()
-    for (const ref of missingIdRefs) {
-      batch.set(ref, { id: ref.id }, { merge: true })
-    }
-    void batch.commit().catch((err) => {
-      logger.warn(
-        `[integrations] id backfill failed team=${teamId} count=${missingIdRefs.length}`,
-        { err: String(err) }
-      )
-    })
+    if (doc) docs.push(doc)
   }
   const byTypeKey = new Map<string, IntegrationDoc>()
   const customs: IntegrationDoc[] = []
@@ -908,8 +883,7 @@ async function writeNewCustomDoc(
   await ref.set({
     // Own id duplicated into the body so the doc is reachable by a
     // collectionGroup equality query (the public agent-profile lookup) —
-    // collectionGroup can't filter on document id alone. Older docs are
-    // healed by `listIntegrations`.
+    // collectionGroup can't filter on document id alone.
     id: ref.id,
     type: fields.type,
     source: "custom",

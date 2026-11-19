@@ -23,6 +23,59 @@ fn set_tray_visible(app: tauri::AppHandle, visible: bool) -> Result<(), String> 
     }
 }
 
+// Run-at-login as the OS actually sees it: "enabled", "disabled", or
+// "blocked". The plugin's `is_enabled` is accurate on Windows (it reads
+// Task Manager's StartupApproved flag) and Linux, but on macOS it only checks
+// that the launch-agent plist exists, so it can't see the user switching the
+// app off under System Settings → Login Items ("Allow in the Background").
+// `SMAppService.statusForLegacyURL:` (macOS 13+) can, so a present plist is
+// refined with it; older macOS has no such switch, so the plist is the truth.
+#[tauri::command]
+fn autostart_status(app: tauri::AppHandle) -> Result<&'static str, String> {
+    use tauri_plugin_autostart::ManagerExt;
+
+    if !app.autostart().is_enabled().map_err(|e| e.to_string())? {
+        return Ok("disabled");
+    }
+    #[cfg(target_os = "macos")]
+    {
+        // Same path the plugin writes: ~/Library/LaunchAgents/{name}.plist.
+        let plist = app
+            .path()
+            .home_dir()
+            .map_err(|e| e.to_string())?
+            .join("Library/LaunchAgents")
+            .join(format!("{}.plist", app.package_info().name));
+        if login_item_requires_approval(&plist) {
+            return Ok("blocked");
+        }
+    }
+    Ok("enabled")
+}
+
+#[cfg(target_os = "macos")]
+#[link(name = "ServiceManagement", kind = "framework")]
+extern "C" {}
+
+#[cfg(target_os = "macos")]
+fn login_item_requires_approval(plist: &std::path::Path) -> bool {
+    use objc2::{class, msg_send, rc::Retained, runtime::AnyClass, runtime::AnyObject};
+    use objc2_foundation::NSString;
+
+    // SMAppService is macOS 13+; its absence means no Login Items switch.
+    let Some(service) = AnyClass::get(c"SMAppService") else {
+        return false;
+    };
+    let path = NSString::from_str(&plist.to_string_lossy());
+    let url: Option<Retained<AnyObject>> =
+        unsafe { msg_send![class!(NSURL), fileURLWithPath: &*path] };
+    let Some(url) = url else {
+        return false;
+    };
+    let status: isize = unsafe { msg_send![service, statusForLegacyURL: &*url] };
+    status == 2 // SMAppServiceStatusRequiresApproval
+}
+
 // Applies the chosen app icon variant on macOS, in two places:
 //
 // 1. The running app's Dock / Cmd-Tab tile (`setApplicationIconImage`). Both
@@ -372,6 +425,7 @@ pub fn run() {
             file_capture::preview_file_path,
             window_controls::align_macos_window_controls,
             set_tray_visible,
+            autostart_status,
             set_dock_icon
         ])
         .setup(|app| {

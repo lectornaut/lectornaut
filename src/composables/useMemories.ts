@@ -15,6 +15,7 @@
  * instantly and recall catches up asynchronously.
  */
 
+import { useAdminView } from "@/composables/useAdminView"
 import { useCurrentTeamRole } from "@/composables/useCurrentTeamRole"
 import {
   archiveMemory,
@@ -127,11 +128,14 @@ export function useMemories(): UseMemoriesReturn {
   // briefly show governance-only mode before the config store settles.
   const memoryEnabled = computed(() => config.value?.memoryEnabled ?? true)
 
-  // Admins read every memory (unfiltered); members are constrained by rules to
-  // their own + shared, so they subscribe to two queries that each provably
-  // satisfy the rule predicate.
+  // The logged "view as admin" step: an admin reads every memory (unfiltered)
+  // only while their grant is live. Otherwise, like members, they are
+  // constrained by rules to their own + shared, so they subscribe to two
+  // queries that each provably satisfy the rule predicate.
+  const adminView = useAdminView("memories")
+  const seesAll = computed(() => isTeamAdmin.value && adminView.active.value)
   const adminQuery = useCollectionQuery<IMemory>(() => {
-    if (!isTeamAdmin.value) return null
+    if (!seesAll.value) return null
     const teamId = currentTeamId.value
     const workspaceId = currentWorkspaceId.value
     if (!teamId || !workspaceId) return null
@@ -143,7 +147,7 @@ export function useMemories(): UseMemoriesReturn {
   })
 
   const ownQuery = useCollectionQuery<IMemory>(() => {
-    if (isTeamAdmin.value) return null
+    if (seesAll.value) return null
     const teamId = currentTeamId.value
     const workspaceId = currentWorkspaceId.value
     const owner = uid.value
@@ -156,7 +160,7 @@ export function useMemories(): UseMemoriesReturn {
   })
 
   const sharedQuery = useCollectionQuery<IMemory>(() => {
-    if (isTeamAdmin.value) return null
+    if (seesAll.value) return null
     const teamId = currentTeamId.value
     const workspaceId = currentWorkspaceId.value
     if (!teamId || !workspaceId) return null
@@ -168,7 +172,7 @@ export function useMemories(): UseMemoriesReturn {
   })
 
   const memories = computed<IMemory[]>(() => {
-    if (isTeamAdmin.value) {
+    if (seesAll.value) {
       return [...(adminQuery.data.value ?? [])].sort(byUpdatedDesc)
     }
     // Merge own + shared, dedupe by id (own wins so my private/shared rows keep
@@ -190,7 +194,7 @@ export function useMemories(): UseMemoriesReturn {
   })
 
   const isLoading = computed<boolean>(() =>
-    isTeamAdmin.value
+    seesAll.value
       ? adminQuery.isLoading.value
       : ownQuery.isLoading.value || sharedQuery.isLoading.value
   )
@@ -205,7 +209,7 @@ export function useMemories(): UseMemoriesReturn {
     const workspaceId = currentWorkspaceId.value
     if (!teamId || !workspaceId) return []
     const path = memoriesPath(teamId, workspaceId)
-    return isTeamAdmin.value
+    return seesAll.value
       ? [queryKeys.list(path, { scope: "workspace-all" })]
       : [
           queryKeys.list(path, { scope: "own" }),

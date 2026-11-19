@@ -17,26 +17,21 @@ const props = withDefaults(
     variant?: OrbVariant
     /** Rendered edge length in px. The 28px geometry scales to fit. */
     size?: number
-    /** Accessible label, and the status text when `pill` is set. */
+    /** Accessible label. */
     label?: string
-    /** Wraps the orb and its label in a status pill. */
-    pill?: boolean
   }>(),
-  { variant: "B5", size: SIZE, label: undefined, pill: false }
+  { variant: "B5", size: SIZE, label: undefined }
 )
 
 const text = computed(() => props.label ?? ORB_TASKS[props.variant] + "…")
 </script>
 
 <template>
-  <span class="root" :data-pill="pill ? '' : null">
-    <!-- In pill form the visible label already carries the meaning, so the
-         glyph steps out of the accessibility tree. -->
+  <span class="root">
     <span
       class="glyph"
-      :role="pill ? undefined : 'img'"
-      :aria-label="pill ? undefined : text"
-      :aria-hidden="pill ? 'true' : undefined"
+      role="img"
+      :aria-label="text"
       :style="{
         width: size + 'px',
         height: size + 'px',
@@ -49,7 +44,6 @@ const text = computed(() => props.label ?? ORB_TASKS[props.variant] + "…")
         <span class="shape shape-c" />
       </span>
     </span>
-    <span v-if="pill" class="pill-label">{{ text }}</span>
   </span>
 </template>
 
@@ -57,30 +51,6 @@ const text = computed(() => props.label ?? ORB_TASKS[props.variant] + "…")
 .root {
   display: inline-flex;
   align-items: center;
-}
-
-/* The inline pill form — same component, wrapped. */
-.root[data-pill] {
-  gap: 7px;
-  height: 30px;
-  padding: 0 11px 0 5px;
-  border-radius: 999px;
-  background: #ffffff;
-  /* A hairline ring rather than a border, so it can't affect layout, plus
-     a tight contact shadow and a wider ambient one. */
-  box-shadow:
-    0 0 0 0.5px rgba(0, 0, 0, 0.08),
-    0 1px 2px rgba(0, 0, 0, 0.05),
-    0 2px 4px rgba(0, 0, 0, 0.02);
-}
-
-.pill-label {
-  font-family: "Inter", system-ui, sans-serif;
-  font-size: 11.5px;
-  font-weight: 425;
-  line-height: 1;
-  color: #a1a1a1;
-  white-space: nowrap;
 }
 
 .glyph {
@@ -93,21 +63,8 @@ const text = computed(() => props.label ?? ORB_TASKS[props.variant] + "…")
   contain: strict;
 }
 
-/* The app themes by class (`@custom-variant dark` in styles/index.css), not
-   by OS preference — a `prefers-color-scheme` query here would ignore the
-   in-app toggle. The bare glyph needs no override at all: its shapes paint
-   with `currentColor`, so it inherits whatever the host row sets. */
-:where(.dark, [data-theme="dark"]) .root[data-pill] {
-  background: #1a1a1a;
-  box-shadow:
-    0 0 0 0.5px rgba(255, 255, 255, 0.12),
-    0 1px 2px rgba(0, 0, 0, 0.4),
-    0 2px 4px rgba(0, 0, 0, 0.3);
-}
-
-:where(.dark, [data-theme="dark"]) .pill-label {
-  color: #a3a3a3;
-}
+/* The glyph needs no dark-mode override: its shapes paint with
+   `currentColor`, so it inherits whatever the host row sets. */
 
 /* --- Lens: three circles at depth, blur reads as distance --------- */
 

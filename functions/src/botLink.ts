@@ -139,18 +139,11 @@ async function loadSourceNode(
   const data = snap.data() ?? {}
   const name = typeof data.name === "string" ? data.name : nodeId
   // `embedding` is stored via `FieldValue.vector(arr)` so it comes back
-  // as a `VectorValue`. Anything else (missing, wrong type, or a stale
-  // array from before the FieldValue migration) is treated as "no
-  // embedding" — the caller short-circuits to an empty result rather
-  // than running an unbounded query against a missing field.
-  const raw = data.embedding as unknown
-  const isVectorValue =
-    raw !== null &&
-    typeof raw === "object" &&
-    typeof (raw as { toArray?: unknown }).toArray === "function"
+  // as a `VectorValue`; folders and empty files have none, and the caller
+  // short-circuits to an empty result.
   return {
     name,
-    embedding: isVectorValue ? (raw as VectorValue) : null,
+    embedding: (data.embedding as VectorValue | undefined) ?? null,
   }
 }
 

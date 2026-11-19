@@ -228,9 +228,6 @@ export const useTeamAgentsStore = defineStore("teamAgents", () => {
     ...agents.value,
   ])
 
-  /** Backwards-compat alias for `pickerAgents`. */
-  const activeAgents = pickerAgents
-
   const disabledAgents = computed<ITeamAgent[]>(() =>
     agents.value
       .filter((agent) => agent.enabled === false && !agent.archivedAt)
@@ -403,7 +400,6 @@ export const useTeamAgentsStore = defineStore("teamAgents", () => {
     connectionAgents,
     allAgents,
     pickerAgents,
-    activeAgents,
     selectableAgents,
     disabledAgents,
     archivedAgents,

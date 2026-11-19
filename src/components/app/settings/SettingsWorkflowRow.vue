@@ -27,8 +27,6 @@ import { settingsLifecycleStatus } from "@/helpers/settingsPresentation"
  *     rows add Archive / Restore + Delete-forever (`canArchive` / `isArchived`
  *     / `canDelete`). Delete only emits `remove`; the parent list owns the
  *     one confirm dialog.
- *   - `switchDisabled` lets a gated predefined preset (dependency not shipped
- *     yet) render its Switch inert.
  */
 const props = defineProps<{
   /** Stable element id for the Switch (the workflow doc id). */
@@ -46,8 +44,6 @@ const props = defineProps<{
   canArchive: boolean
   /** Custom → can hard-delete. */
   canDelete: boolean
-  /** e.g. a gated predefined preset whose dependency doesn't exist yet. */
-  switchDisabled?: boolean
 }>()
 
 const emit = defineEmits<{
@@ -181,7 +177,7 @@ const onToggleEnabled = (value: boolean | string): void => {
               <Switch
                 :id="`wf-row-${id}`"
                 :model-value="enabled"
-                :disabled="!canManage || isSaving || switchDisabled"
+                :disabled="!canManage || isSaving"
                 @update:model-value="onToggleEnabled"
               />
             </span>

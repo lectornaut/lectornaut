@@ -233,37 +233,14 @@ export const SYSTEM_SHORTCUTS = new Set<HotkeyBinding>([
 ])
 
 /**
- * Split a binding string into individual combos while preserving literal comma
- * keys, e.g. `"Mod+,"` -> `["Mod+,"]`. Also splits legacy hotkeys-js values
- * (`"cmd+k,ctrl+k"` -> `["cmd+k", "ctrl+k"]`) so existing user overrides keep
- * working without a data migration.
- */
-export const splitHotkeyBindings = (binding: string): string[] => {
-  const normalizedBinding = binding.replace(/\s/g, "")
-  if (!normalizedBinding) return []
-
-  const combos = normalizedBinding.split(",")
-  let index = combos.lastIndexOf("")
-
-  while (index > 0) {
-    combos[index - 1] += ","
-    combos.splice(index, 1)
-    index = combos.lastIndexOf("")
-  }
-
-  return combos.filter(Boolean)
-}
-
-/**
  * Resolve a shortcut binding (single string, array, or undefined) to a flat
- * list of combo strings. A bare string is run through `splitHotkeyBindings` so
- * both array definitions and legacy comma-joined overrides normalize uniformly.
+ * list of combo strings.
  */
 export const getHotkeyCombos = (
   binding: HotkeyBinding | HotkeyBinding[] | undefined
 ): string[] => {
   if (!binding) return []
-  return Array.isArray(binding) ? binding : splitHotkeyBindings(binding)
+  return Array.isArray(binding) ? binding : [binding]
 }
 
 /**
@@ -397,8 +374,7 @@ export const normalizeHotkeyCombo = (combo: string): string => {
 
 /**
  * True when a single recorded combo equals the shortcut's default binding,
- * compared canonically (so `"Mod+K"` matches a legacy `"cmd+k"` override and a
- * freshly recorded combo alike). Only single-combo defaults are user-editable,
+ * compared canonically (case-insensitive). Only single-combo defaults are user-editable,
  * so multi-combo defaults never match.
  */
 export const isDefaultHotkey = (shortcutId: string, combo: string): boolean => {

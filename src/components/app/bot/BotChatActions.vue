@@ -109,6 +109,12 @@ const visibilityOptions = computed<VisibilityOption[]>(() => [
   },
 ])
 
+// Sharing a chat that read a connected account (Drive, Gmail, Calendar,
+// GitHub) exposes that content to the team, so the confirm says so.
+const holdsConnectedContent = computed(
+  () => !!activeSession.value?.usedConnections
+)
+
 const confirmShareOpen = ref(false)
 const pendingVisibility = ref<IBotSessionVisibility | null>(null)
 
@@ -373,7 +379,11 @@ const submitDelete = async () => {
   <ConfirmAction
     v-model:open="confirmShareOpen"
     :title="t('ai.sidebar.shareConfirmTitle')"
-    :description="t('ai.sidebar.shareConfirmDescription')"
+    :description="
+      holdsConnectedContent
+        ? t('ai.sidebar.shareConfirmConnectedDescription')
+        : t('ai.sidebar.shareConfirmDescription')
+    "
     :action-label="t('ai.sidebar.shareConfirmAction')"
     :on-confirm="handleConfirmShare"
   />

@@ -1,8 +1,4 @@
 import { firestore } from "@/modules/firebase"
-import {
-  FirestoreErrorCodes,
-  hasFirebaseErrorCode,
-} from "@/utils/firebase/firebase-errors"
 import { withCloudSyncOperation } from "@/utils/firebase/firebase-optimistic"
 import { mutateSetDocument } from "@/utils/firebase/firebase-sync-engine"
 import { useEventListener } from "@vueuse/core"
@@ -97,24 +93,12 @@ export async function loadSnapshot(
 ): Promise<Uint8Array | null> {
   const snapshotRef = doc(firestore, "snapshots", contentId)
 
-  let snapshot
-
-  try {
-    // Server-authoritative read (NOT cache-first): the snapshot is mutated
-    // server-side by agent edits without a client listener, so a cached read
-    // would keep returning a stale/deleted snapshot on reopen — clobbering the
-    // newer `content` and reverting agent edits. `getDoc` still falls back to
-    // the cache when offline.
-    snapshot = await getDoc(snapshotRef)
-  } catch (error) {
-    // Older rulesets deny reads for missing snapshot docs. Treat that as a miss
-    // so collaboration can still initialize while rules are being rolled out.
-    if (hasFirebaseErrorCode(error, FirestoreErrorCodes.PERMISSION_DENIED)) {
-      return null
-    }
-
-    throw error
-  }
+  // Server-authoritative read (NOT cache-first): the snapshot is mutated
+  // server-side by agent edits without a client listener, so a cached read
+  // would keep returning a stale/deleted snapshot on reopen — clobbering the
+  // newer `content` and reverting agent edits. `getDoc` still falls back to
+  // the cache when offline.
+  const snapshot = await getDoc(snapshotRef)
 
   if (!snapshot.exists()) {
     return null

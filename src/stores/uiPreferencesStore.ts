@@ -235,15 +235,13 @@ export const useUiPreferencesStore = defineStore("uiPreferences", () => {
         ? (navigationDoc.agentVisibility as Record<string, boolean>)
         : null
 
-      // Clear the dirty flag once our own write round-trips. Each field present
-      // in the snapshot must match local; an absent field is not gating, so an
-      // older doc that predates either feature won't keep prefs stuck dirty.
+      // Clear the dirty flag once our own write round-trips.
       if (
         navigationUiDirty.value &&
-        (ui || savedAgentVisibility) &&
-        (!ui || isNavigationUiSnapshotInSync(ui)) &&
-        (!savedAgentVisibility ||
-          isAgentVisibilityPersisted(savedAgentVisibility))
+        ui &&
+        savedAgentVisibility &&
+        isNavigationUiSnapshotInSync(ui) &&
+        isAgentVisibilityPersisted(savedAgentVisibility)
       ) {
         navigationUiDirty.value = false
       }

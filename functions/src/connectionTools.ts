@@ -28,19 +28,19 @@ import { resolveBindingAccessToken } from "./connections.js"
 import {
   clampCalendarListInput,
   compactCalendarEvents,
-  GOOGLE_CALENDAR_EVENTS_SCOPE,
-  hasGrantedScope,
   interpretResumedConfirmation,
   validateCalendarEventDraft,
   validateCalendarEventPatch,
   type CompactCalendarEvent,
 } from "./connectionsCore.js"
 import {
+  GOOGLE_CALENDAR_EVENTS_SCOPE,
   GOOGLE_CALENDAR_TOOL_KEY,
   GOOGLE_DRIVE_FILE_SCOPE,
   GOOGLE_DRIVE_READ_FILE_TOOL_NAME,
   GOOGLE_DRIVE_TOOL_KEY,
   GOOGLE_DRIVE_WRITE_TOOL_NAMES,
+  hasGrantedScope,
   type ConnectionProvider,
 } from "./domain.js"
 import {

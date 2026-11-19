@@ -10,8 +10,10 @@
  * private — in one list. Agent-owned sessions (headless workflow
  * runs, `ownerUid = agentId`) are then dropped client-side: they have their
  * own home in Settings → Workflows plus the run-history view and would
- * otherwise flood this human-chat admin table. Non-admins receive an empty
- * snapshot because the Firestore rule clause requires `isTeamAdmin(teamId)`.
+ * otherwise flood this human-chat admin table. The unfiltered query needs
+ * the logged "view as admin" grant (`useAdminView`): the Firestore rule
+ * admits it only while that grant is live. Until then the table lists shared
+ * chats plus the admin's own.
  *
  * Mutations reuse the same Cloud Function callables as the per-user
  * sidebar (`renameBotSession`, `archiveBotSession`, `deleteBotSession`).
@@ -20,6 +22,7 @@
  * this surface.
  */
 
+import { useAdminView } from "@/composables/useAdminView"
 import { useCurrentTeamRole } from "@/composables/useCurrentTeamRole"
 import {
   archiveBotSession,
@@ -32,13 +35,17 @@ import { useAuthStore } from "@/stores/authStore"
 import { useMembershipStore } from "@/stores/membershipStore"
 import type { IBotSession } from "@/types/domain"
 import { isAgentMembership } from "@/types/membership"
-import { createWorkspaceBotSessionsQuery } from "@/utils/firebase/firebase-helpers"
+import {
+  createBotSessionsQuery,
+  createSharedBotSessionsQuery,
+  createWorkspaceBotSessionsQuery,
+} from "@/utils/firebase/firebase-helpers"
 import {
   holdOptimistic,
   useCollectionQuery,
 } from "@/utils/firebase/firebase-query"
 import { queryKeys } from "@/utils/firebase/firebase-query-keys"
-import { Timestamp } from "firebase/firestore"
+import { Timestamp, type Query } from "firebase/firestore"
 import { storeToRefs } from "pinia"
 import { computed, ref, type ComputedRef, type Ref } from "vue"
 import { toast } from "vue-sonner"
@@ -62,30 +69,70 @@ export function useWorkspaceBotSessions(): UseWorkspaceBotSessionsReturn {
   const { canManageBotSessions } = useCurrentTeamRole(currentTeamId)
   const { teamMembers } = storeToRefs(useMembershipStore())
 
-  const queryRef = computed(() => {
-    // Short-circuit when the user can't manage: skip subscribing
-    // entirely so we don't waste a Firestore read budget on a rule
-    // denial that would always return empty anyway.
-    if (!canManageBotSessions.value) return null
-    const teamId = currentTeamId.value
-    const workspaceId = currentWorkspaceId.value
-    if (!teamId || !workspaceId) return null
-    return createWorkspaceBotSessionsQuery(teamId, workspaceId)
-  })
+  const { currentUser } = storeToRefs(useAuthStore())
+  // The logged "view as admin" step: the unfiltered query is allowed by rules
+  // only while the admin's grant is live. Without it the table lists what the
+  // rules give any member: shared chats plus the admin's own.
+  const adminView = useAdminView("sessions")
+  const seesAll = computed(
+    () => canManageBotSessions.value && adminView.active.value
+  )
 
-  const sessionsQuery = useCollectionQuery<IBotSession>(() => {
-    const activeQuery = queryRef.value
-    const teamId = currentTeamId.value
-    const workspaceId = currentWorkspaceId.value
-    return activeQuery && teamId && workspaceId
-      ? {
-          query: activeQuery,
-          path: `teams/${teamId}/workspaces/${workspaceId}/botSessions`,
-          // Distinguishes this unfiltered admin view from useBotChat's
-          // owned/shared queries on the same collection.
-          params: { scope: "workspace-all" },
-        }
-      : null
+  // One slot per query the table may run. `null` skips subscribing (also the
+  // no-permission short-circuit, so a rule denial never costs a read).
+  const sessionQuery = (
+    scope: "workspace-all" | "manage-shared" | "manage-own",
+    enabled: () => boolean,
+    build: (teamId: string, workspaceId: string) => Query<IBotSession> | null
+  ) =>
+    useCollectionQuery<IBotSession>(() => {
+      const teamId = currentTeamId.value
+      const workspaceId = currentWorkspaceId.value
+      if (!canManageBotSessions.value || !enabled()) return null
+      if (!teamId || !workspaceId) return null
+      const query = build(teamId, workspaceId)
+      return query
+        ? {
+            query,
+            path: `teams/${teamId}/workspaces/${workspaceId}/botSessions`,
+            // Distinguishes these from useBotChat's owned/shared queries on
+            // the same collection.
+            params: { scope },
+          }
+        : null
+    })
+  const allQuery = sessionQuery(
+    "workspace-all",
+    () => seesAll.value,
+    createWorkspaceBotSessionsQuery
+  )
+  const sharedQuery = sessionQuery(
+    "manage-shared",
+    () => !seesAll.value,
+    createSharedBotSessionsQuery
+  )
+  const ownQuery = sessionQuery(
+    "manage-own",
+    () => !seesAll.value,
+    (teamId, workspaceId) => {
+      const uid = currentUser.value?.uid
+      return uid ? createBotSessionsQuery(teamId, workspaceId, uid) : null
+    }
+  )
+  const activeScopes = computed(() =>
+    seesAll.value
+      ? (["workspace-all"] as const)
+      : (["manage-shared", "manage-own"] as const)
+  )
+  const rows = computed<IBotSession[]>(() => {
+    if (seesAll.value) return allQuery.data.value ?? []
+    // Merge shared + own, dedupe by id, newest first (the queries' order).
+    const byId = new Map<string, IBotSession>()
+    for (const s of sharedQuery.data.value ?? []) byId.set(s.id, s)
+    for (const s of ownQuery.data.value ?? []) byId.set(s.id, s)
+    return [...byId.values()].sort(
+      (a, b) => (b.updatedAt?.toMillis() ?? 0) - (a.updatedAt?.toMillis() ?? 0)
+    )
   })
 
   // Custom team agents enrolled as agent memberships. A headless workflow run
@@ -103,18 +150,21 @@ export function useWorkspaceBotSessions(): UseWorkspaceBotSessionsReturn {
   //     their role — so the membership set alone misses them. Predefined
   //     workflows run as `_default`, so this is the COMMON case, not an edge.
   //   • custom team agents are enrolled, so they appear in `customAgentUids`.
-  // Owner-less legacy docs (ownerUid absent) are treated as human and kept.
-  const isAgentOwned = (uid: string | undefined): boolean =>
-    !!uid && (isBuiltInAgentId(uid) || customAgentUids.value.has(uid))
+  const isAgentOwned = (uid: string): boolean =>
+    isBuiltInAgentId(uid) || customAgentUids.value.has(uid)
 
   // Exclude agent-owned (workflow-run) sessions: they have their own home in
   // Settings → Workflows + the run-history view, and listing them here mixes
   // unattended automation runs into the human-chat admin table.
   const sessions = computed<IBotSession[]>(() =>
-    (sessionsQuery.data.value ?? []).filter((s) => !isAgentOwned(s.ownerUid))
+    rows.value.filter((s) => !isAgentOwned(s.ownerUid))
   )
 
-  const isLoading = computed<boolean>(() => sessionsQuery.isLoading.value)
+  const isLoading = computed<boolean>(() =>
+    seesAll.value
+      ? allQuery.isLoading.value
+      : sharedQuery.isLoading.value || ownQuery.isLoading.value
+  )
 
   // Single in-flight flag shared across all mutation paths — bulk
   // actions in the UI iterate sequentially and rely on this guard to
@@ -132,23 +182,31 @@ export function useWorkspaceBotSessions(): UseWorkspaceBotSessionsReturn {
     applyOptimistic: (current: IBotSession[]) => IBotSession[],
     run: () => Promise<unknown>
   ): Promise<void> => {
-    const key = queryKeys.list(
-      `teams/${teamId}/workspaces/${workspaceId}/botSessions`,
-      { scope: "workspace-all" }
+    // Patch every cache key the current view subscribes to.
+    const keys = activeScopes.value.map((scope) =>
+      queryKeys.list(`teams/${teamId}/workspaces/${workspaceId}/botSessions`, {
+        scope,
+      })
     )
-    const previous = queryClient.getQueryData<IBotSession[]>(key)
-    const release = holdOptimistic(key)
-    queryClient.setQueryData<IBotSession[]>(
-      key,
-      applyOptimistic(previous ?? [])
+    const snapshots = keys.map(
+      (key) => [key, queryClient.getQueryData<IBotSession[]>(key)] as const
     )
+    const releases = keys.map((key) => holdOptimistic(key))
+    for (const [key, previous] of snapshots) {
+      queryClient.setQueryData<IBotSession[]>(
+        key,
+        applyOptimistic(previous ?? [])
+      )
+    }
     try {
       await run()
     } catch (error) {
-      queryClient.setQueryData(key, previous)
+      for (const [key, previous] of snapshots) {
+        queryClient.setQueryData(key, previous)
+      }
       throw error
     } finally {
-      setTimeout(() => release(), 120)
+      setTimeout(() => releases.forEach((release) => release()), 120)
     }
   }
 

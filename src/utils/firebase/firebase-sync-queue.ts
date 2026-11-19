@@ -7,10 +7,7 @@
  * owns all the side effects — listeners, timers, localStorage, Firestore
  * writes — and delegates the "what should happen next" decisions here.
  */
-import {
-  syncOutboxOperationSchema,
-  type SyncOutboxOperation,
-} from "@/schemas/sync"
+import type { SyncOutboxOperation } from "@/schemas/sync"
 
 /** Retention for settled (acked/rejected) ops before they are pruned. */
 export const OUTBOX_SETTLED_RETENTION_MS = 60 * 60 * 1000
@@ -407,8 +404,7 @@ const FUNCTIONS_NOT_FOUND_CODE = "functions/not-found"
  * no verdict can ever arrive, so retrying/parking would pin the op (and,
  * via per-path FIFO, every later write to its target) forever. The engine
  * settles such ops client-side as rejected through the normal verdict path.
- * A details-less not-found (old server deploy, infra 404) stays on the
- * park/ladder path — the safe, pre-carry behavior.
+ * A details-less not-found (infra 404) stays on the park/ladder path.
  */
 export const isDefinitiveNotFound = (
   error: unknown,
@@ -424,27 +420,6 @@ export const isDefinitiveNotFound = (
   typeof (error as { details?: unknown }).details === "object" &&
   (error as { details: { operationMissing?: unknown } | null }).details
     ?.operationMissing === true
-
-/**
- * The payload-carry mirror of `isDefinitiveNotFound`: a callable "not-found"
- * for an op whose op doc was NEVER created (`remoteCreated` false) means the
- * deployed server predates payload carry — its narrower input schema stripped
- * the carried `operation` and it looked up a doc that does not exist. Not a
- * failure: the engine downgrades to the setDoc path (create the op doc, then
- * re-invoke), the contract the old server understands. Only unsettled ops
- * qualify; a not-found WITH `remoteCreated` stays the terminal disposition
- * `isDefinitiveNotFound` owns.
- */
-export const isOldServerPayloadCarryNotFound = (
-  error: unknown,
-  operation: SyncOutboxOperation
-): boolean =>
-  operation.remoteCreated !== true &&
-  isUnsettled(operation) &&
-  typeof error === "object" &&
-  error !== null &&
-  "code" in error &&
-  (error as { code: unknown }).code === FUNCTIONS_NOT_FOUND_CODE
 
 /**
  * Firestore write-error codes from the op-doc `setDoc` that count as a server
@@ -568,41 +543,14 @@ export const mergeOutboxSnapshots = (
 }
 
 /**
- * Convert an outbox snapshot to the shape persisted at the shared localStorage
- * key. "parked" is purely in-memory: older app versions read the same key
- * with a stricter status enum and quarantine-and-drop entries they cannot
- * parse — their next flush rewrites the key without the op, silently losing
- * the write during a version-overlap window (desktop builds lag web deploys).
- * Parked ops are therefore demoted to "pending" WITH a fresh attempt budget
- * (mirroring `resumeParkedOperations`): persisting the exhausted count would
- * make an old-build peer dead-letter the op terminally before ever sending it
- * (old `shouldDeadLetter` fires at attempts >= max), and would make this
- * build re-park it on the first post-reload loop pass without a send — a
- * reload is a resume trigger, so the restored op must ride a full ladder
- * before parking again. `parkedAt` is stripped along with the status so
- * nothing persisted ever carries a trace of the parked state.
- *
+ * Convert an outbox snapshot to the shape persisted at the localStorage key.
  * Settled entries persist payload-less (`stripSettledOperationPayload`): the
- * engine already strips at settlement time, so this is the boundary backstop
- * for fat settled rows adopted from an old-version peer's snapshot — they
- * must not re-inflate the stored outbox for their whole retention hour.
+ * engine already strips at settlement time, so this is the boundary backstop.
+ * Parked ops persist as parked; engine (re)start resumes them.
  */
 export const toPersistedOperations = (
   operations: readonly SyncOutboxOperation[]
-): SyncOutboxOperation[] =>
-  operations.map((operation) =>
-    operation.status === "parked"
-      ? {
-          ...operation,
-          status: "pending" as const,
-          attempts: 0,
-          fastRetries: undefined,
-          nextEligibleAt: undefined,
-          sentAt: undefined,
-          parkedAt: undefined,
-        }
-      : stripSettledOperationPayload(operation)
-  )
+): SyncOutboxOperation[] => operations.map(stripSettledOperationPayload)
 
 /**
  * Decide what one persist flush writes. The read-modify-write merge against
@@ -667,94 +615,6 @@ export const computeAckHorizonMillis = (
 }
 
 /** One row of the dead-letter quarantine ring, normalized for display. */
-export interface QuarantinedOutboxEntry {
-  /** When the entry was quarantined (epoch ms), when the record carried it. */
-  quarantinedAt: number | null
-  /** The quarantined value itself, exactly as stored — possibly corrupt. */
-  entry: unknown
-}
-
-/**
- * Normalize raw quarantine-ring records to a uniform shape. The engine wraps
- * every quarantined value as `{ quarantinedAt, entry }`, but the ring is
- * plain localStorage JSON, so anything unexpected degrades to a bare entry
- * with no timestamp rather than being dropped.
- */
-export const toQuarantinedOutboxEntries = (
-  records: readonly unknown[]
-): QuarantinedOutboxEntry[] =>
-  records.map((record) => {
-    if (typeof record === "object" && record !== null && "entry" in record) {
-      const { quarantinedAt } = record as { quarantinedAt?: unknown }
-      return {
-        quarantinedAt: typeof quarantinedAt === "number" ? quarantinedAt : null,
-        entry: (record as { entry: unknown }).entry,
-      }
-    }
-    return { quarantinedAt: null, entry: record }
-  })
-
-export interface QuarantineRequeueCandidate {
-  /** The parsed operation, safe to hand back to the enqueue path. */
-  operation: SyncOutboxOperation
-  /**
-   * The originating raw ring record, exactly as stored — so a candidate whose
-   * re-enqueue FAILS (path-schema validation, full queue) can be kept
-   * quarantined instead of dropped.
-   */
-  record: unknown
-}
-
-export interface QuarantineRequeuePlan {
-  /**
-   * Candidates that parse under the CURRENT outbox schema, are unsettled,
-   * and belong to `userId` — eligible for re-enqueue as fresh writes.
-   */
-  requeue: QuarantineRequeueCandidate[]
-  /** Raw ring records to leave quarantined (corrupt, settled, other users). */
-  keep: unknown[]
-}
-
-/**
- * Partition the quarantine ring for a re-enqueue pass. An entry qualifies for
- * requeue only when it parses under the CURRENT schema (entries quarantined
- * by an OLDER version's stricter schema — e.g. a pre-`parked` build — often
- * do), is still unsettled (a settled entry's write already has a verdict;
- * replaying it would double-apply), and belongs to `userId` (the engine
- * enqueues under the ACTIVE user, so another account's write must never be
- * replayed here). Everything else is kept untouched — corrupt rows retain
- * their forensic value. Duplicate ids (the same op quarantined by two tabs)
- * are requeued once and the extra copies dropped. Each candidate carries its
- * raw ring record so the engine can keep it quarantined when the actual
- * re-enqueue (payload validation, capacity) fails.
- */
-export const planQuarantineRequeue = (
-  records: readonly unknown[],
-  userId: string
-): QuarantineRequeuePlan => {
-  const requeue: QuarantineRequeueCandidate[] = []
-  const keep: unknown[] = []
-  const seen = new Set<string>()
-
-  for (const record of records) {
-    const [normalized] = toQuarantinedOutboxEntries([record])
-    const parsed = syncOutboxOperationSchema.safeParse(normalized?.entry)
-    if (
-      !parsed.success ||
-      parsed.data.userId !== userId ||
-      !isUnsettled(parsed.data)
-    ) {
-      keep.push(record)
-      continue
-    }
-    if (seen.has(parsed.data.id)) continue
-    seen.add(parsed.data.id)
-    requeue.push({ operation: parsed.data, record })
-  }
-
-  return { requeue, keep }
-}
-
 /**
  * Shallow identity check for two outbox snapshots — same ids in the same order
  * carrying the same status/updatedAt/attempts. Lets the engine skip a reactive

@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import { isTauri } from "@/composables/usePlatform"
+import { isTauri, platform } from "@/composables/usePlatform"
 import {
   type ShortcutRecorderTarget,
   useShortcutRecorder,
@@ -11,6 +11,7 @@ import {
   hotkeyToDisplayKeys,
   normalizeHotkeyCombo,
 } from "@/helpers/shortcuts"
+import { openExternalUrl } from "@/helpers/openExternalUrl"
 import {
   checkForUpdates,
   downloadAndInstallUpdate,
@@ -42,7 +43,13 @@ const {
   dictationEnabled,
   isUpdatingPreferences,
 } = storeToRefs(appPreferencesStore)
-const { updatePreference, updateShortcutKeys } = appPreferencesStore
+const { autostartStatus } = storeToRefs(appPreferencesStore)
+const {
+  updatePreference,
+  updateShortcutKeys,
+  refreshAutostartStatus,
+  setRunOnStartup,
+} = appPreferencesStore
 
 const toBoolean = (value: unknown): boolean => value === true
 
@@ -52,7 +59,6 @@ const toBoolean = (value: unknown): boolean => value === true
  * toasts — confirm here so every switch on this page acknowledges the change.
  */
 const localPreferenceRefs = {
-  runOnStartup,
   menuBar,
   confirmClose,
   openInDesktopApp,
@@ -65,6 +71,43 @@ const updateLocalPreference = (
   localPreferenceRefs[key].value = toBoolean(value)
   toast.success(t("settings.preferences.updateSuccess"))
 }
+
+const handleRunOnStartup = async (value: unknown) => {
+  await setRunOnStartup(toBoolean(value))
+  // Blocked by the OS: the inline notice says so; "updated" would be a lie.
+  if (autostartStatus.value !== "blocked") {
+    toast.success(t("settings.preferences.updateSuccess"))
+  }
+}
+
+// OS-owned state can change while the app is in the background, typically in
+// the System Settings pane opened from here, so re-read it on every return.
+const isWindowFocused = useWindowFocus()
+watch(
+  isWindowFocused,
+  (focused) => {
+    if (focused && isTauri.value) void refreshAutostartStatus()
+  },
+  { immediate: true }
+)
+
+// "denied" when the OS (desktop) or the browser (web) blocks the microphone.
+const microphonePermission = usePermission("microphone")
+
+const SYSTEM_SETTINGS_URLS: Record<string, Record<string, string>> = {
+  loginItems: {
+    macos: "x-apple.systempreferences:com.apple.LoginItems-Settings.extension",
+    windows: "ms-settings:startupapps",
+  },
+  microphone: {
+    macos:
+      "x-apple.systempreferences:com.apple.preference.security?Privacy_Microphone",
+    windows: "ms-settings:privacy-microphone",
+  },
+}
+// Only the desktop app can deep-link into OS settings (Linux has no standard pane).
+const systemSettingsUrl = (pane: "loginItems" | "microphone") =>
+  isTauri.value ? SYSTEM_SETTINGS_URLS[pane]?.[platform.value] : undefined
 
 const version = __APP_VERSION__
 
@@ -176,11 +219,22 @@ const restoreDefaultShortcut = () => {
             <FieldDescription>
               {{ t("settings.preferences.runOnStartup.description") }}
             </FieldDescription>
+            <FieldError v-if="autostartStatus === 'blocked'">
+              {{ t("settings.preferences.runOnStartup.blocked") }}
+              <Button
+                v-if="systemSettingsUrl('loginItems')"
+                variant="link"
+                class="text-destructive h-auto p-0"
+                @click="openExternalUrl(systemSettingsUrl('loginItems')!)"
+              >
+                {{ t("settings.preferences.openSystemSettings") }}
+              </Button>
+            </FieldError>
           </FieldContent>
           <Switch
             id="run-on-startup"
             :model-value="runOnStartup"
-            @update:model-value="updateLocalPreference('runOnStartup', $event)"
+            @update:model-value="handleRunOnStartup"
           />
         </Field>
         <Field v-if="isTauri" orientation="horizontal">
@@ -303,6 +357,19 @@ const restoreDefaultShortcut = () => {
             <FieldDescription>
               {{ t("settings.preferences.dictation.description") }}
             </FieldDescription>
+            <FieldError
+              v-if="dictationEnabled && microphonePermission === 'denied'"
+            >
+              {{ t("settings.preferences.dictation.micDenied") }}
+              <Button
+                v-if="systemSettingsUrl('microphone')"
+                variant="link"
+                class="text-destructive h-auto p-0"
+                @click="openExternalUrl(systemSettingsUrl('microphone')!)"
+              >
+                {{ t("settings.preferences.openSystemSettings") }}
+              </Button>
+            </FieldError>
           </FieldContent>
           <InputGroupButton
             v-if="isUpdatingPreferences === 'dictationEnabled'"

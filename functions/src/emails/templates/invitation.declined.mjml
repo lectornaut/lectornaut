@@ -31,8 +31,8 @@
 
         <mj-text>
           <strong>{{ email }}</strong> has declined the invitation to join
-          <strong>{{ teamName }}</strong
-          >. You can invite someone else or manage your team settings.
+          <strong>{{ teamName }}</strong>. You can invite someone else or manage
+          your team settings.
         </mj-text>
 
         <mj-button href="{{ ctaUrl }}" align="left"> View Team </mj-button>

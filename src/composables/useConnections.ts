@@ -314,7 +314,7 @@ export function useConnections() {
         connection,
         updateAvailable:
           connection !== null &&
-          (connection.installedRevision ?? 0) < app.resources.revision,
+          connection.installedRevision < app.resources.revision,
         disabled: connection?.status === "disabled",
         myBinding,
         bindings,

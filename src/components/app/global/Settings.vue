@@ -353,7 +353,7 @@ const tabContentClass =
               </TabsContent>
               <TabsContent :class="tabContentClass" value="security">
                 <ScrollContainer>
-                  <SettingsSecurity />
+                  <SettingsSecurity @navigate="selectTab" />
                 </ScrollContainer>
               </TabsContent>
               <TabsContent :class="tabContentClass" value="logs">

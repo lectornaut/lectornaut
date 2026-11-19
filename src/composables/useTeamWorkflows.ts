@@ -9,11 +9,68 @@ import type {
   UpdateWorkflowPatch,
   WorkflowReviewDecision,
 } from "@/composables/useFunctions"
+import { useAuthStore } from "@/stores/authStore"
 import { useMembershipStore } from "@/stores/membershipStore"
-import { useTeamWorkflowsStore } from "@/stores/teamWorkflowsStore"
+import {
+  useTeamWorkflowsStore,
+  workflowSubscriberRef,
+} from "@/stores/teamWorkflowsStore"
+import type { IWorkflow } from "@/types/domain"
+import { useDocumentQuery } from "@/utils/firebase/firebase-query"
 import { storeToRefs } from "pinia"
-import { computed } from "vue"
+import { computed, toValue, type MaybeRefOrGetter } from "vue"
 import { toast } from "vue-sonner"
+
+/**
+ * The current user's standing on a workflow, from their own opt-in doc (the
+ * only one a member may read):
+ *   `none`    a shared workflow, nothing to opt in to
+ *   `off`     not opted in
+ *   `on`      opted in to the current instructions, agent and connected apps
+ *   `stale`   opted in before the instructions were edited
+ *   `changed` opted in before the agent or its connected apps changed
+ *   `failed`  paused by the server after repeated failed runs
+ * Everything but `on` means no runs; the last three need the member to turn
+ * "Run for me" on again.
+ */
+export type WorkflowSubscriptionState =
+  "none" | "off" | "on" | "stale" | "changed" | "failed"
+
+export function useWorkflowSubscription(
+  workflow: MaybeRefOrGetter<IWorkflow | null | undefined>
+) {
+  const authStore = useAuthStore()
+  const { isOwner, isAdmin } = storeToRefs(useMembershipStore())
+  const personal = computed(() => {
+    const wf = toValue(workflow)
+    return wf?.audience === "personal" ? wf : null
+  })
+  const { data: subscription } = useDocumentQuery(() => {
+    const uid = authStore.currentUser?.uid
+    return personal.value && uid
+      ? workflowSubscriberRef(personal.value, uid)
+      : null
+  })
+  const state = computed<WorkflowSubscriptionState>(() => {
+    const wf = personal.value
+    if (!wf) return "none"
+    const sub = subscription.value
+    if (!sub) return "off"
+    if (sub.paused === "failures") return "failed"
+    if (sub.approvedRev !== wf.consentRev) return "stale"
+    return sub.paused === "tools" ? "changed" : "on"
+  })
+  /** A per-member workflow runs for whoever opted in; a shared one is admin-run. */
+  const canRun = computed(() =>
+    personal.value ? state.value === "on" : isOwner.value || isAdmin.value
+  )
+  return {
+    state,
+    canRun,
+    /** The member's own opt-in (their last run + "Notify me"), if any. */
+    subscription: computed(() => (personal.value ? subscription.value : null)),
+  }
+}
 
 export function useTeamWorkflows() {
   const { t } = useI18n()
@@ -126,8 +183,40 @@ export function useTeamWorkflows() {
     }
   }
 
+  const setSubscribed = async (
+    workflowId: string,
+    subscribed: boolean
+  ): Promise<void> => {
+    try {
+      await store.setSubscribed(workflowId, subscribed)
+      toast.success(
+        subscribed
+          ? t("settings.workflows.subscribeOn")
+          : t("settings.workflows.subscribeOff")
+      )
+    } catch (error) {
+      console.error("[useTeamWorkflows] setSubscribed failed:", error)
+      toast.error(messageOf(error, t("settings.workflows.subscribeError")))
+    }
+  }
+
+  const setNotify = async (
+    workflowId: string,
+    notify: boolean
+  ): Promise<void> => {
+    try {
+      await store.setNotify(workflowId, notify)
+    } catch (error) {
+      console.error("[useTeamWorkflows] setNotify failed:", error)
+      toast.error(messageOf(error, t("settings.workflows.notifyError")))
+    }
+  }
+
   const runNow = async (workflowId: string): Promise<void> => {
-    if (!guardManage()) return
+    // A per-member workflow runs for the caller (the server checks their
+    // opt-in); a shared one is an admin action.
+    const wf = workflows.value.find((w) => w.id === workflowId)
+    if (wf?.audience !== "personal" && !guardManage()) return
     try {
       await store.runNow(workflowId)
       toast.success(t("settings.workflows.runQueued"))
@@ -143,8 +232,17 @@ export function useTeamWorkflows() {
     decision: WorkflowReviewDecision
   ): Promise<void> => {
     if (!guardManage()) return
+    // Staged under instructions the workflow no longer has: approving is
+    // still allowed, but only as an explicit choice (the server enforces it).
+    const stale = decision === "approve" && store.isRunPromptStale(runId)
+    if (
+      stale &&
+      typeof window !== "undefined" &&
+      !window.confirm(t("settings.workflows.reviewStaleConfirm"))
+    )
+      return
     try {
-      await store.reviewRun(runId, decision)
+      await store.reviewRun(runId, decision, stale)
       toast.success(
         decision === "approve"
           ? t("settings.workflows.reviewApproved")
@@ -200,6 +298,8 @@ export function useTeamWorkflows() {
     isSaving,
     loadError,
     canManage,
+    setSubscribed,
+    setNotify,
     create,
     update,
     setEnabled,

@@ -15,7 +15,7 @@
  *     `messagesRef` getter so locale changes flow through without
  *     remounting consumers.
  *
- * Silent consumers (e.g. the composer reading `activeAgents` to render
+ * Silent consumers (e.g. the composer reading `pickerAgents` to render
  * badges) should bind to `useTeamAgentsStore()` directly and skip the
  * i18n / toast machinery — mirrors the `useAgentConfig` /
  * `useAgentConfigStore` split.
@@ -83,7 +83,6 @@ export function useTeamAgents(messagesRef?: () => UseTeamAgentsI18n) {
   const store = useTeamAgentsStore()
   const {
     agents,
-    activeAgents,
     selectableAgents,
     disabledAgents,
     archivedAgents,
@@ -254,7 +253,6 @@ export function useTeamAgents(messagesRef?: () => UseTeamAgentsI18n) {
 
   return {
     agents,
-    activeAgents,
     selectableAgents,
     disabledAgents,
     archivedAgents,

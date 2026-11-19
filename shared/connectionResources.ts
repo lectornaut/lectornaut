@@ -546,25 +546,10 @@ export function getConnectionWorkflow(
     .find((w) => w.key === key)
 }
 
-// Historical ownership must survive catalog removals before a team's first update.
-const LEGACY_TOOL_PROVIDERS = new Map<string, ConnectionProvider>([
-  [GOOGLE_CALENDAR_TOOL_KEY, "google-calendar"],
-  [GOOGLE_DRIVE_TOOL_KEY, "google-drive"],
-  [GOOGLE_GMAIL_TOOL_KEY, "google-gmail"],
-  [GITHUB_TOOL_KEY, "github"],
-])
-
-/** Old tool docs predate explicit ownership; never infer ownership for other sources. */
+/** Whether a published integration doc belongs to `provider`'s connection. */
 export function isConnectionOwned(
   data: Record<string, unknown>,
   provider: ConnectionProvider
 ): boolean {
-  if (data.source !== "published") return false
-  if (data.connectionProvider !== undefined)
-    return data.connectionProvider === provider
-  return (
-    data.type === "tool" &&
-    typeof data.sourceKey === "string" &&
-    LEGACY_TOOL_PROVIDERS.get(data.sourceKey) === provider
-  )
+  return data.source === "published" && data.connectionProvider === provider
 }

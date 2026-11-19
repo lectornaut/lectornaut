@@ -7,6 +7,7 @@ import {
   type BotChatMode,
   type BotChatNodeRef,
 } from "@/composables/useBotChat"
+import { useConnectionStatus } from "@/composables/useConnectionStatus"
 import { useDictation } from "@/composables/useDictation"
 import type { BotSessionPendingAttachment } from "@/composables/useFunctions"
 import {
@@ -57,6 +58,7 @@ import {
   BOT_TOOL_PERMISSION_MODES,
   PLAN_FLOOR_MODEL,
 } from "@lectornaut/shared/domain"
+import { CONNECTION_TOOL_KEYS } from "@lectornaut/shared/domain"
 import { computed, inject, nextTick, ref, watch, watchEffect } from "vue"
 import type { Component } from "vue"
 import { toast } from "vue-sonner"
@@ -85,6 +87,22 @@ const isActiveArchived = computed(
 const isReadOnly = computed(
   () => !!botChat?.sessionId.value && !canEditActive.value
 )
+
+// Replying in someone else's shared chat: connection tools would act through
+// MY accounts and put what they read into a transcript I do not own. They
+// stay off for my replies here until I turn them on (confirmed below).
+const { installed: connectionInstalled } = useConnectionStatus()
+const showConnectionConsent = computed(
+  () =>
+    !!botChat?.sessionId.value &&
+    !botChat.isActiveOwner.value &&
+    canEditActive.value &&
+    CONNECTION_TOOL_KEYS.some((key) => connectionInstalled("tool", key))
+)
+const usesMyConnections = computed(
+  () => botChat?.useMyConnections.value ?? false
+)
+const confirmConnectionsOpen = ref(false)
 
 // ── Voice dictation (Web Speech API) ──────────────────────────────────────
 // Appends spoken words to the composer input; see `useDictation`. The mic
@@ -1103,6 +1121,44 @@ const onToolMenuCloseAutoFocus = (event: Event) => {
         :disabled="isSending || isReadOnly"
         @keydown="handleKeydown"
       />
+      <InputGroupAddon v-if="showConnectionConsent" align="block-start">
+        <Item variant="muted" size="xs" class="w-full">
+          <ItemContent>
+            <ItemTitle>
+              {{
+                usesMyConnections
+                  ? t("ai.connectionConsent.onTitle")
+                  : t("ai.connectionConsent.offTitle")
+              }}
+            </ItemTitle>
+            <ItemDescription>
+              {{
+                usesMyConnections
+                  ? t("ai.connectionConsent.onDescription")
+                  : t("ai.connectionConsent.offDescription")
+              }}
+            </ItemDescription>
+          </ItemContent>
+          <ItemActions>
+            <InputGroupButton
+              v-if="usesMyConnections"
+              size="xs"
+              :disabled="isSending"
+              @click="botChat?.setUseMyConnections(false)"
+            >
+              {{ t("ai.connectionConsent.turnOff") }}
+            </InputGroupButton>
+            <InputGroupButton
+              v-else
+              size="xs"
+              :disabled="isSending"
+              @click="confirmConnectionsOpen = true"
+            >
+              {{ t("ai.connectionConsent.turnOn") }}
+            </InputGroupButton>
+          </ItemActions>
+        </Item>
+      </InputGroupAddon>
       <InputGroupAddon v-if="editContext" align="block-start">
         <Item variant="muted" size="xs" class="w-full">
           <ItemMedia variant="icon">
@@ -1963,5 +2019,12 @@ const onToolMenuCloseAutoFocus = (event: Event) => {
         </TooltipProvider>
       </InputGroupAddon>
     </InputGroup>
+    <ConfirmAction
+      v-model:open="confirmConnectionsOpen"
+      :title="t('ai.connectionConsent.confirmTitle')"
+      :description="t('ai.connectionConsent.confirmDescription')"
+      :action-label="t('ai.connectionConsent.confirmAction')"
+      :on-confirm="() => botChat?.setUseMyConnections(true)"
+    />
   </div>
 </template>

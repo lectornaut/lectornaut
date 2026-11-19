@@ -1,4 +1,8 @@
 <script lang="ts" setup>
+import {
+  isMembershipRole,
+  type IMembershipRole,
+} from "@lectornaut/shared/permissions"
 import { useDismissGuard } from "@/composables/useDismissGuard"
 import { usePhotoUpload } from "@/composables/usePhotoUpload"
 import { useTeamActions } from "@/composables/useTeamActions"
@@ -31,10 +35,8 @@ import { useTeamAgentsStore } from "@/stores/teamAgentsStore"
 import type { ITeam } from "@/types/domain"
 import {
   isAgentMembership,
-  isMembershipRole,
   isUserMembership,
   type IMembershipAgentSnapshot,
-  type IMembershipRole,
 } from "@/types/membership"
 import { Capabilities, roleCan } from "@/types/permissions"
 import { toast } from "vue-sonner"

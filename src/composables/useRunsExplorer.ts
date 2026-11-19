@@ -8,6 +8,7 @@
  */
 
 import { toRunRow, type RunRow } from "@/components/app/runs/runColumns"
+import { useMemberNames } from "@/composables/useMemberNames"
 import { getWorkflowPreset, WORKFLOW_PRESETS } from "@/data/workflowPresets"
 import { runStatusDotClass, runStatusRank } from "@/data/workflowRunConstants"
 import { useTeamWorkflowsStore } from "@/stores/teamWorkflowsStore"
@@ -46,20 +47,10 @@ const tsMs = (ts: unknown): number | null =>
   (ts as { toDate?: () => Date })?.toDate?.()?.getTime?.() ?? null
 
 export interface WorkflowFilterItem {
-  /**
-   * Stable list + dedupe key — the `presetKey` for predefined rows (collapsing
-   * any legacy data that materialized one preset into several docs), the
-   * workflow doc id for custom rows. NOT itself a workflow id; selection keys
-   * off `workflowIds`.
-   */
+  /** Stable list key: the `presetKey` for predefined rows, else the doc id. */
   key: string
   name: string
-  /**
-   * Every workflow doc this row stands for. Normally one; >1 only in the legacy
-   * multi-doc-per-preset case, where toggling the row covers them all so no
-   * run is left unfilterable.
-   */
-  workflowIds: string[]
+  workflowId: string
 }
 export interface WorkflowFilterGroup {
   label: string
@@ -80,9 +71,14 @@ export function useRunsExplorer() {
   const store = useTeamWorkflowsStore()
   const { recentRuns, wsActiveWorkflows } = storeToRefs(store)
 
+  const { memberName } = useMemberNames()
   const allRows = computed<RunRow[]>(() =>
     recentRuns.value.map((r) =>
-      toRunRow(r, store.getById(r.workflowId)?.name ?? r.workflowId)
+      toRunRow(
+        r,
+        store.getById(r.workflowId)?.name ?? r.workflowId,
+        r.forUid ? memberName(r.forUid) : ""
+      )
     )
   )
 
@@ -113,39 +109,29 @@ export function useRunsExplorer() {
     return markers
   })
 
-  // Predefined rows collapse by `presetKey` so the canonical model — at most
-  // one runnable doc per shipped preset (see SettingsWorkflows) — holds even
-  // against legacy data that materialized a preset twice: the row carries every
-  // matching doc id and toggles them as one. The label comes from the catalog
-  // (the same name Settings shows), falling back to the doc name for a preset
-  // that's since been retired from the catalog.
-  const predefinedItems = (): WorkflowFilterItem[] => {
-    const byKey = new Map<string, WorkflowFilterItem>()
-    for (const w of wsActiveWorkflows.value) {
-      if (!w.presetKey) continue
-      const item = byKey.get(w.presetKey)
-      if (item) {
-        item.workflowIds.push(w.id)
-        continue
-      }
-      byKey.set(w.presetKey, {
-        key: w.presetKey,
-        name: getWorkflowPreset(w.presetKey)?.name ?? w.name,
-        workflowIds: [w.id],
-      })
-    }
-    return [...byKey.values()].sort(
-      (a, b) =>
-        (PRESET_ORDER.get(a.key) ?? Infinity) -
-          (PRESET_ORDER.get(b.key) ?? Infinity) || a.name.localeCompare(b.name)
-    )
-  }
+  // One doc per shipped preset. The label comes from the catalog (the same
+  // name Settings shows), falling back to the doc name for a preset that's
+  // since been retired from the catalog.
+  const predefinedItems = (): WorkflowFilterItem[] =>
+    wsActiveWorkflows.value
+      .filter((w) => !!w.presetKey)
+      .map((w) => ({
+        key: w.presetKey as string,
+        name: getWorkflowPreset(w.presetKey as string)?.name ?? w.name,
+        workflowId: w.id,
+      }))
+      .sort(
+        (a, b) =>
+          (PRESET_ORDER.get(a.key) ?? Infinity) -
+            (PRESET_ORDER.get(b.key) ?? Infinity) ||
+          a.name.localeCompare(b.name)
+      )
 
   // Custom workflows are already one-doc-per-row; key + select by the doc id.
   const customItems = (): WorkflowFilterItem[] =>
     wsActiveWorkflows.value
       .filter((w) => !w.presetKey)
-      .map((w) => ({ key: w.id, name: w.name, workflowIds: [w.id] }))
+      .map((w) => ({ key: w.id, name: w.name, workflowId: w.id }))
 
   const workflowGroups = computed<WorkflowFilterGroup[]>(() =>
     [

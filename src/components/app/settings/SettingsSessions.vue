@@ -64,8 +64,7 @@ const { teamMembers } = storeToRefs(useMembershipStore())
 
 // Agent-owned sessions (headless workflow runs) are filtered out upstream in
 // `useWorkspaceBotSessions`, so every session reaching this view is a human
-// chat (or an owner-less legacy doc). The owner map therefore only needs the
-// team's user memberships.
+// chat. The owner map therefore only needs the team's user memberships.
 const memberByUid = computed<Map<string, IMembership>>(
   () =>
     new Map(
@@ -73,8 +72,8 @@ const memberByUid = computed<Map<string, IMembership>>(
     )
 )
 
-const memberName = (uid: string | undefined): string => {
-  const m = uid ? memberByUid.value.get(uid) : undefined
+const memberName = (uid: string): string => {
+  const m = memberByUid.value.get(uid)
   return (
     m?.user?.displayName ||
     m?.user?.email ||
@@ -212,14 +211,12 @@ const columns = computed<ColumnDef<AppTableFeatures, IBotSession>[]>(() => [
         "onUpdate:modelValue": (value: unknown) =>
           table.toggleAllPageRowsSelected(!!value),
         ariaLabel: t("components.dataTable.selectAll"),
-        class: "mr-2",
       }),
     cell: ({ row }) =>
       h(Checkbox, {
         modelValue: row.getIsSelected(),
         "onUpdate:modelValue": (value: unknown) => row.toggleSelected(!!value),
         ariaLabel: t("components.dataTable.selectAll"),
-        class: "mr-2",
       }),
     enablePinning: true,
     enableSorting: false,
@@ -320,9 +317,7 @@ const columns = computed<ColumnDef<AppTableFeatures, IBotSession>[]>(() => [
     // visually consistent.
     id: "owner",
     accessorFn: (row) =>
-      row.ownerUid && memberByUid.value.has(row.ownerUid)
-        ? row.ownerUid
-        : "__unknown__",
+      memberByUid.value.has(row.ownerUid) ? row.ownerUid : "__unknown__",
     header: ({ column }) =>
       h(DataTableColumnHeader, {
         column: toUnknownColumn(column),
@@ -330,7 +325,7 @@ const columns = computed<ColumnDef<AppTableFeatures, IBotSession>[]>(() => [
       }),
     cell: ({ row }) => {
       const uid = row.original.ownerUid
-      const member = uid ? memberByUid.value.get(uid) : undefined
+      const member = memberByUid.value.get(uid)
       const name = memberName(uid)
       return h(Item, { size: "xs", class: "min-w-48 flex-nowrap p-0" }, () => [
         h(ItemMedia, {}, () =>
@@ -642,6 +637,8 @@ const submitDelete = async () => {
             </FieldContent>
           </Field>
 
+          <AdminViewNotice kind="sessions" />
+
           <Field orientation="horizontal">
             <FieldContent class="min-w-0">
               <LoadingState
@@ -756,8 +753,7 @@ const submitDelete = async () => {
       <template #description>
         <span class="text-foreground font-medium">{{
           t("settings.sessions.selectedCount", { count: selectionCount })
-        }}</span
-        >. {{ t("settings.sessions.bulkDeleteConfirm") }}
+        }}</span>. {{ t("settings.sessions.bulkDeleteConfirm") }}
       </template>
     </ConfirmAction>
   </div>
