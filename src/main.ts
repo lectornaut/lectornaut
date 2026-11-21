@@ -23,6 +23,7 @@ import { initSync } from "@/utils/firebase/firebase-sync-engine"
 import { VueQueryPlugin } from "@tanstack/vue-query"
 import { invoke } from "@tauri-apps/api/core"
 import { createHead } from "@unhead/vue/client"
+import { TemplateParamsPlugin } from "@unhead/vue/plugins"
 import { MotionPlugin } from "@vueuse/motion"
 import {
   enableKatex,
@@ -37,6 +38,7 @@ import "xterminal/dist/xterminal.css"
 import "~console/theme-detect"
 
 const head = createHead({
+  plugins: [TemplateParamsPlugin],
   init: [
     {
       title: "Lectornaut",

@@ -538,20 +538,30 @@
 }
 
 /*
-  Sticky header: the scroller's mask starts at its top edge, which is where
-  the pinned header sits, so the stock top fade dims the header. Keep the
-  header band fully opaque and start the top fade right under it. Same
-  animated `--scroll-fade-t`/`-b` as the stock utility, only offset.
+  Sticky header: rows scroll under a frosted header instead of fading out. No
+  scroll-fade mask at all here: a masked scroller makes Chromium skip the head
+  cells' backdrop blur, leaving a flat tint (WebKit not checked).
 */
 [data-table-viewport][data-sticky-header] > [data-slot="table-container"] {
-  --scroll-fade-mask: linear-gradient(
-    to bottom,
-    #000 var(--table-head-h, 0px),
-    transparent var(--table-head-h, 0px),
-    #000 calc(var(--table-head-h, 0px) + var(--scroll-fade-t, 0px)),
-    #000 calc(100% - var(--scroll-fade-b, 0px)),
-    transparent 100%
-  );
+  mask-image: none;
+}
+
+/*
+  Frosted sticky header. Tint + blur live on each head cell, not the thead: a
+  thead backdrop would become the backdrop root of the pinned head cells, so
+  their own tint would stack on it. Per cell, a pinned head only ever frosts
+  over what actually scrolls under it. Beats the opaque pinned base above.
+  Child chain so a Table nested in an expanded row stays untouched.
+*/
+[data-table-viewport][data-sticky-header]
+  > [data-slot="table-container"]
+  > table
+  > [data-slot="table-header"]
+  > tr
+  > [data-slot="table-head"] {
+  @apply backdrop-blur-md;
+
+  background-color: oklch(from var(--background) l c h / 80%);
 }
 
 /*
@@ -566,7 +576,9 @@
     [colspan],
     [data-slot="table-cell"] *
   ) {
-  &:first-child {
+  /* The select column keeps the cell's own p-3: a checkbox has no hover pill
+     to clear, and the extra inset pushed it off-centre in its pinned column. */
+  &:first-child:not(:has([role="checkbox"])) {
     @apply ps-6;
   }
 
@@ -643,7 +655,8 @@
     on markstream's tooltip, which teleports to <body>). Global CSS is
     the correct home.
   - `[data-custom-id]` is the scoping boundary: only AppMarkdown emits
-    these surfaces ("chat" / "changelog-sheet" / "changelog-page"), so
+    these surfaces ("chat" / "changelog-sheet" / "changelog-page" /
+    "legal-sheet"), so
     the rules stay isolated to its output. Kept UNLAYERED (like the
     driver.js overrides below) so they reliably win over markstream's
     base CSS, which `src/styles/markdown.css` imports into
@@ -669,7 +682,8 @@
 .markstream-vue:is(
   [data-custom-id="chat"],
   [data-custom-id="changelog-sheet"],
-  [data-custom-id="changelog-page"]
+  [data-custom-id="changelog-page"],
+  [data-custom-id="legal-sheet"]
 ) {
   --ms-text-body: 1em;
   --ms-leading-body: 1.6;
@@ -757,7 +771,8 @@
    heading ever reads smaller than the prose under it. */
 .markstream-vue:is(
   [data-custom-id="chat"],
-  [data-custom-id="changelog-sheet"]
+  [data-custom-id="changelog-sheet"],
+  [data-custom-id="legal-sheet"]
 ) {
   --ms-text-h1: 1.5em;
   --ms-text-h2: 1.3em;

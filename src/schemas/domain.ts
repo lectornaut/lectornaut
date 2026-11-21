@@ -303,6 +303,8 @@ export const botSessionMessageSchema = z.object({
    * normal messages.
    */
   status: z.enum(BOT_CHAT_MESSAGE_STATUSES).optional(),
+  /** Error bubbles only: the server will accept a "continue" from here. */
+  resumable: z.boolean().optional(),
   /**
    * Structured parts. Present on agent messages that include tool calls,
    * absent for plain text-only messages, which render as a single `content`
@@ -883,8 +885,11 @@ export const botSessionSchema = z.object({
    * before writing, so a model an admin has since disabled cannot be
    * persisted further (the next send falls back to the team default
    * and overwrites this field accordingly).
+   * `.catch(undefined)`: the model catalog retires ids on every refresh, so
+   * a chat last run on a retired model reads as "no model" and the picker
+   * falls back to the team default.
    */
-  lastModel: botAgentModelSchema.optional(),
+  lastModel: botAgentModelSchema.optional().catch(undefined),
   /**
    * Most recent turn's reasoning-effort pick. Written by
    * `FirestoreBotSessionStore.save` with `lastModel`'s overwrite-on-save

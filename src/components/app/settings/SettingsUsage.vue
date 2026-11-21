@@ -315,7 +315,7 @@ const handleDiscard = (): void => {
                 </FieldDescription>
               </FieldContent>
               <div class="flex flex-col gap-2">
-                <div class="grid gap-2 @md:grid-cols-5">
+                <div class="grid grid-cols-2 gap-2 @3xl:grid-cols-5">
                   <Card class="shadow-none">
                     <CardContent class="p-4">
                       <p class="text-muted-foreground text-sm">
@@ -360,7 +360,7 @@ const handleDiscard = (): void => {
                       </p>
                     </CardContent>
                   </Card>
-                  <Card class="shadow-none">
+                  <Card class="col-span-2 shadow-none @3xl:col-span-1">
                     <CardContent class="p-4">
                       <p class="text-muted-foreground text-sm">
                         {{ t("settings.usage.thisMonth.stats.remaining") }}
@@ -467,12 +467,7 @@ const handleDiscard = (): void => {
                   }}
                 </FieldDescription>
               </FieldContent>
-              <Button
-                v-if="canUpgrade"
-                variant="outline"
-                size="sm"
-                @click="openPlans"
-              >
+              <Button v-if="canUpgrade" variant="outline" @click="openPlans">
                 {{ t("settings.usage.planAllowance.upgrade") }}
               </Button>
             </Field>
@@ -480,8 +475,8 @@ const handleDiscard = (): void => {
             <FieldSeparator />
 
             <!-- Team cap -->
-            <Field :data-invalid="isCapInvalid">
-              <FieldContent>
+            <Field orientation="horizontal" :data-invalid="isCapInvalid">
+              <FieldContent class="min-w-0">
                 <FieldLabel for="usage-team-cap">
                   {{ t("settings.usage.teamCap.label") }}
                 </FieldLabel>
@@ -527,32 +522,29 @@ const handleDiscard = (): void => {
                   {{ t("settings.usage.teamCap.usedSoFar", { used: n(used) }) }}
                 </FieldDescription>
               </FieldContent>
-              <div class="flex flex-col gap-2">
-                <div class="flex items-center justify-end gap-4">
-                  <Slider
-                    v-if="hasCeiling"
-                    :model-value="[sliderValue]"
-                    :min="MONTHLY_TOKEN_CAP_MIN"
-                    :max="planAllowance"
-                    :step="sliderStep"
-                    :disabled="isSaving"
-                    :aria-label="t('settings.usage.teamCap.label')"
-                    class="grow"
-                    @update:model-value="handleSlider"
-                  />
-                  <Input
-                    id="usage-team-cap"
-                    v-model="capInput"
-                    type="number"
-                    inputmode="numeric"
-                    :min="MONTHLY_TOKEN_CAP_MIN"
-                    :step="sliderStep"
-                    :placeholder="t('settings.usage.teamCap.placeholder')"
-                    :disabled="isSaving"
-                    :aria-invalid="isCapInvalid"
-                    class="w-40 shrink-0"
-                  />
-                </div>
+              <div class="flex w-72 items-center justify-end gap-3">
+                <Slider
+                  v-if="hasCeiling"
+                  :model-value="[sliderValue]"
+                  :min="MONTHLY_TOKEN_CAP_MIN"
+                  :max="planAllowance"
+                  :step="sliderStep"
+                  :disabled="isSaving"
+                  :aria-label="t('settings.usage.teamCap.label')"
+                  @update:model-value="handleSlider"
+                />
+                <Input
+                  id="usage-team-cap"
+                  v-model="capInput"
+                  type="number"
+                  inputmode="numeric"
+                  :min="MONTHLY_TOKEN_CAP_MIN"
+                  :step="sliderStep"
+                  :placeholder="t('settings.usage.teamCap.placeholder')"
+                  :disabled="isSaving"
+                  :aria-invalid="isCapInvalid"
+                  class="w-28"
+                />
               </div>
             </Field>
 
@@ -586,22 +578,18 @@ const handleDiscard = (): void => {
                   }}
                 </FieldDescription>
               </FieldContent>
-              <div class="flex flex-col gap-2">
-                <div class="flex items-center justify-end gap-4">
-                  <Input
-                    id="usage-cost-cap"
-                    v-model="costCapInput"
-                    type="number"
-                    inputmode="decimal"
-                    :min="MONTHLY_COST_CAP_MIN_CENTS / 100"
-                    step="0.01"
-                    :placeholder="t('settings.usage.costCap.placeholder')"
-                    :disabled="isSaving"
-                    :aria-invalid="isCostCapInvalid"
-                    class="w-40 shrink-0"
-                  />
-                </div>
-              </div>
+              <Input
+                id="usage-cost-cap"
+                v-model="costCapInput"
+                type="number"
+                inputmode="decimal"
+                :min="MONTHLY_COST_CAP_MIN_CENTS / 100"
+                step="0.01"
+                :placeholder="t('settings.usage.costCap.placeholder')"
+                :disabled="isSaving"
+                :aria-invalid="isCostCapInvalid"
+                class="w-40"
+              />
             </Field>
 
             <FieldSeparator />

@@ -329,6 +329,8 @@ export interface ChatMessage {
    * normal message; the client renders flagged bubbles as failures.
    */
   status?: BotChatMessageStatus
+  /** Error bubbles only: the server will accept a "continue" from here. */
+  resumable?: boolean
   segments?: MessageSegment[]
   /**
    * Firebase uid of the human who sent this message (user-role only), read
@@ -506,7 +508,7 @@ export function extractChatMessages(
     }
   }
 
-  for (const raw of thread as MessageLike[]) {
+  for (const [index, raw] of (thread as MessageLike[]).entries()) {
     const role = raw?.role
     const content = raw.content
 
@@ -544,7 +546,15 @@ export function extractChatMessages(
     if (!Array.isArray(content)) continue
 
     const agent = ensureAgent()
-    if (isErrorTurn) agent.status = "error"
+    if (isErrorTurn) {
+      agent.status = "error"
+      // Mirrors failedTurnResumePoint: only a reply appended after committed
+      // tool rounds can resume. A connection error folds into a completed
+      // turn, so there is nothing to continue (and a rerun would hit it again).
+      agent.resumable =
+        raw.metadata?.[TURN_ERROR_METADATA_KEY] !== "connection" &&
+        thread[index - 1]?.role === "tool"
+    }
     const thinking = createThinkingFolder((text) => appendText(agent, text))
     for (const part of content) {
       // Gemini reasoning parts (thinkingConfig.includeThoughts) arrive

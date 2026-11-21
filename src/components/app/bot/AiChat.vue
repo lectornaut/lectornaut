@@ -245,7 +245,7 @@ const handleRegenerate = () => {
   void botChat.editAndResend(target.promptId, target.text)
 }
 
-// Continue: the newest reply only, when it's an error reply after tool cards —
+// Continue: the newest reply only, when the server marked it `resumable` —
 // the turn failed after finishing some tool calls, which Genkit saved. Picks
 // up from those (no new message, nothing re-run). The server re-checks the
 // snapshots and refuses anything else. Same edit gate as regenerate.
@@ -253,7 +253,7 @@ const canContinue = (message: BotChatMessage): boolean =>
   message === messages.value.at(-1) &&
   message.role === "agent" &&
   message.status === "error" &&
-  !!message.segments?.some((segment) => segment.kind === "tool") &&
+  !!message.resumable &&
   !isSending.value &&
   !!botChat?.sessionId.value &&
   !!botChat.canEditActive.value

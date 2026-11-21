@@ -40,7 +40,8 @@ import MarkdownRender from "markstream-vue"
 // loaded at app startup, instead of being imported from this component.
 import "@/components/app/markdown/registerMarkdownOverrides"
 
-export type AppMarkdownSurface = "chat" | "changelog-sheet" | "changelog-page"
+export type AppMarkdownSurface =
+  "chat" | "changelog-sheet" | "changelog-page" | "legal-sheet"
 
 const props = withDefaults(
   defineProps<{

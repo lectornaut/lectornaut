@@ -81,6 +81,8 @@ export interface BotChatMessage {
    * messages.
    */
   status?: "error"
+  /** Error bubbles only: the server will accept a "continue" from here. */
+  resumable?: boolean
   /** Present on agent messages with tool calls; absent for plain text. */
   segments?: BotChatSegment[]
   /**
@@ -139,6 +141,7 @@ export const createMessage = (m: {
   role: BotChatRole
   content: string
   status?: "error"
+  resumable?: boolean
   segments?: BotChatSegment[]
   authorUid?: string
   parentSnapshotId?: string
@@ -148,6 +151,7 @@ export const createMessage = (m: {
   role: m.role,
   content: m.content,
   status: m.status,
+  resumable: m.resumable,
   authorUid: m.authorUid,
   parentSnapshotId: m.parentSnapshotId,
   sentAt: m.sentAt,

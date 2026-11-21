@@ -66,6 +66,10 @@ import type {
 } from "@/types/domain"
 import type { WorkspaceNodeScope } from "@/types/nodes"
 import {
+  getErrorMessage,
+  hasFirebaseErrorCode,
+} from "@/utils/firebase/firebase-errors"
+import {
   createBotSessionsQuery,
   createSharedBotSessionsQuery,
   getBotSessionRef,
@@ -80,7 +84,7 @@ import {
   isModelAllowedOnPlan,
   type BotToolPermissionMode,
 } from "@lectornaut/shared/domain"
-import { until, useStorage } from "@vueuse/core"
+import { until, useStorage, useThrottleFn } from "@vueuse/core"
 import { storeToRefs } from "pinia"
 import {
   computed,
@@ -804,11 +808,16 @@ export function useBotChat(options?: BotChatOptions): BotChatContext {
   // prevents zombie streams from billing tokens after the user has moved
   // on, and keeps the local message list in sync with what's visible.
   let inflightController: AbortController | null = null
+  let liveFrom = -1
   useCloseGuard(() => inflightController !== null)
-  const abortInflightSend = () => {
+  // `liveFrom` is declared with the live mirror below; a switch-away abort
+  // drops it so the aborted send's final post can't mirror the NEXT chat's
+  // messages. Stop keeps it, so receivers see the rollback.
+  const abortInflightSend = (keepLive = false) => {
     if (inflightController) {
       inflightController.abort()
       inflightController = null
+      if (!keepLive) liveFrom = -1
     }
   }
 
@@ -817,7 +826,7 @@ export function useBotChat(options?: BotChatOptions): BotChatContext {
   // turn that already finished just ignores it.
   const stopSending = () => {
     if (!inflightController) return
-    abortInflightSend()
+    abortInflightSend(true)
     const teamId = currentTeamId.value
     const workspaceId = currentWorkspaceId.value
     const id = sessionId.value
@@ -1308,7 +1317,62 @@ export function useBotChat(options?: BotChatOptions): BotChatContext {
   //     watcher then either no-ops (its equality guard) or, in the rare
   //     case the server's `availableTransferAgentIds` allowlist rejected
   //     the target, corrects our guess.
+  // ── Live mirror across windows ────────────────────────────────────────────
+  //
+  // The stream reaches only the window that sent the turn; every other
+  // surface on the same chat (AiAsk sidebar, pop-out, /bot page) would wait
+  // for the head to move. The sender posts its live tail (messages from
+  // `liveFrom` on) to a BroadcastChannel, which reaches every other
+  // `useBotChat` instance on this origin, same window or not. Receivers
+  // mirror it in place (same id → Object.assign, so the renderer's parse
+  // cache keeps its object); the head watcher's reload then swaps in the
+  // server transcript as usual. The final post after a rollback carries the
+  // rolled-back tail, so receivers drop the failed bubbles too.
+  // ponytail: same-device only; other members/devices still update on commit.
+  // Upgrade path: throttled partial writes on the session record.
+  type LivePacket = {
+    sessionId: string
+    from: number
+    messages: BotChatMessage[]
+  }
+  const liveChannel =
+    typeof BroadcastChannel === "undefined"
+      ? null
+      : new BroadcastChannel("bot-chat-live")
+  const postLive = () => {
+    const id = sessionId.value
+    if (!liveChannel || !id || liveFrom < 0) return
+    liveChannel.postMessage({
+      sessionId: id,
+      from: liveFrom,
+      // JSON round trip: reactive proxies can't be structured-cloned.
+      messages: JSON.parse(JSON.stringify(messages.value.slice(liveFrom))),
+    } satisfies LivePacket)
+  }
+  const postLiveThrottled = useThrottleFn(postLive, 100, true)
+  const endLive = () => {
+    postLive()
+    liveFrom = -1
+  }
+  liveChannel?.addEventListener(
+    "message",
+    ({ data }: MessageEvent<LivePacket>) => {
+      if (data.sessionId !== sessionId.value || isSending.value) return
+      const list = messages.value
+      // Behind the sender's base transcript — the head reload catches up.
+      if (data.from > list.length) return
+      list.splice(data.from + data.messages.length)
+      data.messages.forEach((m, i) => {
+        const existing = list[data.from + i]
+        if (existing?.id === m.id) Object.assign(existing, m)
+        else list.splice(data.from + i, 1, m)
+      })
+    }
+  )
+  onScopeDispose(() => liveChannel?.close())
+
   const applyStreamEffects = (effects: BotChatStreamEffects) => {
+    postLiveThrottled()
     if (effects.sessionId && effects.sessionId !== sessionId.value) {
       sessionId.value = effects.sessionId
     }
@@ -1376,6 +1440,7 @@ export function useBotChat(options?: BotChatOptions): BotChatContext {
       })
     )
     isSending.value = true
+    liveFrom = agentIndex - 1
 
     const controller = new AbortController()
     inflightController = controller
@@ -1469,7 +1534,13 @@ export function useBotChat(options?: BotChatOptions): BotChatContext {
       const isAbort = controller.signal.aborted
       if (!isAbort) {
         console.error("[useBotChat] sendBotMessage failed:", error)
-        toast.error("Failed to send message. Please try again.")
+        // failed-precondition carries a server-authored, actionable reason
+        // (e.g. a connection needing reauth); retrying won't help, so show it.
+        toast.error(
+          hasFirebaseErrorCode(error, "failed-precondition")
+            ? getErrorMessage(error)
+            : "Failed to send message. Please try again."
+        )
       }
       // Roll back the agent placeholder + the user message we optimistically
       // pushed. Using splice (not two pops) so we only mutate the slice we
@@ -1480,6 +1551,7 @@ export function useBotChat(options?: BotChatOptions): BotChatContext {
       // Only clear the controller if it's still ours — a later send may
       // have already swapped a new one in (e.g., abort + immediate retry).
       if (inflightController === controller) inflightController = null
+      endLive()
       isSending.value = false
     }
   }
@@ -1521,6 +1593,7 @@ export function useBotChat(options?: BotChatOptions): BotChatContext {
       })
     )
     isSending.value = true
+    liveFrom = agentIndex
     const controller = new AbortController()
     inflightController = controller
     try {
@@ -1558,6 +1631,7 @@ export function useBotChat(options?: BotChatOptions): BotChatContext {
       messages.value.splice(agentIndex, 1)
     } finally {
       if (inflightController === controller) inflightController = null
+      endLive()
       isSending.value = false
     }
   }
@@ -1710,6 +1784,7 @@ export function useBotChat(options?: BotChatOptions): BotChatContext {
     target.tool.isInterrupt = false
 
     isSending.value = true
+    liveFrom = agentIndex
 
     const controller = new AbortController()
     inflightController = controller
@@ -1773,6 +1848,7 @@ export function useBotChat(options?: BotChatOptions): BotChatContext {
       target.tool.isInterrupt = true
     } finally {
       if (inflightController === controller) inflightController = null
+      endLive()
       isSending.value = false
     }
   }

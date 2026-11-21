@@ -546,7 +546,8 @@
     "apple": "Apple",
     "footer": {
       "terms": "Terms",
-      "privacy": "Privacy"
+      "privacy": "Privacy",
+      "lastUpdated": "Last updated {date}"
     }
   },
   "common": {

@@ -131,8 +131,10 @@ const focusActiveTab = (event: Event) => {
 }
 
 // Centre each settings page (ScrollContainer > page root) like the app pages do.
+// <fieldset> defaults to `min-width: min-content`, so a wide row would push the
+// page into horizontal scroll when the panel narrows; let every one shrink.
 const tabContentClass =
-  "overflow-auto overscroll-none scroll-smooth h-full *:*:container *:*:mx-auto *:*:max-w-4xl"
+  "overflow-auto overscroll-none scroll-smooth h-full *:*:container *:*:mx-auto *:*:max-w-4xl [&_fieldset]:min-w-0"
 </script>
 
 <template>

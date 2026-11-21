@@ -140,13 +140,6 @@ function onCellClick(columnId: string, event: MouseEvent): void {
 // exposed objects and breaks the v9 table's TanStack Store class types, while
 // function return types pass through untouched.
 defineExpose({ getTable: () => table })
-
-// The scroller's top fade starts below the sticky header (index.css reads
-// `--table-head-h`); without it the mask fades the pinned header itself.
-const headerRef = useTemplateRef("header")
-const { height: headerHeight } = useElementSize(headerRef, undefined, {
-  box: "border-box",
-})
 </script>
 
 <template>
@@ -167,14 +160,10 @@ const { height: headerHeight } = useElementSize(headerRef, undefined, {
       <div
         data-table-viewport
         :data-sticky-header="props.stickyHeader || undefined"
-        :style="props.stickyHeader && { '--table-head-h': `${headerHeight}px` }"
         class="relative flex min-h-0 min-w-0 grow flex-col overflow-hidden"
       >
         <Table>
-          <TableHeader
-            ref="header"
-            :class="props.stickyHeader && 'sticky top-0 z-20'"
-          >
+          <TableHeader :class="props.stickyHeader && 'sticky top-0 z-20'">
             <TableRow
               v-for="headerGroup in table.getHeaderGroups()"
               :key="headerGroup.id"
@@ -184,7 +173,7 @@ const { height: headerHeight } = useElementSize(headerRef, undefined, {
                 :key="header.id"
                 :data-pinned="header.column.getIsPinned()"
                 :class="[
-                  props.stickyHeader && 'bg-background top-0',
+                  props.stickyHeader && 'top-0',
                   header.column.id === 'actions' && 'w-px text-right',
                   header.column.id === 'select' && 'w-px',
                 ]"
