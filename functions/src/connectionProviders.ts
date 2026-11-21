@@ -18,20 +18,16 @@ import {
   type ConnectionResources,
 } from "@lectornaut/shared/connectionResources"
 import {
+  CONNECTION_SCOPES,
   GITHUB_READ_FILE_TOOL_NAME,
   GITHUB_TOOL_KEY,
   GITHUB_WRITE_TOOL_NAMES,
-  GOOGLE_CALENDAR_EVENTS_SCOPE,
   GOOGLE_CALENDAR_TOOL_KEY,
   GOOGLE_CALENDAR_WRITE_TOOL_NAMES,
-  GOOGLE_DRIVE_FILE_SCOPE,
   GOOGLE_DRIVE_READ_FILE_TOOL_NAME,
-  GOOGLE_DRIVE_READONLY_SCOPE,
   GOOGLE_DRIVE_TOOL_KEY,
   GOOGLE_DRIVE_WRITE_TOOL_NAMES,
   GOOGLE_GMAIL_READ_MESSAGE_TOOL_NAME,
-  GOOGLE_GMAIL_READONLY_SCOPE,
-  GOOGLE_GMAIL_SEND_SCOPE,
   GOOGLE_GMAIL_TOOL_KEY,
   GOOGLE_GMAIL_WRITE_TOOL_NAMES,
   type ConnectionProvider,
@@ -83,7 +79,7 @@ export interface ConnectionProviderSpec extends ConnectionResources {
    * labels the binding row; GitHub has no id_token, so identity comes from
    * `oauth.userInfoUrl` instead.
    */
-  scopes: string[]
+  scopes: readonly string[]
   /** OAuth endpoint + token-lifecycle config (see ProviderOauthConfig). */
   oauth: ProviderOauthConfig
   /**
@@ -116,7 +112,7 @@ const GOOGLE_CALENDAR: ConnectionProviderSpec = {
   // the broader scope covers reads). Bindings created under P1 keep working
   // for reads; write tools check the binding's GRANTED scopes at call time
   // and steer stale grants to reconnect.
-  scopes: ["openid", "email", GOOGLE_CALENDAR_EVENTS_SCOPE],
+  scopes: CONNECTION_SCOPES["google-calendar"],
   oauth: GOOGLE_OAUTH,
   ...CONNECTION_RESOURCES["google-calendar"],
   wireNames: [GOOGLE_CALENDAR_TOOL_KEY, ...GOOGLE_CALENDAR_WRITE_TOOL_NAMES],
@@ -135,12 +131,7 @@ const GOOGLE_DRIVE: ConnectionProviderSpec = {
   // which reach only files the app created or the user picked. NEVER the
   // full `drive` scope. Bindings granted before `drive.file` was declared
   // surface the `needsScopeUpgrade` reconnect hint (calendar P2 precedent).
-  scopes: [
-    "openid",
-    "email",
-    GOOGLE_DRIVE_READONLY_SCOPE,
-    GOOGLE_DRIVE_FILE_SCOPE,
-  ],
+  scopes: CONNECTION_SCOPES["google-drive"],
   oauth: GOOGLE_OAUTH,
   ...CONNECTION_RESOURCES["google-drive"],
   // `readDriveFile` and the confirm-gated write tools all ride the ONE
@@ -160,17 +151,12 @@ const GOOGLE_GMAIL: ConnectionProviderSpec = {
     "send it — on members' connected Gmail accounts.",
   avatarSeed: "google-gmail",
   // `gmail.readonly` (reads) + `gmail.send` (the confirm-gated send tool) —
-  // both RESTRICTED, riding the same CASA assessment as drive.readonly (one
-  // OAuth client, one verification). NEVER `gmail.modify`/`gmail.compose` —
+  // readonly is RESTRICTED (CASA, like drive.readonly), send is sensitive;
+  // one OAuth client means one verification for all three Google apps. NEVER `gmail.modify`/`gmail.compose` —
   // send-only is the narrowest write grant. Bindings granted before
   // `gmail.send` was declared surface the `needsScopeUpgrade` reconnect
   // hint (calendar P2 precedent).
-  scopes: [
-    "openid",
-    "email",
-    GOOGLE_GMAIL_READONLY_SCOPE,
-    GOOGLE_GMAIL_SEND_SCOPE,
-  ],
+  scopes: CONNECTION_SCOPES["google-gmail"],
   oauth: GOOGLE_OAUTH,
   ...CONNECTION_RESOURCES["google-gmail"],
   // `readGmailMessage` + the confirm-gated send ride the ONE googleGmail
@@ -193,7 +179,7 @@ const GITHUB: ConnectionProviderSpec = {
   // PERMISSIONS (Issues, Contents, …) and which repos it's installed on — NOT
   // OAuth scopes. So no `scope` is requested; the token response carries none.
   // Identity comes from `oauth.userInfoUrl` (GitHub has no id_token).
-  scopes: [],
+  scopes: CONNECTION_SCOPES.github,
   oauth: {
     // GitHub App user-authorization uses the SAME OAuth endpoints as an OAuth
     // App. User tokens may expire (8h) + refresh, or not, per the app's

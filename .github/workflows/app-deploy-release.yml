@@ -8,8 +8,28 @@ concurrency:
   group: app-release
   cancel-in-progress: false
 jobs:
-  deploy-release:
+  # The updater only offers a strictly newer semver, and tauri-action tags the
+  # release v<package.json version>. An unbumped version would overwrite the
+  # existing release's assets and never reach installed apps, so fail fast.
+  # (Re-run FAILED jobs after a partial release; "re-run all" trips this.)
+  check-version:
     if: ${{ github.ref == 'refs/heads/release' && !contains(github.event.head_commit.message, 'skip app release') }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+      - name: Require an unreleased version
+        run: |
+          version=$(node -p 'require("./package.json").version')
+          if git ls-remote --exit-code --tags origin "refs/tags/v$version" >/dev/null; then
+            echo "::error::v$version is already released. Bump \"version\" in package.json."
+            exit 1
+          fi
+          echo "Releasing v$version"
+  deploy-release:
+    needs: check-version
     permissions:
       contents: write
     strategy:
@@ -58,6 +78,9 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+          # build.rs bakes these into the binary (option_env!) for the App Check proof.
+          TAURI_APP_CHECK_APP_ID: ${{ secrets.TAURI_APP_CHECK_APP_ID }}
+          TAURI_APP_CHECK_SHARED_SECRET: ${{ secrets.TAURI_APP_CHECK_SHARED_SECRET }}
           VITE_API_KEY: ${{ secrets.VITE_API_KEY }}
           VITE_AUTH_DOMAIN: ${{ secrets.VITE_AUTH_DOMAIN }}
           VITE_DATABASE_URL: ${{ secrets.VITE_DATABASE_URL }}
@@ -83,6 +106,9 @@ jobs:
           VITE_APPLE_AUTH_URL: ${{ secrets.VITE_APPLE_AUTH_URL }}
           VITE_APPLE_TOKEN_URL: ${{ secrets.VITE_APPLE_TOKEN_URL }}
           VITE_APPLE_REDIRECT_URI: ${{ secrets.VITE_APPLE_REDIRECT_URI }}
+          VITE_GOOGLE_OAUTH_CLIENT_ID: ${{ secrets.VITE_GOOGLE_OAUTH_CLIENT_ID }}
+          VITE_GITHUB_OAUTH_CLIENT_ID: ${{ secrets.VITE_GITHUB_OAUTH_CLIENT_ID }}
+          VITE_GITHUB_APP_SLUG: ${{ secrets.VITE_GITHUB_APP_SLUG }}
         with:
           tagName: v__VERSION__
           releaseName: "Lectornaut v__VERSION__"

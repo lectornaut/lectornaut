@@ -174,7 +174,17 @@ async function postTokenRequest(
   }
   const kind = classifyGoogleTokenFailure(status, body)
   const detail = extractOauthError(body) ?? String(status)
-  return { ok: false, kind, message: `Token request failed (${detail}).` }
+  // Google's description is what tells a Testing-mode 7-day expiry ("Token
+  // has been expired or revoked.") apart from other dead-grant causes.
+  const description = (body as { error_description?: unknown } | null)
+    ?.error_description
+  return {
+    ok: false,
+    kind,
+    message:
+      `Token request failed (${detail})` +
+      (typeof description === "string" ? `: ${description}` : "."),
+  }
 }
 
 /**
@@ -1060,6 +1070,12 @@ async function resolveBindingAccessTokenUnrecorded(
   })
   if (!result.ok) {
     if (result.kind === "invalid_grant") {
+      logger.warn("[connections] refresh grant dead", {
+        teamId,
+        provider,
+        uid,
+        detail: result.message,
+      })
       // The grant is dead — surface it in Settings and to the model. Best-
       // effort write: the tool's narratable failure matters more than the flag.
       await markBindingNeedsReauth(teamId, provider, uid, { refreshToken })

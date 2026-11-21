@@ -763,6 +763,34 @@ export const GOOGLE_GMAIL_READONLY_SCOPE =
 export const GOOGLE_GMAIL_SEND_SCOPE =
   "https://www.googleapis.com/auth/gmail.send"
 
+/**
+ * The ONE list of OAuth scopes each provider requests. The client's authorize
+ * URL and the server's spec both read it, so the consent screen can't drift
+ * from what's declared in the Google Cloud console (a review rejection).
+ * Google tiers: calendar.events + gmail.send are sensitive; drive.readonly +
+ * gmail.readonly are RESTRICTED (CASA); drive.file is non-sensitive. Never
+ * the full `drive` / `mail.google.com` / gmail.modify / gmail.compose.
+ * GitHub is a GitHub App (permissions, not scopes), so it requests none.
+ */
+export const CONNECTION_SCOPES: Readonly<
+  Record<ConnectionProvider, readonly string[]>
+> = {
+  "google-calendar": ["openid", "email", GOOGLE_CALENDAR_EVENTS_SCOPE],
+  "google-drive": [
+    "openid",
+    "email",
+    GOOGLE_DRIVE_READONLY_SCOPE,
+    GOOGLE_DRIVE_FILE_SCOPE,
+  ],
+  "google-gmail": [
+    "openid",
+    "email",
+    GOOGLE_GMAIL_READONLY_SCOPE,
+    GOOGLE_GMAIL_SEND_SCOPE,
+  ],
+  github: [],
+}
+
 // GitHub is a GitHub App, not an OAuth App: access is governed by the app's
 // granted PERMISSIONS + installed repos, not OAuth scopes — so it has no scope
 // constants and requests no `scope`.

@@ -5,6 +5,8 @@ on:
       - "**"
       - "!release"
   workflow_dispatch:
+permissions:
+  contents: read
 concurrency:
   group: web-preview-${{ github.ref }}
   cancel-in-progress: true
@@ -27,8 +29,6 @@ jobs:
       - name: Build app
         run: pnpm build
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          FIREBASE_SERVICE_ACCOUNT_LECTORNAUT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_LECTORNAUT }}
           VITE_API_KEY: ${{ secrets.VITE_API_KEY }}
           VITE_AUTH_DOMAIN: ${{ secrets.VITE_AUTH_DOMAIN }}
           VITE_DATABASE_URL: ${{ secrets.VITE_DATABASE_URL }}
@@ -54,6 +54,9 @@ jobs:
           VITE_APPLE_AUTH_URL: ${{ secrets.VITE_APPLE_AUTH_URL }}
           VITE_APPLE_TOKEN_URL: ${{ secrets.VITE_APPLE_TOKEN_URL }}
           VITE_APPLE_REDIRECT_URI: ${{ secrets.VITE_APPLE_REDIRECT_URI }}
+          VITE_GOOGLE_OAUTH_CLIENT_ID: ${{ secrets.VITE_GOOGLE_OAUTH_CLIENT_ID }}
+          VITE_GITHUB_OAUTH_CLIENT_ID: ${{ secrets.VITE_GITHUB_OAUTH_CLIENT_ID }}
+          VITE_GITHUB_APP_SLUG: ${{ secrets.VITE_GITHUB_APP_SLUG }}
       - name: Stamp build version
         env:
           SHA: ${{ github.sha }}

@@ -19,10 +19,7 @@ import {
 } from "@lectornaut/shared/connectionResources"
 import {
   CONNECTION_PROVIDERS,
-  GOOGLE_DRIVE_FILE_SCOPE,
-  GOOGLE_DRIVE_READONLY_SCOPE,
-  GOOGLE_GMAIL_READONLY_SCOPE,
-  GOOGLE_GMAIL_SEND_SCOPE,
+  CONNECTION_SCOPES,
   type ConnectionProvider,
 } from "@lectornaut/shared/domain"
 import type { Component } from "vue"
@@ -59,7 +56,7 @@ export interface ConnectionAppDescriptor {
    * (the token exchange grants whatever the user consented to), but a
    * mismatch surfaces as confusing consent screens.
    */
-  scopes: string[]
+  scopes: readonly string[]
   /**
    * Provider authorize endpoint — used by the web authorization-code redirect
    * flow AND the desktop (Tauri) loopback flow for every provider.
@@ -107,11 +104,7 @@ const GOOGLE_CALENDAR_APP: ConnectionAppDescriptor = {
   // P2 upgraded `calendar.events.readonly` → `calendar.events` (read+write).
   // Members who connected under P1 keep read access; the binding row shows a
   // reconnect hint (`needsScopeUpgrade`) until they re-consent.
-  scopes: [
-    "openid",
-    "email",
-    "https://www.googleapis.com/auth/calendar.events",
-  ],
+  scopes: CONNECTION_SCOPES["google-calendar"],
   authorizeUrl: GOOGLE_AUTHORIZE_URL,
   authParams: GOOGLE_AUTH_PARAMS,
   manage: GOOGLE_MANAGE,
@@ -136,12 +129,7 @@ const GOOGLE_DRIVE_APP: ConnectionAppDescriptor = {
   // `drive.file` for the confirm-gated writes (app-created/picked files
   // only). Bindings granted before `drive.file` was declared show the
   // `needsScopeUpgrade` reconnect hint (calendar P2 precedent).
-  scopes: [
-    "openid",
-    "email",
-    GOOGLE_DRIVE_READONLY_SCOPE,
-    GOOGLE_DRIVE_FILE_SCOPE,
-  ],
+  scopes: CONNECTION_SCOPES["google-drive"],
   authorizeUrl: GOOGLE_AUTHORIZE_URL,
   authParams: GOOGLE_AUTH_PARAMS,
   manage: GOOGLE_MANAGE,
@@ -161,12 +149,7 @@ const GOOGLE_GMAIL_APP: ConnectionAppDescriptor = {
   // NEVER modify/compose (send-only is the narrowest write grant). Bindings
   // granted before `gmail.send` was declared show the `needsScopeUpgrade`
   // reconnect hint (calendar P2 precedent).
-  scopes: [
-    "openid",
-    "email",
-    GOOGLE_GMAIL_READONLY_SCOPE,
-    GOOGLE_GMAIL_SEND_SCOPE,
-  ],
+  scopes: CONNECTION_SCOPES["google-gmail"],
   authorizeUrl: GOOGLE_AUTHORIZE_URL,
   authParams: GOOGLE_AUTH_PARAMS,
   manage: GOOGLE_MANAGE,
@@ -185,7 +168,7 @@ const GITHUB_APP: ConnectionAppDescriptor = {
   // GitHub App: access is governed by the app's PERMISSIONS + which repos it's
   // installed on, not OAuth scopes — so request none (an empty `scope` is
   // omitted from the authorize URL). No extra grant params either.
-  scopes: [],
+  scopes: CONNECTION_SCOPES.github,
   authorizeUrl: "https://github.com/login/oauth/authorize",
   authParams: {},
   // Authorizing alone yields a token that can reach NO repos until the GitHub
